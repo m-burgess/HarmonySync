@@ -2,6 +2,7 @@
 use std::cell::RefCell;
 use std::fs::File;
 use std::io::Write;
+use std::net::TcpStream;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
@@ -9,6 +10,7 @@ use std::time::{Duration, SystemTime};
 
 use midir::{MidiInput, MidiOutput};
 use rodio::{OutputStream, Sink, Source};
+use serde::Serialize;
 use slint::{Model, SharedString, VecModel};
 
 use crate::application::use_cases::LoadSongUseCase;
@@ -33,6 +35,25 @@ struct AppState {
     midi_input: Option<MidiInput>,
     midi_output: Option<MidiOutput>,
     start_time: Option<SystemTime>,
+}
+
+#[derive(Serialize)]
+struct AudienceUpdate {
+    video_path: String,
+    line1: String,
+    line2: String,
+}
+
+pub fn send_audience_update(video_path: &str, line1: &str, line2: &str) {
+    if let Ok(mut stream) = TcpStream::connect("127.0.0.1:7878") {
+        let update = AudienceUpdate {
+            video_path: video_path.to_string(),
+            line1: line1.to_string(),
+            line2: line2.to_string(),
+        };
+        let msg = serde_json::to_string(&update).unwrap();
+        let _ = stream.write_all(msg.as_bytes());
+    }
 }
 
 fn main() -> Result<(), slint::PlatformError> {
