@@ -1,0 +1,23 @@
+// Cargo.toml
+[package]
+name = "sling-presenter"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+slint = "1.7"
+rodio = { version = "0.18", features = ["symphonia-all"] }
+cpal = "0.15"
+midir = "0.10"
+pitch_shift = "1.0"
+fundsp = "0.18"
+gstreamer = "0.22"
+gstreamer-video = "0.22"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rfd = "0.14"
+reqwest = { version = "0.12", features = ["blocking", "json"] }
+tokio = { version = "1", features = ["full"] } // For async if needed
+
+[build-dependencies]
+slint-build = "1.7"
