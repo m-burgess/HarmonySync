@@ -1,0 +1,103 @@
+import { VerticalBox, HorizontalBox, Text, Button, Slider, CheckBox, ComboBox, SpinBox } from "std-widgets.slint";
+
+export component MainWindow inherits Window {
+    title: "RustPresenter";
+    min-width: 900px;
+    min-height: 700px;
+    VerticalBox {
+        // Setlist
+        HorizontalBox {
+            Text { text: "Setlist:"; }
+            Button { text: "Add Song"; on-click => { root.add_song(); } }
+            Button { text: "Remove Song"; on-click => { root.remove_song(); } }
+        }
+        // Track Mixer
+        VerticalBox {
+            Text { text: "Tracks:"; }
+            for track, idx in tracks : [
+                HorizontalBox {
+                    Text { text: track.name; }
+                    Slider { value: track.volume; min: 0; max: 1; step: 0.01;
+                        on-released => { root.tracks_changed(tracks); }
+                    }
+                    ComboBox { model: ["L", "C", "R"]; current-index: track.pan;
+                        on-activated => { root.tracks_changed(tracks); }
+                    }
+                    CheckBox { checked: track.mute; text: "Mute";
+                        on-toggled => { root.tracks_changed(tracks); }
+                    }
+                    CheckBox { checked: track.solo; text: "Solo";
+                        on-toggled => { root.tracks_changed(tracks); }
+                    }
+                    CheckBox { checked: track.transpose; text: "Transpose";
+                        on-toggled => { root.tracks_changed(tracks); }
+                    }
+                }
+            ]
+        }
+        // Metronome
+        HorizontalBox {
+            Text { text: "Metronome:"; }
+            Button { text: "Start"; on-click => { root.metronome_start(bpm, beats_per_bar, note_value); } }
+            Button { text: "Stop"; on-click => { root.metronome_stop(); } }
+            SpinBox { value: bpm; min: 40; max: 240; }
+            ComboBox { model: ["4/4", "6/8", "Custom"]; current-index: time_signature_index; }
+            SpinBox { value: beats_per_bar; min: 1; max: 16; }
+            SpinBox { value: note_value; min: 1; max: 16; }
+        }
+        // Master Controls
+        HorizontalBox {
+            Button { text: "Play"; on-click => { root.play(); } }
+            Button { text: "Stop"; on-click => { root.stop(); } }
+            Text { text: "Transpose:"; }
+            Slider { value: global_transpose; min: -12; max: 12; step: 1;
+                on-released => { root.master_changed(global_transpose, limiter_threshold, low_cut, high_cut); }
+            }
+            Text { text: "Limiter:"; }
+            Slider { value: limiter_threshold; min: 0.1; max: 1.0; step: 0.01;
+                on-released => { root.master_changed(global_transpose, limiter_threshold, low_cut, high_cut); }
+            }
+            Text { text: "Low Cut:"; }
+            Slider { value: low_cut; min: 20; max: 2000; step: 1;
+                on-released => { root.master_changed(global_transpose, limiter_threshold, low_cut, high_cut); }
+            }
+            Text { text: "High Cut:"; }
+            Slider { value: high_cut; min: 2000; max: 20000; step: 1;
+                on-released => { root.master_changed(global_transpose, limiter_threshold, low_cut, high_cut); }
+            }
+        }
+        // Status
+        Text { text: status_message; }
+    }
+
+    // Expose properties for Rust
+    in-out property <[TrackData]> tracks;
+    in-out property <int> bpm;
+    in-out property <int> time_signature_index;
+    in-out property <int> beats_per_bar;
+    in-out property <int> note_value;
+    in-out property <int> global_transpose;
+    in-out property <float> limiter_threshold;
+    in-out property <float> low_cut;
+    in-out property <float> high_cut;
+    in-out property <string> status_message;
+
+    // Callbacks for Rust glue
+    callback play();
+    callback stop();
+    callback add_song();
+    callback remove_song();
+    callback metronome_start(int bpm, int beats, int note);
+    callback metronome_stop();
+    callback tracks_changed([TrackData] tracks);
+    callback master_changed(int transpose, float limiter, float low_cut, float high_cut);
+}
+
+struct TrackData {
+    name: string,
+    volume: float,
+    pan: int, // 0=L, 1=C, 2=R
+    mute: bool,
+    solo: bool,
+    transpose: bool,
+}

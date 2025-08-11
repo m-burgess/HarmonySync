@@ -13,11 +13,21 @@ pitch_shift = "1.0"
 fundsp = "0.18"
 gstreamer = "0.22"
 gstreamer-video = "0.22"
+eframe = "0.27"
+egui_video = "0.7"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 rfd = "0.14"
 reqwest = { version = "0.12", features = ["blocking", "json"] }
 tokio = { version = "1", features = ["full"] } // For async if needed
+dasp = { version = "0.11", features = ["signal", "ring_buffer", "interpolate", "interpolate-linear"] }
+dasp_signal = "0.11"
+dasp_ring_buffer = "0.11"
+dasp_interpolate = "0.11"
 
 [build-dependencies]
 slint-build = "1.7"
+
+[[bin]]
+name = "audience_screen"
+path = "audience_screen/main.rs"

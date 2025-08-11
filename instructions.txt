@@ -1,5 +1,60 @@
 This project will entirely be written with Rust and Slint. Only use those to build out this application.
-The goal of the project:
+
+# Progress Update (as of August 2025):
+
+## Architecture & Structure
+- Project uses clean architecture: domain, application, infrastructure, and presentation layers.
+- Modular folder structure with clear separation of concerns.
+- Unit tests are created for each function and must pass before integration.
+
+## Audio
+- Multitrack player implemented with per-track fader, LCR pan, mute, solo, and global transpose (except click, guide, drums, percussion).
+- Supported audio formats: MP3, FLAC, OGG, WAV, M4A, etc.
+- Click and Guide tracks auto-pan left; others pan right; master output is stereo.
+- Low cut and high cut filters implemented.
+- Limiter implemented to prevent clipping.
+- Metronome feature implemented, outputting on left channel only, and can be saved per song.
+- Mixer configuration can be saved/loaded per song (JSON).
+- If no audio files are found, the mixer displays "no audio files found".
+- Unit tests exist for pan, transpose, filters, limiter, solo/mute logic, and metronome.
+
+## Video & Images
+- Supported video: MP4, MOV, etc.
+- Supported images: PNG, JPG, JPEG, etc.
+- Backgrounds folder holds all videos and images for lyric display.
+- Video backgrounds for the audience screen are handled by a separate egui+egui_video process for smooth playback.
+- Main Slint app communicates with the audience screen via TCP socket, sending JSON updates for video path and lyrics.
+- Every lyric or image transition uses a 0.2s fade in/out. (Audience screen video/lyrics fade handled in egui process.)
+
+## GUI & Presentation
+- Main GUI built with Slint, dark themed, resizable.
+- Lyrics column and media column layout.
+- Setlist supports drag-and-drop reordering.
+- Directory chooser for song library.
+- Display configuration menu for setting confidence monitor and audience screens.
+- Confidence monitor and audience screens have full screen functionality and can be toggled from the main GUI.
+- Users can set fonts and font sizes for audience/confidence screens.
+- All text centered, max 2 lines per slide.
+- Bible verse API integration planned.
+
+## Confidence Monitor
+- Will display current and next lyrics, clock at top, video countdown at bottom.
+- Full screen and font configuration supported.
+
+## IPC & Integration
+- Main app and audience screen communicate via TCP socket (JSON).
+- Audience screen is a separate binary using egui and egui_video for smooth video loops and overlays.
+
+# Remaining/Planned Features
+- Sync lyric videos with click/SPLIT/STEREO files from multitracks.
+- Save mixer configuration per song (done for audio, extend for video if needed).
+- Bible verse API integration.
+- Media column to display additional media (sermon slides, etc.).
+- 2s fade out for non-background videos/images at end.
+- MIDI in/out communication.
+- More robust error handling and user feedback.
+
+# Original Goals (for reference)
 -Play multitracks using a master clock. The master clock will be "click", or "SPLIT" or "STEREO" by default. 
 -Display video background loops and images to layer lyrics over
 -Display an audience screen with media and text for lyrics
@@ -32,4 +87,4 @@ The goal of the project:
 - The Confidence monitor and Audience screens need to have full screen functionality as well as options on the main GUI to be turned on or off. 
 - Need a Limiter to prevent any clipping
 -Main GUI layout will have a lyrics column and a media column. The lyrics column will hold a background and lyric text only. The media column will display any other media found in a folder. For example, sermon slides are created in canva and exported into a folder along with videos and images that pastor wants to use during his sermon. 
--Bible Verse functionality to connect to a free API bible to retrieve any translation
+-Bible Verse functionality to connect to a free API bible to retrieve any
