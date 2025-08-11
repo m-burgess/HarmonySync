@@ -1,0 +1,35 @@
+This project will entirely be written with Rust and Slint. Only use those to build out this application.
+The goal of the project:
+-Play multitracks using a master clock. The master clock will be "click", or "SPLIT" or "STEREO" by default. 
+-Display video background loops and images to layer lyrics over
+-Display an audience screen with media and text for lyrics
+-Display a confidence monitor with current selected lyrics, next slide lyrics, a clock at the top of the screen and a video countdown timer at the bottom of the screen.
+-Ability to have midi in and midi out communication.
+-Dark themed
+-Keep all text centered with only 2 lines per slide
+-Library folder will contain sub folders of songs. Songs can be added to a setlist in the GUI
+-The setlist songs can have drag and drop functionality to move the song order around
+-Backgrounds folder will hold all videos and images that lyrcis will be displayed over.
+-Each Song folder will contain audio files as well as lyrics.txt. This txt file will need to be processed into clickable slides with only 2 lines of text when the song is loaded. The audio files will need to be loaded into a multirack player. Each track will need a fader, LCR Pan buttons, Mute, and Solo buttons.
+-The multitrack player must have a global transpose function that will transpose all audio files except file that contain the names click, guide, drums, or percussion.
+- When a song is loaded, Click and Guide will automatically pan Left and all other track will pan right. The master output must be stereo.
+- The GUI needs to have access to the song library or a directory chooser to select multiple songs at the same time. 
+- If there are no audio files in the track, the multitrack mixer will display no audio files found. 
+- Every lyric or image transition needs a 0.2 second fade in and out. 
+- Any video other than background videos from the backgrounds directory and the multitrack audio need to have a 2 second fade out time when they end. 
+- Supported Audio (MP3, FLAC, OGG, WAV, M4A, etc..)
+- Supported Video (MP4, MOV, etc..)
+- Supported Images (PNG, JPG, JPEG, etc..)
+- Need a way to sync lyric videos up with the  "click", or "SPLIT" or "STEREO"  files from the multitracks.
+-Need a way to send a metronome out of the left side of the stereo signal only. the metronome feature can be saved per song.
+-Need a way to save the mixer configuration per song into the song folder. Perhaps JSON or XML.
+- Need a low cut filer and a high cut filter function
+- Use clean architecture to build this project so it can easily be updated and tested. 
+- Create unit tests for each function built. Ensure that the tests pass before giving a solution.
+- Users need to be able to set their confidence monitor and Audience Screen displays in a display configuration menu.
+- Users need to be able to set different fonts and font sizes for the text displayed on the audience screen and confidence monitor. 
+- The main application GUI needs to be able to be resized.
+- The Confidence monitor and Audience screens need to have full screen functionality as well as options on the main GUI to be turned on or off. 
+- Need a Limiter to prevent any clipping
+-Main GUI layout will have a lyrics column and a media column. The lyrics column will hold a background and lyric text only. The media column will display any other media found in a folder. For example, sermon slides are created in canva and exported into a folder along with videos and images that pastor wants to use during his sermon. 
+-Bible Verse functionality to connect to a free API bible to retrieve any translation
