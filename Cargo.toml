@@ -1,34 +1,21 @@
 
 [package]
-name = "slint-presenter"
+name = "HarmonySync"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-slint = "1.7"
+iced = "0.12.1"
 rodio = { version = "0.18", features = ["symphonia-all"] }
 cpal = "0.15"
 midir = "0.10"
 pitch_shift = "1.0"
 fundsp = "0.18"
 gstreamer = "0.22"
-gstreamer-video = "0.22"
-eframe = "0.27"
-egui_video = "0.7"
+dasp = { version = "0.11", features = ["signal", "ring_buffer", "interpolate", "interpolate-linear"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-rfd = "0.14"
-reqwest = { version = "0.12", features = ["blocking", "json"] }
-tokio = { version = "1", features = ["full"] }
-dasp = { version = "0.11", features = ["signal", "ring_buffer", "interpolate", "interpolate-linear"] }
-dasp_signal = "0.11"
-dasp_ring_buffer = "0.11"
-dasp_interpolate = "0.11"
+rfd = "0.15.4"
 
-[build-dependencies]
-slint-build = "1.7"
+tempfile = "3.23.0"
 
-[[bin]]
-name = "audience_screen"
-
-path = "audience_screen/main.rs"
