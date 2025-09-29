@@ -1,6 +1,5 @@
-This project will entirely be written with Rust and Slint. Only use those to build out this application.
-
-# Progress Update (as of August 2025):
+This project will entirely be written with Rust and tauri with html, css, and javascript as UI. Only use those to build out this application.
+to run this application run "cargo run --bin HarmonySync"
 
 ## Architecture & Structure
 - Project uses clean architecture: core, data, and presentation layers.
@@ -20,7 +19,6 @@ This project will entirely be written with Rust and Slint. Only use those to bui
 - Supported images: PNG, JPG, JPEG, etc.
 - Backgrounds folder holds all videos and images for lyric display.
 - Video backgrounds for the audience screen are handled by a separate egui+egui_video process for smooth playback.
-- Main Slint app communicates with the audience screen via TCP socket, sending JSON updates for video path and lyrics.
 - Every lyric or image transition uses a 0.2s fade in/out. (Audience screen video/lyrics fade handled in egui process.)
 
 ## GUI & Presentation
