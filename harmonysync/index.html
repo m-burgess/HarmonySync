@@ -5,9 +5,27 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>harmonysync</title>
+    <link rel="stylesheet" href="src/style.css">
   </head>
   <body>
-    <div id="app"></div>
+    <div class="container">
+      <div class="col" id="setlist-col">
+        <button id="add-audio-button">Add to Setlist</button>
+        <ul id="setlist"></ul>
+      </div>
+      <div class="col" id="slide-col"></div>
+      <div class="col" id="preview-col"></div>
+    </div>
+    <div id="multitrack-player">
+      <div class="track-controls" id="track-controls">
+        <!-- Dynamically generated track controls will go here -->
+      </div>
+      <div class="player-controls">
+        <button id="play-all-button">Play All</button>
+        <button id="stop-all-button">Stop All</button>
+        <button id="start-from-beginning-button">Start From Beginning</button>
+      </div>
+    </div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

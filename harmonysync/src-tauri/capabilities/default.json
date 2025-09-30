@@ -6,6 +6,10 @@
     "main"
   ],
   "permissions": [
-    "core:default"
+    "core:default",
+    "dialog:allow-open",
+    "core:path:default",
+    "dialog:default",
+    "fs:default"
   ]
 }
