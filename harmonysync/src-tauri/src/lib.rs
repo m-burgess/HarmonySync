@@ -1,18 +1,29 @@
+mod application;
+mod domain;
+
+use tauri::Manager;
+
+fn setup_windows(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    let main_window = app.get_webview_window("main").unwrap();
+
+    if cfg!(debug_assertions) {
+        main_window.open_devtools();
+    }
+    Ok(())
+}
+
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_dialog::init()) // Add this line
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
-            if cfg!(debug_assertions) {
-                app.handle().plugin(
-                    tauri_plugin_log::Builder::default()
-                        .level(log::LevelFilter::Info)
-                        .build(),
-                )?;
-            }
-            Ok(())
+            setup_windows(app)
         })
+        .invoke_handler(tauri::generate_handler![
+            application::commands::generate_background_css
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

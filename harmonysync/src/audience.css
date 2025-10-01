@@ -1,0 +1,24 @@
+body {
+  background-color: black;
+  overflow: hidden;
+}
+
+#lyric-display {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh; /* Take full viewport height */
+  padding: 20px; /* Add some padding around the lyrics */
+  box-sizing: border-box; /* Include padding in height calculation */
+}
+
+#lyric-display p {
+  text-align: center;
+  font-size: 46px;
+  color: white;
+  text-transform: uppercase;
+  text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000;
+  margin: 10px 0; /* Add some vertical margin between lines */
+  line-height: 1.2; /* Adjust line height for better readability */
+}
