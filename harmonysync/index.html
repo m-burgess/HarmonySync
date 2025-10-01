@@ -14,16 +14,20 @@
         <ul id="setlist"></ul>
       </div>
       <div class="col" id="slide-col"></div>
-      <div class="col" id="preview-col"></div>
+      <div class="col" id="preview-col">
+        <button id="open-audience-screen-button">Open Audience Screen</button>
+      </div>
     </div>
     <div id="multitrack-player">
-      <div class="track-controls" id="track-controls">
-        <!-- Dynamically generated track controls will go here -->
-      </div>
       <div class="player-controls">
         <button id="play-all-button">Play All</button>
         <button id="stop-all-button">Stop All</button>
         <button id="start-from-beginning-button">Start From Beginning</button>
+        <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="1">
+        <label for="volume-slider">Volume</label>
+      </div>
+      <div class="track-controls" id="track-controls">
+        <!-- Dynamically generated track controls will go here -->
       </div>
     </div>
     <script type="module" src="/src/main.js"></script>

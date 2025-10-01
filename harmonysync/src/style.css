@@ -45,6 +45,8 @@ body {
 
 #slide-col {
   flex: 2;
+  overflow-y: auto;
+  max-height: calc(100vh - 200px);
 }
 
 #preview-col {
@@ -57,6 +59,7 @@ body {
   padding: 15px;
   margin: 10px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  overflow-x: auto;
 }
 
 .track-controls {

@@ -3,13 +3,15 @@
   "identifier": "default",
   "description": "enables the default permissions",
   "windows": [
-    "main"
+    "main",
+    "audience"
   ],
   "permissions": [
     "core:default",
     "dialog:allow-open",
     "core:path:default",
     "dialog:default",
-    "fs:default"
+    "fs:default",
+    "core:event:allow-listen"
   ]
 }
