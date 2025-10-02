@@ -1,4 +1,4 @@
-import { emit } from '@tauri-apps/api/event';
+import * as Tauri from '@tauri-apps/api';
 import { setPan } from './audio.js';
 
 export function createSlide(slide, index) {
@@ -18,7 +18,29 @@ export function createSlide(slide, index) {
     });
 
     slideDiv.addEventListener('click', () => {
-        emit('display-lyric-slide', { text: slide.text, section: slide.section });
+        // Emit the original event for the audience screen
+        console.log('Emitting display-lyric-slide with payload:', { text: slide.text, section: slide.section });
+        Tauri.event.emit('display-lyric-slide', { text: slide.text, section: slide.section });
+
+        // Emit the new, more detailed event for the confidence monitor
+        const allSlides = Array.from(document.querySelectorAll('.slide'));
+        const currentSlideIndex = allSlides.findIndex(s => s.dataset.slideIndex === slideDiv.dataset.slideIndex);
+        
+        const nextSlideElement = allSlides[currentSlideIndex + 1];
+        
+        const payload = {
+            current: slide,
+            next: null
+        };
+
+        if (nextSlideElement) {
+            // Reconstruct the next slide's data from its DOM element
+            const nextSection = nextSlideElement.querySelector('.slide-section-label').textContent.replace(/[\[\]]/g, '');
+            const nextText = Array.from(nextSlideElement.querySelectorAll('p')).map(p => p.textContent);
+            payload.next = { text: nextText, section: nextSection };
+        }
+        console.log('Emitting display-confidence-slide with payload:', payload);
+        Tauri.event.emit('display-confidence-slide', payload);
     });
 
     return slideDiv;

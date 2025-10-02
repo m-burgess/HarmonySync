@@ -1,24 +1,19 @@
 body {
-  background-color: black;
-  overflow: hidden;
+    background-color: black;
+    color: white; /* Assuming white text for visibility on black */
+    font-family: sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    overflow: hidden;
 }
 
 #lyric-display {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  height: 100vh; /* Take full viewport height */
-  padding: 20px; /* Add some padding around the lyrics */
-  box-sizing: border-box; /* Include padding in height calculation */
-}
-
-#lyric-display p {
-  text-align: center;
-  font-size: 46px;
-  color: white;
-  text-transform: uppercase;
-  text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000;
-  margin: 10px 0; /* Add some vertical margin between lines */
-  line-height: 1.2; /* Adjust line height for better readability */
+    text-align: center;
+    font-size: 72px; /* Changed from 48px to 72px */
+    text-transform: uppercase;
+    padding: 20px;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 5px #000; /* Black outline */
 }

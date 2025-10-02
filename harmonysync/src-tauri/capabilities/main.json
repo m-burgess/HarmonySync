@@ -1,0 +1,18 @@
+{
+  "identifier": "main-capability",
+  "description": "Capability for the main window to create other windows.",
+  "windows": [ "main", "audience", "confidence" ],
+  "permissions": [
+    "core:window:allow-create",
+    "core:window:allow-show",
+    "core:window:allow-hide",
+    "core:window:allow-is-visible",
+    "dialog:allow-open",
+    "core:path:allow-basename",
+    "fs:allow-read-dir",
+    "fs:allow-read-file",
+    "core:event:allow-listen",
+    "core:event:allow-emit",
+    "core:window:allow-get-all-windows"
+  ]
+}

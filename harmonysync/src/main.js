@@ -3,6 +3,7 @@ import * as Tauri from '@tauri-apps/api';
 import * as TauriDialog from '@tauri-apps/plugin-dialog';
 import * as TauriPath from '@tauri-apps/api/path';
 import * as TauriFs from '@tauri-apps/plugin-fs';
+import { Window } from '@tauri-apps/api/window'; // Corrected import
 import { loadAudioFile, playAllTracks, stopAllTracks, goToBeginningAllTracks, tracks, audioContext } from './audio.js';
 import { createSlide, createTrackControl, applyDefaultPanning } from './ui.js';
 import { parseLyricsToSlides } from './lyrics.js';
@@ -15,22 +16,43 @@ document.addEventListener('DOMContentLoaded', () => {
   const stopAllButton = document.getElementById('stop-all-button');
   const startFromBeginningButton = document.getElementById('start-from-beginning-button');
   const openAudienceScreenButton = document.getElementById('open-audience-screen-button');
+  const openConfidenceScreenButton = document.getElementById('open-confidence-screen-button');
+
+  let currentBackgroundCssContent = ''; // New variable to store background CSS
 
   if (playAllButton) playAllButton.addEventListener('click', playAllTracks);
   if (stopAllButton) stopAllButton.addEventListener('click', stopAllTracks);
   if (startFromBeginningButton) startFromBeginningButton.addEventListener('click', goToBeginningAllTracks);
+
   if (openAudienceScreenButton) {
-    openAudienceScreenButton.addEventListener('click', () => {
-        const audienceWindow = new Tauri.window.WebviewWindow('audience', {
-            url: 'audience.html',
-            title: 'Audience Screen'
-        });
-        audienceWindow.once('tauri://created', function () {
-            // window successfully created
-        });
-        audienceWindow.once('tauri://error', function (e) {
-            // an error occurred during webview window creation
-        });
+    openAudienceScreenButton.addEventListener('click', async () => {
+        let currentAudienceWindow = await Window.getByLabel('audience');
+        if (currentAudienceWindow) {
+            // Window already exists, toggle visibility
+            if (await currentAudienceWindow.isVisible()) {
+                currentAudienceWindow.hide();
+            } else {
+                currentAudienceWindow.show();
+                // Re-emit background if it exists and window is shown
+                if (currentBackgroundCssContent) {
+                    Tauri.event.emit('set-background', currentBackgroundCssContent);
+                }
+            }
+        }
+    });
+  }
+
+  if (openConfidenceScreenButton) {
+    openConfidenceScreenButton.addEventListener('click', async () => {
+        let currentConfidenceWindow = await Window.getByLabel('confidence');
+        if (currentConfidenceWindow) {
+            // Window already exists, toggle visibility
+            if (await currentConfidenceWindow.isVisible()) {
+                currentConfidenceWindow.hide();
+            } else {
+                currentConfidenceWindow.show();
+            }
+        }
     });
   }
 
@@ -102,7 +124,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (backgroundCssContent instanceof Uint8Array) {
                     backgroundCssContent = new TextDecoder().decode(backgroundCssContent);
                 }
-                Tauri.event.emit('set-background', backgroundCssContent);
+                currentBackgroundCssContent = backgroundCssContent; // Store the content
+                Tauri.event.emit('set-background', currentBackgroundCssContent);
             }
 
             const loadingPromises = audioFiles.map(async (file) => {
@@ -124,12 +147,17 @@ document.addEventListener('DOMContentLoaded', () => {
                   panValue: 0, // Initialize pan value
                 };
                 tracks.push(track);
-                const trackControl = createTrackControl(track);
-                trackControlsContainer.appendChild(trackControl);
+                return createTrackControl(track);
               }
+              return null;
             });
 
-            await Promise.all(loadingPromises);
+            const trackControls = await Promise.all(loadingPromises);
+            const fragment = document.createDocumentFragment();
+            trackControls.filter(Boolean).forEach(control => {
+              fragment.appendChild(control);
+            });
+            trackControlsContainer.appendChild(fragment);
 
             const currentLoadingMessage = document.getElementById('loading-message');
             if (currentLoadingMessage) {
