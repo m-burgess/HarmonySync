@@ -1,7 +1,7 @@
 import * as Tauri from '@tauri-apps/api';
 
 Tauri.event.listen('set-background', (event) => {
-  console.log('set-background event received:', event.payload);
+  console.log('Audience: set-background event received:', event.payload);
   const head = document.getElementsByTagName('head')[0];
   const oldStyle = document.getElementById('song-background-style');
   if (oldStyle) {
@@ -15,13 +15,9 @@ Tauri.event.listen('set-background', (event) => {
 });
 
 Tauri.event.listen('display-lyric-slide', (event) => {
+  console.log('Audience: display-lyric-slide event received:', event.payload);
   const lyricDisplay = document.getElementById('lyric-display');
   if (lyricDisplay) {
-    lyricDisplay.innerHTML = ''; // Clear previous content
-    event.payload.text.forEach(line => {
-      const p = document.createElement('p');
-      p.textContent = line;
-      lyricDisplay.appendChild(p);
-    });
+    lyricDisplay.innerHTML = event.payload.text.join('<br>'); // Join lines with <br>
   }
 });

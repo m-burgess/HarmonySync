@@ -1,6 +1,7 @@
 import * as TauriFs from '@tauri-apps/plugin-fs';
 
 let audioContext;
+let audioBufferCache = new Map(); // Cache for AudioBuffer objects
 let tracks = []; // Stores { buffer, source, gainNode, pannerNode, isPlaying, startTime, offset, path, name, panValue }
 let isPlayingAll = false;
 let lastPlayTime = 0;
@@ -10,9 +11,14 @@ async function loadAudioFile(path) {
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
   }
 
+  if (audioBufferCache.has(path)) {
+    return audioBufferCache.get(path);
+  }
+
   try {
     const binaryData = await TauriFs.readFile(path);
     const audioBuffer = await audioContext.decodeAudioData(binaryData.buffer);
+    audioBufferCache.set(path, audioBuffer);
     return audioBuffer;
   } catch (error) {
     console.error('Error loading audio file:', path, error);

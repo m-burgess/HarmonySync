@@ -1,0 +1,53 @@
+body, html {
+    background-color: #000;
+    color: #fff;
+    font-family: sans-serif;
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+.monitor-container {
+    display: flex;
+    flex-direction: column; /* Stack items vertically */
+    justify-content: center; /* Center vertically */
+    align-items: center; /* Center horizontally */
+    gap: 20px;
+    padding: 20px;
+    box-sizing: border-box;
+    height: 100%;
+}
+
+.text-columns-wrapper {
+    display: flex;
+    justify-content: center; /* Center columns horizontally */
+    gap: 20px; /* Space between columns */
+    width: 100%; /* Take full width of parent */
+}
+
+.slide-column {
+    flex: 1; /* Allow columns to grow and shrink */
+    text-transform: uppercase;
+    font-size: 72px; /* Changed from 48px to 72px */
+    font-weight: bold;
+    text-align: center;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 5px #000; /* Black outline */
+}
+
+#clock-display {
+    color: white;
+    font-size: 72px; /* Set clock font size to 72px */
+    font-weight: bold;
+    text-align: center;
+    margin-top: 20px; /* Space from the text columns */
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 5px #000; /* Black outline */
+}
+
+#current-slide-display {
+    color: white;
+}
+
+#next-slide-display {
+    color: yellow;
+}
