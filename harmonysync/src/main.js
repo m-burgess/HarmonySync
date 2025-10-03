@@ -1,5 +1,7 @@
 import './style.css';
 import * as Tauri from '@tauri-apps/api';
+import { invoke } from '@tauri-apps/api/core';
+import { emit } from '@tauri-apps/api/event';
 import * as TauriDialog from '@tauri-apps/plugin-dialog';
 import * as TauriPath from '@tauri-apps/api/path';
 import * as TauriFs from '@tauri-apps/plugin-fs';
@@ -35,7 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentAudienceWindow.show();
                 // Re-emit background if it exists and window is shown
                 if (currentBackgroundCssContent) {
-                    Tauri.event.emit('set-background', currentBackgroundCssContent);
+                    emit('set-background', currentBackgroundCssContent);
                 }
             }
         }
@@ -117,17 +119,9 @@ document.addEventListener('DOMContentLoaded', () => {
               }
             }
 
-            const backgroundCssFile = entries.find(entry => entry.name === 'background.css' && entry.children === undefined);
-            if (backgroundCssFile) {
-                const backgroundCssPath = `${listItem.dataset.path}/${backgroundCssFile.name}`;
-                let backgroundCssContent = await TauriFs.readFile(backgroundCssPath, { encoding: 'utf8' });
-                if (backgroundCssContent instanceof Uint8Array) {
-                    backgroundCssContent = new TextDecoder().decode(backgroundCssContent);
-                }
-                currentBackgroundCssContent = backgroundCssContent; // Store the content
-                Tauri.event.emit('set-background', currentBackgroundCssContent);
-            }
-
+            const backgroundCssContent = await invoke('generate_background_css', { path: listItem.dataset.path });
+            currentBackgroundCssContent = backgroundCssContent; // Store the content
+                                emit('set-background', currentBackgroundCssContent);
             const loadingPromises = audioFiles.map(async (file) => {
               const trackPath = `${listItem.dataset.path}/${file.name}`;
               const fileName = file.name;

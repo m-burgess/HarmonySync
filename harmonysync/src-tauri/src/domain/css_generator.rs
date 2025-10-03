@@ -27,29 +27,9 @@ fn generate_css_content() -> String {
     let g3 = rng.gen_range(100..256);
     let b3 = rng.gen_range(100..256);
 
-    let r4 = rng.gen_range(100..256);
-    let g4 = rng.gen_range(100..256);
-    let b4 = rng.gen_range(100..256);
-
     format!(
-        "body {{
-    background: linear-gradient(-45deg, rgb({}, {}, {}), rgb({}, {}, {}), rgb({}, {}, {}), rgb({}, {}, {}));
-    background-size: 400% 400%;
-    animation: gradient 15s ease infinite;
-}}
-
-@keyframes gradient {{
-    0% {{
-        background-position: 0% 50%;
-    }}
-    50% {{
-        background-position: 100% 50%;
-    }}
-    100% {{
-        background-position: 0% 50%;
-    }}
-}}",
-        r1, g1, b1, r2, g2, b2, r3, g3, b3, r4, g4, b4
+        "body {{\n    background: linear-gradient(-45deg, rgb({}, {}, {}), rgb({}, {}, {}), rgb({}, {}, {}));\n    background-size: 400% 400%;\n    animation: gradient 15s ease infinite;\n}}\n\n@keyframes gradient {{\n    0% {{\n        background-position: 0% 50%;\n    }}\n    50% {{\n        background-position: 100% 50%;\n    }}\n    100% {{\n        background-position: 0% 50%;\n    }}\n}}",
+        r1, g1, b1, r2, g2, b2, r3, g3, b3
     )
 }
 
