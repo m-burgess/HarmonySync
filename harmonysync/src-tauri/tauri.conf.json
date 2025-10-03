@@ -43,8 +43,12 @@
       }
     ],
     "security": {
-      "csp": null,
-      "capabilities": ["main-capability"]
+      "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost",
+      "capabilities": ["main-capability"],
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$APPDATA/**", "$RESOURCE/**", "$LOCALDATA/**", "$PICTURES/**", "$DESKTOP/**", "$DOCUMENT/**", "$DOWNLOAD/**"]
+      }
     }
   },
   "bundle": {
