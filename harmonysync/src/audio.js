@@ -6,10 +6,27 @@ let tracks = []; // Stores { buffer, source, gainNode, pannerNode, isPlaying, st
 let isPlayingAll = false;
 let lastPlayTime = 0;
 
-async function loadAudioFile(path) {
-  if (!audioContext) {
+function getAudioContext() {
+  if (!audioContext || audioContext.state === 'closed') {
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
   }
+  return audioContext;
+}
+
+function getTracks() {
+  return tracks;
+}
+
+function clearAudioBufferCache() {
+  audioBufferCache.clear();
+}
+
+function clearTracks() {
+  tracks.length = 0;
+}
+
+async function loadAudioFile(path) {
+  const currentAudioContext = getAudioContext();
 
   if (audioBufferCache.has(path)) {
     return audioBufferCache.get(path);
@@ -17,7 +34,7 @@ async function loadAudioFile(path) {
 
   try {
     const binaryData = await TauriFs.readFile(path);
-    const audioBuffer = await audioContext.decodeAudioData(binaryData.buffer);
+    const audioBuffer = await currentAudioContext.decodeAudioData(binaryData.buffer);
     audioBufferCache.set(path, audioBuffer);
     return audioBuffer;
   } catch (error) {
@@ -34,29 +51,32 @@ function setPan(track, panValue) {
 }
 
 function playAllTracks() {
-  if (!audioContext || tracks.length === 0) return;
+  const currentAudioContext = getAudioContext();
+  const currentTracks = getTracks();
 
-  if (audioContext.state === 'suspended') {
-    audioContext.resume();
+  if (!currentAudioContext || currentTracks.length === 0) return;
+
+  if (currentAudioContext.state === 'suspended') {
+    currentAudioContext.resume();
   }
 
   if (!isPlayingAll) {
-    lastPlayTime = audioContext.currentTime;
-    tracks.forEach(track => {
+    lastPlayTime = currentAudioContext.currentTime;
+    currentTracks.forEach(track => {
       if (track.source) {
         track.source.stop();
         track.source = null;
       }
 
-      track.source = audioContext.createBufferSource();
+      track.source = currentAudioContext.createBufferSource();
       track.source.buffer = track.buffer;
 
-      track.gainNode = audioContext.createGain();
-      track.pannerNode = audioContext.createStereoPanner();
+      track.gainNode = currentAudioContext.createGain();
+      track.pannerNode = currentAudioContext.createStereoPanner();
 
       track.source.connect(track.gainNode);
       track.gainNode.connect(track.pannerNode);
-      track.pannerNode.connect(audioContext.destination);
+      track.pannerNode.connect(currentAudioContext.destination);
 
       track.gainNode.gain.value = track.isMuted ? 0 : 0.7; // Set initial gain based on mute state and default volume
       setPan(track, track.panValue || 0); // Apply current pan value
@@ -69,38 +89,45 @@ function playAllTracks() {
 }
 
 function stopAllTracks() {
-  if (!audioContext || tracks.length === 0) return;
+  const currentAudioContext = getAudioContext();
+  const currentTracks = getTracks();
 
-  tracks.forEach(track => {
+  if (!currentAudioContext || currentTracks.length === 0) return;
+
+  currentTracks.forEach(track => {
     if (track.source && track.isPlaying) {
       track.source.stop();
       track.source = null;
       track.isPlaying = false;
-      track.offset += audioContext.currentTime - lastPlayTime;
+      track.offset += currentAudioContext.currentTime - lastPlayTime;
     }
   });
   isPlayingAll = false;
 }
 
 function goToBeginningAllTracks() {
-  if (!audioContext || tracks.length === 0) return;
+  const currentAudioContext = getAudioContext();
+  const currentTracks = getTracks();
+
+  if (!currentAudioContext || currentTracks.length === 0) return;
 
   stopAllTracks();
-  tracks.forEach(track => {
+  currentTracks.forEach(track => {
     track.offset = 0;
   });
 }
 
 function applyDefaultPanning() {
+  const currentTracks = getTracks();
   let hasClickOrGuide = false;
-  tracks.forEach(track => {
+  currentTracks.forEach(track => {
     const lowerCaseName = track.name.toLowerCase();
     if (lowerCaseName.includes('click') || lowerCaseName.includes('guide')) {
       hasClickOrGuide = true;
     }
   });
 
-  tracks.forEach(track => {
+  currentTracks.forEach(track => {
     const lowerCaseName = track.name.toLowerCase();
     let panValue = 0; // Default to center
 
@@ -118,8 +145,10 @@ function applyDefaultPanning() {
 }
 
 export {
-    audioContext,
-    tracks,
+    getAudioContext,
+    getTracks,
+    clearAudioBufferCache,
+    clearTracks,
     loadAudioFile,
     setPan,
     playAllTracks,

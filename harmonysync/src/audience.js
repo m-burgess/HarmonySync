@@ -21,3 +21,11 @@ Tauri.event.listen('display-lyric-slide', (event) => {
     lyricDisplay.innerHTML = event.payload.text.join('<br>'); // Join lines with <br>
   }
 });
+
+Tauri.event.listen('clear-lyric-display', () => {
+  console.log('Audience: clear-lyric-display event received');
+  const lyricDisplay = document.getElementById('lyric-display');
+  if (lyricDisplay) {
+    lyricDisplay.innerHTML = '';
+  }
+});
