@@ -33,3 +33,15 @@ Tauri.event.listen('display-confidence-slide', (event) => {
         nextSlideDisplay.innerHTML = next && next.text ? next.text.join('<br>') : '';
     }
 });
+
+Tauri.event.listen('clear-confidence-display', () => {
+    console.log('Confidence: clear-confidence-display event received');
+    const currentSlideDisplay = document.getElementById('current-slide-display');
+    const nextSlideDisplay = document.getElementById('next-slide-display');
+    if (currentSlideDisplay) {
+        currentSlideDisplay.innerHTML = '';
+    }
+    if (nextSlideDisplay) {
+        nextSlideDisplay.innerHTML = '';
+    }
+});

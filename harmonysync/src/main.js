@@ -6,9 +6,9 @@ import * as TauriDialog from '@tauri-apps/plugin-dialog';
 import * as TauriPath from '@tauri-apps/api/path';
 import * as TauriFs from '@tauri-apps/plugin-fs';
 import { Window } from '@tauri-apps/api/window'; // Corrected import
-import { loadAudioFile, playAllTracks, stopAllTracks, goToBeginningAllTracks, tracks, audioContext } from './audio.js';
-import { createSlide, createTrackControl, applyDefaultPanning } from './ui.js';
-import { parseLyricsToSlides } from './lyrics.js';
+import { loadAudioFile, setPan, playAllTracks, stopAllTracks, goToBeginningAllTracks, applyDefaultPanning, getAudioContext, getTracks, clearAudioBufferCache, clearTracks } from './audio.js';
+import { createSlide, createTrackControl, applyDefaultPanning as applyDefaultPanningUI } from './ui.js';
+import * as Lyrics from './lyrics.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   const addSetlistButton = document.getElementById('add-audio-button');
@@ -79,14 +79,18 @@ document.addEventListener('DOMContentLoaded', () => {
           try {
             // Clear previous tracks and reset audio context if a new folder is loaded
             stopAllTracks(); // Stop any currently playing tracks
-            tracks.length = 0;
-            if (audioContext) {
-              audioContext.close();
+            clearTracks();
+            if (getAudioContext().state !== 'closed') {
+              getAudioContext().close();
             }
+            clearAudioBufferCache();
             trackControlsContainer.innerHTML = ''; // Clear existing track controls
 
             const slideCol = document.getElementById('slide-col');
             slideCol.innerHTML = ''; // Clear existing slides
+
+            emit('clear-lyric-display');
+            emit('clear-confidence-display');
 
             const loadingMessage = document.createElement('p');
             loadingMessage.textContent = 'Loading tracks...';
@@ -110,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
               }
               console.log('lyricsContent:', lyricsContent);
               if (typeof lyricsContent === 'string' && lyricsContent.length > 0) {
-                const slides = parseLyricsToSlides(lyricsContent);
+                const slides = Lyrics.parseLyricsToSlides(lyricsContent);
                 console.log('slides:', slides);
                 slides.forEach((slide, index) => {
                   const slideDiv = createSlide(slide, index);
@@ -125,23 +129,27 @@ document.addEventListener('DOMContentLoaded', () => {
             const loadingPromises = audioFiles.map(async (file) => {
               const trackPath = `${listItem.dataset.path}/${file.name}`;
               const fileName = file.name;
-              const audioBuffer = await loadAudioFile(trackPath);
-              if (audioBuffer) {
-                const track = {
-                  buffer: audioBuffer,
-                  source: null,
-                  gainNode: audioContext.createGain(),
-                  pannerNode: audioContext.createStereoPanner(),
-                  isPlaying: false,
-                  isMuted: false,
-                  startTime: 0,
-                  offset: 0,
-                  path: trackPath,
-                  name: fileName,
-                  panValue: 0, // Initialize pan value
-                };
-                tracks.push(track);
-                return createTrackControl(track);
+              try {
+                const audioBuffer = await loadAudioFile(trackPath);
+                if (audioBuffer) {
+                  const track = {
+                    buffer: audioBuffer,
+                    source: null,
+                    gainNode: getAudioContext().createGain(),
+                    pannerNode: getAudioContext().createStereoPanner(),
+                    isPlaying: false,
+                    isMuted: false,
+                    startTime: 0,
+                    offset: 0,
+                    path: trackPath,
+                    name: fileName,
+                    panValue: 0, // Initialize pan value
+                  };
+                  getTracks().push(track);
+                  return createTrackControl(track);
+                }
+              } catch (audioError) {
+                console.error(`Error loading audio file ${fileName}:`, audioError);
               }
               return null;
             });
@@ -158,9 +166,10 @@ document.addEventListener('DOMContentLoaded', () => {
               currentLoadingMessage.remove();
             }
 
-            applyDefaultPanning(tracks);
+            applyDefaultPanning();
           } catch (error) {
             console.error('Error reading directory:', error);
+            TauriDialog.message(`Failed to load setlist from ${listItem.dataset.path}. It might have been moved or deleted. Please select a valid folder.`, { title: 'Error Loading Setlist', type: 'error' });
           }
         });
       }
