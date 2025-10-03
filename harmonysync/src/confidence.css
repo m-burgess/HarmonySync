@@ -11,16 +11,15 @@ body, html {
 .monitor-container {
     display: flex;
     flex-direction: column; /* Stack items vertically */
-    justify-content: center; /* Center vertically */
+    justify-content: flex-start; /* Align items to the top */
     align-items: center; /* Center horizontally */
-    gap: 20px;
     padding: 20px;
     box-sizing: border-box;
     height: 100%;
 }
 
 .text-columns-wrapper {
-    display: flex;
+    display: none; /* Hidden by default */
     justify-content: center; /* Center columns horizontally */
     gap: 20px; /* Space between columns */
     width: 100%; /* Take full width of parent */
@@ -36,12 +35,13 @@ body, html {
 }
 
 #clock-display {
+    display: block; /* Changed from none to block */
     color: white;
-    font-size: 72px; /* Set clock font size to 72px */
+    font-size: 72px;
     font-weight: bold;
     text-align: center;
-    margin-top: 20px; /* Space from the text columns */
-    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 5px #000; /* Black outline */
+    flex-shrink: 0; /* Prevent clock from shrinking */
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 5px #000;
 }
 
 #current-slide-display {
@@ -50,4 +50,23 @@ body, html {
 
 #next-slide-display {
     color: yellow;
+}
+
+#confidence-image-display {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    max-height: 100%; /* Maximize height */
+    overflow: hidden; /* Hide overflowing parts of the scaled image */
+    flex-grow: 1; /* Allow image display to take available space */
+    margin-bottom: 20px; /* Space between image and clock */
+}
+
+.confidence-slide-image {
+    width: 100%; /* Fill container */
+    height: 100%; /* Fill container */
+    object-fit: cover; /* Cover container, potentially cropping */
+    transform: scale(0.80) translateY(-10%); /* Scale up by 80% and move up by 10% */
+    border: 2px solid #555;
+    border-radius: 8px;
 }

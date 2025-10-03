@@ -53,6 +53,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentConfidenceWindow.hide();
             } else {
                 currentConfidenceWindow.show();
+                // Emit a default empty slide to show the clock initially
+                emit('display-confidence-slide', { current: null, next: null });
             }
         }
     });
@@ -105,8 +107,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }).sort((a, b) => a.name.localeCompare(b.name));
 
             const lyricsFile = entries.find(entry => entry.name === 'lyrics.txt' && entry.children === undefined);
-            console.log('lyricsFile:', lyricsFile);
+            let allSlides = [];
+
             if (lyricsFile) {
+              // Process as a song folder (lyrics only)
+              console.log('lyricsFile:', lyricsFile);
               const lyricsPath = `${listItem.dataset.path}/${lyricsFile.name}`;
               let lyricsContent = await TauriFs.readFile(lyricsPath, { encoding: 'utf8' });
               if (lyricsContent instanceof Uint8Array) {
@@ -114,14 +119,30 @@ document.addEventListener('DOMContentLoaded', () => {
               }
               console.log('lyricsContent:', lyricsContent);
               if (typeof lyricsContent === 'string' && lyricsContent.length > 0) {
-                const slides = Lyrics.parseLyricsToSlides(lyricsContent);
-                console.log('slides:', slides);
-                slides.forEach((slide, index) => {
-                  const slideDiv = createSlide(slide, index);
-                  slideCol.appendChild(slideDiv);
-                });
+                const lyricsSlides = Lyrics.parseLyricsToSlides(lyricsContent);
+                allSlides = lyricsSlides; // Only lyrics slides
               }
+            } else {
+              // Process as a sermon/presentation folder (images only)
+              const imageFiles = entries.filter(entry => {
+                const isFile = entry.children === undefined;
+                const isImage = isFile && (entry.name.endsWith('.png') || entry.name.endsWith('.jpg') || entry.name.endsWith('.jpeg') || entry.name.endsWith('.gif') || entry.name.endsWith('.webp'));
+                return isImage;
+              }).sort((a, b) => a.name.localeCompare(b.name));
+
+              const imageSlides = imageFiles.map(file => ({
+                type: 'image',
+                path: `${listItem.dataset.path}/${file.name}`,
+                name: file.name
+              }));
+              allSlides = imageSlides; // Only image slides
             }
+
+            console.log('allSlides:', allSlides);
+            allSlides.forEach((slide, index) => {
+              const slideDiv = createSlide(slide, index);
+              slideCol.appendChild(slideDiv);
+            });
 
             const backgroundCssContent = await invoke('generate_background_css', { path: listItem.dataset.path });
             currentBackgroundCssContent = backgroundCssContent; // Store the content

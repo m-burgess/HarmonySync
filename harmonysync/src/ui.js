@@ -1,43 +1,64 @@
 import * as Tauri from '@tauri-apps/api';
+import { convertFileSrc } from '@tauri-apps/api/core';
 import { setPan } from './audio.js';
 
 export function createSlide(slide, index) {
     const slideDiv = document.createElement('div');
     slideDiv.classList.add('slide');
     slideDiv.dataset.slideIndex = index;
+    slideDiv.dataset.slideType = slide.type || 'lyric'; // Add slide type to dataset
 
-    const sectionLabel = document.createElement('span');
-    sectionLabel.classList.add('slide-section-label');
-    sectionLabel.textContent = `[${slide.section}]`;
-    slideDiv.appendChild(sectionLabel);
+    if (slide.type === 'image') {
+        const img = document.createElement('img');
+        img.src = convertFileSrc(slide.path);
+        img.alt = slide.name; // Use image name as alt text
+        img.classList.add('slide-image'); // Add a class for styling
+        slideDiv.appendChild(img);
+        slideDiv.dataset.slidePath = slide.path; // Store path for next slide reconstruction
+        slideDiv.dataset.slideName = slide.name; // Store name for next slide reconstruction
+    } else {
+        const sectionLabel = document.createElement('span');
+        sectionLabel.classList.add('slide-section-label');
+        sectionLabel.textContent = `[${slide.section}]`;
+        slideDiv.appendChild(sectionLabel);
 
-    slide.text.forEach(line => {
-        const p = document.createElement('p');
-        p.textContent = line;
-        slideDiv.appendChild(p);
-    });
+        slide.text.forEach(line => {
+            const p = document.createElement('p');
+            p.textContent = line;
+            slideDiv.appendChild(p);
+        });
+    }
 
     slideDiv.addEventListener('click', () => {
         // Emit the original event for the audience screen
-        console.log('Emitting display-lyric-slide with payload:', { text: slide.text, section: slide.section });
-        Tauri.event.emit('display-lyric-slide', { text: slide.text, section: slide.section });
+        if (slide.type === 'image') {
+            console.log('Emitting display-image-slide with payload:', { path: slide.path, name: slide.name });
+            Tauri.event.emit('display-image-slide', { path: slide.path, name: slide.name });
+        } else {
+            console.log('Emitting display-lyric-slide with payload:', { text: slide.text, section: slide.section });
+            Tauri.event.emit('display-lyric-slide', { text: slide.text, section: slide.section });
+        }
 
         // Emit the new, more detailed event for the confidence monitor
         const allSlides = Array.from(document.querySelectorAll('.slide'));
         const currentSlideIndex = allSlides.findIndex(s => s.dataset.slideIndex === slideDiv.dataset.slideIndex);
-        
+
         const nextSlideElement = allSlides[currentSlideIndex + 1];
-        
+
         const payload = {
             current: slide,
             next: null
         };
 
         if (nextSlideElement) {
-            // Reconstruct the next slide's data from its DOM element
-            const nextSection = nextSlideElement.querySelector('.slide-section-label').textContent.replace(/[\[\]]/g, '');
-            const nextText = Array.from(nextSlideElement.querySelectorAll('p')).map(p => p.textContent);
-            payload.next = { text: nextText, section: nextSection };
+            const nextSlideType = nextSlideElement.dataset.slideType;
+            if (nextSlideType === 'image') {
+                payload.next = { type: 'image', path: nextSlideElement.dataset.slidePath, name: nextSlideElement.dataset.slideName };
+            } else {
+                const nextSection = nextSlideElement.querySelector('.slide-section-label').textContent.replace(/[\[\]]/g, '');
+                const nextText = Array.from(nextSlideElement.querySelectorAll('p')).map(p => p.textContent);
+                payload.next = { text: nextText, section: nextSection };
+            }
         }
         console.log('Emitting display-confidence-slide with payload:', payload);
         Tauri.event.emit('display-confidence-slide', payload);
