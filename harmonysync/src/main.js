@@ -123,7 +123,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 allSlides = lyricsSlides; // Only lyrics slides
               }
             } else {
-              // Process as a sermon/presentation folder (images only)
+              // Process as a sermon/presentation folder (images and/or videos)
+              const videoFiles = entries.filter(entry => {
+                const isFile = entry.children === undefined;
+                const isVideo = isFile && (entry.name.endsWith('.mp4') || entry.name.endsWith('.mov') || entry.name.endsWith('.avi') || entry.name.endsWith('.mkv'));
+                return isVideo;
+              }).sort((a, b) => a.name.localeCompare(b.name));
+
+              const videoSlides = videoFiles.map(file => ({
+                type: 'video',
+                path: `${listItem.dataset.path}/${file.name}`,
+                name: file.name
+              }));
+
               const imageFiles = entries.filter(entry => {
                 const isFile = entry.children === undefined;
                 const isImage = isFile && (entry.name.endsWith('.png') || entry.name.endsWith('.jpg') || entry.name.endsWith('.jpeg') || entry.name.endsWith('.gif') || entry.name.endsWith('.webp'));
@@ -135,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 path: `${listItem.dataset.path}/${file.name}`,
                 name: file.name
               }));
-              allSlides = imageSlides; // Only image slides
+              allSlides = [...videoSlides, ...imageSlides]; // Combine video and image slides
             }
 
             console.log('allSlides:', allSlides);
