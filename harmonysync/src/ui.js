@@ -24,6 +24,13 @@ export function createSlide(slide, index) {
         slideDiv.appendChild(videoName);
         slideDiv.dataset.slidePath = slide.path; // Store path for next slide reconstruction
         slideDiv.dataset.slideName = slide.name; // Store name for next slide reconstruction
+    } else if (slide.type === 'youtube') {
+        const youtubeName = document.createElement('span');
+        youtubeName.classList.add('slide-youtube-name');
+        youtubeName.textContent = `Youtube: ${slide.name}`;
+        slideDiv.appendChild(youtubeName);
+        slideDiv.dataset.slideVideoId = slide.videoId; // Store videoId for next slide reconstruction
+        slideDiv.dataset.slideName = slide.name; // Store name for next slide reconstruction
     } else { // This is now specifically for lyrics slides
         const sectionLabel = document.createElement('span');
         sectionLabel.classList.add('slide-section-label');
@@ -55,6 +62,8 @@ export function createSlide(slide, index) {
             // Instead of emitting directly, call videoManager.playVideo
             // videoManager.playVideo will handle invoking Rust and emitting the event with stream URL
             videoManager.playVideo(slide.path, slide.duration);
+        } else if (slide.type === 'youtube') {
+            Tauri.event.emit('navigate', { videoId: slide.videoId });
         } else {
             console.log('Emitting display-lyric-slide with payload:', { text: slide.text, section: slide.section });
             Tauri.event.emit('display-lyric-slide', { text: slide.text, section: slide.section });
@@ -77,6 +86,8 @@ export function createSlide(slide, index) {
                 payload.next = { type: 'image', path: nextSlideElement.dataset.slidePath, name: nextSlideElement.dataset.slideName };
             } else if (nextSlideType === 'video') {
                 payload.next = { type: 'video', path: nextSlideElement.dataset.slidePath, name: nextSlideElement.dataset.slideName };
+            } else if (nextSlideType === 'youtube') {
+                payload.next = { type: 'youtube', videoId: nextSlideElement.dataset.slideVideoId, name: nextSlideElement.dataset.slideName };
             } else {
                 const nextSection = nextSlideElement.querySelector('.slide-section-label').textContent.replace(/[\[\]]/g, '');
                 const nextText = Array.from(nextSlideElement.querySelectorAll('p')).map(p => p.textContent);

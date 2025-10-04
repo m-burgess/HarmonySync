@@ -147,7 +147,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 path: `${listItem.dataset.path}/${file.name}`,
                 name: file.name
               }));
-              allSlides = [...videoSlides, ...imageSlides]; // Combine video and image slides
+
+              const youtubeFile = entries.find(entry => entry.name === 'youtube.txt' && entry.children === undefined);
+              if (youtubeFile) {
+                  const youtubePath = `${listItem.dataset.path}/${youtubeFile.name}`;
+                  let youtubeContent = await TauriFs.readFile(youtubePath, { encoding: 'utf8' });
+                  if (youtubeContent instanceof Uint8Array) {
+                      youtubeContent = new TextDecoder().decode(youtubeContent);
+                  }
+                  if (typeof youtubeContent === 'string' && youtubeContent.length > 0) {
+                      const youtubeSlides = youtubeContent.split('\n').map(line => {
+                          line = line.trim();
+                          if (!line) return null;
+                          const parts = line.split(',');
+                          let url = parts[0].trim();
+                          if (!url.startsWith('http')) {
+                              url = 'https://' + url;
+                          }
+                          const name = parts[1] ? parts[1].trim() : '';
+                          const videoId = url.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/)[1];
+                          return { type: 'youtube', videoId, name };
+                      }).filter(Boolean);
+                      allSlides = [...videoSlides, ...imageSlides, ...youtubeSlides]; // Combine video, image and youtube slides
+                  }
+              } else {
+                allSlides = [...videoSlides, ...imageSlides]; // Combine video and image slides
+              }
             }
 
             console.log('allSlides:', allSlides);
