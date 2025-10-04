@@ -22,7 +22,11 @@ pub fn run() {
             setup_windows(app)
         })
         .invoke_handler(tauri::generate_handler![
-            application::commands::generate_background_css
+            application::commands::generate_background_css,
+            application::commands::display_video_slide,
+            application::commands::get_video_metadata,
+            application::commands::transcode_video,
+            application::commands::stream_video_with_vlc
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

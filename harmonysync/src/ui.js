@@ -1,6 +1,7 @@
 import * as Tauri from '@tauri-apps/api';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { setPan } from './audio.js';
+import { videoManager } from './video.js';
 
 export function createSlide(slide, index) {
     const slideDiv = document.createElement('div');
@@ -16,7 +17,14 @@ export function createSlide(slide, index) {
         slideDiv.appendChild(img);
         slideDiv.dataset.slidePath = slide.path; // Store path for next slide reconstruction
         slideDiv.dataset.slideName = slide.name; // Store name for next slide reconstruction
-    } else {
+    } else if (slide.type === 'video') {
+        const videoName = document.createElement('span');
+        videoName.classList.add('slide-video-name');
+        videoName.textContent = `Video: ${slide.name}`;
+        slideDiv.appendChild(videoName);
+        slideDiv.dataset.slidePath = slide.path; // Store path for next slide reconstruction
+        slideDiv.dataset.slideName = slide.name; // Store name for next slide reconstruction
+    } else { // This is now specifically for lyrics slides
         const sectionLabel = document.createElement('span');
         sectionLabel.classList.add('slide-section-label');
         sectionLabel.textContent = `[${slide.section}]`;
@@ -29,11 +37,24 @@ export function createSlide(slide, index) {
         });
     }
 
+    // Hover effects
+    slideDiv.addEventListener('mouseenter', () => {
+        slideDiv.classList.add('slide-hover');
+    });
+
+    slideDiv.addEventListener('mouseleave', () => {
+        slideDiv.classList.remove('slide-hover');
+    });
+
     slideDiv.addEventListener('click', () => {
         // Emit the original event for the audience screen
         if (slide.type === 'image') {
             console.log('Emitting display-image-slide with payload:', { path: slide.path, name: slide.name });
             Tauri.event.emit('display-image-slide', { path: slide.path, name: slide.name });
+        } else if (slide.type === 'video') {
+            // Instead of emitting directly, call videoManager.playVideo
+            // videoManager.playVideo will handle invoking Rust and emitting the event with stream URL
+            videoManager.playVideo(slide.path, slide.duration);
         } else {
             console.log('Emitting display-lyric-slide with payload:', { text: slide.text, section: slide.section });
             Tauri.event.emit('display-lyric-slide', { text: slide.text, section: slide.section });
@@ -54,6 +75,8 @@ export function createSlide(slide, index) {
             const nextSlideType = nextSlideElement.dataset.slideType;
             if (nextSlideType === 'image') {
                 payload.next = { type: 'image', path: nextSlideElement.dataset.slidePath, name: nextSlideElement.dataset.slideName };
+            } else if (nextSlideType === 'video') {
+                payload.next = { type: 'video', path: nextSlideElement.dataset.slidePath, name: nextSlideElement.dataset.slideName };
             } else {
                 const nextSection = nextSlideElement.querySelector('.slide-section-label').textContent.replace(/[\[\]]/g, '');
                 const nextText = Array.from(nextSlideElement.querySelectorAll('p')).map(p => p.textContent);
