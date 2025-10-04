@@ -5,10 +5,11 @@ import { emit } from '@tauri-apps/api/event';
 import * as TauriDialog from '@tauri-apps/plugin-dialog';
 import * as TauriPath from '@tauri-apps/api/path';
 import * as TauriFs from '@tauri-apps/plugin-fs';
-import { Window } from '@tauri-apps/api/window'; // Corrected import
+import { Window } from '@tauri-apps/api/window';
 import { loadAudioFile, setPan, playAllTracks, stopAllTracks, goToBeginningAllTracks, applyDefaultPanning, getAudioContext, getTracks, clearAudioBufferCache, clearTracks } from './audio.js';
 import { createSlide, createTrackControl, applyDefaultPanning as applyDefaultPanningUI } from './ui.js';
 import * as Lyrics from './lyrics.js';
+import { videoManager } from './video.js'; // Import videoManager
 
 document.addEventListener('DOMContentLoaded', () => {
   const addSetlistButton = document.getElementById('add-audio-button');
@@ -19,6 +20,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const startFromBeginningButton = document.getElementById('start-from-beginning-button');
   const openAudienceScreenButton = document.getElementById('open-audience-screen-button');
   const openConfidenceScreenButton = document.getElementById('open-confidence-screen-button');
+  const openFileButton = document.getElementById('open-file-button'); // Get reference to open file button
+  const openVideoButton = document.getElementById('open-video-button'); // Get reference to open video button
 
   let currentBackgroundCssContent = ''; // New variable to store background CSS
 
@@ -59,6 +62,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
   }
+
+  // Existing openFileButton listener
+  if (openFileButton) openFileButton.addEventListener('click', openFile);
+
+  // New openVideoButton listener
+  if (openVideoButton) openVideoButton.addEventListener('click', openVideoFile);
 
   addSetlistButton.addEventListener('click', async () => {
     try {
@@ -123,19 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 allSlides = lyricsSlides; // Only lyrics slides
               }
             } else {
-              // Process as a sermon/presentation folder (images and/or videos)
-              const videoFiles = entries.filter(entry => {
-                const isFile = entry.children === undefined;
-                const isVideo = isFile && (entry.name.endsWith('.mp4') || entry.name.endsWith('.mov') || entry.name.endsWith('.avi') || entry.name.endsWith('.mkv'));
-                return isVideo;
-              }).sort((a, b) => a.name.localeCompare(b.name));
-
-              const videoSlides = videoFiles.map(file => ({
-                type: 'video',
-                path: `${listItem.dataset.path}/${file.name}`,
-                name: file.name
-              }));
-
+              // Process as a sermon/presentation folder (images only)
               const imageFiles = entries.filter(entry => {
                 const isFile = entry.children === undefined;
                 const isImage = isFile && (entry.name.endsWith('.png') || entry.name.endsWith('.jpg') || entry.name.endsWith('.jpeg') || entry.name.endsWith('.gif') || entry.name.endsWith('.webp'));
@@ -147,7 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 path: `${listItem.dataset.path}/${file.name}`,
                 name: file.name
               }));
-              allSlides = [...videoSlides, ...imageSlides]; // Combine video and image slides
+              allSlides = imageSlides; // Only image slides
             }
 
             console.log('allSlides:', allSlides);
@@ -211,3 +208,151 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+async function openFile() {
+    try {
+        const selected = await TauriDialog.open({
+            multiple: false,
+            filters: [{
+                name: 'Text',
+                extensions: ['txt', 'md']
+            }]
+        });
+
+        if (Array.isArray(selected)) {
+            // User selected multiple files, but we only expect one
+            console.warn('Multiple files selected, taking the first one.');
+            await processSongFile(selected[0]);
+        } else if (selected) {
+            // User selected a single file
+            await processSongFile(selected);
+        }
+    } catch (error) {
+        console.error('Error opening file:', error);
+    }
+}
+
+async function processSongFile(filePath, content) {
+    // This function is currently unused in the provided main.js, but kept for context
+    // It would typically parse a song file and create slides.
+    console.log(`Processing song file: ${filePath}`);
+    // Placeholder for actual song processing logic
+}
+
+async function openVideoFile() {
+    try {
+        const selected = await TauriDialog.open({
+            multiple: false,
+            filters: [{
+                name: 'Video',
+                extensions: ['mp4', 'mov', 'avi', 'mkv']
+            }]
+        });
+
+        if (Array.isArray(selected)) {
+            // User selected multiple files, but we only expect one
+            console.warn('Multiple video files selected, taking the first one.');
+            await processVideoFile(selected[0]);
+        } else if (selected) {
+            // User selected a single file
+            await processVideoFile(selected);
+        }
+    } catch (error) {
+        console.error('Error opening video file:', error);
+    }
+}
+
+// Replace processVideoFile in harmonysync/src/main.js
+async function processVideoFile(filePath) {
+  try {
+    const metadata = await videoManager.getVideoMetadata(filePath);
+    let targetPath = filePath;
+
+    if (metadata.audioCodec !== 'aac') {
+      const shouldTranscode = await TauriDialog.ask(
+        'Audio codec is not AAC. Transcode to ensure compatibility?',
+        { title: 'Transcoding Required', type: 'warning' }
+      );
+
+      if (shouldTranscode) {
+        const outputDir = await TauriPath.appDataDir();
+        const uniqueId = Date.now();
+        const outputPath = await TauriPath.join(outputDir, `transcoded_${uniqueId}.mp4`);
+        await videoManager.transcodeVideo(filePath, outputPath);
+        targetPath = outputPath;
+        metadata = await videoManager.getVideoMetadata(targetPath);[Error] Video processing failed: – "path.resolve_directory not allowed. Permissions associated with this command: core:path:allow-resolve-directory, core:path:default"
+	processVideoFile (main.js:291)
+      }
+    }
+
+    currentVideoPath = targetPath;
+    songSlides.push({ type: 'video', path: currentVideoPath });
+    renderSlideList();
+  } catch (error) {
+    console.error('Video processing failed:', error);
+    TauriDialog.message('Failed to process video.', { title: 'Error', type: 'error' });
+  }
+}
+
+let songSlides = [];
+let currentSlideIndex = 0;
+
+function renderSlideList() {
+    const slideCol = document.getElementById('slide-col');
+    slideCol.innerHTML = ''; // Clear existing slides
+
+    songSlides.forEach((slide, index) => {
+        const slideDiv = createSlide(slide, index);
+        slideDiv.addEventListener('click', () => displaySlide(index)); // Add click listener here
+        slideCol.appendChild(slideDiv);
+    });
+}
+
+async function displaySlide(index) {
+    console.log('Entering displaySlide for index:', index);
+    if (index < 0 || index >= songSlides.length) {
+        console.warn('Slide index out of bounds:', index);
+        return;
+    }
+
+    currentSlideIndex = index;
+    const slide = songSlides[currentSlideIndex];
+
+    console.log('Displaying slide:', slide.type, slide);
+
+    // Clear previous displays
+    emit('clear-lyric-display');
+    emit('clear-confidence-display');
+
+    if (slide.type === 'lyrics') {
+        emit('display-lyric-slide', { text: slide.text });
+        emit('display-confidence-slide', { current: slide, next: songSlides[currentSlideIndex + 1] });
+    } else if (slide.type === 'image') {
+        emit('display-image-slide', { path: slide.path, name: slide.name });
+        emit('display-confidence-slide', { current: slide, next: songSlides[currentSlideIndex + 1] });
+    } else if (slide.type === 'video') {
+        // Play video on audience screen and show countdown on confidence monitor
+        await videoManager.playVideo(slide.path, slide.duration);
+        // The confidence monitor will be updated by the `start-video-countdown` event emitted from Rust
+        // We still need to emit a confidence slide to ensure the clock is visible and other elements are hidden
+        emit('display-confidence-slide', { current: slide, next: songSlides[currentSlideIndex + 1] });
+    }
+
+    // Highlight current slide in the list
+    const slideElements = document.querySelectorAll('.slide-item');
+    slideElements.forEach((el, i) => {
+        if (i === currentSlideIndex) {
+            el.classList.add('active-slide');
+        } else {
+            el.classList.remove('active-slide');
+        }
+    });
+}
+
+function clearDisplays() {
+    emit('clear-lyric-display');
+    emit('clear-confidence-display');
+}
+
+// Initial render
+renderSlideList();
