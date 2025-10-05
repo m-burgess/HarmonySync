@@ -7,7 +7,25 @@ export function createSlide(slide, index) {
     const slideDiv = document.createElement('div');
     slideDiv.classList.add('slide');
     slideDiv.dataset.slideIndex = index;
+    slideDiv.dataset.originalIndex = index;
     slideDiv.dataset.slideType = slide.type || 'lyric'; // Add slide type to dataset
+    slideDiv.draggable = true;
+
+    slideDiv.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', slideDiv.dataset.slideIndex);
+    });
+
+    slideDiv.addEventListener('dragenter', () => {
+        slideDiv.classList.add('drag-over');
+    });
+
+    slideDiv.addEventListener('dragleave', () => {
+        slideDiv.classList.remove('drag-over');
+    });
+
+    slideDiv.addEventListener('drop', () => {
+        slideDiv.classList.remove('drag-over');
+    });
 
     if (slide.type === 'image') {
         const img = document.createElement('img');
@@ -24,6 +42,19 @@ export function createSlide(slide, index) {
         slideDiv.appendChild(videoName);
         slideDiv.dataset.slidePath = slide.path; // Store path for next slide reconstruction
         slideDiv.dataset.slideName = slide.name; // Store name for next slide reconstruction
+    } else if (slide.type === 'youtube') {
+        const img = document.createElement('img');
+        img.src = `https://img.youtube.com/vi/${slide.videoId}/0.jpg`;
+        img.alt = `Youtube thumbnail for ${slide.name}`;
+        img.classList.add('slide-image');
+        slideDiv.appendChild(img);
+
+        const youtubeName = document.createElement('span');
+        youtubeName.classList.add('slide-youtube-name');
+        youtubeName.textContent = `Youtube: ${slide.name}`;
+        slideDiv.appendChild(youtubeName);
+        slideDiv.dataset.slideVideoId = slide.videoId; // Store videoId for next slide reconstruction
+        slideDiv.dataset.slideName = slide.name; // Store name for next slide reconstruction
     } else { // This is now specifically for lyrics slides
         const sectionLabel = document.createElement('span');
         sectionLabel.classList.add('slide-section-label');
@@ -37,16 +68,10 @@ export function createSlide(slide, index) {
         });
     }
 
-    // Hover effects
-    slideDiv.addEventListener('mouseenter', () => {
-        slideDiv.classList.add('slide-hover');
-    });
-
-    slideDiv.addEventListener('mouseleave', () => {
-        slideDiv.classList.remove('slide-hover');
-    });
-
     slideDiv.addEventListener('click', () => {
+        document.querySelectorAll('.slide').forEach(s => s.classList.remove('selected'));
+        slideDiv.classList.add('selected');
+
         // Emit the original event for the audience screen
         if (slide.type === 'image') {
             console.log('Emitting display-image-slide with payload:', { path: slide.path, name: slide.name });
@@ -55,6 +80,8 @@ export function createSlide(slide, index) {
             // Instead of emitting directly, call videoManager.playVideo
             // videoManager.playVideo will handle invoking Rust and emitting the event with stream URL
             videoManager.playVideo(slide.path, slide.duration);
+        } else if (slide.type === 'youtube') {
+            Tauri.event.emit('navigate', { videoId: slide.videoId });
         } else {
             console.log('Emitting display-lyric-slide with payload:', { text: slide.text, section: slide.section });
             Tauri.event.emit('display-lyric-slide', { text: slide.text, section: slide.section });
@@ -77,6 +104,8 @@ export function createSlide(slide, index) {
                 payload.next = { type: 'image', path: nextSlideElement.dataset.slidePath, name: nextSlideElement.dataset.slideName };
             } else if (nextSlideType === 'video') {
                 payload.next = { type: 'video', path: nextSlideElement.dataset.slidePath, name: nextSlideElement.dataset.slideName };
+            } else if (nextSlideType === 'youtube') {
+                payload.next = { type: 'youtube', videoId: nextSlideElement.dataset.slideVideoId, name: nextSlideElement.dataset.slideName };
             } else {
                 const nextSection = nextSlideElement.querySelector('.slide-section-label').textContent.replace(/[\[\]]/g, '');
                 const nextText = Array.from(nextSlideElement.querySelectorAll('p')).map(p => p.textContent);

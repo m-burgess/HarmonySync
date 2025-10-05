@@ -44,3 +44,18 @@ Tauri.event.listen('clear-lyric-display', () => {
     lyricDisplay.innerHTML = '';
   }
 });
+
+Tauri.event.listen('navigate', (event) => {
+    console.log('Audience: navigate event received:', event.payload);
+    const lyricDisplay = document.getElementById('lyric-display');
+    if (lyricDisplay) {
+        lyricDisplay.innerHTML = ''; // Clear any previous content
+        const iframe = document.createElement('iframe');
+        iframe.src = `https://www.youtube.com/embed/${event.payload.videoId}?autoplay=1`;
+        iframe.width = '100%';
+        iframe.height = '100%';
+        iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+        iframe.allowFullscreen = true;
+        lyricDisplay.appendChild(iframe);
+    }
+});

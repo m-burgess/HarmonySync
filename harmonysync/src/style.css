@@ -179,6 +179,20 @@ button:focus-visible {
   color: #e0e0e0;
   font-size: 1.2em;
   line-height: 1.5;
+  border: 2px solid transparent;
+  transition: border-color 0.2s ease;
+}
+
+.slide.selected {
+  border-color: #007bff;
+}
+
+.slide.drag-over {
+  border-top: 2px solid #007bff;
+}
+
+.slide:hover {
+  background-color: #3a3a3a;
 }
 
 .slide-section-label {
