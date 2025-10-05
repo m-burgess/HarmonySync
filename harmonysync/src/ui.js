@@ -25,6 +25,12 @@ export function createSlide(slide, index) {
         slideDiv.dataset.slidePath = slide.path; // Store path for next slide reconstruction
         slideDiv.dataset.slideName = slide.name; // Store name for next slide reconstruction
     } else if (slide.type === 'youtube') {
+        const img = document.createElement('img');
+        img.src = `https://img.youtube.com/vi/${slide.videoId}/0.jpg`;
+        img.alt = `Youtube thumbnail for ${slide.name}`;
+        img.classList.add('slide-image');
+        slideDiv.appendChild(img);
+
         const youtubeName = document.createElement('span');
         youtubeName.classList.add('slide-youtube-name');
         youtubeName.textContent = `Youtube: ${slide.name}`;
