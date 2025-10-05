@@ -51,7 +51,7 @@ Tauri.event.listen('navigate', (event) => {
     if (lyricDisplay) {
         lyricDisplay.innerHTML = ''; // Clear any previous content
         const iframe = document.createElement('iframe');
-        iframe.src = `https://www.youtube.com/embed/${event.payload.videoId}`;
+        iframe.src = `https://www.youtube.com/embed/${event.payload.videoId}?autoplay=1`;
         iframe.width = '100%';
         iframe.height = '100%';
         iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
