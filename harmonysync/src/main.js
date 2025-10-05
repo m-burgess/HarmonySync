@@ -19,6 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const startFromBeginningButton = document.getElementById('start-from-beginning-button');
   const openAudienceScreenButton = document.getElementById('open-audience-screen-button');
   const openConfidenceScreenButton = document.getElementById('open-confidence-screen-button');
+  const slideCol = document.getElementById('slide-col');
+  let allSlides = [];
 
   let currentBackgroundCssContent = ''; // New variable to store background CSS
 
@@ -28,13 +30,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (openAudienceScreenButton) {
     openAudienceScreenButton.addEventListener('click', async () => {
-        let currentAudienceWindow = await Window.getByLabel('audience');
-        if (currentAudienceWindow) {
-            // Window already exists, toggle visibility
-            if (await currentAudienceWindow.isVisible()) {
-                currentAudienceWindow.hide();
+        let audienceWindow = await Window.getByLabel('audience');
+        if (!audienceWindow) {
+            audienceWindow = new Window('audience', {
+                url: 'audience.html',
+                title: 'Audience Screen'
+            });
+        } else {
+            if (await audienceWindow.isVisible()) {
+                audienceWindow.hide();
             } else {
-                currentAudienceWindow.show();
+                audienceWindow.show();
                 // Re-emit background if it exists and window is shown
                 if (currentBackgroundCssContent) {
                     emit('set-background', currentBackgroundCssContent);
@@ -88,7 +94,6 @@ document.addEventListener('DOMContentLoaded', () => {
             clearAudioBufferCache();
             trackControlsContainer.innerHTML = ''; // Clear existing track controls
 
-            const slideCol = document.getElementById('slide-col');
             slideCol.innerHTML = ''; // Clear existing slides
 
             emit('clear-lyric-display');
@@ -107,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }).sort((a, b) => a.name.localeCompare(b.name));
 
             const lyricsFile = entries.find(entry => entry.name === 'lyrics.txt' && entry.children === undefined);
-            let allSlides = [];
+            allSlides = [];
 
             if (lyricsFile) {
               // Process as a song folder (lyrics only)
@@ -147,7 +152,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 path: `${listItem.dataset.path}/${file.name}`,
                 name: file.name
               }));
-              allSlides = [...videoSlides, ...imageSlides]; // Combine video and image slides
+
+              const youtubeFile = entries.find(entry => entry.name === 'youtube.txt' && entry.children === undefined);
+              if (youtubeFile) {
+                  const youtubePath = `${listItem.dataset.path}/${youtubeFile.name}`;
+                  let youtubeContent = await TauriFs.readFile(youtubePath, { encoding: 'utf8' });
+                  if (youtubeContent instanceof Uint8Array) {
+                      youtubeContent = new TextDecoder().decode(youtubeContent);
+                  }
+                  if (typeof youtubeContent === 'string' && youtubeContent.length > 0) {
+                      const youtubeSlides = youtubeContent.split('\n').map(line => {
+                          line = line.trim();
+                          if (!line) return null;
+                          const parts = line.split(',');
+                          let url = parts[0].trim();
+                          if (!url.startsWith('http')) {
+                              url = 'https://' + url;
+                          }
+                          const name = parts[1] ? parts[1].trim() : '';
+                          const videoId = url.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/)[1];
+                          return { type: 'youtube', videoId, name };
+                      }).filter(Boolean);
+                      allSlides = [...videoSlides, ...imageSlides, ...youtubeSlides]; // Combine video, image and youtube slides
+                  }
+              } else {
+                allSlides = [...videoSlides, ...imageSlides]; // Combine video and image slides
+              }
             }
 
             console.log('allSlides:', allSlides);
@@ -208,6 +238,53 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (error) {
       console.error('Error selecting folder:', error);
+    }
+  });
+
+  slideCol.addEventListener('dragover', (e) => {
+    e.preventDefault();
+  });
+
+  slideCol.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'));
+    const draggedElement = document.querySelector(`[data-slide-index='${draggedIndex}']`);
+    const dropTarget = e.target.closest('.slide');
+
+    if (dropTarget && draggedElement) {
+        const dropTargetIndex = parseInt(dropTarget.dataset.slideIndex);
+
+        const draggedSlide = allSlides[draggedIndex];
+        allSlides.splice(draggedIndex, 1);
+        allSlides.splice(dropTargetIndex, 0, draggedSlide);
+
+        // Re-render all slides
+        slideCol.innerHTML = '';
+        allSlides.forEach((slide, index) => {
+            const slideDiv = createSlide(slide, index);
+            slideCol.appendChild(slideDiv);
+        });
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const selectedSlide = document.querySelector('.slide.selected');
+        if (!selectedSlide) return;
+
+        let nextSlide = null;
+
+        if (e.key === 'ArrowDown') {
+            nextSlide = selectedSlide.nextElementSibling;
+        } else if (e.key === 'ArrowUp') {
+            nextSlide = selectedSlide.previousElementSibling;
+        }
+
+        if (nextSlide && nextSlide.classList.contains('slide')) {
+            nextSlide.click();
+            nextSlide.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
     }
   });
 });
