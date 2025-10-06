@@ -1,7 +1,9 @@
 import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 const host = process.env.TAURI_DEV_HOST;
 export default defineConfig({
   clearScreen: false,
+  plugins: [react()],
   server: {
     port: 5174,
     strictPort: true,
@@ -15,11 +17,11 @@ export default defineConfig({
     minify: !process.env.TAURI_ENV_DEBUG ? 'esbuild' : false,
     sourcemap: !!process.env.TAURI_ENV_DEBUG,
     rollupOptions: {
-      input: {
-        main: 'index.html',
-        audience: 'audience.html',
-      },
-    },
+              input: {
+                main: 'index.html',
+                audience: 'audience.html',
+                confidence: 'confidence.html',
+              },    },
   },
   optimizeDeps: {
     esbuildOptions: {
