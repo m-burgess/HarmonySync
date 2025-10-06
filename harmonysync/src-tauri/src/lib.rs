@@ -26,9 +26,11 @@ pub fn run() {
             application::commands::display_video_slide,
             application::commands::get_video_metadata,
             application::commands::transcode_video,
-            application::commands::stream_video_with_vlc,
-            application::commands::stop_vlc_stream,
-            application::commands::convert_to_ogg
+
+
+            application::commands::convert_to_ogg,
+            application::commands::start_http_server,
+            application::commands::stop_http_server
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

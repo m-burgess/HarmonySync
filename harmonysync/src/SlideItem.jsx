@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import * as TauriEvent from '@tauri-apps/api/event';
 import * as TauriCore from '@tauri-apps/api/core';
-import { videoManager } from './video.js';
 
-const SlideItem = ({ slide, index, isSelected, onSelect, onDragStart, onDragEnter, onDrop, onDragEnd, thumbnailSize }) => {
+
+const SlideItem = ({ slide, index, isSelected, onSelect, onDragStart, onDragEnter, onDrop, onDragEnd, thumbnailSize, onVideoTranscoded }) => {
   const [isDragOver, setIsDragOver] = useState(false);
 
   const handleDragStart = (e) => {
@@ -30,7 +30,24 @@ const SlideItem = ({ slide, index, isSelected, onSelect, onDragStart, onDragEnte
       console.log('Emitting display-image-slide with payload:', { path: slide.path, name: slide.name });
       TauriEvent.emit('display-image-slide', { path: slide.path, name: slide.name });
     } else if (slide.type === 'video') {
-      videoManager.playVideo(slide.path, slide.duration);
+      // Check if the video is already transcoded (i.e., its path points to the cache)
+      const isAlreadyTranscoded = slide.path.includes('/harmonysync/cache/') && slide.path.endsWith('_youtube.mp4');
+
+      if (isAlreadyTranscoded) {
+        console.log('Playing already transcoded video:', slide.path);
+        TauriCore.invoke('display_video_slide', { path: slide.path, duration: slide.duration })
+          .catch(e => console.error('Error displaying video slide:', e));
+      } else {
+        // Transcode video and then display it
+      console.log('Transcoding video:', slide.path);
+      TauriCore.invoke('transcode_video', { inputPath: slide.path })
+        .then((transcodedPath) => {
+          console.log('Transcoded video path:', transcodedPath);
+          onVideoTranscoded(index, transcodedPath); // Update the parent state
+          TauriCore.invoke('display_video_slide', { path: transcodedPath, duration: slide.duration })
+            .catch(e => console.error('Error displaying video slide:', e));
+        })
+        .catch(e => console.error('Error transcoding video:', e));      }
     } else if (slide.type === 'youtube') {
       TauriEvent.emit('navigate', { videoId: slide.videoId });
     } else { // Lyrics slide
@@ -46,7 +63,11 @@ const SlideItem = ({ slide, index, isSelected, onSelect, onDragStart, onDragEnte
     );
   } else if (slide.type === 'video') {
     slideContent = (
-      <span className="slide-video-name">Video: {slide.name}</span>
+      slide.thumbnail_path ? (
+        <img src={TauriCore.convertFileSrc(slide.thumbnail_path)} alt={`Thumbnail for ${slide.name}`} className="slide-image" width={thumbnailSize} height={thumbnailSize} />
+      ) : (
+        <span className="slide-video-name">Video: {slide.name}</span>
+      )
     );
   } else if (slide.type === 'youtube') {
     slideContent = (

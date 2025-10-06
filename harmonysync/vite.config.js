@@ -21,7 +21,9 @@ export default defineConfig({
                 main: 'index.html',
                 audience: 'audience.html',
                 confidence: 'confidence.html',
-              },    },
+              },
+      external: ['@tauri-apps/api'], // Add this line
+    },
   },
   optimizeDeps: {
     esbuildOptions: {

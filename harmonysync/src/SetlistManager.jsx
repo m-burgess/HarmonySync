@@ -3,11 +3,10 @@ import * as TauriDialog from '@tauri-apps/plugin-dialog';
 import * as TauriPath from '@tauri-apps/api/path';
 import * as TauriFs from '@tauri-apps/plugin-fs';
 import * as TauriCore from '@tauri-apps/api/core';
-// import { getCurrent } from '@tauri-apps/api/window'; // Import getCurrent
 import * as TauriEvent from '@tauri-apps/api/event';
 import { loadAudioFile, setPan, playAllTracks, stopAllAudio, goToBeginningAllTracks, applyDefaultPanning, getAudioContext, getTracks, clearAudioBufferCache, clearTracks, cleanupAudio } from './audio.js';
-
 import { parseLyricsToSlides } from './lyrics.js';
+import { getVideoMetadata } from './video.js';
 
 const SetlistManager = ({ setAllSlides, setAllTracks }) => {
   const [setlist, setSetlist] = useState([]);
@@ -42,6 +41,12 @@ const SetlistManager = ({ setAllSlides, setAllTracks }) => {
     setLoadingMessage('Loading folder contents...');
 
     const unlisten = await TauriEvent.listen('ogg-conversion-progress', (event) => {
+      const payload = event.payload;
+      setLoadingProgress(payload.progress);
+      setLoadingMessage(payload.message);
+    });
+
+    const unlistenVideoTranscode = await TauriEvent.listen('video-transcode-progress', (event) => {
       const payload = event.payload;
       setLoadingProgress(payload.progress);
       setLoadingMessage(payload.message);
@@ -123,11 +128,40 @@ const SetlistManager = ({ setAllSlides, setAllTracks }) => {
           return isVideo;
         }).sort((a, b) => a.name.localeCompare(b.name));
 
-        const videoSlides = videoFiles.map(file => ({
-          type: 'video',
-          path: `${itemPath}/${file.name}`,
-          name: file.name
-        }));
+        setLoadingMessage('Loading video metadata...');
+        const videoSlidesPromises = videoFiles.map(async (file) => {
+          const fullPath = `${itemPath}/${file.name}`;
+          const metadata = await getVideoMetadata(fullPath);
+          if (metadata) {
+            // Construct the expected transcoded path
+            const fileNameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.'));
+            const transcodedFileName = `${fileNameWithoutExt}_youtube.mp4`;
+            const cacheDirAbsolute = await TauriPath.join(await TauriPath.appLocalDataDir(), 'harmonysync', 'cache');
+            const expectedTranscodedPath = await TauriPath.join(cacheDirAbsolute, transcodedFileName);
+
+            let videoPathToUse = fullPath;
+
+            // Check if the transcoded file already exists
+            const transcodedExists = await TauriFs.exists(expectedTranscodedPath);
+
+            if (transcodedExists) {
+              console.log(`Found existing transcoded video: ${expectedTranscodedPath}`);
+              videoPathToUse = expectedTranscodedPath;
+            } else {
+              console.log(`Transcoded video not found for ${file.name}. Will transcode on first play.`);
+            }
+
+            return {
+              type: 'video',
+              path: videoPathToUse, // Use transcoded path if exists, else original
+              name: file.name,
+              duration: metadata.duration,
+              thumbnail_path: metadata.thumbnail_path,
+            };
+          }
+          return null; // Skip if metadata fetching fails
+        });
+        const videoSlides = (await Promise.all(videoSlidesPromises)).filter(Boolean);
 
         const imageFiles = entries.filter(entry => {
           const isFile = entry.children === undefined;
@@ -165,7 +199,7 @@ const SetlistManager = ({ setAllSlides, setAllTracks }) => {
                 loadedSlides = [...videoSlides, ...imageSlides, ...youtubeSlides];
             }
         } else {
-          loadedSlides = [...videoFiles, ...imageSlides];
+          loadedSlides = [...videoSlides, ...imageSlides];
         }
       }
 
@@ -173,8 +207,7 @@ const SetlistManager = ({ setAllSlides, setAllTracks }) => {
       setAllSlides(loadedSlides); // Update the allSlides state in App.jsx
 
       setLoadingMessage('Generating background CSS...');
-      const backgroundCssContent = await TauriCore.invoke('generate_background_css', { path: itemPath });
-      setCurrentBackgroundCssContent(backgroundCssContent); // Store the content
+              const backgroundCssContent = await TauriCore.invoke('generate_background_css', { path: itemPath });      setCurrentBackgroundCssContent(backgroundCssContent); // Store the content
       TauriEvent.emit('set-background', backgroundCssContent);
 
       const loadedTracks = [];
@@ -225,6 +258,7 @@ const SetlistManager = ({ setAllSlides, setAllTracks }) => {
       setLoadingProgress(0);
     } finally {
       unlisten(); // Clean up the event listener
+      unlistenVideoTranscode();
     }
   };
 
