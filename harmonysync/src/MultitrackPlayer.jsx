@@ -22,6 +22,33 @@ const MultitrackPlayer = ({ allTracks }) => {
     track.isMuted = newMuteState;
   };
 
+  const sortTracks = (a, b) => {
+    const aName = a.name.toLowerCase();
+    const bName = b.name.toLowerCase();
+
+    // Define a custom order for specific tracks
+    const customOrder = ['click', 'guide'];
+
+    const aIndex = customOrder.indexOf(aName);
+    const bIndex = customOrder.indexOf(bName);
+
+    // If both are in customOrder, sort by their index
+    if (aIndex !== -1 && bIndex !== -1) {
+      return aIndex - bIndex;
+    }
+    // If only 'a' is in customOrder, 'a' comes first
+    if (aIndex !== -1) {
+      return -1;
+    }
+    // If only 'b' is in customOrder, 'b' comes first
+    if (bIndex !== -1) {
+      return 1;
+    }
+
+    // If neither are in customOrder, sort alphabetically
+    return aName.localeCompare(bName);
+  };
+
   return (
     <div id="multitrack-player">
       <div className="player-controls">
@@ -40,7 +67,7 @@ const MultitrackPlayer = ({ allTracks }) => {
         <label htmlFor="volume-slider">Volume</label>
       </div>
       <div className="track-controls" id="track-controls">
-        {allTracks.map((track, index) => (
+        {allTracks.sort(sortTracks).map((track, index) => (
           <TrackControl
             key={index}
             track={track}

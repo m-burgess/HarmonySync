@@ -143,14 +143,15 @@ body {
 
 /* Track Controls */
 #track-controls {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid; /* Use grid for better column control */
+    grid-template-columns: repeat(6, 1fr); /* 6 columns */
     gap: 10px;
     padding: 15px;
     background-color: #222;
     border-top: 1px solid #333;
-    overflow-x: auto;
+    overflow-y: auto; /* Scrollbar for tracks */
     flex-shrink: 0; /* Prevent shrinking */
+    max-height: calc(100% - 60px); /* Adjust based on player-controls height */
 }
 
 .track-control {
@@ -160,7 +161,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 5px;
-    min-width: 150px;
+    /* min-width removed, grid handles sizing */
 }
 
 .track-control button {
@@ -197,6 +198,8 @@ body {
     flex-direction: column;
     gap: 10px;
     flex-shrink: 0;
+    height: 400px; /* Make it taller */
+    overflow-y: auto; /* Add scrollbar */
 }
 
 .player-controls {
