@@ -7,6 +7,11 @@ body {
     overflow: hidden;
 }
 
+#root {
+    width: 100%;
+    height: 100%;
+}
+
 #lyric-display {
     width: 100%;
     height: 100%;

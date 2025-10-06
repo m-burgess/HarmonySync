@@ -185,3 +185,17 @@ pub async fn stream_video_with_vlc(_app_handle: AppHandle, video_path: String) -
 
     Ok(())
 }
+
+#[command]
+pub async fn stop_vlc_stream() -> Result<(), String> {
+    let mut vlc_process_guard = VLC_PROCESS.lock().await;
+    if let Some(mut child) = vlc_process_guard.take() {
+        info!("Stopping VLC process...");
+        let _ = child.kill().await;
+        let _ = child.wait().await;
+        info!("VLC process stopped.");
+    } else {
+        info!("No active VLC process to stop.");
+    }
+    Ok(())
+}

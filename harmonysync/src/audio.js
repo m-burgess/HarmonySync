@@ -1,108 +1,126 @@
 import * as TauriFs from '@tauri-apps/plugin-fs';
 
-let audioContext;
-let audioBufferCache = new Map(); // Cache for AudioBuffer objects
-let tracks = []; // Stores { buffer, source, gainNode, pannerNode, isPlaying, startTime, offset, path, name, panValue }
-let isPlayingAll = false;
-let lastPlayTime = 0;
+let audioContext = null;
+let gainNode = null;
+const audioSources = []; // To keep track of all active audio sources
+const audioBufferCache = new Map(); // Cache for audio buffers
+
+let tracks = []; // Array to hold track objects
+
+export function getTracks() {
+  return tracks;
+}
+
+export function clearTracks() {
+  tracks = [];
+}
+
+export function clearAudioBufferCache() {
+  audioBufferCache.clear();
+}
 
 function getAudioContext() {
   if (!audioContext || audioContext.state === 'closed') {
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    gainNode = audioContext.createGain(); // Re-create gainNode here
+    gainNode.connect(audioContext.destination);
+    console.log('AudioContext initialized.');
   }
   return audioContext;
 }
 
-function getTracks() {
-  return tracks;
+function getGainNode() {
+  // Ensure audio context and gain node are initialized
+  getAudioContext();
+  return gainNode;
 }
 
-function clearAudioBufferCache() {
-  audioBufferCache.clear();
+export function stopAllAudio() {
+  audioSources.forEach(source => {
+    try {
+      source.stop();
+      source.disconnect(); // Disconnect the source from the gain node
+    } catch (e) {
+      console.warn("Error stopping or disconnecting audio source:", e);
+    }
+  });
+  audioSources.length = 0; // Clear the array
 }
 
-function clearTracks() {
-  tracks.length = 0;
-}
-
-async function loadAudioFile(path) {
-  const currentAudioContext = getAudioContext();
-
-  if (audioBufferCache.has(path)) {
-    return audioBufferCache.get(path);
+export function cleanupAudio() {
+  stopAllAudio(); // Stop all playing tracks and disconnect their sources
+  if (audioContext && audioContext.state !== 'closed') {
+    audioContext.close().then(() => {
+      console.log("AudioContext closed successfully.");
+      audioContext = null;
+      gainNode = null; // Also nullify gainNode here
+    }).catch((e) => {
+      console.error("Error closing AudioContext:", e);
+      audioContext = null;
+      gainNode = null; // Also nullify gainNode on error
+    });
+  } else {
+    audioContext = null; // Ensure it's null even if it was already closed or never initialized
+    gainNode = null; // Also nullify gainNode
   }
-
-  try {
-    const binaryData = await TauriFs.readFile(path);
-    const audioBuffer = await currentAudioContext.decodeAudioData(binaryData.buffer);
-    audioBufferCache.set(path, audioBuffer);
-    return audioBuffer;
-  } catch (error) {
-    console.error('Error loading audio file:', path, error);
-    return null;
-  }
+  audioBufferCache.clear(); // Clear the audio buffer cache
 }
 
-function setPan(track, panValue) {
-  if (track.pannerNode) {
+export function setPan(track, panValue) {
+  if (track && track.pannerNode) {
     track.pannerNode.pan.value = panValue;
     track.panValue = panValue;
   }
 }
 
-function playAllTracks() {
-  const currentAudioContext = getAudioContext();
-  const currentTracks = getTracks();
-
-  if (!currentAudioContext || currentTracks.length === 0) return;
-
-  if (currentAudioContext.state === 'suspended') {
-    currentAudioContext.resume();
+export async function loadAudioFile(path) {
+  if (audioBufferCache.has(path)) {
+    return audioBufferCache.get(path);
   }
 
-  if (!isPlayingAll) {
-    lastPlayTime = currentAudioContext.currentTime;
-    currentTracks.forEach(track => {
-      if (track.source) {
-        track.source.stop();
-        track.source = null;
-      }
-
-      track.source = currentAudioContext.createBufferSource();
-      track.source.buffer = track.buffer;
-
-      track.gainNode = currentAudioContext.createGain();
-      track.pannerNode = currentAudioContext.createStereoPanner();
-
-      track.source.connect(track.gainNode);
-      track.gainNode.connect(track.pannerNode);
-      track.pannerNode.connect(currentAudioContext.destination);
-
-      track.gainNode.gain.value = track.isMuted ? 0 : 0.7; // Set initial gain based on mute state and default volume
-      setPan(track, track.panValue || 0); // Apply current pan value
-
-      track.source.start(0, track.offset);
-      track.isPlaying = true;
-    });
-    isPlayingAll = true;
+  try {
+    const audioContext = getAudioContext();
+    const fileContent = await TauriFs.readFile(path);
+    const audioBuffer = await audioContext.decodeAudioData(fileContent.buffer);
+    audioBufferCache.set(path, audioBuffer);
+    return audioBuffer;
+  } catch (error) {
+    console.error(`Error loading or decoding audio file ${path}:`, error);
+    return null;
   }
 }
 
-function stopAllTracks() {
+export function playAllTracks() {
   const currentAudioContext = getAudioContext();
   const currentTracks = getTracks();
 
   if (!currentAudioContext || currentTracks.length === 0) return;
 
   currentTracks.forEach(track => {
-    if (track.source && track.isPlaying) {
-      track.source.stop();
-      track.source = null;
-      track.isPlaying = false;
-      track.offset += currentAudioContext.currentTime - lastPlayTime;
+    if (!track.isPlaying) {
+      const source = currentAudioContext.createBufferSource();
+      source.buffer = track.buffer;
+
+      source.connect(track.pannerNode);
+      track.pannerNode.connect(track.gainNode);
+      track.gainNode.connect(getGainNode());
+
+      source.start(0, track.offset);
+      track.startTime = currentAudioContext.currentTime - track.offset;
+      track.isPlaying = true;
+      track.source = source;
+      audioSources.push(source);
+
+      source.onended = () => {
+        track.isPlaying = false;
+        track.offset = 0; // Reset offset when track ends
+        const index = audioSources.indexOf(source);
+        if (index > -1) {
+          audioSources.splice(index, 1);
+        }
+      };
     }
   });
-  isPlayingAll = false;
 }
 
 function goToBeginningAllTracks() {
@@ -144,15 +162,23 @@ function applyDefaultPanning() {
   });
 }
 
+let globalVolume = 1; // New variable to store global volume
+
+function setGlobalVolume(volume) {
+  globalVolume = volume;
+  const currentTracks = getTracks();
+  currentTracks.forEach(track => {
+    if (track.gainNode) {
+      // Apply global volume in addition to individual track volume (if any)
+      // For simplicity, let's assume individual track volume is 0.7 if not muted
+      track.gainNode.gain.value = track.isMuted ? 0 : globalVolume * (track.individualVolume || 0.7);
+    }
+  });
+}
+
 export {
     getAudioContext,
-    getTracks,
-    clearAudioBufferCache,
-    clearTracks,
-    loadAudioFile,
-    setPan,
-    playAllTracks,
-    stopAllTracks,
     goToBeginningAllTracks,
-    applyDefaultPanning
+    applyDefaultPanning,
+    setGlobalVolume // Export the new function
 }
