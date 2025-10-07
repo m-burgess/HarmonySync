@@ -40,6 +40,17 @@
         "title": "Confidence Monitor",
         "devtools": true,
         "visible": false
+      },
+      {
+        "label": "lowerthirds",
+        "url": "lowerthirds.html",
+        "width": 1920,
+        "height": 1080,
+        "resizable": false,
+        "fullscreen": false,
+        "title": "Lower Thirds",
+        "devtools": true,
+        "visible": false
       }
     ],
     "security": {

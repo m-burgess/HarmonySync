@@ -11,7 +11,7 @@ body, html {
 .monitor-container {
     display: flex;
     flex-direction: column; /* Stack items vertically */
-    justify-content: flex-start; /* Align items to the top */
+    justify-content: center; /* Align items to the center vertically */
     align-items: center; /* Center horizontally */
     padding: 20px;
     box-sizing: border-box;
