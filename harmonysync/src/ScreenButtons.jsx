@@ -5,6 +5,7 @@ import { emit } from '@tauri-apps/api/event';
 const ScreenButtons = () => {
   const [audienceWindow, setAudienceWindow] = useState(null);
   const [confidenceWindow, setConfidenceWindow] = useState(null);
+  const [lowerThirdsWindow, setLowerThirdsWindow] = useState(null);
 
   const openAudienceScreen = async () => {
     let currentAudienceWindow = audienceWindow;
@@ -48,10 +49,33 @@ const ScreenButtons = () => {
     }
   };
 
+  const openLowerThirds = async () => {
+    let currentLowerThirdsWindow = lowerThirdsWindow;
+    if (!currentLowerThirdsWindow) {
+      currentLowerThirdsWindow = new Window('lowerthirds', {
+        url: 'lowerthirds.html',
+        title: 'Lower Thirds',
+        width: 1920,
+        height: 1080,
+        resizable: false,
+        fullscreen: false,
+        devtools: true,
+      });
+      setLowerThirdsWindow(currentLowerThirdsWindow);
+    }
+
+    if (await currentLowerThirdsWindow.isVisible()) {
+      currentLowerThirdsWindow.hide();
+    } else {
+      currentLowerThirdsWindow.show();
+    }
+  };
+
   return (
     <div className="col" id="preview-col">
       <button onClick={openAudienceScreen} id="open-audience-screen-button">Open Audience Screen</button>
       <button onClick={openConfidenceMonitor} id="open-confidence-screen-button">Open Confidence Monitor</button>
+      <button onClick={openLowerThirds} id="open-lower-thirds-button">Open Lower Thirds</button>
     </div>
   );
 };

@@ -1,7 +1,7 @@
 {
   "identifier": "main-capability",
   "description": "Capability for the main window to create other windows.",
-  "windows": [ "main", "audience", "confidence" ],
+  "windows": [ "main", "audience", "confidence", "lowerthirds" ],
   "permissions": [
     "core:window:allow-create",
     "core:window:allow-show",
