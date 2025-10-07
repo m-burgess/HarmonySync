@@ -11,7 +11,25 @@ const AudienceApp = () => {
   const videoRef = useRef(null); // Create a ref for the video element
   const httpServerUrl = useRef(null); // Ref to store the HTTP server URL
 
-  useEffect(() => {
+      const handleVideoEnded = () => {
+        if (videoRef.current) {
+          videoRef.current.style.display = 'none'; // Hide the video
+          videoRef.current.classList.remove('fade-out'); // Remove fade-out class
+          TauriEvent.emit('video-ended', 'Audience video finished');
+        }
+      };
+          const handleVideoTimeUpdate = () => {
+            if (videoRef.current) {
+              const { currentTime, duration } = videoRef.current;
+              TauriEvent.emit('video-progress', { currentTime, duration });
+      
+              if (duration - currentTime <= 3) {
+                videoRef.current.classList.add('fade-out');
+              } else {
+                videoRef.current.classList.remove('fade-out');
+              }
+            }
+          };  useEffect(() => {
     // Start the custom HTTP server
     const startServer = async () => {
       try {
@@ -26,30 +44,11 @@ const AudienceApp = () => {
     };
     startServer();
 
-    const fetchBackgroundCss = async () => {
-      try {
-        const backgroundCssContent = await TauriCore.invoke('generate_background_css', { path: '.' });
-        setDynamicBackgroundCss(backgroundCssContent);
-      } catch (error) {
-        console.error('Error generating background CSS for audience screen:', error);
-      }
-    };
 
-    fetchBackgroundCss();
 
-    // Handle video ended event
-    const handleVideoEnded = () => {
-      if (videoRef.current) {
-        videoRef.current.style.display = 'none'; // Hide the video
-        // Optionally, emit an event back to the main window
-        // TauriCore.emit('video-ended', 'Audience video finished');
-      }
-    };
 
-    // Attach event listener if videoRef.current is available
-    if (videoRef.current) {
-      videoRef.current.addEventListener('ended', handleVideoEnded);
-    }
+
+
 
     // Listen for the display-video-slide event
     const unlisten = TauriEvent.listen('display-video-slide', async (event) => {
@@ -64,6 +63,15 @@ const AudienceApp = () => {
           console.log('Audience Screen: Video URL from custom HTTP server:', videoUrl);
           videoRef.current.src = videoUrl;
           videoRef.current.style.display = 'block'; // Show the video
+
+          // Remove existing listeners to avoid duplicates
+          videoRef.current.removeEventListener('ended', handleVideoEnded);
+          videoRef.current.removeEventListener('timeupdate', handleVideoTimeUpdate);
+
+          // Add new listeners
+          videoRef.current.addEventListener('ended', handleVideoEnded);
+          videoRef.current.addEventListener('timeupdate', handleVideoTimeUpdate);
+
           videoRef.current.play().then(() => {
             console.log('Audience Screen: Video started playing.');
           }).catch(e => console.error("Audience Screen: Error playing video:", e));
@@ -79,6 +87,7 @@ const AudienceApp = () => {
       unlisten.then(f => f()); // Clean up the event listener
       if (videoRef.current) {
         videoRef.current.removeEventListener('ended', handleVideoEnded);
+        videoRef.current.removeEventListener('timeupdate', handleVideoTimeUpdate);
       }
       // Stop the HTTP server when component unmounts
       TauriCore.invoke('stop_http_server').catch(e => console.error('Error stopping HTTP server:', e));

@@ -7,6 +7,12 @@ const ConfidenceMonitor = () => {
   const [currentSlide, setCurrentSlide] = useState(null);
   const [nextSlide, setNextSlide] = useState(null);
   const [isImageDisplay, setIsImageDisplay] = useState(false);
+  const [videoCountdown, setVideoCountdown] = useState(null);
+  const currentSlideRef = React.useRef(currentSlide);
+
+  useEffect(() => {
+    currentSlideRef.current = currentSlide;
+  }, [currentSlide]);
 
   // Clock functionality
   useEffect(() => {
@@ -33,6 +39,9 @@ const ConfidenceMonitor = () => {
       setCurrentSlide(current);
       setNextSlide(next);
       setIsImageDisplay(current && current.type === 'image');
+      if (current && current.type !== 'video') {
+        setVideoCountdown(null);
+      }
     });
 
     const unlistenClear = TauriEvent.listen('clear-confidence-display', () => {
@@ -40,11 +49,31 @@ const ConfidenceMonitor = () => {
       setCurrentSlide(null);
       setNextSlide(null);
       setIsImageDisplay(false);
+      setVideoCountdown(null);
+    });
+
+    const unlistenNavigate = TauriEvent.listen('navigate', (event) => {
+      console.log('Confidence: navigate event received:', event.payload);
+      setCurrentSlide({ type: 'video', videoId: event.payload.videoId });
+    });
+
+    const unlistenVideoProgress = TauriEvent.listen('video-progress', (event) => {
+      console.log('Confidence: video-progress event received:', event.payload);
+      console.log('Current slide:', currentSlideRef.current);
+      const { currentTime, duration } = event.payload;
+      if (duration) {
+        const remainingTime = duration - currentTime;
+        const minutes = Math.floor(remainingTime / 60);
+        const seconds = Math.floor(remainingTime % 60).toString().padStart(2, '0');
+        setVideoCountdown(`${minutes}:${seconds}`);
+      }
     });
 
     return () => {
       unlistenDisplay.then(f => f());
       unlistenClear.then(f => f());
+      unlistenNavigate.then(f => f());
+      unlistenVideoProgress.then(f => f());
     };
   }, []);
 
@@ -74,6 +103,11 @@ const ConfidenceMonitor = () => {
       <div id="clock-display" style={{ display: 'block' }}>
         {currentTime}
       </div>
+      {currentSlide && currentSlide.type === 'video' && videoCountdown && (
+        <div id="video-countdown-display" style={{ color: 'red', fontSize: '72px' }}>
+          {videoCountdown}
+        </div>
+      )}
     </div>
   );
 };
