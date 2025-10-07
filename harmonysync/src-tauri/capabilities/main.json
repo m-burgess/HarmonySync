@@ -16,6 +16,14 @@
     "core:window:allow-get-all-windows",
     "dialog:allow-message",
     "core:path:allow-resolve-directory",
-    "core:path:default"
+    "core:path:default",
+    "fs:allow-applocaldata-write",
+    "fs:allow-applocaldata-read",
+    "fs:allow-applocaldata-write-recursive",
+    "fs:allow-applocaldata-read-recursive",
+    "fs:allow-create",
+    "fs:allow-write",
+    "fs:allow-remove",
+    "core:event:allow-unlisten"
   ]
 }

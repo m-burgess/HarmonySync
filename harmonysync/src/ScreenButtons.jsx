@@ -12,6 +12,7 @@ const ScreenButtons = () => {
       currentAudienceWindow = new Window('audience', {
         url: 'audience.html',
         title: 'Audience Screen',
+        devtools: true,
       });
       setAudienceWindow(currentAudienceWindow);
     }
@@ -33,6 +34,7 @@ const ScreenButtons = () => {
       currentConfidenceWindow = new Window('confidence', {
         url: 'confidence.html',
         title: 'Confidence Monitor',
+        devtools: true,
       });
       setConfidenceWindow(currentConfidenceWindow);
     }

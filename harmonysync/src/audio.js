@@ -1,4 +1,5 @@
 import * as TauriFs from '@tauri-apps/plugin-fs';
+import * as TauriCore from '@tauri-apps/api/core'; // Re-add TauriCore import
 
 let audioContext = null;
 let gainNode = null;
@@ -80,8 +81,11 @@ export async function loadAudioFile(path) {
 
   try {
     const audioContext = getAudioContext();
-    const fileContent = await TauriFs.readFile(path);
-    const audioBuffer = await audioContext.decodeAudioData(fileContent.buffer);
+    const assetUrl = TauriCore.convertFileSrc(path); // Use convertFileSrc again
+    console.log("Attempting to fetch assetUrl:", assetUrl); // Debugging line
+    const response = await fetch(assetUrl);
+    const arrayBuffer = await response.arrayBuffer();
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
     audioBufferCache.set(path, audioBuffer);
     return audioBuffer;
   } catch (error) {
