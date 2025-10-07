@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { setPan } from './audio.js';
 
 const TrackControl = ({ track, onPanChange, onMuteToggle }) => {
-  const [volume, setVolume] = useState(track.individualVolume || 0.7);
+  const [volume, setVolume] = useState(track.individualVolume || 1);
   const [isMuted, setIsMuted] = useState(track.isMuted || false);
   const [panValue, setPanValue] = useState(track.panValue || 0);
 
@@ -37,7 +37,7 @@ const TrackControl = ({ track, onPanChange, onMuteToggle }) => {
   };
 
   return (
-    <div className="track" data-path={track.path}>
+    <div className="track-control" data-path={track.path}>
       <span className="track-name">{track.name}</span>
 
       <input

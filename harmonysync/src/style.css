@@ -23,7 +23,7 @@ body {
   gap: 20px; /* Space between columns */
   padding: 20px;
   width: 100%;
-  height: calc(100% - 100px); /* Adjust height to make space for multitrack player */
+  height: calc(100% - 300px); /* Adjust height to make space for multitrack player */
   box-sizing: border-box;
 }
 
@@ -151,7 +151,7 @@ body {
     border-top: 1px solid #333;
     overflow-y: auto; /* Scrollbar for tracks */
     flex-shrink: 0; /* Prevent shrinking */
-    max-height: calc(100% - 60px); /* Adjust based on player-controls height */
+    max-height: 220px; /* Adjust to show only one row of track controls */
 }
 
 .track-control {
@@ -159,34 +159,76 @@ body {
     padding: 10px;
     border-radius: 5px;
     display: flex;
-    flex-direction: column;
+    flex-direction: column; /* Changed to column for vertical layout */
+    align-items: center; /* Center items horizontally */
     gap: 5px;
-    /* min-width removed, grid handles sizing */
+    height: 200px; /* Give it some height for the vertical fader */
+    justify-content: space-between; /* Distribute space */
 }
 
-.track-control button {
+.track-control .track-name {
+    margin-bottom: 0;
+}
+
+.track-control .volume-slider {
+    -webkit-appearance: none; /* Override default slider styles */
+    width: 100px; /* Shorter width when rotated becomes height */
+    height: 10px; /* Height when rotated becomes width */
+    background: #555; /* Slider track color */
+    outline: none;
+    opacity: 0.7;
+    -webkit-transition: .2s;
+    transition: opacity .2s;
+    transform: rotate(-90deg); /* Rotate to make it vertical */
+    margin: 20px 0; /* Add some vertical margin */
+}
+
+.track-control .volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #007bff;
+    cursor: pointer;
+}
+
+.track-control .volume-slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #007bff;
+    cursor: pointer;
+}
+
+.track-control .pan-controls {
+    display: flex;
+    gap: 5px;
+    margin-top: 0; /* Remove auto margin */
+}
+
+.track-control .pan-button,
+.track-control .mute-button {
     padding: 5px 10px;
-    background-color: #007bff;
+    background-color: #333; /* Dark grey default */
     color: white;
     border: none;
     border-radius: 3px;
     cursor: pointer;
 }
 
-.track-control button:hover {
-    background-color: #0056b3;
+.track-control .pan-button:hover,
+.track-control .mute-button:hover {
+    background-color: #555; /* Slightly lighter grey on hover */
 }
 
-.track-control button.active {
-    background-color: #28a745;
+.track-control .pan-button.active-pan {
+    background-color: yellow; /* Yellow when active */
+    color: black; /* For contrast */
 }
 
-.track-control button.active:hover {
-    background-color: #218838;
-}
-
-.track-control input[type="range"] {
-    width: 100%;
+.track-control .mute-button.active {
+    background-color: red; /* Red when muted */
 }
 
 /* Multitrack Player */
@@ -198,8 +240,7 @@ body {
     flex-direction: column;
     gap: 10px;
     flex-shrink: 0;
-    height: 400px; /* Make it taller */
-    overflow-y: auto; /* Add scrollbar */
+    height: 300px; /* Make it taller */
 }
 
 .player-controls {

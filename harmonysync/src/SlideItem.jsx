@@ -53,6 +53,11 @@ const SlideItem = ({ slide, index, isSelected, onSelect, onDragStart, onDragEnte
     } else { // Lyrics slide
       console.log('Emitting display-lyric-slide with payload:', { text: slide.text, section: slide.section });
       TauriEvent.emit('display-lyric-slide', { text: slide.text, section: slide.section });
+
+      // Emit event for Lower Thirds screen
+      const line1 = slide.text && slide.text.length > 0 ? slide.text[0] : '';
+      const line2 = slide.text && slide.text.length > 1 ? slide.text[1] : '';
+      TauriEvent.emit('set-lower-thirds-text', { line1, line2 });
     }
   };
 

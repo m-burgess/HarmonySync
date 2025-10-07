@@ -21,6 +21,7 @@ export default defineConfig({
                 main: 'index.html',
                 audience: 'audience.html',
                 confidence: 'confidence.html',
+                lowerthirds: 'lowerthirds.html',
               },
       external: ['@tauri-apps/api'], // Add this line
     },
