@@ -1,0 +1,16 @@
+{
+  "identifier": "fs-cache-capability",
+  "description": "Capability for file system access to the harmonysync cache directory.",
+  "windows": ["main"],
+  "permissions": [
+    "fs:default"
+  ],
+  "fs": {
+    "scope": [
+      {
+        "path": "$LOCALDATA/harmonysync/cache",
+        "allow": ["read", "write", "create", "remove"]
+      }
+    ]
+  }
+}

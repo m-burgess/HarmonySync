@@ -9,6 +9,17 @@ const SlideManager = ({ allSlides, setAllSlides }) => {
   const dragOverItem = useRef(null);
   const slideColRef = useRef(null);
 
+  // New function to update the slide after transcoding
+  const handleVideoTranscoded = (index, transcodedPath) => {
+    setAllSlides(prevSlides => {
+      const newSlides = [...prevSlides];
+      if (newSlides[index]) {
+        newSlides[index] = { ...newSlides[index], path: transcodedPath };
+      }
+      return newSlides;
+    });
+  };
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -110,10 +121,12 @@ const SlideManager = ({ allSlides, setAllSlides }) => {
           onSelect={handleSlideClick}
           onDragStart={handleDragStart}
           onDragEnter={handleDragEnter}
-                     onDrop={handleDrop}
-                     onDragEnd={handleDragEnd}
-                     thumbnailSize={thumbnailSize}
-                   />      ))}
+          onDrop={handleDrop}
+          onDragEnd={handleDragEnd}
+          thumbnailSize={thumbnailSize}
+          onVideoTranscoded={handleVideoTranscoded} // Pass the new prop
+        />
+      ))}
     </div>
   );
 };

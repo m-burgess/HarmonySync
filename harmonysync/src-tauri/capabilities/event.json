@@ -1,0 +1,10 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "event-capability",
+  "description": "Capability for emitting events",
+  "windows": ["main", "audience", "confidence"],
+  "permissions": [
+    "core:event:allow-emit",
+    "core:event:allow-emit-to"
+  ]
+}
