@@ -44,7 +44,7 @@
     ],
     "security": {
       "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost",
-      "capabilities": ["main-capability", "fs-cache-capability"],
+      "capabilities": ["main-capability", "fs-cache-capability", "event-capability"],
       "assetProtocol": {
         "enable": true,
         "scope": ["$LOCALDATA/**"]

@@ -35,6 +35,21 @@ const SetlistManager = ({ setAllSlides, setAllTracks }) => {
     }
   };
 
+  const handleSetBackgroundClick = async (itemPath) => {
+    try {
+      const backgroundCssPath = await TauriPath.join(itemPath, 'background.css');
+      const exists = await TauriFs.exists(backgroundCssPath);
+      if (exists) {
+        const backgroundCssContent = await TauriCore.invoke('generate_background_css', { path: itemPath });
+        TauriEvent.emit('set-background', backgroundCssContent);
+      } else {
+        console.log('No background.css file found in this folder.');
+      }
+    } catch (error) {
+      console.error('Error setting background:', error);
+    }
+  };
+
   const handleSetlistItemClick = async (itemPath) => {
     console.log('Folder clicked:', itemPath);
     setLoadingProgress(0);
@@ -206,9 +221,7 @@ const SetlistManager = ({ setAllSlides, setAllTracks }) => {
       console.log('loadedSlides:', loadedSlides);
       setAllSlides(loadedSlides); // Update the allSlides state in App.jsx
 
-      setLoadingMessage('Generating background CSS...');
-              const backgroundCssContent = await TauriCore.invoke('generate_background_css', { path: itemPath });      setCurrentBackgroundCssContent(backgroundCssContent); // Store the content
-      TauriEvent.emit('set-background', backgroundCssContent);
+
 
       const loadedTracks = [];
       setLoadingMessage('Loading audio tracks...');
@@ -278,8 +291,9 @@ const SetlistManager = ({ setAllSlides, setAllTracks }) => {
       )}
       <ul id="setlist">
         {setlist.map((item, index) => (
-          <li key={index} className="setlist-item" onClick={() => handleSetlistItemClick(item.path)}>
-            {item.name}
+          <li key={index} className="setlist-item" >
+            <span onClick={() => handleSetlistItemClick(item.path)}>{item.name}</span>
+            <button onClick={() => handleSetBackgroundClick(item.path)}>Set Background</button>
           </li>
         ))}
       </ul>
