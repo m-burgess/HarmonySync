@@ -1,7 +1,6 @@
 use std::net::SocketAddr;
-use std::path::{Path, PathBuf};
-use warp::Filter;
-use log::{info, error};
+use std::path::PathBuf;
+use log::info;
 use tokio::sync::oneshot;
 
 pub async fn start_server(port: u16, serve_dir: PathBuf) -> Result<(String, oneshot::Sender<()>), String> {
@@ -17,7 +16,7 @@ pub async fn start_server(port: u16, serve_dir: PathBuf) -> Result<(String, ones
 
     let (tx, rx) = oneshot::channel();
 
-    let server_handle = tokio::spawn(async move {
+    let _server_handle = tokio::spawn(async move {
         let (_, server) = warp::serve(routes).bind_with_graceful_shutdown(addr, async {
             rx.await.ok();
         });

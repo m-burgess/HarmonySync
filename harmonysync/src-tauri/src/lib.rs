@@ -1,7 +1,11 @@
 mod application;
 mod domain;
+mod infrastructure;
 
-use tauri::{Manager};
+use tauri::menu::{Menu, Submenu, MenuItem, PredefinedMenuItem};
+use tauri::{Manager, Emitter};
+use crate::infrastructure::sqlite_repository::SqliteRepository;
+
 
 fn setup_windows(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let main_window = app.get_webview_window("main").unwrap();
@@ -15,11 +19,67 @@ fn setup_windows(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>>
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let conn = rusqlite::Connection::open("harmonylink.sqlite")
+        .expect("Failed to open database connection");
+    let repository = SqliteRepository::new(conn);
+    repository.init_database().expect("Failed to initialize database");
+
     tauri::Builder::default()
+        .manage(repository)
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
-            setup_windows(app)
+            let handle = app.handle();
+
+            // Create the 'Song' item with a specific ID
+            let song_item = MenuItem::with_id(handle, "import-song", "Song", true, Some("CmdOrCtrl+Shift+I"))?;
+            let presentation_item = MenuItem::with_id(handle, "import-presentation", "Presentation", true, None as Option<&str>)?;
+
+            // Create the 'Import' submenu
+            let import_submenu = Submenu::with_items(
+                handle,
+                "Import",
+                true,
+                &[&song_item, &presentation_item],
+            )?;
+
+            // Create the 'File' menu
+            let separator = PredefinedMenuItem::separator(handle)?;
+            let close_item = PredefinedMenuItem::close_window(handle, None)?;
+            let file_submenu = Submenu::with_items(
+                handle,
+                "File",
+                true,
+                &[
+                    &import_submenu,
+                    &separator,
+                    &close_item,
+                ],
+            )?;
+
+            // Create the main menu bar
+            let menu = Menu::with_items(handle, &[&file_submenu])?;
+
+            // Set the menu
+            app.set_menu(menu)?;
+
+            setup_windows(app)?;
+            Ok(())
+        })
+        .on_menu_event(|app, event| {
+            match event.id().0.as_str() {
+                "import-song" => {
+                    if let Err(e) = app.emit("import-song-clicked", ()) {
+                        eprintln!("Failed to emit import-song-clicked event: {}", e);
+                    }
+                }
+                "import-presentation" => {
+                    if let Err(e) = app.emit("import-presentation-clicked", ()) {
+                        eprintln!("Failed to emit import-presentation-clicked event: {}", e);
+                    }
+                }
+                _ => {}
+            }
         })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
@@ -61,7 +121,15 @@ pub fn run() {
 
             application::commands::convert_to_ogg,
             application::commands::start_http_server,
-            application::commands::stop_http_server
+            application::commands::stop_http_server,
+            application::commands::add_song,
+            application::commands::import_song_folder,
+            application::commands::search_songs,
+            application::commands::search_presentations,
+            application::commands::get_song_details,
+            application::commands::get_presentation_details,
+            application::commands::import_presentation_folder,
+            application::commands::get_all_presentations,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

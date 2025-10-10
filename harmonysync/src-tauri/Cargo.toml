@@ -35,3 +35,4 @@ cpal = "0.15"
 ffmpeg-next = { version = "7.0.0", features = ["codec", "device", "filter", "format", "software-scaling", "image"] }
 anyhow = "1.0"
 image = "0.25.1"
+rusqlite = { version = "0.37.0", features = ["bundled"] }
