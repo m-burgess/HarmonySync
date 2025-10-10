@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Window } from '@tauri-apps/api/window';
 import { emit } from '@tauri-apps/api/event';
+import { ComputerDesktopIcon, ChartBarIcon, RectangleStackIcon } from '@heroicons/react/24/solid';
 
 const ScreenButtons = () => {
   const [audienceWindow, setAudienceWindow] = useState(null);
@@ -73,9 +74,17 @@ const ScreenButtons = () => {
 
   return (
     <div className="col" id="preview-col">
-      <button onClick={openAudienceScreen} id="open-audience-screen-button">Open Audience Screen</button>
-      <button onClick={openConfidenceMonitor} id="open-confidence-screen-button">Open Confidence Monitor</button>
-      <button onClick={openLowerThirds} id="open-lower-thirds-button">Open Lower Thirds</button>
+      <div className="flex flex-col gap-2">
+        <button aria-label="Open Audience Screen" title="Audience" onClick={openAudienceScreen} id="open-audience-screen-button" className="p-2 bg-surface rounded-md">
+          <ComputerDesktopIcon className="w-5 h-5 text-primary" />
+        </button>
+        <button aria-label="Open Confidence Monitor" title="Confidence" onClick={openConfidenceMonitor} id="open-confidence-screen-button" className="p-2 bg-surface rounded-md">
+          <ChartBarIcon className="w-5 h-5 text-primary" />
+        </button>
+        <button aria-label="Open Lower Thirds" title="Lower Thirds" onClick={openLowerThirds} id="open-lower-thirds-button" className="p-2 bg-surface rounded-md">
+          <RectangleStackIcon className="w-5 h-5 text-primary" />
+        </button>
+      </div>
     </div>
   );
 };

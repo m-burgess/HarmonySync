@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import * as Tauri from '@tauri-apps/api';
+import { PlusIcon } from '@heroicons/react/24/solid';
 import './PresentationLibrary.css';
 
 const PresentationLibrary = ({ onAddPresentationToSetlist, presentationImportedTrigger }) => {
@@ -37,8 +38,8 @@ const PresentationLibrary = ({ onAddPresentationToSetlist, presentationImportedT
         {results.map((presentation) => (
           <div key={presentation.id} className="song-item">
             <span>{presentation.name}</span>
-            <button onClick={() => onAddPresentationToSetlist(presentation.id, presentation.name)} className="add-button">
-              +
+            <button aria-label={`Add ${presentation.name} to setlist`} title="Add" onClick={() => onAddPresentationToSetlist(presentation.id, presentation.name)} className="add-button p-1 rounded bg-surface">
+              <PlusIcon className="w-4 h-4 text-primary" />
             </button>
           </div>
         ))}
