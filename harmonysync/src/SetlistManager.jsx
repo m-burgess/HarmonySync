@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import * as TauriDialog from '@tauri-apps/plugin-dialog';
-import * as TauriPath from '@tauri-apps/api/path';
 import * as TauriFs from '@tauri-apps/plugin-fs';
+import * as TauriPath from '@tauri-apps/api/path';
 import * as TauriCore from '@tauri-apps/api/core';
 import * as TauriEvent from '@tauri-apps/api/event';
 import { loadAudioFile, loadMoggChannel, setPan, playAllTracks, stopAllAudio, goToBeginningAllTracks, applyDefaultPanning, getAudioContext, getTracks, clearAudioBufferCache, clearTracks, cleanupAudio, addTracks } from './audio.js';
@@ -11,6 +11,9 @@ import LoadingModal from './LoadingModal.jsx';
 import { parseLyricsToSlides } from './lyrics.js';
 import { getVideoMetadata } from './video.js';
 import './transitions.css';
+
+import { TrashIcon } from '@heroicons/react/24/solid';
+import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 
 const SetlistManager = ({ setAllSlides, setAllTracks, serviceOrder, setServiceOrder }) => {
   const [currentBackgroundCssContent, setCurrentBackgroundCssContent] = useState('');
@@ -459,8 +462,14 @@ const SetlistManager = ({ setAllSlides, setAllTracks, serviceOrder, setServiceOr
   };
 
   return (
-    <div className="col" id="setlist-col">
-      <h2>Service Order</h2>
+    <div className="col p-3 bg-card rounded-md" id="setlist-col">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-semibold text-primary">Service Order</h2>
+        <button title="Add Folder" onClick={handleAddFolder} className="p-1 rounded bg-surface hover:bg-surface/80">
+          <ArrowDownTrayIcon className="w-5 h-5 text-muted" />
+        </button>
+      </div>
+
       <LoadingModal progress={loadingProgress} message={loadingMessage} />
       
       {/* Transition Settings */}
