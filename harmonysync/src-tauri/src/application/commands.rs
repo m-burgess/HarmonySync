@@ -1,6 +1,4 @@
-use tauri::Manager;
-use tokio::io::AsyncBufReadExt;
-use tauri::{command, AppHandle, Emitter};
+use tauri::{command, AppHandle, Emitter, Manager, State};
 use crate::domain::css_generator;
 use std::fs;
 use std::path::PathBuf;
@@ -15,9 +13,17 @@ use std::path::Path;
 use anyhow::Result;
 use image::{ImageBuffer, Rgb};
 use tokio::sync::oneshot; // Import oneshot
+use tokio::io::AsyncBufReadExt;
+use super::file_manager;
+
+
+
 
 // Import the new http_server module
 use super::http_server;
+use crate::domain::repositories::{SongRepository, TrackRepository, MacroRepository, SettingRepository, ScheduleRepository, PresentationRepository, YouTubeLinkRepository};
+use crate::domain::entities::{Song, Track, Macro, Setting, ScheduleEvent, Presentation, YouTubeLink, SongSearchResult, SongDetails, PresentationSearchResult};
+use crate::infrastructure::sqlite_repository::SqliteRepository;
 
 // Global variable to hold the server shutdown sender
 static HTTP_SERVER_SHUTDOWN_TX: Lazy<Arc<Mutex<Option<oneshot::Sender<()>>>>> = // Changed type
@@ -175,20 +181,19 @@ async fn generate_thumbnail(video_path: &str, app_handle: &AppHandle) -> Result<
 }
 
 
-#[command]
-pub async fn convert_to_ogg(app_handle: AppHandle, input_path: String) -> Result<String, String> {
+async fn convert_to_ogg_helper(app_handle: &AppHandle, input_path: &str) -> Result<String, String> {
     let window = app_handle.get_webview_window("main").ok_or_else(|| "Main window not found".to_string())?;
     info!("Converting {} to Ogg", input_path);
     let output_dir = app_handle.path().app_local_data_dir().map_err(|e| format!("Failed to get app local data directory: {}", e))?.join("harmonysync").join("cache");
     fs::create_dir_all(&output_dir).map_err(|e| format!("Failed to create output directory: {}", e))?;
-    let file_name_os = Path::new(&input_path).file_name().ok_or_else(|| "Invalid input path".to_string())?;
+    let file_name_os = Path::new(input_path).file_name().ok_or_else(|| "Invalid input path".to_string())?;
     let file_name = file_name_os.to_str().ok_or_else(|| "Invalid file name".to_string())?;
     let output_path = output_dir.join(format!("{}.ogg", Path::new(file_name).file_stem().unwrap().to_str().unwrap()));
 
     let mut command = Command::new("ffmpeg");
     command
         .arg("-i")
-        .arg(&input_path)
+        .arg(input_path)
         .arg("-c:a")
         .arg("libvorbis")
         .arg("-q:a")
@@ -213,7 +218,7 @@ pub async fn convert_to_ogg(app_handle: AppHandle, input_path: String) -> Result
         .arg("format=duration")
         .arg("-of")
         .arg("default=noprint_wrappers=1:nokey=1")
-        .arg(&input_path)
+        .arg(input_path)
         .output()
         .await
         .map_err(|e| format!("Failed to execute ffprobe for duration: {}", e))?;
@@ -254,6 +259,11 @@ pub async fn convert_to_ogg(app_handle: AppHandle, input_path: String) -> Result
             stderr_output
         ))
     }
+}
+
+#[command]
+pub async fn convert_to_ogg(app_handle: AppHandle, input_path: String) -> Result<String, String> {
+    convert_to_ogg_helper(&app_handle, &input_path).await
 }
 
 #[command]
@@ -386,4 +396,430 @@ pub async fn stop_http_server() -> Result<(), String> {
         info!("No HTTP server was running to stop.");
         Ok(())
     }
+}
+
+#[command]
+pub fn add_song(
+    title: String,
+    lyrics: String,
+    repository: State<'_, SqliteRepository>,
+) -> Result<Song, String> {
+    let new_song = Song {
+        id: None,
+        title,
+        lyrics: Some(lyrics),
+    };
+    SongRepository::insert(repository.inner(), &new_song).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn update_song(
+    song: Song,
+    repository: State<'_, SqliteRepository>,
+) -> Result<(), String> {
+    SongRepository::update(repository.inner(), &song).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn delete_song(
+    id: i64,
+    repository: State<'_, SqliteRepository>,
+) -> Result<(), String> {
+    SongRepository::delete(repository.inner(), id).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn insert_track(
+    song_id: i64,
+    file_path: String,
+    track_name: Option<String>,
+    repository: State<'_, SqliteRepository>,
+) -> Result<Track, String> {
+    let new_track = Track {
+        id: None,
+        song_id,
+        file_path,
+        track_name,
+    };
+    TrackRepository::insert(repository.inner(), &new_track).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn get_all_tracks_for_song(
+    song_id: i64,
+    repository: State<'_, SqliteRepository>,
+) -> Result<Vec<Track>, String> {
+    TrackRepository::get_all_for_song(repository.inner(), song_id).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn update_track(
+    track: Track,
+    repository: State<'_, SqliteRepository>,
+) -> Result<(), String> {
+    TrackRepository::update(repository.inner(), &track).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn delete_track(
+    id: i64,
+    repository: State<'_, SqliteRepository>,
+) -> Result<(), String> {
+    TrackRepository::delete(repository.inner(), id).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn get_setting(
+    key: String,
+    repository: State<'_, SqliteRepository>,
+) -> Result<Option<Setting>, String> {
+    SettingRepository::get(repository.inner(), &key).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn set_setting(
+    key: String,
+    value: String,
+    repository: State<'_, SqliteRepository>,
+) -> Result<(), String> {
+    let setting = Setting { key, value };
+    SettingRepository::set(repository.inner(), &setting).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn get_all_macros(
+    repository: State<'_, SqliteRepository>,
+) -> Result<Vec<Macro>, String> {
+    MacroRepository::get_all(repository.inner()).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn insert_macro(
+    name: String,
+    action: String,
+    repository: State<'_, SqliteRepository>,
+) -> Result<Macro, String> {
+    let new_macro = Macro {
+        id: None,
+        name,
+        action,
+    };
+    MacroRepository::insert(repository.inner(), &new_macro).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn update_macro(
+    mac: Macro,
+    repository: State<'_, SqliteRepository>,
+) -> Result<(), String> {
+    MacroRepository::update(repository.inner(), &mac).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn delete_macro(
+    id: i64,
+    repository: State<'_, SqliteRepository>,
+) -> Result<(), String> {
+    MacroRepository::delete(repository.inner(), id).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn get_macros_for_slide(
+    slide_id: String,
+    repository: State<'_, SqliteRepository>,
+) -> Result<Vec<Macro>, String> {
+    MacroRepository::get_for_slide(repository.inner(), &slide_id).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn add_macro_to_slide(
+    slide_id: String,
+    macro_id: i64,
+    repository: State<'_, SqliteRepository>,
+) -> Result<(), String> {
+    MacroRepository::add_to_slide(repository.inner(), &slide_id, macro_id).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn remove_macro_from_slide(
+    slide_id: String,
+    macro_id: i64,
+    repository: State<'_, SqliteRepository>,
+) -> Result<(), String> {
+    MacroRepository::remove_from_slide(repository.inner(), &slide_id, macro_id).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn insert_scheduled_event(
+    event: ScheduleEvent,
+    repository: State<'_, SqliteRepository>,
+) -> Result<ScheduleEvent, String> {
+    ScheduleRepository::insert(repository.inner(), &event).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn update_scheduled_event(
+    event: ScheduleEvent,
+    repository: State<'_, SqliteRepository>,
+) -> Result<(), String> {
+    ScheduleRepository::update(repository.inner(), &event).map_err(|e| e.to_string())
+}
+
+
+#[command]
+pub async fn import_song_folder(
+    app_handle: AppHandle,
+    folder_path: String,
+    repository: State<'_, SqliteRepository>,
+) -> Result<(), String> {
+    let folder_path_p = Path::new(&folder_path);
+
+    // 1. Get Song Title from folder name
+    let title = folder_path_p
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("Unknown Title")
+        .to_string();
+
+    // Check for duplicate song title BEFORE processing
+    let existing_songs = SongRepository::get_all(repository.inner()).map_err(|e| e.to_string())?;
+    if existing_songs.iter().any(|s| s.title == title) {
+        return Err(format!("A song with the title '{}' already exists in the library.", title));
+    }
+
+    // 2. Read Lyrics
+    let lyrics_path = folder_path_p.join("lyrics.txt");
+    let lyrics = fs::read_to_string(lyrics_path).map_err(|e| format!("Failed to read lyrics.txt: {}", e))?;
+
+    // 3. Find audio files
+    let mut audio_files = Vec::new();
+    let supported_extensions = ["wav", "mp3", "aiff", "flac", "m4a"];
+    for entry in fs::read_dir(folder_path_p).map_err(|e| format!("Failed to read folder: {}", e))? {
+        let entry = entry.map_err(|e| format!("Failed to read directory entry: {}", e))?;
+        let path = entry.path();
+        if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
+            if supported_extensions.contains(&ext.to_lowercase().as_str()) {
+                if let Some(path_str) = path.to_str() {
+                    audio_files.push(path_str.to_string());
+                }
+            }
+        }
+    }
+
+    if audio_files.is_empty() {
+        return Err("No supported audio files found in the folder.".to_string());
+    }
+
+    // 4. Convert all audio files to OGG
+    let mut ogg_files_cache_paths = Vec::new();
+    for audio_file_path in &audio_files {
+        let ogg_path = convert_to_ogg_helper(&app_handle, audio_file_path).await?;
+        ogg_files_cache_paths.push(ogg_path);
+    }
+
+    // 5. Create song library folder
+    let song_library_dir = app_handle
+        .path()
+        .app_local_data_dir()
+        .map_err(|e| format!("Failed to get app local data dir: {}", e))?
+        .join("harmonysync")
+        .join("song_library");
+    let specific_song_dir = song_library_dir.join(&title);
+    fs::create_dir_all(&specific_song_dir)
+        .map_err(|e| format!("Failed to create song library directory: {}", e))?;
+
+    // 6. Copy OGG files to the new library folder
+    let mut final_track_paths = Vec::new();
+    for cache_path_str in &ogg_files_cache_paths {
+        let cache_path = Path::new(cache_path_str);
+        let file_name = cache_path.file_name().ok_or_else(|| "Cache path has no filename".to_string())?;
+        let dest_path = specific_song_dir.join(file_name);
+        fs::copy(cache_path, &dest_path).map_err(|e| format!("Failed to copy OGG file: {}", e))?;
+        final_track_paths.push(dest_path.to_str().unwrap().to_string());
+    }
+
+    // 7. Add to database
+    let new_song = Song {
+        id: None,
+        title: title.clone(),
+        lyrics: Some(lyrics),
+    };
+    let inserted_song = SongRepository::insert(repository.inner(), &new_song).map_err(|e| e.to_string())?;
+    let song_id = inserted_song.id.ok_or("Inserted song did not return an ID")?;
+
+    for track_path in &final_track_paths {
+        let track_name = Path::new(track_path)
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("Unknown Track")
+            .to_string();
+        let new_track = Track {
+            id: None,
+            song_id,
+            file_path: track_path.clone(),
+            track_name: Some(track_name),
+        };
+        TrackRepository::insert(repository.inner(), &new_track).map_err(|e| e.to_string())?;
+    }
+
+    info!("Successfully imported song: {}", title);
+    if let Err(e) = app_handle.emit("song-imported", ()) {
+        eprintln!("Failed to emit song-imported event: {}", e);
+    }
+    Ok(())
+}
+
+#[command]
+pub fn search_songs(
+    search_term: String,
+    repository: State<'_, SqliteRepository>,
+) -> Result<Vec<SongSearchResult>, String> {
+    let all_songs = SongRepository::get_all(repository.inner()).map_err(|e| e.to_string())?;
+    let search_pattern = search_term.to_lowercase();
+
+    let results: Vec<SongSearchResult> = all_songs.into_iter()
+        .filter(|song| song.title.to_lowercase().contains(&search_pattern))
+        .map(|song| SongSearchResult {
+            id: song.id.unwrap_or_default(), // Assuming id is always present for existing songs
+            title: song.title,
+        })
+        .collect();
+    Ok(results)
+}
+
+#[command]
+pub fn search_presentations(
+    search_term: String,
+    repository: State<'_, SqliteRepository>,
+) -> Result<Vec<PresentationSearchResult>, String> {
+    let all_presentations = PresentationRepository::get_all(repository.inner()).map_err(|e| e.to_string())?;
+    let search_pattern = search_term.to_lowercase();
+
+    let results: Vec<PresentationSearchResult> = all_presentations.into_iter()
+        .filter(|presentation| presentation.name.to_lowercase().contains(&search_pattern))
+        .map(|presentation| PresentationSearchResult {
+            id: presentation.id.unwrap_or_default(),
+            name: presentation.name,
+            path: presentation.path,
+        })
+        .collect();
+    Ok(results)
+}
+
+
+
+
+
+#[tauri::command]
+pub fn import_presentation_folder(app_handle: tauri::AppHandle, source_folder_path: String, category: String, repository: tauri::State<'_, SqliteRepository>) -> Result<String, String> {
+    let app_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
+    let presentation_library_root = app_dir.join("presentation_library");
+
+    let category_folder = match category.as_str() {
+        "song" => presentation_library_root.join("songs"),
+        "presentation" => presentation_library_root.join("presentations"),
+        _ => return Err(format!("Invalid category: {}. Must be 'song' or 'presentation'.", category)),
+    };
+
+    file_manager::create_dir_if_not_exists(&category_folder)?;
+
+    let source_path = PathBuf::from(source_folder_path);
+
+    if !source_path.is_dir() {
+        return Err(format!("Source path is not a directory: {}", source_path.display()));
+    }
+
+    let presentation_name = source_path.file_name()
+        .and_then(|s| s.to_str())
+        .ok_or_else(|| "Could not get presentation name from source folder path.".to_string())?;
+
+    // Check if a presentation with this name already exists
+    if PresentationRepository::get_by_name(repository.inner(), presentation_name).map_err(|e| e.to_string())?.is_some() {
+        return Err(format!("A presentation with the name '{}' already exists.", presentation_name));
+    }
+
+    let destination_presentation_path = category_folder.join(presentation_name);
+    file_manager::create_dir_if_not_exists(&destination_presentation_path)?;
+
+    let imported_files_count = file_manager::copy_directory(&source_path, &destination_presentation_path)?;
+
+    // Create Presentation record in the database
+    let new_presentation = Presentation {
+        id: None,
+        name: presentation_name.to_string(),
+        path: destination_presentation_path.to_str().ok_or("Failed to convert path to string")?.to_string(),
+        category: category.clone(),
+    };
+
+    let inserted_presentation = PresentationRepository::insert(repository.inner(), &new_presentation).map_err(|e| e.to_string())?;
+    let presentation_id = inserted_presentation.id.ok_or("Inserted presentation did not return an ID")?;
+
+    // Parse youtube.txt if it exists
+    let youtube_txt_path = source_path.join("youtube.txt");
+    if youtube_txt_path.is_file() {
+        let content = std::fs::read_to_string(&youtube_txt_path)
+            .map_err(|e| format!("Failed to read youtube.txt: {}", e))?;
+
+        for line in content.lines() {
+            let trimmed_line = line.trim();
+            if !trimmed_line.is_empty() {
+                // Basic validation for YouTube URL (can be improved)
+                if trimmed_line.contains("youtube.com/") || trimmed_line.contains("youtu.be/") {
+                    let new_link = YouTubeLink {
+                        id: None,
+                        presentation_id,
+                        url: trimmed_line.to_string(),
+                    };
+                    YouTubeLinkRepository::insert(repository.inner(), &new_link).map_err(|e| e.to_string())?;
+                } else {
+                    eprintln!("Skipping invalid YouTube URL in youtube.txt: {}", trimmed_line);
+                }
+            }
+        }
+    }
+
+    // Emit the presentation-imported event
+    if let Err(e) = app_handle.emit("presentation-imported", ()) {
+        eprintln!("Failed to emit presentation-imported event: {}", e);
+    }
+
+    Ok(format!("Successfully imported {} files for presentation '{}' into the '{}' category.", imported_files_count, presentation_name, category))
+}
+
+#[tauri::command]
+pub fn get_all_songs(repository: tauri::State<'_, SqliteRepository>) -> Result<Vec<Song>, String> {
+    SongRepository::get_all(repository.inner()).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_song_details(
+    song_id: i64,
+    repository: State<'_, SqliteRepository>,
+) -> Result<SongDetails, String> {
+    let song = SongRepository::get_by_id(repository.inner(), song_id).map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("Song with ID {} not found", song_id))?;
+    let tracks = TrackRepository::get_all_for_song(repository.inner(), song_id).map_err(|e| e.to_string())?;
+    Ok(SongDetails {
+        id: song.id.unwrap_or_default(),
+        title: song.title,
+        lyrics: Some(song.lyrics.unwrap_or_default()),
+        tracks,
+    })
+}
+
+#[tauri::command]
+pub fn get_presentation_details(
+    presentation_id: i64,
+    repository: State<'_, SqliteRepository>,
+) -> Result<Presentation, String> {
+    let presentation = PresentationRepository::get_by_id(repository.inner(), presentation_id).map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("Presentation with ID {} not found", presentation_id))?;
+    Ok(presentation)
+}
+
+#[tauri::command]
+pub fn get_all_presentations(
+    repository: State<'_, SqliteRepository>,
+) -> Result<Vec<Presentation>, String> {
+    PresentationRepository::get_all(repository.inner()).map_err(|e| e.to_string())
 }

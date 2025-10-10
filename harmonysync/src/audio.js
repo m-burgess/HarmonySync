@@ -16,6 +16,10 @@ export function clearTracks() {
   tracks = [];
 }
 
+export function addTracks(newTracks) {
+  tracks.push(...newTracks);
+}
+
 export function clearAudioBufferCache() {
   audioBufferCache.clear();
 }
@@ -139,8 +143,7 @@ function goToBeginningAllTracks() {
   });
 }
 
-function applyDefaultPanning() {
-  const currentTracks = getTracks();
+export function applyDefaultPanning(currentTracks) {
   let hasClickOrGuide = false;
   currentTracks.forEach(track => {
     const lowerCaseName = track.name.toLowerCase();
@@ -183,6 +186,5 @@ function setGlobalVolume(volume) {
 export {
     getAudioContext,
     goToBeginningAllTracks,
-    applyDefaultPanning,
     setGlobalVolume // Export the new function
 }

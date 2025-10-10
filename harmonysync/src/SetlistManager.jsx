@@ -4,58 +4,22 @@ import * as TauriPath from '@tauri-apps/api/path';
 import * as TauriFs from '@tauri-apps/plugin-fs';
 import * as TauriCore from '@tauri-apps/api/core';
 import * as TauriEvent from '@tauri-apps/api/event';
-import { loadAudioFile, setPan, playAllTracks, stopAllAudio, goToBeginningAllTracks, applyDefaultPanning, getAudioContext, getTracks, clearAudioBufferCache, clearTracks, cleanupAudio } from './audio.js';
+import { loadAudioFile, setPan, playAllTracks, stopAllAudio, goToBeginningAllTracks, applyDefaultPanning, getAudioContext, getTracks, clearAudioBufferCache, clearTracks, cleanupAudio, addTracks } from './audio.js';
+import LoadingModal from './LoadingModal.jsx';
 import { parseLyricsToSlides } from './lyrics.js';
 import { getVideoMetadata } from './video.js';
 
-const SetlistManager = ({ setAllSlides, setAllTracks }) => {
-  const [setlist, setSetlist] = useState([]);
+const SetlistManager = ({ setAllSlides, setAllTracks, serviceOrder, setServiceOrder }) => {
   const [currentBackgroundCssContent, setCurrentBackgroundCssContent] = useState('');
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadingMessage, setLoadingMessage] = useState('');
 
-  const handleAddFolder = async () => {
-    try {
-      const selectedPaths = await TauriDialog.open({
-        directory: true,
-        multiple: true,
-        title: 'Select folders for the presentation',
-      });
-
-      if (selectedPaths) {
-        // selectedPaths will be an array if multiple is true
-        for (const path of selectedPaths) {
-          const folderName = await TauriPath.basename(path);
-          const newSetlistItem = { path: path, name: folderName };
-          setSetlist((prevSetlist) => [...prevSetlist, newSetlistItem]);
-        }
-      }
-    } catch (error) {
-      console.error('Error selecting folder:', error);
+  const loadFolderContents = async (itemPath) => {
+    if (!itemPath || typeof itemPath !== 'string') {
+      console.error('Invalid itemPath provided to loadFolderContents:', itemPath);
+      return { loadedSlides: [], loadedTracks: [], unlistenOgg: () => {}, unlistenVideoTranscode: () => {} };
     }
-  };
-
-  const handleSetBackgroundClick = async (itemPath) => {
-    try {
-      const backgroundCssPath = await TauriPath.join(itemPath, 'background.css');
-      const exists = await TauriFs.exists(backgroundCssPath);
-      if (exists) {
-        const backgroundCssContent = await TauriCore.invoke('generate_background_css', { path: itemPath });
-        TauriEvent.emit('set-background', backgroundCssContent);
-      } else {
-        console.log('No background.css file found in this folder.');
-      }
-    } catch (error) {
-      console.error('Error setting background:', error);
-    }
-  };
-
-  const handleSetlistItemClick = async (itemPath) => {
-    console.log('Folder clicked:', itemPath);
-    setLoadingProgress(0);
-    setLoadingMessage('Loading folder contents...');
-
-    const unlisten = await TauriEvent.listen('ogg-conversion-progress', (event) => {
+    const unlistenOgg = await TauriEvent.listen('ogg-conversion-progress', (event) => {
       const payload = event.payload;
       setLoadingProgress(payload.progress);
       setLoadingMessage(payload.message);
@@ -68,13 +32,6 @@ const SetlistManager = ({ setAllSlides, setAllTracks }) => {
     });
 
     try {
-      // Clear previous tracks and reset audio context if a new folder is loaded
-      cleanupAudio();
-      clearTracks();
-
-      TauriEvent.emit('clear-lyric-display');
-      TauriEvent.emit('clear-confidence-display');
-
       const entries = await TauriFs.readDir(itemPath, { recursive: false });
       const audioFiles = entries.filter(entry => {
         const isFile = entry.children === undefined; // Check if it's a file
@@ -82,59 +39,45 @@ const SetlistManager = ({ setAllSlides, setAllTracks }) => {
         return isAudio;
       }).sort((a, b) => a.name.localeCompare(b.name));
 
-              const processedAudioFiles = await Promise.all(audioFiles.map(async (file) => {
-              const originalPath = `${itemPath}/${file.name}`;
-              const fileNameWithOgg = file.name.endsWith('.ogg') ? file.name : `${file.name}.ogg`;
-              const targetCachePathAbsolute = await TauriPath.join(await TauriPath.appLocalDataDir(), 'harmonysync', 'cache', fileNameWithOgg);
-              console.log("targetCachePathAbsolute:", targetCachePathAbsolute); // Debugging line
-      
-              if (!file.name.endsWith('.ogg')) {
-                setLoadingMessage(`Converting ${file.name} to Ogg...`);
-                try {
-                  // Invoke the Rust command to convert, assuming it returns the path to the converted file
-                  const tempOggPath = await TauriCore.invoke('convert_to_ogg', { inputPath: originalPath });
-                  // Ensure the cache directory exists
-                  const cacheDirAbsolute = await TauriPath.join(await TauriPath.appLocalDataDir(), 'harmonysync', 'cache');
-                  await TauriFs.mkdir(cacheDirAbsolute, { recursive: true });
-                  // Copy the converted file to the public cache directory
-                  await TauriFs.copyFile(tempOggPath, targetCachePathAbsolute);
-                  // Delete the temporary file
-                  await TauriFs.remove(tempOggPath);
-                  // Return the file object with the path set to the relative URL for the web audio API
-                  return { ...file, path: targetCachePathAbsolute, name: fileNameWithOgg }; // Path is now absolute for convertFileSrc
-                } catch (error) {
-                  console.error(`Error converting ${file.name} to Ogg:`, error);
-                  return null; // Skip this file if conversion fails
-                }
-              } else {
-                // If it's already an OGG, copy it to the cache if it's not already there
-                // This handles cases where originalPath might not be in the public/cache
-                const sourcePath = originalPath;
-                const cacheDirAbsolute = await TauriPath.join(await TauriPath.appLocalDataDir(), 'harmonysync', 'cache');
-                await TauriFs.mkdir(cacheDirAbsolute, { recursive: true });
-                await TauriFs.copyFile(sourcePath, targetCachePathAbsolute);
-                return { ...file, path: targetCachePathAbsolute, name: fileNameWithOgg }; // Path is now absolute for convertFileSrc
-              }
-            }));
+      const processedAudioFiles = await Promise.all(audioFiles.map(async (file) => {
+        const originalPath = `${itemPath}/${file.name}`;
+        const fileNameWithOgg = file.name.endsWith('.ogg') ? file.name : `${file.name}.ogg`;
+        const targetCachePathAbsolute = await TauriPath.join(await TauriPath.appLocalDataDir(), 'harmonysync', 'cache', fileNameWithOgg);
+
+        if (!file.name.endsWith('.ogg')) {
+          setLoadingMessage(`Converting ${file.name} to Ogg...`);
+          try {
+            const tempOggPath = await TauriCore.invoke('convert_to_ogg', { inputPath: originalPath });
+            const cacheDirAbsolute = await TauriPath.join(await TauriPath.appLocalDataDir(), 'harmonysync', 'cache');
+            await TauriFs.mkdir(cacheDirAbsolute, { recursive: true });
+            await TauriFs.copyFile(tempOggPath, targetCachePathAbsolute);
+            await TauriFs.remove(tempOggPath);
+            return { ...file, path: targetCachePathAbsolute, name: fileNameWithOgg };
+          } catch (error) {
+            console.error(`Error converting ${file.name} to Ogg:`, error);
+            return null;
+          }
+        } else {
+          const sourcePath = originalPath;
+          const cacheDirAbsolute = await TauriPath.join(await TauriPath.appLocalDataDir(), 'harmonysync', 'cache');
+          await TauriFs.mkdir(cacheDirAbsolute, { recursive: true });
+          await TauriFs.copyFile(sourcePath, targetCachePathAbsolute);
+          return { ...file, path: targetCachePathAbsolute, name: fileNameWithOgg };
+        }
+      }));
       const validAudioFiles = processedAudioFiles.filter(Boolean);
 
-      const lyricsFile = entries.find(entry => entry.name === 'lyrics.txt' && entry.children === undefined);
       let loadedSlides = [];
-      let totalFilesToLoad = validAudioFiles.length;
-      let loadedCount = 0;
-
+      const lyricsFile = entries.find(entry => entry.name === 'lyrics.txt' && entry.children === undefined);
       if (lyricsFile) {
         setLoadingMessage('Loading lyrics...');
-        console.log('lyricsFile:', lyricsFile);
         const lyricsPath = `${itemPath}/${lyricsFile.name}`;
-        let lyricsContent = await TauriFs.readFile(lyricsPath, { encoding: 'utf8' });
-        if (lyricsContent instanceof Uint8Array) {
-          lyricsContent = new TextDecoder().decode(lyricsContent);
+        let content = await TauriFs.readFile(lyricsPath, { encoding: 'utf8' });
+        if (content instanceof Uint8Array) {
+          content = new TextDecoder().decode(content);
         }
-        console.log('lyricsContent:', lyricsContent);
-        if (typeof lyricsContent === 'string' && lyricsContent.length > 0) {
-          const lyricsSlides = parseLyricsToSlides(lyricsContent);
-          loadedSlides = lyricsSlides;
+        if (typeof content === 'string' && content.length > 0) {
+          loadedSlides = parseLyricsToSlides(content);
         }
       } else {
         const videoFiles = entries.filter(entry => {
@@ -214,23 +157,16 @@ const SetlistManager = ({ setAllSlides, setAllTracks }) => {
                 loadedSlides = [...videoSlides, ...imageSlides, ...youtubeSlides];
             }
         } else {
-          loadedSlides = [...videoSlides, ...imageSlides];
+          loadedSlides = [...videoSlides, ...imageFiles.map(file => ({ type: 'image', path: `${itemPath}/${file.name}`, name: file.name }))];
         }
       }
 
-      console.log('loadedSlides:', loadedSlides);
-      setAllSlides(loadedSlides); // Update the allSlides state in App.jsx
-
-
-
-      const loadedTracks = [];
+      // Load audio tracks
       setLoadingMessage('Loading audio tracks...');
+      const loadedTracks = [];
       const loadingPromises = validAudioFiles.map(async (file) => {
-        const fileName = file.name;
-        // Use the absolute path from the processed file for fetching
-        const trackPath = file.path; // This should now be the absolute path
         try {
-          const audioBuffer = await loadAudioFile(trackPath);
+          const audioBuffer = await loadAudioFile(file.path);
           if (audioBuffer) {
             const track = {
               buffer: audioBuffer,
@@ -241,59 +177,199 @@ const SetlistManager = ({ setAllSlides, setAllTracks }) => {
               isMuted: false,
               startTime: 0,
               offset: 0,
-              path: trackPath,
-              name: fileName,
+              path: file.path,
+              name: file.name,
               panValue: 0,
-              individualVolume: 0.7, // Initialize individual volume
+              individualVolume: 0.7,
             };
             getTracks().push(track);
             loadedTracks.push(track);
           }
         } catch (audioError) {
-          console.error(`Error loading audio file ${fileName}:`, audioError);
-        } finally {
-          loadedCount++;
-          setLoadingProgress(Math.round((loadedCount / totalFilesToLoad) * 100));
+          console.error(`Error loading audio file ${file.name}:`, audioError);
         }
         return null;
       });
 
       await Promise.all(loadingPromises);
+      addTracks(loadedTracks);
       applyDefaultPanning(loadedTracks);
-      setAllTracks([...loadedTracks]); // Update the allTracks state in App.jsx with a new array
-      setLoadingMessage('Loading complete!');
-      setLoadingProgress(100);
+
+      return { loadedSlides, loadedTracks, unlistenOgg, unlistenVideoTranscode };
+
+    } finally {
+      // Listeners are now unlistened in the calling function
+    }
+  };
+
+  const handleAddFolder = async () => {
+    try {
+      const selectedPaths = await TauriDialog.open({
+        directory: true,
+        multiple: true,
+        title: 'Select folders for the presentation',
+      });
+
+      if (selectedPaths) {
+        // selectedPaths will be an array if multiple is true
+        for (const path of selectedPaths) {
+          const folderName = await TauriPath.basename(path);
+          // Update serviceOrder prop
+          setServiceOrder((prevOrder) => [...prevOrder, { type: 'folder', path: path, name: folderName }]);
+        }
+      }
+    } catch (error) {
+      console.error('Error selecting folder:', error);
+    }
+  };
+
+  const handleSetBackgroundClick = async (itemPath) => {
+    try {
+      const backgroundCssPath = await TauriPath.join(itemPath, 'background.css');
+      const exists = await TauriFs.exists(backgroundCssPath);
+      if (exists) {
+        const backgroundCssContent = await TauriCore.invoke('generate_background_css', { path: itemPath });
+        TauriEvent.emit('set-background', backgroundCssContent);
+      } else {
+        console.log('No background.css file found in this folder.');
+      }
+    } catch (error) {
+      console.error('Error setting background:', error);
+    }
+  };
+
+  const handleRemoveItem = (indexToRemove) => {
+    setServiceOrder((prevOrder) => prevOrder.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handleSetlistItemClick = async (clickedItem, index) => {
+    console.log('Item clicked:', clickedItem);
+    setLoadingProgress(0);
+    setLoadingMessage('Loading item contents...');
+
+    let unlistenOgg = () => {}; // Initialize with a no-op function
+    let unlistenVideoTranscode = () => {}; // Initialize with a no-op function
+
+    try {
+      // Clear previous tracks and reset audio context if a new folder is loaded
+      cleanupAudio();
+      clearTracks();
+
+      TauriEvent.emit('clear-lyric-display');
+      TauriEvent.emit('clear-confidence-display');
+
+      let currentSlides = [];
+      let currentTracks = [];
+
+      if (clickedItem.loaded) {
+        // If already loaded, use the stored slides and tracks
+        currentSlides = clickedItem.slides;
+        currentTracks = clickedItem.tracks;
+        setLoadingMessage('Item already loaded.');
+        setLoadingProgress(100);
+      } else {
+        // Item not loaded, fetch details and process
+        let details;
+        if (clickedItem.type === 'song') {
+          details = await TauriCore.invoke('get_song_details', { songId: clickedItem.id });
+          // 1. Create slides from lyrics
+          currentSlides = parseLyricsToSlides(details.lyrics);
+
+          // 2. Create and load audio tracks
+          const newLoadedTracks = [];
+          const loadingPromises = details.tracks.map(async (trackInfo) => {
+            try {
+              const audioBuffer = await loadAudioFile(trackInfo.file_path);
+              if (audioBuffer) {
+                const track = {
+                  buffer: audioBuffer,
+                  source: null,
+                  gainNode: getAudioContext().createGain(),
+                  pannerNode: getAudioContext().createStereoPanner(),
+                  isPlaying: false,
+                  isMuted: false,
+                  startTime: 0,
+                  offset: 0,
+                  path: trackInfo.file_path,
+                  name: trackInfo.track_name,
+                  panValue: 0,
+                  individualVolume: 0.7,
+                };
+                getTracks().push(track); // Add to global tracks array in audio.js
+                newLoadedTracks.push(track);
+              }
+            } catch (audioError) {
+              console.error(`Error loading audio file ${trackInfo.track_name}:`, audioError);
+            }
+          });
+
+          await Promise.all(loadingPromises);
+          applyDefaultPanning(newLoadedTracks);
+          addTracks(newLoadedTracks);
+          currentTracks = newLoadedTracks;
+
+        } else if (clickedItem.type === 'presentation') {
+          details = await TauriCore.invoke('get_presentation_details', { presentationId: clickedItem.id });
+          const { loadedSlides, loadedTracks, unlistenOgg: newUnlistenOgg, unlistenVideoTranscode: newUnlistenVideoTranscode } = await loadFolderContents(details.path);
+          unlistenOgg = newUnlistenOgg;
+          unlistenVideoTranscode = newUnlistenVideoTranscode;
+          currentSlides = loadedSlides;
+          currentTracks = loadedTracks;
+        }
+
+        // Update the serviceOrder to mark this item as loaded
+        setServiceOrder(prevOrder =>
+          prevOrder.map((item, idx) =>
+            idx === index
+              ? { ...item, loaded: true, slides: currentSlides, tracks: currentTracks }
+              : item
+          )
+        );
+        setLoadingMessage('Loading complete!');
+        setLoadingProgress(100);
+      }
+
+      setAllSlides(currentSlides);
+      setAllTracks(currentTracks);
+
+      // Automatically 'click' the first slide to display it
+      if (currentSlides.length > 0) {
+        const firstSlide = currentSlides[0];
+        if (firstSlide.type === 'image') {
+          TauriEvent.emit('display-image-slide', { path: firstSlide.path, name: firstSlide.name });
+        } else if (firstSlide.type === 'video') {
+          TauriCore.invoke('display_video_slide', { path: firstSlide.path, duration: firstSlide.duration })
+            .catch(e => console.error('Error displaying video slide:', e));
+        } else if (firstSlide.type === 'youtube') {
+          TauriEvent.emit('navigate', { videoId: firstSlide.videoId });
+        } else { // Lyrics slide
+          TauriEvent.emit('display-lyric-slide', { text: firstSlide.text, section: firstSlide.section });
+          const line1 = firstSlide.text && firstSlide.text.length > 0 ? firstSlide.text[0] : '';
+          const line2 = firstSlide.text && firstSlide.text.length > 1 ? firstSlide.text[1] : '';
+          TauriEvent.emit('set-lower-thirds-text', { line1, line2 });
+        }
+      }
 
     } catch (error) {
-      console.error('Error reading directory:', error);
-      TauriDialog.message(`Failed to load setlist from ${itemPath}. It might have been moved or deleted. Please select a valid folder.`, { title: 'Error Loading Setlist', type: 'error' });
-      setLoadingMessage('Error loading folder.');
+      console.error('Error loading setlist item:', error);
+      TauriDialog.message(`Failed to load item. It might have been moved or deleted.`, { title: 'Error Loading Item', type: 'error' });
+      setLoadingMessage('Error loading item.');
       setLoadingProgress(0);
     } finally {
-      unlisten(); // Clean up the event listener
+      unlistenOgg(); // Clean up the event listener
       unlistenVideoTranscode();
     }
   };
 
   return (
     <div className="col" id="setlist-col">
-      <button onClick={handleAddFolder} id="add-folder-button">Add Folder to Presentation</button>
-      {loadingProgress > 0 && loadingProgress < 100 && (
-        <div className="progress-container">
-          <div className="progress-bar" style={{ width: `${loadingProgress}%` }}></div>
-          <div className="progress-text">{loadingMessage} ({loadingProgress}%)</div>
-        </div>
-      )}
-      {loadingProgress === 100 && (
-        <div className="progress-container">
-          <div className="progress-text">{loadingMessage}</div>
-        </div>
-      )}
+      <h2>Service Order</h2>
+      <LoadingModal progress={loadingProgress} message={loadingMessage} />
       <ul id="setlist">
-        {setlist.map((item, index) => (
+        {serviceOrder.map((item, index) => (
           <li key={index} className="setlist-item" >
-            <span onClick={() => handleSetlistItemClick(item.path)}>{item.name}</span>
-            <button onClick={() => handleSetBackgroundClick(item.path)}>Set Background</button>
+            <span onClick={() => handleSetlistItemClick(item, index)}>{item.name}</span>
+            <button onClick={() => handleRemoveItem(index)}>-</button>
           </li>
         ))}
       </ul>
