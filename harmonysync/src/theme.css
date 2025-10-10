@@ -1,0 +1,22 @@
+:root {
+  /* ProPresenter-like dark stage palette */
+  --bg: #0f1724; /* very dark navy */
+  --surface: #111827; /* charcoal surface */
+  --card: #151a23; /* card background */
+  --accent: #ff8a00; /* warm orange accent */
+  --accent-2: #06b6d4; /* cyan secondary */
+  --muted: #9ca3af; /* muted text */
+  --text: #e6eef6; /* primary text */
+  --radius: 8px;
+  --elevation-1: 0 1px 3px rgba(0,0,0,0.4);
+  --elevation-2: 0 6px 18px rgba(0,0,0,0.6);
+}
+
+/* utility classes for quick use */
+.bg-stage { background-color: var(--bg); }
+.bg-surface { background-color: var(--surface); }
+.bg-card { background-color: var(--card); }
+.text-accent { color: var(--accent); }
+.text-muted { color: var(--muted); }
+.text-primary { color: var(--text); }
+.ring-accent { box-shadow: 0 0 0 3px rgba(255,138,0,0.12); }

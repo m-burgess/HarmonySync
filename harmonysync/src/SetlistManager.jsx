@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import * as TauriDialog from '@tauri-apps/plugin-dialog';
-import * as TauriPath from '@tauri-apps/api/path';
 import * as TauriFs from '@tauri-apps/plugin-fs';
+import * as TauriPath from '@tauri-apps/api/path';
 import * as TauriCore from '@tauri-apps/api/core';
 import * as TauriEvent from '@tauri-apps/api/event';
 import { loadAudioFile, setPan, playAllTracks, stopAllAudio, goToBeginningAllTracks, applyDefaultPanning, getAudioContext, getTracks, clearAudioBufferCache, clearTracks, cleanupAudio, addTracks } from './audio.js';
 import LoadingModal from './LoadingModal.jsx';
 import { parseLyricsToSlides } from './lyrics.js';
 import { getVideoMetadata } from './video.js';
+
+import { TrashIcon } from '@heroicons/react/24/solid';
+import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 
 const SetlistManager = ({ setAllSlides, setAllTracks, serviceOrder, setServiceOrder }) => {
   const [currentBackgroundCssContent, setCurrentBackgroundCssContent] = useState('');
@@ -362,14 +365,26 @@ const SetlistManager = ({ setAllSlides, setAllTracks, serviceOrder, setServiceOr
   };
 
   return (
-    <div className="col" id="setlist-col">
-      <h2>Service Order</h2>
+    <div className="col p-3 bg-card rounded-md" id="setlist-col">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-semibold text-primary">Service Order</h2>
+        <button title="Add Folder" onClick={handleAddFolder} className="p-1 rounded bg-surface hover:bg-surface/80">
+          <ArrowDownTrayIcon className="w-5 h-5 text-muted" />
+        </button>
+      </div>
+
       <LoadingModal progress={loadingProgress} message={loadingMessage} />
-      <ul id="setlist">
+
+      <ul id="setlist" className="space-y-2">
         {serviceOrder.map((item, index) => (
-          <li key={index} className="setlist-item" >
-            <span onClick={() => handleSetlistItemClick(item, index)}>{item.name}</span>
-            <button onClick={() => handleRemoveItem(index)}>-</button>
+          <li key={index} className="flex items-center justify-between p-2 bg-surface rounded">
+            <button className="text-left flex-1 pr-2" onClick={() => handleSetlistItemClick(item, index)}>
+              <div className="text-sm text-primary truncate">{item.name}</div>
+              <div className="text-xs text-muted">{item.type}</div>
+            </button>
+            <button onClick={() => handleRemoveItem(index)} className="ml-2 p-1 rounded hover:bg-red-600/10" title="Remove">
+              <TrashIcon className="w-5 h-5 text-muted" />
+            </button>
           </li>
         ))}
       </ul>

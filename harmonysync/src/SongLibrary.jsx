@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import * as Tauri from '@tauri-apps/api';
+import { PlusIcon } from '@heroicons/react/24/solid';
 import './SongLibrary.css';
 
 const SongLibrary = ({ onAddSong, songImportedTrigger }) => {
@@ -37,8 +38,8 @@ const SongLibrary = ({ onAddSong, songImportedTrigger }) => {
         {results.map((song) => (
           <div key={song.id} className="song-item">
             <span>{song.title}</span>
-            <button onClick={() => onAddSong(song.id, song.title)} className="add-button">
-              +
+            <button aria-label={`Add ${song.title} to setlist`} title="Add" onClick={() => onAddSong(song.id, song.title)} className="add-button p-1 rounded bg-surface">
+              <PlusIcon className="w-4 h-4 text-primary" />
             </button>
           </div>
         ))}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { setPan } from './audio.js';
+import { SpeakerWaveIcon, SpeakerXMarkIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
 
 const TrackControl = ({ track, onPanChange, onMuteToggle }) => {
   const [volume, setVolume] = useState(track.individualVolume || 1);
@@ -51,32 +52,20 @@ const TrackControl = ({ track, onPanChange, onMuteToggle }) => {
         disabled={isMuted}
       />
 
-      <div className="pan-controls">
-        <button
-          className={`pan-button pan-left ${panValue === -1 ? 'active-pan' : ''}`}
-          onClick={() => handlePanChange(-1)}
-        >
-          L
+      <div className="pan-controls flex items-center gap-1">
+        <button aria-label="Pan left" title="Left" className={`p-1 rounded ${panValue === -1 ? 'bg-accent' : 'bg-surface'}`} onClick={() => handlePanChange(-1)}>
+          <ChevronLeftIcon className="w-4 h-4" />
         </button>
-        <button
-          className={`pan-button pan-center ${panValue === 0 ? 'active-pan' : ''}`}
-          onClick={() => handlePanChange(0)}
-        >
-          C
+        <button aria-label="Pan center" title="Center" className={`p-1 rounded ${panValue === 0 ? 'bg-accent' : 'bg-surface'}`} onClick={() => handlePanChange(0)}>
+          <div className="w-4 h-4 flex items-center justify-center text-sm">C</div>
         </button>
-        <button
-          className={`pan-button pan-right ${panValue === 1 ? 'active-pan' : ''}`}
-          onClick={() => handlePanChange(1)}
-        >
-          R
+        <button aria-label="Pan right" title="Right" className={`p-1 rounded ${panValue === 1 ? 'bg-accent' : 'bg-surface'}`} onClick={() => handlePanChange(1)}>
+          <ChevronRightIcon className="w-4 h-4" />
         </button>
       </div>
 
-      <button
-        className={`mute-button ${isMuted ? 'active' : ''}`}
-        onClick={handleMuteToggle}
-      >
-        {isMuted ? 'Unmute' : 'Mute'}
+      <button aria-label={isMuted ? 'Unmute' : 'Mute'} title={isMuted ? 'Unmute' : 'Mute'} className={`p-1 rounded ${isMuted ? 'bg-red-600/20' : 'bg-surface'}`} onClick={handleMuteToggle}>
+        {isMuted ? <SpeakerXMarkIcon className="w-4 h-4" /> : <SpeakerWaveIcon className="w-4 h-4" />}
       </button>
     </div>
   );

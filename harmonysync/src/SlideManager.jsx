@@ -1,9 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { ArrowPathIcon } from '@heroicons/react/24/solid';
 import SlideItem from './SlideItem.jsx';
 import * as TauriEvent from '@tauri-apps/api/event';
+import { FixedSizeGrid as Grid } from 'react-window';
 
 const SlideManager = ({ allSlides, setAllSlides, selectedSlide, setSelectedSlide }) => {
-  const [thumbnailSize, setThumbnailSize] = useState(700); // Initial size for thumbnails
+  const [thumbnailSize, setThumbnailSize] = useState(220); // Initial reasonable thumbnail size
+  const [columns, setColumns] = useState(4);
+  const gridRef = useRef(null);
+  const [gridKey, setGridKey] = useState(0);
   const selectedSlideIndex = allSlides.findIndex(slide => slide === selectedSlide);
   const dragItem = useRef(null);
   const dragOverItem = useRef(null);
@@ -52,6 +57,42 @@ const SlideManager = ({ allSlides, setAllSlides, selectedSlide, setSelectedSlide
     };
   }, [allSlides, selectedSlide, setSelectedSlide]);
 
+  // Recalculate columns on resize
+  useEffect(() => {
+    let ro;
+    const handleResize = () => {
+      const width = slideColRef.current ? slideColRef.current.clientWidth : 800;
+      const col = Math.max(2, Math.floor(width / (thumbnailSize + 16))); // 16 is gap
+      setColumns(col);
+      // FixedSizeGrid doesn't expose resetAfterIndices; force a re-render via key
+      setGridKey(k => k + 1);
+    };
+    handleResize();
+    if (window.ResizeObserver && slideColRef.current) {
+      ro = new ResizeObserver(handleResize);
+      ro.observe(slideColRef.current);
+    } else {
+      window.addEventListener('resize', handleResize);
+    }
+
+    return () => {
+      if (ro && slideColRef.current) ro.unobserve(slideColRef.current);
+      else window.removeEventListener('resize', handleResize);
+    };
+  }, [thumbnailSize]);
+
+  // Center selected slide in the grid viewport
+  useEffect(() => {
+    if (!gridRef.current || selectedSlide == null) return;
+    const index = allSlides.findIndex(s => s === selectedSlide);
+    if (index === -1) return;
+    const row = Math.floor(index / columns);
+    const col = index % columns;
+    const rowHeight = thumbnailSize + 24; // estimate including padding
+    const colWidth = thumbnailSize + 16;
+    gridRef.current.scrollTo({ scrollLeft: Math.max(0, col * colWidth - (gridRef.current.props.width / 2) + (colWidth / 2)), scrollTop: Math.max(0, row * rowHeight - (gridRef.current.props.height / 2) + (rowHeight / 2)) });
+  }, [selectedSlide, columns, thumbnailSize, allSlides]);
+
   const handleSlideClick = (index) => {
     setSelectedSlide(allSlides[index]);
 
@@ -99,34 +140,60 @@ const SlideManager = ({ allSlides, setAllSlides, selectedSlide, setSelectedSlide
   };
 
   return (
-    <div className="col" id="slide-col" ref={slideColRef} onDragOver={handleDragOver}>
-      <div className="thumbnail-size-control">
-        <label htmlFor="thumbnail-size-slider">Thumbnail Size:</label>
+    <div className="p-3 h-full flex flex-col" id="slide-col" ref={slideColRef} onDragOver={handleDragOver}>
+  <div className="flex items-center gap-4 mb-3">
+        <label htmlFor="thumbnail-size-slider" className="text-sm text-muted">Thumbnail Size</label>
         <input
+          aria-label="Thumbnail Size"
           type="range"
           id="thumbnail-size-slider"
-          min="50"
-          max="700"
+          min="80"
+          max="520"
           value={thumbnailSize}
           onChange={(e) => setThumbnailSize(parseInt(e.target.value))}
+          className="w-48"
         />
-        <span>{thumbnailSize}px</span>
+        <div className="text-sm text-muted">{thumbnailSize}px</div>
+        <button aria-label="Reset thumbnail size" title="Reset" className="ml-auto p-2 bg-surface rounded-md" onClick={() => setThumbnailSize(220)}>
+          <ArrowPathIcon className="w-4 h-4 text-muted" />
+        </button>
       </div>
-      {allSlides.map((slide, index) => (
-        <SlideItem
-          key={index} // Using index as key for now, consider unique ID if available
-          slide={slide}
-          index={index}
-          isSelected={slide === selectedSlide}
-          onSelect={handleSlideClick}
-          onDragStart={handleDragStart}
-          onDragEnter={handleDragEnter}
-          onDrop={handleDrop}
-          onDragEnd={handleDragEnd}
-          thumbnailSize={thumbnailSize}
-          onVideoTranscoded={handleVideoTranscoded} // Pass the new prop
-        />
-      ))}
+
+      <div className="flex-1">
+        <Grid
+          key={gridKey}
+          ref={gridRef}
+          columnCount={columns}
+          columnWidth={thumbnailSize + 16}
+          height={Math.max(300, window.innerHeight - 420)}
+          rowCount={Math.ceil(allSlides.length / columns)}
+          rowHeight={thumbnailSize + 24}
+          width={slideColRef.current ? slideColRef.current.clientWidth : 800}
+          itemData={{ allSlides, columns, thumbnailSize, selectedSlide, handleSlideClick, handleDragStart, handleDragEnter, handleDrop, handleDragEnd, handleVideoTranscoded }}
+        >
+          {({ columnIndex, rowIndex, style, data }) => {
+            const index = rowIndex * data.columns + columnIndex;
+            if (index >= data.allSlides.length) return null;
+            const slide = data.allSlides[index];
+            return (
+              <div style={style} className="p-2">
+                <SlideItem
+                  slide={slide}
+                  index={index}
+                  isSelected={slide === data.selectedSlide}
+                  onSelect={data.handleSlideClick}
+                  onDragStart={data.handleDragStart}
+                  onDragEnter={data.handleDragEnter}
+                  onDrop={data.handleDrop}
+                  onDragEnd={data.handleDragEnd}
+                  thumbnailSize={data.thumbnailSize}
+                  onVideoTranscoded={data.handleVideoTranscoded}
+                />
+              </div>
+            );
+          }}
+        </Grid>
+      </div>
     </div>
   );
 };
