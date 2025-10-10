@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import SlideItem from './SlideItem.jsx';
 import * as TauriEvent from '@tauri-apps/api/event';
 
-const SlideManager = ({ allSlides, setAllSlides }) => {
-  const [selectedSlideIndex, setSelectedSlideIndex] = useState(null);
+const SlideManager = ({ allSlides, setAllSlides, selectedSlide, setSelectedSlide }) => {
   const [thumbnailSize, setThumbnailSize] = useState(700); // Initial size for thumbnails
+  const selectedSlideIndex = allSlides.findIndex(slide => slide === selectedSlide);
   const dragItem = useRef(null);
   const dragOverItem = useRef(null);
   const slideColRef = useRef(null);
@@ -28,7 +28,7 @@ const SlideManager = ({ allSlides, setAllSlides }) => {
 
         let newIndex = selectedSlideIndex;
 
-        if (selectedSlideIndex === null) {
+        if (selectedSlideIndex === -1) {
           newIndex = 0; // Select first slide if none is selected
         } else if (e.key === 'ArrowDown') {
           newIndex = (selectedSlideIndex + 1) % allSlides.length;
@@ -36,7 +36,7 @@ const SlideManager = ({ allSlides, setAllSlides }) => {
           newIndex = (selectedSlideIndex - 1 + allSlides.length) % allSlides.length;
         }
 
-        setSelectedSlideIndex(newIndex);
+        setSelectedSlide(allSlides[newIndex]);
         // Programmatically click the slide to trigger its event emission
         const selectedSlideElement = slideColRef.current.querySelector(`[data-slide-index='${newIndex}']`);
         if (selectedSlideElement) {
@@ -50,10 +50,10 @@ const SlideManager = ({ allSlides, setAllSlides }) => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [allSlides, selectedSlideIndex]);
+  }, [allSlides, selectedSlide, setSelectedSlide]);
 
   const handleSlideClick = (index) => {
-    setSelectedSlideIndex(index);
+    setSelectedSlide(allSlides[index]);
 
     // Emit the new, more detailed event for the confidence monitor
     const currentSlide = allSlides[index];
@@ -117,7 +117,7 @@ const SlideManager = ({ allSlides, setAllSlides }) => {
           key={index} // Using index as key for now, consider unique ID if available
           slide={slide}
           index={index}
-          isSelected={selectedSlideIndex === index}
+          isSelected={slide === selectedSlide}
           onSelect={handleSlideClick}
           onDragStart={handleDragStart}
           onDragEnter={handleDragEnter}

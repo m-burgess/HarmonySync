@@ -1,0 +1,64 @@
+.song-library {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.search-input {
+  width: 100%;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  background-color: #2d2d2d;
+  border: 1px solid #3a3a3a;
+  color: #d4d4d4;
+  border-radius: 4px;
+}
+
+.search-results {
+  flex-grow: 1;
+  overflow-y: auto;
+}
+
+.song-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.song-item:hover {
+  background-color: #3a3a3a;
+}
+
+.song-item span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.add-button {
+  background: #007acc;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  font-size: 16px;
+  line-height: 24px;
+  text-align: center;
+  cursor: pointer;
+  margin-left: 10px;
+  flex-shrink: 0;
+}
+
+.add-button:hover {
+  background: #005a9e;
+}
+
+.error-message {
+    color: #f44336;
+    text-align: center;
+}
