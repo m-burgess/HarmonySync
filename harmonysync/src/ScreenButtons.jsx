@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Window } from '@tauri-apps/api/window';
 import { emit } from '@tauri-apps/api/event';
-import { ComputerDesktopIcon, ChartBarIcon, RectangleStackIcon } from '@heroicons/react/24/solid';
+import { ComputerDesktopIcon, TvIcon, WindowIcon } from '@heroicons/react/24/solid';
 
 const ScreenButtons = () => {
   const [audienceWindow, setAudienceWindow] = useState(null);
@@ -14,7 +14,13 @@ const ScreenButtons = () => {
       currentAudienceWindow = new Window('audience', {
         url: 'audience.html',
         title: 'Audience Screen',
-        devtools: true,
+        decorations: false,
+        resizable: true,
+        maximizable: false,
+        minimizable: false,
+        closable: true,
+        skipTaskbar: false,
+        devtools: false,
       });
       setAudienceWindow(currentAudienceWindow);
     }
@@ -36,6 +42,8 @@ const ScreenButtons = () => {
       currentConfidenceWindow = new Window('confidence', {
         url: 'confidence.html',
         title: 'Confidence Monitor',
+        decorations: false,
+        resizable: true,
         devtools: true,
       });
       setConfidenceWindow(currentConfidenceWindow);
@@ -60,6 +68,10 @@ const ScreenButtons = () => {
         height: 1080,
         resizable: false,
         fullscreen: false,
+        decorations: false,
+        transparent: true,
+        alwaysOnTop: true,
+        skipTaskbar: true,
         devtools: true,
       });
       setLowerThirdsWindow(currentLowerThirdsWindow);
@@ -73,18 +85,16 @@ const ScreenButtons = () => {
   };
 
   return (
-    <div className="col" id="preview-col">
-      <div className="flex flex-col gap-2">
-        <button aria-label="Open Audience Screen" title="Audience" onClick={openAudienceScreen} id="open-audience-screen-button" className="p-2 bg-surface rounded-md">
-          <ComputerDesktopIcon className="w-5 h-5 text-primary" />
-        </button>
-        <button aria-label="Open Confidence Monitor" title="Confidence" onClick={openConfidenceMonitor} id="open-confidence-screen-button" className="p-2 bg-surface rounded-md">
-          <ChartBarIcon className="w-5 h-5 text-primary" />
-        </button>
-        <button aria-label="Open Lower Thirds" title="Lower Thirds" onClick={openLowerThirds} id="open-lower-thirds-button" className="p-2 bg-surface rounded-md">
-          <RectangleStackIcon className="w-5 h-5 text-primary" />
-        </button>
-      </div>
+    <div className="flex gap-2">
+      <button aria-label="Open Audience Screen" title="Audience" onClick={openAudienceScreen} id="open-audience-screen-button" className="p-2 bg-surface rounded-md">
+        <ComputerDesktopIcon className="w-5 h-5 text-primary" />
+      </button>
+      <button aria-label="Open Confidence Monitor" title="Confidence" onClick={openConfidenceMonitor} id="open-confidence-screen-button" className="p-2 bg-surface rounded-md">
+        <TvIcon className="w-5 h-5 text-primary" />
+      </button>
+      <button aria-label="Open Lower Thirds" title="Lower Thirds" onClick={openLowerThirds} id="open-lower-thirds-button" className="p-2 bg-surface rounded-md">
+        <WindowIcon className="w-5 h-5 text-primary" />
+      </button>
     </div>
   );
 };

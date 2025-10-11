@@ -60,8 +60,10 @@ pub fn run() {
             // Create the main menu bar
             let menu = Menu::with_items(handle, &[&file_submenu])?;
 
-            // Set the menu
-            app.set_menu(menu)?;
+            // Set the menu only for the main window, not child windows
+            if let Some(main_window) = app.get_webview_window("main") {
+                main_window.set_menu(menu)?;
+            }
 
             setup_windows(app)?;
             Ok(())

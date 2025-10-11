@@ -35,7 +35,7 @@ const MultitrackPlayer = ({ allTracks }) => {
   return (
     <div id="multitrack-player" className="bg-stage text-primary p-3 rounded-md">
       <div className="flex items-center gap-3 mb-3">
-        <button aria-label="Play all tracks" title="Play All" className="p-2 bg-accent rounded-md text-black" onClick={playAllTracks}>
+        <button aria-label="Play all tracks" title="Play All" className="p-2 bg-stage rounded-md text-primary" onClick={playAllTracks}>
           <PlayIcon className="w-5 h-5 text-primary" />
         </button>
 
