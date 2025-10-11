@@ -120,12 +120,12 @@ const SlideItem = ({ slide, index, isSelected, onSelect, onDragStart, onDragEnte
       {/* Hover overlay with quick actions */}
       {isHover && (
         <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-2">
-          <button aria-label="Open slide" title="Open" className="p-2 bg-accent rounded-md" onClick={(e) => { e.stopPropagation(); handleClick(); }}>
+            <button aria-label="Open slide" title="Open" className="p-2 bg-accent rounded-md" onClick={(e) => { e.stopPropagation(); handleClick(); }}>
             <ArrowTopRightOnSquareIcon className="w-5 h-5 text-black" />
           </button>
           {slide.type === 'video' && (
-            <button aria-label="Play video" title="Play" className="p-2 bg-surface rounded-md" onClick={(e) => { e.stopPropagation(); TauriCore.invoke('transcode_video', { inputPath: slide.path }).then(p => { onVideoTranscoded(index, p); TauriCore.invoke('display_video_slide', { path: p, duration: slide.duration }); }).catch(console.error); }}>
-              <PlayIcon className="w-5 h-5 text-muted" />
+              <button aria-label="Play video" title="Play" className="p-2 bg-surface rounded-md" onClick={(e) => { e.stopPropagation(); TauriCore.invoke('transcode_video', { inputPath: slide.path }).then(p => { onVideoTranscoded(index, p); TauriCore.invoke('display_video_slide', { path: p, duration: slide.duration }); }).catch(console.error); }}>
+              <PlayIcon className="w-5 h-5 text-primary" />
             </button>
           )}
         </div>
