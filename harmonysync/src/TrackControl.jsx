@@ -54,18 +54,18 @@ const TrackControl = ({ track, onPanChange, onMuteToggle }) => {
 
       <div className="pan-controls flex items-center gap-1">
         <button aria-label="Pan left" title="Left" className={`p-1 rounded ${panValue === -1 ? 'bg-accent' : 'bg-surface'}`} onClick={() => handlePanChange(-1)}>
-          <ChevronLeftIcon className="w-4 h-4" />
+          <ChevronLeftIcon className="w-4 h-4 text-primary" />
         </button>
         <button aria-label="Pan center" title="Center" className={`p-1 rounded ${panValue === 0 ? 'bg-accent' : 'bg-surface'}`} onClick={() => handlePanChange(0)}>
           <div className="w-4 h-4 flex items-center justify-center text-sm">C</div>
         </button>
         <button aria-label="Pan right" title="Right" className={`p-1 rounded ${panValue === 1 ? 'bg-accent' : 'bg-surface'}`} onClick={() => handlePanChange(1)}>
-          <ChevronRightIcon className="w-4 h-4" />
+          <ChevronRightIcon className="w-4 h-4 text-primary" />
         </button>
       </div>
 
       <button aria-label={isMuted ? 'Unmute' : 'Mute'} title={isMuted ? 'Unmute' : 'Mute'} className={`p-1 rounded ${isMuted ? 'bg-red-600/20' : 'bg-surface'}`} onClick={handleMuteToggle}>
-        {isMuted ? <SpeakerXMarkIcon className="w-4 h-4" /> : <SpeakerWaveIcon className="w-4 h-4" />}
+  {isMuted ? <SpeakerXMarkIcon className="w-4 h-4 text-primary" /> : <SpeakerWaveIcon className="w-4 h-4 text-primary" />}
       </button>
     </div>
   );

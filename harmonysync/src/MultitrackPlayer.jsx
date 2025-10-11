@@ -36,15 +36,15 @@ const MultitrackPlayer = ({ allTracks }) => {
     <div id="multitrack-player" className="bg-stage text-primary p-3 rounded-md">
       <div className="flex items-center gap-3 mb-3">
         <button aria-label="Play all tracks" title="Play All" className="p-2 bg-accent rounded-md text-black" onClick={playAllTracks}>
-          <PlayIcon className="w-5 h-5" />
+          <PlayIcon className="w-5 h-5 text-primary" />
         </button>
 
         <button aria-label="Stop all tracks" title="Stop All" className="p-2 bg-surface rounded-md text-muted" onClick={stopAllAudio}>
-          <PauseIcon className="w-5 h-5" />
+          <PauseIcon className="w-5 h-5 text-primary" />
         </button>
 
         <button aria-label="Restart all tracks" title="Start From Beginning" className="p-2 bg-surface rounded-md text-muted" onClick={goToBeginningAllTracks}>
-          <BackwardIcon className="w-5 h-5" />
+          <BackwardIcon className="w-5 h-5 text-primary" />
         </button>
 
         <div className="ml-auto flex items-center gap-2">
