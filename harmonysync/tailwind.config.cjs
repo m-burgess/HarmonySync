@@ -14,6 +14,7 @@ module.exports = {
         accent2: '#06b6d4',
         muted: '#9ca3af',
         text: '#e6eef6',
+        primary: '#e6eef6',
       },
       borderRadius: {
         xl: '12px',

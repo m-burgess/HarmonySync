@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ArrowPathIcon } from '@heroicons/react/24/solid';
 import SlideItem from './SlideItem.jsx';
+import ScreenButtons from './ScreenButtons.jsx';
 import * as TauriEvent from '@tauri-apps/api/event';
 import { FixedSizeGrid as Grid } from 'react-window';
 
@@ -141,7 +142,13 @@ const SlideManager = ({ allSlides, setAllSlides, selectedSlide, setSelectedSlide
 
   return (
     <div className="p-3 h-full flex flex-col" id="slide-col" ref={slideColRef} onDragOver={handleDragOver}>
-  <div className="flex items-center gap-4 mb-3">
+      {/* Screen Controls */}
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-semibold text-primary">Slides</h2>
+        <ScreenButtons />
+      </div>
+      
+      <div className="flex items-center gap-4 mb-3">
         <label htmlFor="thumbnail-size-slider" className="text-sm text-muted">Thumbnail Size</label>
         <input
           aria-label="Thumbnail Size"

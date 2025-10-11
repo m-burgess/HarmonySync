@@ -5,7 +5,6 @@ import * as TauriCore from '@tauri-apps/api/core';
 
 import './App.css';
 import LibraryTabs from './LibraryTabs.jsx';
-import ScreenButtons from './ScreenButtons.jsx';
 import SetlistManager from './SetlistManager.jsx';
 import SlideManager from './SlideManager.jsx';
 import SlideInfo from './SlideInfo.jsx';
@@ -248,24 +247,19 @@ const App = () => {
           </button>
         </div>
 
-        <div className="container relative" ref={containerRef} style={{ gridTemplateColumns: `${leftWidth}px 1fr ${rightWidth}px` }}>
+        <div className="container relative" ref={containerRef} style={{ gridTemplateColumns: `${leftWidth}px 1fr` }}>
           {/* Left column */}
           <div className="left-col overflow-auto">
             <SetlistManager setAllSlides={setAllSlides} setAllTracks={setAllTracks} serviceOrder={serviceOrder} setServiceOrder={setServiceOrder} />
           </div>
 
-          {/* Middle column */}
-          <div className="middle-col overflow-auto">
-            <SlideManager allSlides={allSlides} setAllSlides={setAllSlides} selectedSlide={selectedSlide} setSelectedSlide={setSelectedSlide} />
-          </div>
-
-          {/* Right column: combine buttons + slide info */}
+          {/* Right column - now contains both slides and slide info */}
           <div className="right-col overflow-auto flex flex-col">
-            <ScreenButtons />
+            <SlideManager allSlides={allSlides} setAllSlides={setAllSlides} selectedSlide={selectedSlide} setSelectedSlide={setSelectedSlide} />
             <SlideInfo selectedSlide={selectedSlide} />
           </div>
 
-          {/* Left gutter (between left and middle) */}
+          {/* Gutter (between left and right) */}
           <div
             role="separator"
             aria-orientation="vertical"
@@ -273,22 +267,6 @@ const App = () => {
             onDoubleClick={() => resetColumns()}
             className="absolute top-0 bottom-0 w-6 -translate-x-3 bg-transparent hover:bg-gray-600/10 z-20 cursor-col-resize flex items-center justify-center"
             style={{ left: `${leftWidth}px` }}
-          >
-            <div className="space-y-1">
-              <span className="block w-6 h-0.5 bg-gray-500 rounded"></span>
-              <span className="block w-6 h-0.5 bg-gray-500 rounded"></span>
-              <span className="block w-6 h-0.5 bg-gray-500 rounded"></span>
-            </div>
-          </div>
-
-          {/* Right gutter (between middle and right) */}
-          <div
-            role="separator"
-            aria-orientation="vertical"
-            onMouseDown={(e) => startDrag('right', e)}
-            onDoubleClick={() => resetColumns()}
-            className="absolute top-0 bottom-0 w-6 -translate-x-3 bg-transparent hover:bg-gray-600/10 z-20 cursor-col-resize flex items-center justify-center"
-            style={{ left: `calc(100% - ${rightWidth}px)` }}
           >
             <div className="space-y-1">
               <span className="block w-6 h-0.5 bg-gray-500 rounded"></span>

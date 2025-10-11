@@ -22,6 +22,9 @@ const AudienceScreen = () => {
     }
   }, [content]);
 
+  // Add console log to verify component is loading
+  console.log('AudienceScreen component loaded, content:', content);
+
   useEffect(() => {
     const unlistenBackground = TauriEvent.listen('set-background', (event) => {
       console.log('Audience: set-background event received:', event.payload);
@@ -158,6 +161,8 @@ const AudienceScreen = () => {
   }, [content]);
 
   const renderContent = () => {
+    console.log('AudienceScreen renderContent called, content:', content);
+    
     if (!content) {
       return (
         <div 
@@ -205,9 +210,9 @@ const AudienceScreen = () => {
   };
 
   return (
-    <>
+    <div id="audience-container">
       {renderContent()}
-    </>
+    </div>
   );
 };
 
