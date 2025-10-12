@@ -9,6 +9,7 @@ import SetlistManager from './SetlistManager.jsx';
 import SlideManager from './SlideManager.jsx';
 import SlideInfo from './SlideInfo.jsx';
 import MultitrackPlayer from './MultitrackPlayer.jsx';
+import DisplaySettings from './DisplaySettings.jsx';
 
 
 import { parseLyricsToSlides } from './lyrics.js';
@@ -74,6 +75,7 @@ const App = () => {
   const [serviceOrder, setServiceOrder] = useState([]); // New state for service order
   const [isLibraryVisible, setIsLibraryVisible] = useState(true);
   const [selectedSlide, setSelectedSlide] = useState(null);
+  const [isDisplaySettingsOpen, setIsDisplaySettingsOpen] = useState(false);
   const containerRef = useRef(null);
 
   // Resizable columns: left and right widths in pixels. Middle column is flexible (1fr).
@@ -237,6 +239,17 @@ const App = () => {
     };
   }, []);
 
+  // Listen for display settings menu event
+  useEffect(() => {
+    const unlisten = Tauri.event.listen('display-settings-clicked', () => {
+      setIsDisplaySettingsOpen(true);
+    });
+
+    return () => {
+      unlisten.then(f => f());
+    };
+  }, []);
+
   return (
     <div className="app-container">
       {isLibraryVisible && <LibraryTabs onAddSongToSetlist={handleAddSongToSetlist} onAddPresentationToSetlist={handleAddPresentationToSetlist} songImportedTrigger={songImportedTrigger} presentationImportedTrigger={presentationImportedTrigger} />}
@@ -280,6 +293,11 @@ const App = () => {
           <MultitrackPlayer allTracks={allTracks} />
         </div>
       </main>
+      
+      <DisplaySettings
+        isOpen={isDisplaySettingsOpen}
+        onClose={() => setIsDisplaySettingsOpen(false)}
+      />
     </div>
   );
 };

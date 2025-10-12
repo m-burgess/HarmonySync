@@ -57,8 +57,17 @@ pub fn run() {
                 ],
             )?;
 
+            // Create the 'Settings' menu
+            let display_settings_item = MenuItem::with_id(handle, "display-settings", "Display Settings", true, None as Option<&str>)?;
+            let settings_submenu = Submenu::with_items(
+                handle,
+                "Settings",
+                true,
+                &[&display_settings_item],
+            )?;
+
             // Create the main menu bar
-            let menu = Menu::with_items(handle, &[&file_submenu])?;
+            let menu = Menu::with_items(handle, &[&file_submenu, &settings_submenu])?;
 
             // Set the menu only for the main window, not child windows
             if let Some(main_window) = app.get_webview_window("main") {
@@ -78,6 +87,11 @@ pub fn run() {
                 "import-presentation" => {
                     if let Err(e) = app.emit("import-presentation-clicked", ()) {
                         eprintln!("Failed to emit import-presentation-clicked event: {}", e);
+                    }
+                }
+                "display-settings" => {
+                    if let Err(e) = app.emit("display-settings-clicked", ()) {
+                        eprintln!("Failed to emit display-settings-clicked event: {}", e);
                     }
                 }
                 _ => {}
@@ -119,8 +133,6 @@ pub fn run() {
             application::commands::display_video_slide,
             application::commands::get_video_metadata,
             application::commands::transcode_video,
-
-
             application::commands::convert_to_ogg,
             application::commands::start_http_server,
             application::commands::stop_http_server,
@@ -132,6 +144,8 @@ pub fn run() {
             application::commands::get_presentation_details,
             application::commands::import_presentation_folder,
             application::commands::get_all_presentations,
+            application::commands::get_setting,
+            application::commands::set_setting,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
