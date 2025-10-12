@@ -20,10 +20,17 @@ impl SqliteRepository {
             "CREATE TABLE IF NOT EXISTS songs (
                 id INTEGER PRIMARY KEY,
                 title TEXT NOT NULL UNIQUE,
-                lyrics TEXT
+                lyrics TEXT,
+                mogg_file_path TEXT
             )",
             [],
         )?;
+        
+        // Migration: Add mogg_file_path column if it doesn't exist
+        conn.execute(
+            "ALTER TABLE songs ADD COLUMN mogg_file_path TEXT",
+            [],
+        ).ok(); // Ignore error if column already exists
 
         conn.execute(
             "CREATE TABLE IF NOT EXISTS tracks (
@@ -100,12 +107,13 @@ impl SqliteRepository {
 impl SongRepository for SqliteRepository {
     fn get_all(&self) -> Result<Vec<Song>> {
         let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare("SELECT id, title, lyrics FROM songs")?;
+        let mut stmt = conn.prepare("SELECT id, title, lyrics, mogg_file_path FROM songs")?;
         let song_iter = stmt.query_map([], |row| {
             Ok(Song {
                 id: row.get(0)?,
                 title: row.get(1)?,
                 lyrics: row.get(2)?,
+                mogg_file_path: row.get(3)?,
             })
         })?;
 
@@ -118,12 +126,13 @@ impl SongRepository for SqliteRepository {
 
     fn get_by_id(&self, id: i64) -> Result<Option<Song>> {
         let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare("SELECT id, title, lyrics FROM songs WHERE id = ?1")?;
+        let mut stmt = conn.prepare("SELECT id, title, lyrics, mogg_file_path FROM songs WHERE id = ?1")?;
         let song = stmt.query_row(params![id], |row| {
             Ok(Song {
                 id: row.get(0)?,
                 title: row.get(1)?,
                 lyrics: row.get(2)?,
+                mogg_file_path: row.get(3)?,
             })
         }).optional()?;
         Ok(song)
@@ -132,8 +141,8 @@ impl SongRepository for SqliteRepository {
     fn insert(&self, song: &Song) -> Result<Song> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "INSERT INTO songs (title, lyrics) VALUES (?1, ?2)",
-            params![song.title, song.lyrics],
+            "INSERT INTO songs (title, lyrics, mogg_file_path) VALUES (?1, ?2, ?3)",
+            params![song.title, song.lyrics, song.mogg_file_path],
         )?;
         let last_id = conn.last_insert_rowid();
         Ok(Song { id: Some(last_id), ..song.clone() })
@@ -142,8 +151,8 @@ impl SongRepository for SqliteRepository {
     fn update(&self, song: &Song) -> Result<()> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "UPDATE songs SET title = ?1, lyrics = ?2 WHERE id = ?3",
-            params![song.title, song.lyrics, song.id],
+            "UPDATE songs SET title = ?1, lyrics = ?2, mogg_file_path = ?3 WHERE id = ?4",
+            params![song.title, song.lyrics, song.mogg_file_path, song.id],
         )?;
         Ok(())
     }

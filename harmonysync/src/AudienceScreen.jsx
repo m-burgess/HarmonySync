@@ -1,10 +1,26 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as TauriEvent from '@tauri-apps/api/event';
 import * as TauriCore from '@tauri-apps/api/core';
+import { lyricTransitionManager } from './lyric-transitions.js';
 
 const AudienceScreen = () => {
   const [content, setContent] = useState(null); // { type: 'lyrics', text: [] }, { type: 'image', path: '', name: '' }, { type: 'video', videoId: '' }
   const playerRef = useRef(null);
+  const lyricDisplayRef = useRef(null);
+
+  // Initialize lyric display when component mounts
+  useEffect(() => {
+    if (lyricDisplayRef.current && !content) {
+      lyricTransitionManager.displayImmediate(null, lyricDisplayRef.current);
+    }
+  }, []);
+
+  // Initialize content when it first becomes available
+  useEffect(() => {
+    if (lyricDisplayRef.current && content && (content.type === 'lyrics' || content.type === 'image')) {
+      lyricTransitionManager.displayImmediate(content, lyricDisplayRef.current);
+    }
+  }, [content]);
 
   useEffect(() => {
     const unlistenBackground = TauriEvent.listen('set-background', (event) => {
@@ -21,18 +37,35 @@ const AudienceScreen = () => {
       head.appendChild(style);
     });
 
-    const unlistenLyric = TauriEvent.listen('display-lyric-slide', (event) => {
+    const unlistenLyric = TauriEvent.listen('display-lyric-slide', async (event) => {
       console.log('Audience: display-lyric-slide event received:', event.payload);
-      setContent({ type: 'lyrics', text: event.payload.text });
+      const newContent = { type: 'lyrics', text: event.payload.text };
+      
+      // Use smooth transition for lyrics
+      if (lyricDisplayRef.current) {
+        await lyricTransitionManager.transitionTo(newContent, lyricDisplayRef.current);
+      }
+      setContent(newContent);
     });
 
-    const unlistenImage = TauriEvent.listen('display-image-slide', (event) => {
+    const unlistenImage = TauriEvent.listen('display-image-slide', async (event) => {
       console.log('Audience: display-image-slide event received:', event.payload);
-      setContent({ type: 'image', path: event.payload.path, name: event.payload.name });
+      const newContent = { type: 'image', path: event.payload.path, name: event.payload.name };
+      
+      // Use smooth transition for images
+      if (lyricDisplayRef.current) {
+        await lyricTransitionManager.transitionTo(newContent, lyricDisplayRef.current);
+      }
+      setContent(newContent);
     });
 
-    const unlistenClear = TauriEvent.listen('clear-lyric-display', () => {
+    const unlistenClear = TauriEvent.listen('clear-lyric-display', async () => {
       console.log('Audience: clear-lyric-display event received');
+      
+      // Use smooth transition to clear display
+      if (lyricDisplayRef.current) {
+        await lyricTransitionManager.clear(lyricDisplayRef.current);
+      }
       setContent(null);
     });
 
@@ -126,34 +159,48 @@ const AudienceScreen = () => {
 
   const renderContent = () => {
     if (!content) {
-      return null;
+      return (
+        <div 
+          id="lyric-display" 
+          ref={lyricDisplayRef}
+          style={{ opacity: 0, display: 'none' }}
+        />
+      );
     }
 
     switch (content.type) {
       case 'lyrics':
-        return (
-          <div id="lyric-display">
-            {content.text.map((line, index) => (
-              <div key={index}>{line}</div>
-            ))}
-          </div>
-        );
       case 'image':
         return (
-          <div id="lyric-display">
-            <img
-              src={TauriCore.convertFileSrc(content.path)}
-              alt={content.name}
-              className="audience-slide-image"
-            />
-          </div>
+          <div 
+            id="lyric-display" 
+            ref={lyricDisplayRef}
+            style={{ 
+              opacity: 1, 
+              display: 'flex',
+              transition: 'opacity 200ms ease-in-out'
+            }}
+          />
         );
       case 'video':
         return (
-          <div id="youtube-player"></div>
+          <>
+            <div 
+              id="lyric-display" 
+              ref={lyricDisplayRef}
+              style={{ opacity: 0, display: 'none' }}
+            />
+            <div id="youtube-player"></div>
+          </>
         );
       default:
-        return null;
+        return (
+          <div 
+            id="lyric-display" 
+            ref={lyricDisplayRef}
+            style={{ opacity: 0, display: 'none' }}
+          />
+        );
     }
   };
 
