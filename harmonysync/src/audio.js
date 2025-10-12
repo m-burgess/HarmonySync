@@ -100,6 +100,12 @@ export async function loadAudioFile(path) {
 
 // Load a MOGG file and extract a specific channel as a mono buffer
 export async function loadMoggChannel(path, channelIndex) {
+  // Validate inputs
+  if (typeof channelIndex !== 'number' || channelIndex < 0) {
+    console.error(`Invalid channel index: ${channelIndex}`);
+    return null;
+  }
+
   const cacheKey = `${path}:${channelIndex}`;
   if (audioBufferCache.has(cacheKey)) {
     return audioBufferCache.get(cacheKey);
@@ -110,6 +116,11 @@ export async function loadMoggChannel(path, channelIndex) {
     const assetUrl = TauriCore.convertFileSrc(path);
     console.log(`Loading MOGG channel ${channelIndex} from:`, assetUrl);
     const response = await fetch(assetUrl);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch MOGG file: ${response.statusText}`);
+    }
+    
     const arrayBuffer = await response.arrayBuffer();
     const multiChannelBuffer = await audioContext.decodeAudioData(arrayBuffer);
     
