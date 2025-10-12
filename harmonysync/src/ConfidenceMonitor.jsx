@@ -55,7 +55,6 @@ const ConfidenceMonitor = () => {
       }
     });
 
-<<<<<<< HEAD
     const unlistenClear = TauriEvent.listen('clear-confidence-display', async () => {
       console.log('Confidence: clear-confidence-display event received');
       
