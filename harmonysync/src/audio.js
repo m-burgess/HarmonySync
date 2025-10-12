@@ -98,6 +98,46 @@ export async function loadAudioFile(path) {
   }
 }
 
+// Load a MOGG file and extract a specific channel as a mono buffer
+export async function loadMoggChannel(path, channelIndex) {
+  const cacheKey = `${path}:${channelIndex}`;
+  if (audioBufferCache.has(cacheKey)) {
+    return audioBufferCache.get(cacheKey);
+  }
+
+  try {
+    const audioContext = getAudioContext();
+    const assetUrl = TauriCore.convertFileSrc(path);
+    console.log(`Loading MOGG channel ${channelIndex} from:`, assetUrl);
+    const response = await fetch(assetUrl);
+    const arrayBuffer = await response.arrayBuffer();
+    const multiChannelBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    
+    // Check if the requested channel exists
+    if (channelIndex >= multiChannelBuffer.numberOfChannels) {
+      console.error(`Channel ${channelIndex} does not exist in MOGG file (has ${multiChannelBuffer.numberOfChannels} channels)`);
+      return null;
+    }
+    
+    // Extract the specific channel into a new mono buffer
+    const monoBuffer = audioContext.createBuffer(
+      1, // mono
+      multiChannelBuffer.length,
+      multiChannelBuffer.sampleRate
+    );
+    
+    const sourceData = multiChannelBuffer.getChannelData(channelIndex);
+    const destData = monoBuffer.getChannelData(0);
+    destData.set(sourceData);
+    
+    audioBufferCache.set(cacheKey, monoBuffer);
+    return monoBuffer;
+  } catch (error) {
+    console.error(`Error loading or decoding MOGG channel ${channelIndex} from ${path}:`, error);
+    return null;
+  }
+}
+
 export function playAllTracks() {
   const currentAudioContext = getAudioContext();
   const currentTracks = getTracks();

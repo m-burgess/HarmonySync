@@ -4,7 +4,7 @@ import * as TauriPath from '@tauri-apps/api/path';
 import * as TauriFs from '@tauri-apps/plugin-fs';
 import * as TauriCore from '@tauri-apps/api/core';
 import * as TauriEvent from '@tauri-apps/api/event';
-import { loadAudioFile, setPan, playAllTracks, stopAllAudio, goToBeginningAllTracks, applyDefaultPanning, getAudioContext, getTracks, clearAudioBufferCache, clearTracks, cleanupAudio, addTracks } from './audio.js';
+import { loadAudioFile, loadMoggChannel, setPan, playAllTracks, stopAllAudio, goToBeginningAllTracks, applyDefaultPanning, getAudioContext, getTracks, clearAudioBufferCache, clearTracks, cleanupAudio, addTracks } from './audio.js';
 import LoadingModal from './LoadingModal.jsx';
 import { parseLyricsToSlides } from './lyrics.js';
 import { getVideoMetadata } from './video.js';
@@ -279,7 +279,23 @@ const SetlistManager = ({ setAllSlides, setAllTracks, serviceOrder, setServiceOr
           const newLoadedTracks = [];
           const loadingPromises = details.tracks.map(async (trackInfo) => {
             try {
-              const audioBuffer = await loadAudioFile(trackInfo.file_path);
+              let audioBuffer;
+              let trackName = trackInfo.track_name;
+              
+              // Check if this is a MOGG file (track_name contains channel index)
+              if (trackName && trackName.includes(':')) {
+                const parts = trackName.split(':');
+                const actualTrackName = parts[0];
+                const channelIndex = parseInt(parts[1], 10);
+                
+                // Load the specific channel from the MOGG file
+                audioBuffer = await loadMoggChannel(trackInfo.file_path, channelIndex);
+                trackName = actualTrackName; // Use the actual track name without channel index
+              } else {
+                // Legacy: Load as a regular single audio file
+                audioBuffer = await loadAudioFile(trackInfo.file_path);
+              }
+              
               if (audioBuffer) {
                 const track = {
                   buffer: audioBuffer,
@@ -291,7 +307,7 @@ const SetlistManager = ({ setAllSlides, setAllTracks, serviceOrder, setServiceOr
                   startTime: 0,
                   offset: 0,
                   path: trackInfo.file_path,
-                  name: trackInfo.track_name,
+                  name: trackName,
                   panValue: 0,
                   individualVolume: 0.7,
                 };
