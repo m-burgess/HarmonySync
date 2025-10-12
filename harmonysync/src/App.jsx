@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as Tauri from '@tauri-apps/api';
+import * as TauriDialog from '@tauri-apps/plugin-dialog';
+import * as TauriCore from '@tauri-apps/api/core';
 
 import './App.css';
 import LibraryTabs from './LibraryTabs.jsx';
@@ -18,7 +20,7 @@ import { loadAudioFile, getAudioContext, getTracks, applyDefaultPanning } from '
 async function handleImportSong() {
   try {
     // Open a dialog for the user to select a directory.
-    const selectedPath = await Tauri.dialog.open({
+    const selectedPath = await TauriDialog.open({
       directory: true,
       multiple: false,
       title: 'Select Song Folder',
@@ -27,7 +29,7 @@ async function handleImportSong() {
     if (typeof selectedPath === 'string') {
       // If a folder was selected, call the import command.
       console.log(`Importing song from: ${selectedPath}`);
-      await Tauri.core.invoke('import_song_folder', {
+      await TauriCore.invoke('import_song_folder', {
         folderPath: selectedPath,
       });
       alert('Song imported successfully!');
@@ -43,7 +45,7 @@ async function handleImportSong() {
 
 async function handleImportPresentation() {
     try {
-        const selectedPath = await Tauri.dialog.open({
+        const selectedPath = await TauriDialog.open({
             directory: true,
             multiple: false,
             title: 'Select Presentation Folder',
@@ -51,7 +53,7 @@ async function handleImportPresentation() {
 
         if (typeof selectedPath === 'string') {
             console.log(`Importing presentation from: ${selectedPath}`);
-            await Tauri.core.invoke('import_presentation_folder', {
+            await TauriCore.invoke('import_presentation_folder', {
                 sourceFolderPath: selectedPath,
                 category: 'presentation',
             });

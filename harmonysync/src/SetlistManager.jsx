@@ -5,9 +5,12 @@ import * as TauriFs from '@tauri-apps/plugin-fs';
 import * as TauriCore from '@tauri-apps/api/core';
 import * as TauriEvent from '@tauri-apps/api/event';
 import { loadAudioFile, loadMoggChannel, setPan, playAllTracks, stopAllAudio, goToBeginningAllTracks, applyDefaultPanning, getAudioContext, getTracks, clearAudioBufferCache, clearTracks, cleanupAudio, addTracks } from './audio.js';
+import { loadSongTracksForStreaming } from './streaming-audio.js';
+import { songTransitionManager } from './song-transition.js';
 import LoadingModal from './LoadingModal.jsx';
 import { parseLyricsToSlides } from './lyrics.js';
 import { getVideoMetadata } from './video.js';
+import './transitions.css';
 
 const SetlistManager = ({ setAllSlides, setAllTracks, serviceOrder, setServiceOrder }) => {
   const [currentBackgroundCssContent, setCurrentBackgroundCssContent] = useState('');
@@ -161,39 +164,42 @@ const SetlistManager = ({ setAllSlides, setAllTracks, serviceOrder, setServiceOr
         }
       }
 
-      // Load audio tracks
+      // Load audio tracks using streaming approach
       setLoadingMessage('Loading audio tracks...');
       const loadedTracks = [];
-      const loadingPromises = validAudioFiles.map(async (file) => {
-        try {
-          const audioBuffer = await loadAudioFile(file.path);
-          if (audioBuffer) {
-            const track = {
-              buffer: audioBuffer,
-              source: null,
-              gainNode: getAudioContext().createGain(),
-              pannerNode: getAudioContext().createStereoPanner(),
-              isPlaying: false,
-              isMuted: false,
-              startTime: 0,
-              offset: 0,
-              path: file.path,
-              name: file.name,
-              panValue: 0,
-              individualVolume: 0.7,
-            };
-            getTracks().push(track);
-            loadedTracks.push(track);
-          }
-        } catch (audioError) {
-          console.error(`Error loading audio file ${file.name}:`, audioError);
+      
+      // Convert folder audio files to track format expected by streaming function
+      const folderTracks = validAudioFiles.map(file => ({
+        file_path: file.path,
+        track_name: file.name
+      }));
+      
+      if (folderTracks.length > 0) {
+        const streamingTracks = await loadSongTracksForStreaming(folderTracks);
+        
+        // Convert streaming tracks to the format expected by the rest of the app
+        for (const streamingTrack of streamingTracks) {
+          const track = {
+            buffer: streamingTrack.buffer,
+            source: null,
+            gainNode: getAudioContext().createGain(),
+            pannerNode: getAudioContext().createStereoPanner(),
+            isPlaying: false,
+            isMuted: false,
+            startTime: 0,
+            offset: 0,
+            path: streamingTrack.filePath,
+            name: streamingTrack.name,
+            panValue: 0,
+            individualVolume: 0.7,
+          };
+          getTracks().push(track);
+          loadedTracks.push(track);
         }
-        return null;
-      });
-
-      await Promise.all(loadingPromises);
-      addTracks(loadedTracks);
-      applyDefaultPanning(loadedTracks);
+        
+        addTracks(loadedTracks);
+        applyDefaultPanning(loadedTracks);
+      }
 
       return { loadedSlides, loadedTracks, unlistenOgg, unlistenVideoTranscode };
 
@@ -242,8 +248,8 @@ const SetlistManager = ({ setAllSlides, setAllTracks, serviceOrder, setServiceOr
     setServiceOrder((prevOrder) => prevOrder.filter((_, index) => index !== indexToRemove));
   };
 
-  const handleSetlistItemClick = async (clickedItem, index) => {
-    console.log('Item clicked:', clickedItem);
+  const handleSetlistItemClick = async (clickedItem, index, transitionType = 'crossfade') => {
+    console.log('Item clicked:', clickedItem, 'Transition type:', transitionType);
     setLoadingProgress(0);
     setLoadingMessage('Loading item contents...');
 
@@ -251,6 +257,79 @@ const SetlistManager = ({ setAllSlides, setAllTracks, serviceOrder, setServiceOr
     let unlistenVideoTranscode = () => {}; // Initialize with a no-op function
 
     try {
+      // Check if we should use smooth transition for songs
+      const shouldUseTransition = clickedItem.type === 'song' && 
+                                  getTracks().length > 0 && 
+                                  transitionType !== 'none';
+
+      if (shouldUseTransition) {
+        // Use smooth transition system
+        setLoadingMessage('Preparing smooth transition...');
+        
+        // Get song details for transition
+        const details = await TauriCore.invoke('get_song_details', { songId: clickedItem.id });
+        const songDetails = {
+          id: clickedItem.id,
+          title: clickedItem.name,
+          tracks: details.tracks
+        };
+
+        // Preload next song if not already preloaded
+        if (!songTransitionManager.preloadedSongs.has(clickedItem.id)) {
+          setLoadingMessage('Preloading tracks for smooth transition...');
+          await songTransitionManager.preloadNextSong(songDetails);
+        }
+
+        // Perform smooth transition
+        setLoadingMessage(`Performing ${transitionType} transition...`);
+        const transitionSuccess = await songTransitionManager.transitionToSong(songDetails, transitionType);
+        
+        if (transitionSuccess) {
+          // Update slides
+          const currentSlides = parseLyricsToSlides(details.lyrics);
+          setAllSlides(currentSlides);
+          setAllTracks(getTracks());
+          
+          // Mark item as loaded
+          setServiceOrder(prevOrder =>
+            prevOrder.map((item, idx) =>
+              idx === index
+                ? { ...item, loaded: true, slides: currentSlides, tracks: getTracks() }
+                : item
+            )
+          );
+          
+          // Auto-preload next song for seamless transitions
+          const nextSongIndex = serviceOrder.findIndex((item, idx) => 
+            idx > index && item.type === 'song' && !item.loaded
+          );
+          
+          if (nextSongIndex !== -1) {
+            const nextSong = serviceOrder[nextSongIndex];
+            console.log('Auto-preloading next song:', nextSong.name);
+            try {
+              const nextDetails = await TauriCore.invoke('get_song_details', { songId: nextSong.id });
+              const nextSongDetails = {
+                id: nextSong.id,
+                title: nextSong.name,
+                tracks: nextDetails.tracks
+              };
+              await songTransitionManager.preloadNextSong(nextSongDetails);
+              console.log('Next song preloaded successfully');
+            } catch (error) {
+              console.error('Error auto-preloading next song:', error);
+            }
+          }
+          
+          setLoadingMessage('Smooth transition completed');
+          setLoadingProgress(100);
+          return;
+        } else {
+          console.warn('Smooth transition failed, falling back to standard loading');
+        }
+      }
+
+      // Standard loading (no transition or fallback)
       // Clear previous tracks and reset audio context if a new folder is loaded
       cleanupAudio();
       clearTracks();
@@ -275,67 +354,31 @@ const SetlistManager = ({ setAllSlides, setAllTracks, serviceOrder, setServiceOr
           // 1. Create slides from lyrics
           currentSlides = parseLyricsToSlides(details.lyrics);
 
-          // 2. Create and load audio tracks
-          const newLoadedTracks = [];
-          const loadingPromises = details.tracks.map(async (trackInfo) => {
-            try {
-              let audioBuffer;
-              let trackName = trackInfo.track_name || 'Unknown Track';
-              
-              // Check if this is a MOGG file (track_name contains channel index)
-              if (trackName.includes(':')) {
-                const parts = trackName.split(':');
-                const actualTrackName = parts[0];
-                const channelIndex = parseInt(parts[1], 10);
-                
-                // Validate channel index
-                if (isNaN(channelIndex)) {
-                  console.error(`Invalid channel index in track name: ${trackName}`);
-                  return null;
-                }
-                
-                // Load the specific channel from the MOGG file
-                audioBuffer = await loadMoggChannel(trackInfo.file_path, channelIndex);
-                trackName = actualTrackName; // Use the actual track name without channel index
-                
-                if (!audioBuffer) {
-                  console.error(`Failed to load MOGG channel ${channelIndex} for track: ${actualTrackName}`);
-                  return null;
-                }
-              } else {
-                // Legacy: Load as a regular single audio file
-                audioBuffer = await loadAudioFile(trackInfo.file_path);
-                
-                if (!audioBuffer) {
-                  console.error(`Failed to load audio file for track: ${trackName}`);
-                  return null;
-                }
-              }
-              
-              if (audioBuffer) {
-                const track = {
-                  buffer: audioBuffer,
-                  source: null,
-                  gainNode: getAudioContext().createGain(),
-                  pannerNode: getAudioContext().createStereoPanner(),
-                  isPlaying: false,
-                  isMuted: false,
-                  startTime: 0,
-                  offset: 0,
-                  path: trackInfo.file_path,
-                  name: trackName,
-                  panValue: 0,
-                  individualVolume: 0.7,
-                };
-                getTracks().push(track); // Add to global tracks array in audio.js
-                newLoadedTracks.push(track);
-              }
-            } catch (audioError) {
-              console.error(`Error loading audio file ${trackInfo.track_name}:`, audioError);
-            }
+          // 2. Load audio tracks using new streaming approach
+          console.log('Loading tracks for streaming:', details.tracks);
+          const streamingTracks = await loadSongTracksForStreaming(details.tracks);
+          
+          // Convert streaming tracks to the format expected by the rest of the app
+          const newLoadedTracks = streamingTracks.map(streamingTrack => {
+            const track = {
+              buffer: streamingTrack.buffer,
+              source: null,
+              gainNode: getAudioContext().createGain(),
+              pannerNode: getAudioContext().createStereoPanner(),
+              isPlaying: false,
+              isMuted: false,
+              startTime: 0,
+              offset: 0,
+              path: streamingTrack.filePath,
+              name: streamingTrack.name,
+              panValue: 0,
+              individualVolume: 0.7,
+            };
+            getTracks().push(track); // Add to global tracks array in audio.js
+            return track;
           });
 
-          await Promise.all(loadingPromises);
+          console.log(`Successfully loaded ${newLoadedTracks.length} streaming tracks`);
           applyDefaultPanning(newLoadedTracks);
           addTracks(newLoadedTracks);
           currentTracks = newLoadedTracks;
@@ -393,15 +436,121 @@ const SetlistManager = ({ setAllSlides, setAllTracks, serviceOrder, setServiceOr
     }
   };
 
+  // Preload next song for smooth transitions
+  const handlePreloadSong = async (item, index) => {
+    if (item.type !== 'song') return;
+    
+    try {
+      setLoadingMessage(`Preloading ${item.name}...`);
+      const details = await TauriCore.invoke('get_song_details', { songId: item.id });
+      const songDetails = {
+        id: item.id,
+        title: item.name,
+        tracks: details.tracks
+      };
+      
+      await songTransitionManager.preloadNextSong(songDetails);
+      setLoadingMessage(`${item.name} preloaded successfully`);
+      setTimeout(() => setLoadingMessage(''), 2000);
+    } catch (error) {
+      console.error('Error preloading song:', error);
+      setLoadingMessage('Error preloading song');
+    }
+  };
+
   return (
     <div className="col" id="setlist-col">
       <h2>Service Order</h2>
       <LoadingModal progress={loadingProgress} message={loadingMessage} />
+      
+      {/* Transition Settings */}
+      <div className="transition-settings" style={{ marginBottom: '10px', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}>
+        <h4 style={{ margin: '0 0 8px 0', fontSize: '14px' }}>Transition Settings</h4>
+        <label style={{ fontSize: '12px', marginRight: '10px' }}>
+          Duration: 
+          <input 
+            type="range" 
+            min="1000" 
+            max="8000" 
+            step="500"
+            defaultValue="3000"
+            onChange={(e) => songTransitionManager.setTransitionSettings(parseInt(e.target.value))}
+            style={{ marginLeft: '5px', width: '60px' }}
+          />
+          <span style={{ fontSize: '10px', marginLeft: '5px' }}>3s</span>
+        </label>
+        <label style={{ fontSize: '12px' }}>
+          Type:
+          <select 
+            defaultValue="logarithmic"
+            onChange={(e) => songTransitionManager.setTransitionSettings(undefined, e.target.value)}
+            style={{ marginLeft: '5px', fontSize: '11px' }}
+          >
+            <option value="linear">Linear</option>
+            <option value="logarithmic">Logarithmic</option>
+            <option value="scurve">S-Curve</option>
+          </select>
+        </label>
+      </div>
+
       <ul id="setlist">
         {serviceOrder.map((item, index) => (
-          <li key={index} className="setlist-item" >
-            <span onClick={() => handleSetlistItemClick(item, index)}>{item.name}</span>
-            <button onClick={() => handleRemoveItem(index)}>-</button>
+          <li key={index} className={`setlist-item ${item.loaded ? 'loaded' : ''}`}>
+            <div className="item-header">
+              <span 
+                onClick={() => handleSetlistItemClick(item, index)}
+                className="item-name"
+              >
+                {item.name}
+              </span>
+              <button onClick={() => handleRemoveItem(index)} className="transition-btn remove">×</button>
+            </div>
+            
+            {/* Transition buttons for songs */}
+            {item.type === 'song' && (
+              <div className="transition-buttons">
+                <button 
+                  onClick={() => handleSetlistItemClick(item, index, 'crossfade')}
+                  className="transition-btn crossfade"
+                  title="Smooth crossfade transition"
+                >
+                  Crossfade
+                </button>
+                <button 
+                  onClick={() => handleSetlistItemClick(item, index, 'cut')}
+                  className="transition-btn cut"
+                  title="Instant cut transition"
+                >
+                  Cut
+                </button>
+                <button 
+                  onClick={() => handleSetlistItemClick(item, index, 'fadeout-fadein')}
+                  className="transition-btn fade"
+                  title="Fade out then fade in"
+                >
+                  Fade
+                </button>
+                <button 
+                  onClick={() => handlePreloadSong(item, index)}
+                  className="transition-btn preload"
+                  title="Preload for instant switching"
+                >
+                  Preload
+                </button>
+              </div>
+            )}
+            
+            {/* Standard load for presentations */}
+            {item.type === 'presentation' && (
+              <div className="transition-buttons">
+                <button 
+                  onClick={() => handleSetlistItemClick(item, index, 'none')}
+                  className="transition-btn load"
+                >
+                  Load
+                </button>
+              </div>
+            )}
           </li>
         ))}
       </ul>
