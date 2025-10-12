@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Window } from '@tauri-apps/api/window';
 import { emit } from '@tauri-apps/api/event';
 import { ComputerDesktopIcon, TvIcon, WindowIcon } from '@heroicons/react/24/solid';
+import { Button } from './components/ui';
 
 const ScreenButtons = () => {
   const [audienceWindow, setAudienceWindow] = useState(null);
@@ -86,15 +87,36 @@ const ScreenButtons = () => {
 
   return (
     <div className="flex gap-2">
-      <button aria-label="Open Audience Screen" title="Audience" onClick={openAudienceScreen} id="open-audience-screen-button" className="p-2 bg-surface rounded-md">
-        <ComputerDesktopIcon className="w-5 h-5 text-primary" />
-      </button>
-      <button aria-label="Open Confidence Monitor" title="Confidence" onClick={openConfidenceMonitor} id="open-confidence-screen-button" className="p-2 bg-surface rounded-md">
-        <TvIcon className="w-5 h-5 text-primary" />
-      </button>
-      <button aria-label="Open Lower Thirds" title="Lower Thirds" onClick={openLowerThirds} id="open-lower-thirds-button" className="p-2 bg-surface rounded-md">
-        <WindowIcon className="w-5 h-5 text-primary" />
-      </button>
+      <Button 
+        variant="ghost" 
+        size="medium"
+        onClick={openAudienceScreen} 
+        title="Open Audience Screen"
+        icon={<ComputerDesktopIcon />}
+        className="screen-button"
+      >
+        Audience
+      </Button>
+      <Button 
+        variant="ghost" 
+        size="medium"
+        onClick={openConfidenceMonitor} 
+        title="Open Confidence Monitor"
+        icon={<TvIcon />}
+        className="screen-button"
+      >
+        Confidence
+      </Button>
+      <Button 
+        variant="ghost" 
+        size="medium"
+        onClick={openLowerThirds} 
+        title="Open Lower Thirds"
+        icon={<WindowIcon />}
+        className="screen-button"
+      >
+        Lower Thirds
+      </Button>
     </div>
   );
 };

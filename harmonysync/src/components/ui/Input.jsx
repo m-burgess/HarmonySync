@@ -1,0 +1,58 @@
+import React from 'react';
+import './Input.css';
+
+const Input = ({
+  type = 'text',
+  value,
+  onChange,
+  placeholder,
+  disabled = false,
+  error = false,
+  errorMessage,
+  label,
+  required = false,
+  className = '',
+  icon = null,
+  size = 'medium',
+  variant = 'default',
+  ...props
+}) => {
+  const inputClass = [
+    'input',
+    `input-${size}`,
+    `input-${variant}`,
+    error && 'input-error',
+    disabled && 'input-disabled',
+    icon && 'input-with-icon',
+    className
+  ].filter(Boolean).join(' ');
+
+  return (
+    <div className="input-wrapper">
+      {label && (
+        <label className="input-label">
+          {label}
+          {required && <span className="input-required">*</span>}
+        </label>
+      )}
+      <div className="input-container">
+        {icon && <span className="input-icon">{icon}</span>}
+        <input
+          type={type}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          disabled={disabled}
+          className={inputClass}
+          required={required}
+          {...props}
+        />
+      </div>
+      {error && errorMessage && (
+        <span className="input-error-message">{errorMessage}</span>
+      )}
+    </div>
+  );
+};
+
+export default Input;
