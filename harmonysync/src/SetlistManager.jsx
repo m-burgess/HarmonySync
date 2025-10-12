@@ -280,20 +280,36 @@ const SetlistManager = ({ setAllSlides, setAllTracks, serviceOrder, setServiceOr
           const loadingPromises = details.tracks.map(async (trackInfo) => {
             try {
               let audioBuffer;
-              let trackName = trackInfo.track_name;
+              let trackName = trackInfo.track_name || 'Unknown Track';
               
               // Check if this is a MOGG file (track_name contains channel index)
-              if (trackName && trackName.includes(':')) {
+              if (trackName.includes(':')) {
                 const parts = trackName.split(':');
                 const actualTrackName = parts[0];
                 const channelIndex = parseInt(parts[1], 10);
                 
+                // Validate channel index
+                if (isNaN(channelIndex)) {
+                  console.error(`Invalid channel index in track name: ${trackName}`);
+                  return null;
+                }
+                
                 // Load the specific channel from the MOGG file
                 audioBuffer = await loadMoggChannel(trackInfo.file_path, channelIndex);
                 trackName = actualTrackName; // Use the actual track name without channel index
+                
+                if (!audioBuffer) {
+                  console.error(`Failed to load MOGG channel ${channelIndex} for track: ${actualTrackName}`);
+                  return null;
+                }
               } else {
                 // Legacy: Load as a regular single audio file
                 audioBuffer = await loadAudioFile(trackInfo.file_path);
+                
+                if (!audioBuffer) {
+                  console.error(`Failed to load audio file for track: ${trackName}`);
+                  return null;
+                }
               }
               
               if (audioBuffer) {

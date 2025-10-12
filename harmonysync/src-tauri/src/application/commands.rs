@@ -268,6 +268,12 @@ async fn convert_to_mogg_helper(
     output_name: &str
 ) -> Result<String, String> {
     let window = app_handle.get_webview_window("main").ok_or_else(|| "Main window not found".to_string())?;
+    
+    // Validate inputs
+    if audio_files.is_empty() {
+        return Err("No audio files provided for MOGG conversion".to_string());
+    }
+    
     info!("Converting {} audio files to MOGG", audio_files.len());
     
     let output_dir = app_handle.path()
@@ -290,8 +296,8 @@ async fn convert_to_mogg_helper(
     // Build filter complex to convert all tracks to mono and merge them into a multi-channel output
     let mut filter_parts = Vec::new();
     for i in 0..audio_files.len() {
-        // Convert each input to mono
-        filter_parts.push(format!("[{}:a]pan=mono|c0=0.5*c0+0.5*c1[a{}]", i, i));
+        // Convert each input to mono - handles both mono and stereo inputs
+        filter_parts.push(format!("[{}:a]pan=mono|c0=FC[a{}]", i, i));
     }
     
     let filter_complex = filter_parts.join(";");
@@ -705,6 +711,11 @@ pub async fn import_song_folder(
 
     if audio_files.is_empty() {
         return Err("No supported audio files found in the folder.".to_string());
+    }
+
+    // Check for reasonable number of tracks (Web Audio API supports up to 32 channels comfortably)
+    if audio_files.len() > 32 {
+        return Err(format!("Too many audio files ({}). Maximum supported is 32 tracks.", audio_files.len()));
     }
 
     // Sort audio files to ensure consistent track ordering
