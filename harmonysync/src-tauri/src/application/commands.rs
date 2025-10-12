@@ -262,106 +262,82 @@ async fn convert_to_ogg_helper(app_handle: &AppHandle, input_path: &str) -> Resu
 }
 
 // Helper function to convert multiple audio files to a single multi-channel MOGG file
-async fn convert_to_mogg_helper(
+async fn convert_to_individual_tracks(
     app_handle: &AppHandle, 
     audio_files: &[String],
-    output_name: &str
-) -> Result<String, String> {
+    song_title: &str
+) -> Result<Vec<(String, String)>, String> {
     let window = app_handle.get_webview_window("main").ok_or_else(|| "Main window not found".to_string())?;
     
     // Validate inputs
     if audio_files.is_empty() {
-        return Err("No audio files provided for MOGG conversion".to_string());
+        return Err("No audio files provided for conversion".to_string());
     }
     
-    info!("Converting {} audio files to MOGG", audio_files.len());
+    info!("Converting {} audio files to individual streaming tracks", audio_files.len());
     
     let output_dir = app_handle.path()
         .app_local_data_dir()
         .map_err(|e| format!("Failed to get app local data directory: {}", e))?
         .join("harmonysync")
-        .join("cache");
+        .join("cache")
+        .join(format!("{}_tracks", song_title));
     fs::create_dir_all(&output_dir).map_err(|e| format!("Failed to create output directory: {}", e))?;
     
-    let output_path = output_dir.join(format!("{}.ogg", output_name));
+    let mut track_files = Vec::new();
     
-    // Build ffmpeg command with multiple inputs
-    let mut command = Command::new("ffmpeg");
-    
-    // Add all input files
-    for audio_file in audio_files {
-        command.arg("-i").arg(audio_file);
-    }
-    
-    // Build filter complex to convert all tracks to mono and merge them into a multi-channel output
-    let mut filter_parts = Vec::new();
-    for i in 0..audio_files.len() {
-        // Convert each input to mono - handles both mono and stereo inputs
-        filter_parts.push(format!("[{}:a]pan=mono|c0=FC[a{}]", i, i));
-    }
-    
-    let filter_complex = filter_parts.join(";");
-    
-    // Merge all mono tracks into a multi-channel output
-    let merge_inputs: Vec<String> = (0..audio_files.len())
-        .map(|i| format!("[a{}]", i))
-        .collect();
-    let filter_complex = format!("{};{}join=inputs={}:channel_layout={}[out]", 
-        filter_complex,
-        merge_inputs.join(""),
-        audio_files.len(),
-        audio_files.len()
-    );
-    
-    command
-        .arg("-filter_complex")
-        .arg(&filter_complex)
-        .arg("-map")
-        .arg("[out]")
-        .arg("-c:a")
-        .arg("libvorbis")
-        .arg("-q:a")
-        .arg("4")
-        .arg(&output_path)
-        .arg("-y")
-        .arg("-progress")
-        .arg("pipe:2")
-        .stderr(std::process::Stdio::piped());
-    
-    let mut child = command.spawn().map_err(|e| format!("Failed to spawn ffmpeg process: {}", e))?;
-    
-    let stderr = child.stderr.take().ok_or_else(|| "Failed to capture ffmpeg stderr".to_string())?;
-    let reader = tokio::io::BufReader::new(stderr);
-    let mut lines = reader.lines();
-    
-    // Monitor progress
-    while let Some(line) = lines.next_line().await.map_err(|e| format!("Failed to read ffmpeg stderr: {}", e))? {
-        if line.starts_with("out_time_ms=") {
-            if let Some(time_ms_str) = line.split("=").nth(1) {
-                if let Ok(time_ms) = time_ms_str.parse::<f64>() {
-                    let current_time = time_ms / 1_000_000.0;
-                    let progress = (current_time / 10.0 * 100.0).min(99.0) as u64; // Rough estimate
-                    let _ = window.emit("ogg-conversion-progress", ProgressPayload {
-                        file_name: output_name.to_string(),
-                        progress,
-                        message: format!("Creating MOGG file with {} tracks...", audio_files.len()),
-                    });
-                }
-            }
+    // Convert each audio file to a separate optimized file for streaming
+    for (i, audio_file) in audio_files.iter().enumerate() {
+        // Extract track name from filename
+        let track_name = Path::new(audio_file)
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or(&format!("Track_{}", i))
+            .to_string();
+        
+        let output_filename = format!("{:02}_{}.ogg", i, track_name);
+        let output_path = output_dir.join(&output_filename);
+        
+        let mut command = Command::new("ffmpeg");
+        command
+            .arg("-i")
+            .arg(audio_file)
+            .arg("-ac")
+            .arg("1")  // Convert to mono for consistent streaming
+            .arg("-c:a")
+            .arg("libvorbis")  // Use Vorbis for good compression and streaming
+            .arg("-q:a")
+            .arg("3")  // Good quality for streaming
+            .arg("-ar")
+            .arg("44100")  // Standard sample rate
+            .arg(&output_path)
+            .arg("-y")
+            .stderr(std::process::Stdio::piped());
+        
+        info!("Converting {} to streaming track: {}", audio_file, output_path.display());
+        
+        let output = command.output().await.map_err(|e| format!("Failed to execute ffmpeg for file {}: {}", audio_file, e))?;
+        
+        if output.status.success() {
+            info!("Successfully converted {} to streaming track", track_name);
+            track_files.push((track_name, output_path.to_str().unwrap().to_string()));
+        } else {
+            let stderr_output = String::from_utf8_lossy(&output.stderr);
+            error!("Failed to convert {}. Stderr: {}", audio_file, stderr_output);
+            return Err(format!("ffmpeg conversion failed for {}: {}", audio_file, stderr_output));
         }
+        
+        // Update progress
+        let progress = ((i + 1) as f64 / audio_files.len() as f64 * 100.0) as u64;
+        let _ = window.emit("ogg-conversion-progress", ProgressPayload {
+            file_name: song_title.to_string(),
+            progress,
+            message: format!("Creating streaming track {} of {}...", i + 1, audio_files.len()),
+        });
     }
     
-    let output = child.wait_with_output().await.map_err(|e| format!("Failed to wait for ffmpeg process: {}", e))?;
-    
-    if output.status.success() {
-        info!("Successfully created MOGG file: {}", output_path.to_str().unwrap());
-        Ok(output_path.to_str().unwrap().to_string())
-    } else {
-        let stderr_output = String::from_utf8_lossy(&output.stderr);
-        let stdout_output = String::from_utf8_lossy(&output.stdout);
-        error!("Failed to create MOGG file. Stderr: {}", stderr_output);
-        Err(format!("ffmpeg MOGG conversion failed: {}\nStderr: {}", stdout_output, stderr_output))
-    }
+    info!("Successfully created {} streaming tracks", track_files.len());
+    Ok(track_files)
 }
 
 #[command]
@@ -511,6 +487,7 @@ pub fn add_song(
         id: None,
         title,
         lyrics: Some(lyrics),
+        mogg_file_path: None,
     };
     SongRepository::insert(repository.inner(), &new_song).map_err(|e| e.to_string())
 }
@@ -684,10 +661,25 @@ pub async fn import_song_folder(
         .unwrap_or("Unknown Title")
         .to_string();
 
-    // Check for duplicate song title BEFORE processing
+    // Check for duplicate song title and handle replacement
     let existing_songs = SongRepository::get_all(repository.inner()).map_err(|e| e.to_string())?;
-    if existing_songs.iter().any(|s| s.title == title) {
-        return Err(format!("A song with the title '{}' already exists in the library.", title));
+    if let Some(existing_song) = existing_songs.iter().find(|s| s.title == title) {
+        info!("Found existing song '{}', deleting and replacing with new version", title);
+        
+        // Delete existing song and its tracks
+        if let Some(song_id) = existing_song.id {
+            // First delete all tracks associated with the song
+            let existing_tracks = TrackRepository::get_all_for_song(repository.inner(), song_id).map_err(|e| e.to_string())?;
+            for track in existing_tracks {
+                if let Some(track_id) = track.id {
+                    TrackRepository::delete(repository.inner(), track_id).map_err(|e| e.to_string())?;
+                }
+            }
+            
+            // Delete the song itself
+            SongRepository::delete(repository.inner(), song_id).map_err(|e| e.to_string())?;
+            info!("Successfully deleted existing song and tracks for '{}'", title);
+        }
     }
 
     // 2. Read Lyrics
@@ -732,47 +724,41 @@ pub async fn import_song_folder(
     fs::create_dir_all(&specific_song_dir)
         .map_err(|e| format!("Failed to create song library directory: {}", e))?;
 
-    // 5. Convert all audio files to a single MOGG file
-    let mogg_filename = format!("{}_multitrack", title);
-    let mogg_cache_path = convert_to_mogg_helper(&app_handle, &audio_files, &mogg_filename).await?;
+    // 5. Convert all audio files to individual track files for streaming
+    let track_files = convert_to_individual_tracks(&app_handle, &audio_files, &title).await?;
     
-    // 6. Copy MOGG file to the song library folder
-    let mogg_cache_path_buf = Path::new(&mogg_cache_path);
-    let mogg_filename_final = mogg_cache_path_buf.file_name()
-        .ok_or_else(|| "MOGG cache path has no filename".to_string())?;
-    let mogg_dest_path = specific_song_dir.join(mogg_filename_final);
-    fs::copy(&mogg_cache_path, &mogg_dest_path)
-        .map_err(|e| format!("Failed to copy MOGG file: {}", e))?;
+    // 6. Copy track files to the song library folder and collect their final paths
+    let mut final_track_paths = Vec::new();
+    for (track_name, temp_path) in &track_files {
+        let temp_path_buf = Path::new(temp_path);
+        let filename = temp_path_buf.file_name()
+            .ok_or_else(|| format!("Track file path has no filename: {}", temp_path))?;
+        let final_path = specific_song_dir.join(filename);
+        fs::copy(temp_path, &final_path)
+            .map_err(|e| format!("Failed to copy track file {}: {}", track_name, e))?;
+        final_track_paths.push((track_name.clone(), final_path.to_str().unwrap().to_string()));
+    }
 
-    // 7. Store track names for database (extracted from original filenames)
-    let track_names: Vec<String> = audio_files.iter()
-        .map(|path| {
-            Path::new(path)
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or("Unknown Track")
-                .to_string()
-        })
-        .collect();
+    // 7. Store track names from the converted files
+    let track_names: Vec<String> = track_files.iter().map(|(name, _)| name.clone()).collect();
 
-    // 8. Add to database with MOGG path
+    // 8. Add to database (no mogg_file_path since we have individual tracks)
     let new_song = Song {
         id: None,
         title: title.clone(),
         lyrics: Some(lyrics),
-        mogg_file_path: Some(mogg_dest_path.to_str().unwrap().to_string()),
+        mogg_file_path: None, // Individual tracks, not a single file
     };
     let inserted_song = SongRepository::insert(repository.inner(), &new_song).map_err(|e| e.to_string())?;
     let song_id = inserted_song.id.ok_or("Inserted song did not return an ID")?;
 
-    // 9. Store track metadata (track names) in the database
-    // Each track references the MOGG file but has its own channel index (stored in track_name as "TrackName:ChannelIndex")
-    for (idx, track_name) in track_names.iter().enumerate() {
+    // 9. Store track metadata in the database - each track has its own file path for streaming
+    for (track_name, file_path) in &final_track_paths {
         let new_track = Track {
             id: None,
             song_id,
-            file_path: mogg_dest_path.to_str().unwrap().to_string(), // All tracks point to the same MOGG file
-            track_name: Some(format!("{}:{}", track_name, idx)), // Store channel index with track name
+            file_path: file_path.clone(), // Each track has its own file for streaming
+            track_name: Some(track_name.clone()), // No index needed since each has its own file
         };
         TrackRepository::insert(repository.inner(), &new_track).map_err(|e| e.to_string())?;
     }
