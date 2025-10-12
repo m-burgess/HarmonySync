@@ -5,6 +5,7 @@ pub struct Song {
     pub id: Option<i64>,
     pub title: String,
     pub lyrics: Option<String>,
+    pub mogg_file_path: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
