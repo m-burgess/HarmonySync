@@ -7,6 +7,7 @@ A comprehensive, reusable React component for displaying and interacting with di
 - **Multi-Media Support**: Handles lyrics, images, videos, and YouTube content
 - **Drag & Drop**: Full drag and drop functionality with visual feedback
 - **Interactive Actions**: Hover overlays with contextual action buttons
+- **Enlarged Preview**: 5-second hover displays full-size image preview (perfect for scripture reading)
 - **Loading States**: Built-in loading indicators for video transcoding
 - **Accessibility**: ARIA labels, keyboard navigation, and focus management
 - **Responsive**: Multiple size variants with responsive breakpoints
@@ -113,6 +114,13 @@ The `slide` prop expects an object with the following structure:
 | `large` | 300×169px | Featured slides, previews |
 
 ## Events and Interactions
+
+### Enlarged Preview
+- **5-Second Hover**: Displays full-size image overlay for better readability
+- **Supported Types**: Images, video thumbnails, and YouTube thumbnails  
+- **Keyboard Control**: Press Escape to close enlarged preview
+- **Click to Close**: Click outside the image to close
+- **Perfect for Scripture**: Enlarged text makes scripture images easy to read
 
 ### Tauri Events
 The component automatically emits Tauri events when slides are clicked:

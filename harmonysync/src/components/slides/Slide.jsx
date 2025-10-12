@@ -23,6 +23,8 @@ const Slide = ({
   const [isDragOver, setIsDragOver] = useState(false);
   const [isHover, setIsHover] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showEnlargedPreview, setShowEnlargedPreview] = useState(false);
+  const hoverTimeoutRef = React.useRef(null);
 
   const handleDragStart = (e) => {
     e.dataTransfer.setDragImage(new Image(), 0, 0); // Disable default drag image
@@ -47,6 +49,12 @@ const Slide = ({
   };
 
   const handleClick = async () => {
+    // Clear any pending hover timeout when clicking
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+
     if (onSelect) {
       onSelect(index);
     }
@@ -115,6 +123,62 @@ const Slide = ({
       const minutes = Math.floor(slide.duration / 60);
       const seconds = Math.floor(slide.duration % 60);
       return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+    return null;
+  };
+
+  const handleMouseEnter = () => {
+    setIsHover(true);
+    
+    // Only show enlarged preview for image slides after 5 seconds
+    if (slide.type === 'image' || (slide.type === 'video' && slide.thumbnail_path)) {
+      hoverTimeoutRef.current = setTimeout(() => {
+        setShowEnlargedPreview(true);
+      }, 5000);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setIsHover(false);
+    setShowEnlargedPreview(false);
+    
+    // Clear the timeout if user stops hovering before 5 seconds
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+  };
+
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Handle escape key to close enlarged preview
+  React.useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && showEnlargedPreview) {
+        setShowEnlargedPreview(false);
+      }
+    };
+
+    if (showEnlargedPreview) {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [showEnlargedPreview]);
+
+  const getPreviewImageSrc = () => {
+    if (slide.type === 'image') {
+      return TauriCore.convertFileSrc(slide.path);
+    } else if (slide.type === 'video' && slide.thumbnail_path) {
+      return TauriCore.convertFileSrc(slide.thumbnail_path);
+    } else if (slide.type === 'youtube') {
+      return `https://img.youtube.com/vi/${slide.videoId}/maxresdefault.jpg`;
     }
     return null;
   };
@@ -209,8 +273,8 @@ const Slide = ({
       className={slideClass}
       hover={true}
       onClick={handleClick}
-      onMouseEnter={() => setIsHover(true)}
-      onMouseLeave={() => setIsHover(false)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
@@ -284,6 +348,37 @@ const Slide = ({
 
       {/* Selection Indicator */}
       {isSelected && <div className="slide-selection-indicator" />}
+
+      {/* Enlarged Preview Overlay */}
+      {showEnlargedPreview && getPreviewImageSrc() && (
+        <div 
+          className="slide-enlarged-preview-overlay"
+          onClick={() => setShowEnlargedPreview(false)}
+        >
+          <div 
+            className="slide-enlarged-preview-container"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img 
+              src={getPreviewImageSrc()} 
+              alt={`Enlarged preview of ${slide.name}`}
+              className="slide-enlarged-preview-image"
+              onError={(e) => {
+                e.target.style.display = 'none';
+              }}
+            />
+            <div className="slide-enlarged-preview-info">
+              <h3 className="slide-enlarged-preview-title">{slide.name}</h3>
+              {slide.type === 'video' && getDuration() && (
+                <span className="slide-enlarged-preview-duration">{getDuration()}</span>
+              )}
+            </div>
+            <div className="slide-enlarged-preview-hint">
+              Click outside or press Escape to close
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   );
 };
