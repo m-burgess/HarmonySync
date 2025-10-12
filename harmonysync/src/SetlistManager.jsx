@@ -12,8 +12,8 @@ import { parseLyricsToSlides } from './lyrics.js';
 import { getVideoMetadata } from './video.js';
 import './transitions.css';
 
-import { TrashIcon } from '@heroicons/react/24/solid';
 import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { Button, SetlistItem } from './components';
 
 const SetlistManager = ({ setAllSlides, setAllTracks, serviceOrder, setServiceOrder }) => {
   const [currentBackgroundCssContent, setCurrentBackgroundCssContent] = useState('');
@@ -465,9 +465,13 @@ const SetlistManager = ({ setAllSlides, setAllTracks, serviceOrder, setServiceOr
     <div className="col p-3 bg-card rounded-md" id="setlist-col">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-semibold text-primary">Service Order</h2>
-        <button title="Add Folder" onClick={handleAddFolder} className="p-1 rounded bg-surface hover:bg-surface/80">
-          <ArrowDownTrayIcon className="w-5 h-5 text-muted" />
-        </button>
+        <Button
+          variant="ghost"
+          size="small"
+          onClick={handleAddFolder}
+          title="Add Folder"
+          icon={<ArrowDownTrayIcon />}
+        />
       </div>
 
       <LoadingModal progress={loadingProgress} message={loadingMessage} />
@@ -504,63 +508,16 @@ const SetlistManager = ({ setAllSlides, setAllTracks, serviceOrder, setServiceOr
 
       <ul id="setlist">
         {serviceOrder.map((item, index) => (
-          <li key={index} className={`setlist-item ${item.loaded ? 'loaded' : ''}`}>
-            <div className="item-header">
-              <span 
-                onClick={() => handleSetlistItemClick(item, index)}
-                className="item-name"
-              >
-                {item.name}
-              </span>
-              <button onClick={() => handleRemoveItem(index)} className="transition-btn remove">×</button>
-            </div>
-            
-            {/* Transition buttons for songs */}
-            {item.type === 'song' && (
-              <div className="transition-buttons">
-                <button 
-                  onClick={() => handleSetlistItemClick(item, index, 'crossfade')}
-                  className="transition-btn crossfade"
-                  title="Smooth crossfade transition"
-                >
-                  Crossfade
-                </button>
-                <button 
-                  onClick={() => handleSetlistItemClick(item, index, 'cut')}
-                  className="transition-btn cut"
-                  title="Instant cut transition"
-                >
-                  Cut
-                </button>
-                <button 
-                  onClick={() => handleSetlistItemClick(item, index, 'fadeout-fadein')}
-                  className="transition-btn fade"
-                  title="Fade out then fade in"
-                >
-                  Fade
-                </button>
-                <button 
-                  onClick={() => handlePreloadSong(item, index)}
-                  className="transition-btn preload"
-                  title="Preload for instant switching"
-                >
-                  Preload
-                </button>
-              </div>
-            )}
-            
-            {/* Standard load for presentations */}
-            {item.type === 'presentation' && (
-              <div className="transition-buttons">
-                <button 
-                  onClick={() => handleSetlistItemClick(item, index, 'none')}
-                  className="transition-btn load"
-                >
-                  Load
-                </button>
-              </div>
-            )}
-          </li>
+          <SetlistItem
+            key={index}
+            item={item}
+            index={index}
+            isLoaded={item.loaded}
+            onItemClick={handleSetlistItemClick}
+            onRemove={handleRemoveItem}
+            onTransition={handleSetlistItemClick}
+            onPreload={handlePreloadSong}
+          />
         ))}
       </ul>
     </div>

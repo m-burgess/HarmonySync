@@ -1,0 +1,129 @@
+/* Track Control Card Styles */
+
+.track-control-card {
+  background-color: #333;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 12px;
+  width: 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+
+.track-control-card:hover {
+  border-color: #555;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.track-muted {
+  opacity: 0.6;
+  background-color: #2a2a2a;
+}
+
+.track-solo {
+  border-color: #ffc107;
+  background-color: rgba(255, 193, 7, 0.1);
+}
+
+.track-control-header {
+  text-align: center;
+  border-bottom: 1px solid #444;
+  padding-bottom: 8px;
+}
+
+.track-name {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #d4d4d4;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.track-control-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.track-control-options {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.track-control-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.solo-button,
+.mute-button {
+  width: 100% !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.5px !important;
+  padding: 6px 8px !important;
+}
+
+.solo-button {
+  background: linear-gradient(135deg, #ffc107, #e0a800) !important;
+  color: #000 !important;
+}
+
+.solo-button:not(.btn-warning) {
+  background: transparent !important;
+  color: #999 !important;
+  border: 1px solid #444 !important;
+}
+
+.mute-button {
+  background: linear-gradient(135deg, #dc3545, #bd2130) !important;
+}
+
+.mute-button:not(.btn-danger) {
+  background: transparent !important;
+  color: #999 !important;
+  border: 1px solid #444 !important;
+}
+
+/* Volume slider positioning */
+.track-control-card .volume-slider-container {
+  height: 120px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .track-control-card {
+    width: 120px;
+    padding: 10px;
+  }
+  
+  .track-name {
+    font-size: 11px;
+  }
+  
+  .track-control-card .volume-slider-container {
+    height: 100px;
+  }
+  
+  .solo-button,
+  .mute-button {
+    font-size: 9px !important;
+    padding: 4px 6px !important;
+  }
+}

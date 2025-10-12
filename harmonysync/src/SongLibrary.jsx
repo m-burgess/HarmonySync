@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as Tauri from '@tauri-apps/api';
-import { PlusIcon } from '@heroicons/react/24/solid';
+import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { Input, LibraryItem } from './components';
 import './SongLibrary.css';
 
 const SongLibrary = ({ onAddSong, songImportedTrigger }) => {
@@ -26,22 +27,27 @@ const SongLibrary = ({ onAddSong, songImportedTrigger }) => {
 
   return (
     <div className="song-library">
-      <input
+      <Input
         type="text"
         placeholder="Search for a song..."
-        className="search-input"
+        variant="search"
+        icon={<MagnifyingGlassIcon />}
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
       />
       {error && <p className="error-message">{error}</p>}
       <div className="search-results">
         {results.map((song) => (
-          <div key={song.id} className="song-item">
-            <span>{song.title}</span>
-            <button aria-label={`Add ${song.title} to setlist`} title="Add" onClick={() => onAddSong(song.id, song.title)} className="add-button p-1 rounded bg-surface">
-              <PlusIcon className="w-4 h-4 text-primary" />
-            </button>
-          </div>
+          <LibraryItem
+            key={song.id}
+            item={{
+              id: song.id,
+              name: song.title,
+              type: 'song'
+            }}
+            onAdd={(item) => onAddSong(item.id, item.name)}
+            showAddButton={true}
+          />
         ))}
       </div>
     </div>
