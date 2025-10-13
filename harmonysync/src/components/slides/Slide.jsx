@@ -16,6 +16,7 @@ const Slide = ({
   onDragEnd,
   onVideoTranscoded,
   size = 'medium',
+  thumbnailSize, // Direct size override
   showActions = true,
   showTypeIcon = true,
   className = ''
@@ -24,7 +25,9 @@ const Slide = ({
   const [isHover, setIsHover] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showEnlargedPreview, setShowEnlargedPreview] = useState(false);
+  const [slidePosition, setSlidePosition] = useState({ x: 0, y: 0 });
   const hoverTimeoutRef = React.useRef(null);
+  const slideRef = React.useRef(null);
 
   const handleDragStart = (e) => {
     e.dataTransfer.setDragImage(new Image(), 0, 0); // Disable default drag image
@@ -55,7 +58,7 @@ const Slide = ({
       hoverTimeoutRef.current = null;
     }
 
-    if (onSelect) {
+    if (onSelect && typeof onSelect === 'function') {
       onSelect(index);
     }
 
@@ -130,6 +133,34 @@ const Slide = ({
   const handleMouseEnter = () => {
     setIsHover(true);
     
+    // Calculate slide position for popup placement
+    if (slideRef.current) {
+      const rect = slideRef.current.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const popupWidth = 800; // Max width from CSS
+      const popupHeight = 600; // Max height from CSS
+      
+      let x = rect.left + rect.width / 2;
+      let y = rect.top + rect.height / 2;
+      
+      // Adjust horizontal position if popup would go off-screen
+      if (x + popupWidth / 2 > viewportWidth) {
+        x = viewportWidth - popupWidth / 2 - 20;
+      } else if (x - popupWidth / 2 < 0) {
+        x = popupWidth / 2 + 20;
+      }
+      
+      // Adjust vertical position if popup would go off-screen
+      if (y + popupHeight / 2 > viewportHeight) {
+        y = viewportHeight - popupHeight / 2 - 20;
+      } else if (y - popupHeight / 2 < 0) {
+        y = popupHeight / 2 + 20;
+      }
+      
+      setSlidePosition({ x, y });
+    }
+    
     // Only show enlarged preview for image slides after 5 seconds
     if (slide.type === 'image' || (slide.type === 'video' && slide.thumbnail_path)) {
       hoverTimeoutRef.current = setTimeout(() => {
@@ -157,20 +188,6 @@ const Slide = ({
       }
     };
   }, []);
-
-  // Handle escape key to close enlarged preview
-  React.useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && showEnlargedPreview) {
-        setShowEnlargedPreview(false);
-      }
-    };
-
-    if (showEnlargedPreview) {
-      document.addEventListener('keydown', handleKeyDown);
-      return () => document.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [showEnlargedPreview]);
 
   const getPreviewImageSrc = () => {
     if (slide.type === 'image') {
@@ -261,16 +278,24 @@ const Slide = ({
 
   const slideClass = [
     'slide-component',
-    `slide-${size}`,
+    thumbnailSize ? 'slide-custom' : `slide-${size}`,
     isSelected && 'slide-selected',
     isDragOver && 'slide-drag-over',
     isLoading && 'slide-loading',
     className
   ].filter(Boolean).join(' ');
 
+  // Calculate custom dimensions when thumbnailSize is provided
+  const customStyle = thumbnailSize ? {
+    width: `${thumbnailSize}px`,
+    height: `${Math.round(thumbnailSize * 0.56)}px` // 16:9 aspect ratio
+  } : {};
+
   return (
     <Card
+      ref={slideRef}
       className={slideClass}
+      style={customStyle}
       hover={true}
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
@@ -352,13 +377,14 @@ const Slide = ({
       {/* Enlarged Preview Overlay */}
       {showEnlargedPreview && getPreviewImageSrc() && (
         <div 
-          className="slide-enlarged-preview-overlay"
-          onClick={() => setShowEnlargedPreview(false)}
+          className="slide-enlarged-preview-popup"
+          style={{
+            left: `${slidePosition.x}px`,
+            top: `${slidePosition.y}px`,
+            transform: 'translate(-50%, -50%)'
+          }}
         >
-          <div 
-            className="slide-enlarged-preview-container"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="slide-enlarged-preview-container">
             <img 
               src={getPreviewImageSrc()} 
               alt={`Enlarged preview of ${slide.name}`}
@@ -374,7 +400,7 @@ const Slide = ({
               )}
             </div>
             <div className="slide-enlarged-preview-hint">
-              Click outside or press Escape to close
+              Move mouse away to close
             </div>
           </div>
         </div>

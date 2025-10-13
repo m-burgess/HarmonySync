@@ -127,3 +127,59 @@
     padding: 4px 6px !important;
   }
 }
+
+/* Simplified Track Control Styles */
+.track-control-simplified {
+  width: 120px;
+  padding: 8px;
+  gap: 8px;
+}
+
+.track-name-button {
+  background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+  border: 1px solid #4a5568;
+  border-radius: 6px;
+  color: #e2e8f0;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 8px 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.track-name-button:hover {
+  background: linear-gradient(135deg, #5a6578 0%, #3d4758 100%);
+  border-color: #5a6578;
+  transform: translateY(-1px);
+}
+
+.track-name-button:active {
+  transform: translateY(0);
+}
+
+.track-name-button.muted {
+  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+  border-color: #dc2626;
+  color: white;
+}
+
+.track-name-button.muted:hover {
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+  border-color: #ef4444;
+}
+
+.track-pan-section {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 4px 0;
+}

@@ -62,9 +62,9 @@ const MultitrackPlayer = ({ allTracks }) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-2 overflow-auto" id="track-controls">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-0.5 overflow-auto" id="track-controls">
         {allTracks.sort(sortTracks).map((track, index) => (
-          <div key={index} className="p-2 bg-surface rounded">
+          <div key={index} className="bg-surface rounded">
             <TrackControl
               track={track}
               onPanChange={handlePanChange}
