@@ -1,0 +1,240 @@
+/**
+ * Multitrack Player component styles
+ */
+
+@import '../variables.less';
+
+.multitrack-player {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.multitrack-header {
+  padding: @spacing-sm @spacing-md;
+  border-bottom: 1px solid @border-color;
+  display: flex;
+  align-items: center;
+  gap: @spacing-lg;
+  background-color: @bg-tertiary;
+}
+
+.transport-controls {
+  display: flex;
+  gap: @spacing-xs;
+}
+
+.transport-button {
+  width: 32px;
+  height: 32px;
+  background-color: @bg-secondary;
+  border: 1px solid @border-color;
+  border-radius: @border-radius-md;
+  color: @text-primary;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all @transition-fast;
+
+  &:hover {
+    background-color: @bg-hover;
+    border-color: @accent-blue;
+  }
+
+  &:active {
+    background-color: @bg-active;
+  }
+
+  .codicon {
+    font-size: 16px;
+  }
+}
+
+.time-display {
+  display: flex;
+  align-items: center;
+  gap: @spacing-xs;
+  font-family: @font-family-mono;
+  font-size: @font-size-sm;
+  color: @text-secondary;
+
+  .separator {
+    color: @text-muted;
+  }
+}
+
+.track-controls {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: @spacing-md;
+  display: flex;
+  gap: @spacing-md;
+}
+
+.track-control {
+  min-width: 200px;
+  background-color: @bg-secondary;
+  border: 1px solid @border-color;
+  border-radius: @border-radius-md;
+  padding: @spacing-sm;
+  display: flex;
+  flex-direction: column;
+  gap: @spacing-sm;
+}
+
+.track-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: @spacing-sm;
+}
+
+.track-name {
+  flex: 1;
+  font-size: @font-size-sm;
+  color: @text-primary;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.track-buttons {
+  display: flex;
+  gap: @spacing-xs;
+}
+
+.track-button {
+  width: 24px;
+  height: 24px;
+  background-color: @bg-tertiary;
+  border: 1px solid @border-color;
+  border-radius: @border-radius-sm;
+  color: @text-secondary;
+  cursor: pointer;
+  font-size: @font-size-sm;
+  font-weight: 600;
+  transition: all @transition-fast;
+
+  &:hover {
+    background-color: @bg-hover;
+    color: @text-primary;
+  }
+
+  &.active {
+    background-color: @accent-blue;
+    border-color: @accent-blue;
+    color: #fff;
+  }
+}
+
+.track-controls-row {
+  display: flex;
+  flex-direction: column;
+  gap: @spacing-sm;
+}
+
+.volume-control {
+  display: flex;
+  align-items: center;
+  gap: @spacing-xs;
+}
+
+.control-label {
+  font-size: @font-size-sm;
+  color: @text-secondary;
+  min-width: 30px;
+}
+
+.volume-slider {
+  flex: 1;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: @bg-tertiary;
+  border-radius: 2px;
+  outline: none;
+
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    background: @accent-blue;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: all @transition-fast;
+
+    &:hover {
+      transform: scale(1.2);
+    }
+  }
+
+  &::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    background: @accent-blue;
+    cursor: pointer;
+    border: none;
+    border-radius: 50%;
+    transition: all @transition-fast;
+
+    &:hover {
+      transform: scale(1.2);
+    }
+  }
+}
+
+.volume-value {
+  font-size: @font-size-sm;
+  color: @text-secondary;
+  font-family: @font-family-mono;
+  min-width: 30px;
+  text-align: right;
+}
+
+.pan-control {
+  display: flex;
+  align-items: center;
+  gap: @spacing-xs;
+}
+
+.pan-buttons {
+  display: flex;
+  gap: 2px;
+  flex: 1;
+}
+
+.pan-button {
+  flex: 1;
+  height: 24px;
+  background-color: @bg-tertiary;
+  border: 1px solid @border-color;
+  color: @text-secondary;
+  cursor: pointer;
+  font-size: @font-size-sm;
+  font-weight: 600;
+  transition: all @transition-fast;
+
+  &:first-child {
+    border-radius: @border-radius-sm 0 0 @border-radius-sm;
+  }
+
+  &:last-child {
+    border-radius: 0 @border-radius-sm @border-radius-sm 0;
+  }
+
+  &:hover {
+    background-color: @bg-hover;
+    color: @text-primary;
+  }
+
+  &.active {
+    background-color: @accent-blue;
+    border-color: @accent-blue;
+    color: #fff;
+  }
+}

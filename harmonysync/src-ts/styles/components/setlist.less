@@ -1,0 +1,92 @@
+/**
+ * Setlist Manager component styles
+ */
+
+@import '../variables.less';
+
+.setlist-manager {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.setlist-header {
+  padding: @spacing-md;
+  border-bottom: 1px solid @border-color;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: @bg-secondary;
+}
+
+.setlist-title {
+  font-size: @font-size-base;
+  font-weight: 600;
+  color: @text-primary;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.setlist-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.setlist-item {
+  padding: @spacing-sm @spacing-md;
+  border-bottom: 1px solid @border-subtle;
+  cursor: pointer;
+  transition: background-color @transition-fast;
+
+  &:hover {
+    background-color: @bg-hover;
+  }
+
+  &.loaded {
+    background-color: fade(@accent-blue, 10%);
+    border-left: 3px solid @accent-blue;
+    padding-left: calc(@spacing-md - 3px);
+  }
+}
+
+.setlist-item-header {
+  display: flex;
+  align-items: center;
+  gap: @spacing-sm;
+}
+
+.setlist-item-icon {
+  font-size: 16px;
+  color: @text-secondary;
+  flex-shrink: 0;
+}
+
+.setlist-item-name {
+  flex: 1;
+  font-size: @font-size-base;
+  color: @text-primary;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.setlist-item-actions {
+  display: flex;
+  gap: @spacing-xs;
+  opacity: 0;
+  transition: opacity @transition-fast;
+
+  .setlist-item:hover & {
+    opacity: 1;
+  }
+}
+
+.setlist-item-info {
+  margin-top: @spacing-xs;
+  font-size: @font-size-sm;
+  color: @text-secondary;
+  padding-left: calc(16px + @spacing-sm);
+}

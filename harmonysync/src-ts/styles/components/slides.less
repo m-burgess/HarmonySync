@@ -1,0 +1,145 @@
+/**
+ * Slide Manager component styles
+ */
+
+@import '../variables.less';
+
+.slide-manager {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.slide-manager-header {
+  padding: @spacing-md;
+  border-bottom: 1px solid @border-color;
+  background-color: @bg-secondary;
+}
+
+.screen-buttons {
+  display: flex;
+  gap: @spacing-sm;
+}
+
+.screen-button {
+  display: flex;
+  align-items: center;
+  gap: @spacing-xs;
+  padding: @spacing-xs @spacing-md;
+  background-color: @bg-tertiary;
+  border: 1px solid @border-color;
+  border-radius: @border-radius-md;
+  color: @text-primary;
+  cursor: pointer;
+  font-size: @font-size-sm;
+  transition: all @transition-fast;
+
+  &:hover {
+    background-color: @bg-hover;
+    border-color: @accent-blue;
+  }
+
+  &:active {
+    background-color: @bg-active;
+  }
+
+  .codicon {
+    font-size: 14px;
+  }
+}
+
+.slide-grid {
+  flex: 1;
+  overflow-y: auto;
+  padding: @spacing-md;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: @spacing-md;
+  align-content: start;
+}
+
+.slide-item {
+  background-color: @bg-secondary;
+  border: 2px solid @border-color;
+  border-radius: @border-radius-md;
+  cursor: pointer;
+  transition: all @transition-fast;
+  overflow: hidden;
+
+  &:hover {
+    border-color: @accent-blue;
+    box-shadow: @shadow-sm;
+  }
+
+  &.selected {
+    border-color: @accent-blue;
+    background-color: fade(@accent-blue, 15%);
+    box-shadow: @shadow-md;
+  }
+}
+
+.slide-preview {
+  aspect-ratio: 16 / 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: @spacing-md;
+  background-color: @bg-primary;
+  overflow: hidden;
+  position: relative;
+}
+
+.slide-lyric {
+  font-size: @font-size-lg;
+  color: @text-primary;
+  text-align: center;
+  line-height: 1.4;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+}
+
+.slide-image {
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.slide-video {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #000;
+
+  .codicon {
+    font-size: 48px;
+    color: @text-secondary;
+  }
+}
+
+.slide-blank {
+  width: 100%;
+  height: 100%;
+  background-color: #000;
+}
+
+.slide-content {
+  font-size: @font-size-base;
+  color: @text-primary;
+  text-align: center;
+}
+
+.slide-number {
+  padding: @spacing-xs @spacing-sm;
+  background-color: @bg-tertiary;
+  color: @text-secondary;
+  font-size: @font-size-sm;
+  text-align: center;
+  border-top: 1px solid @border-color;
+}

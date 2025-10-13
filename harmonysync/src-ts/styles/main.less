@@ -1,0 +1,144 @@
+/**
+ * Main application styles
+ * VS Code-inspired layout and design
+ */
+
+@import './variables.less';
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: @font-family;
+  font-size: @font-size-base;
+  line-height: @line-height;
+  color: @text-primary;
+  background-color: @bg-primary;
+}
+
+.app-container {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-layout {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.main-area {
+  flex: 1;
+  display: grid;
+  grid-template-columns: @sidebar-width 1fr;
+  overflow: hidden;
+  border-bottom: 1px solid @border-color;
+}
+
+.left-column {
+  background-color: @bg-secondary;
+  border-right: 1px solid @border-color;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.center-column {
+  background-color: @bg-primary;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.bottom-panel {
+  height: @panel-height;
+  background-color: @bg-tertiary;
+  border-top: 1px solid @border-color;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+// Empty state
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: @spacing-xl;
+  color: @text-muted;
+  text-align: center;
+  font-size: @font-size-sm;
+}
+
+// Icon button base styles
+.icon-button {
+  background: transparent;
+  border: none;
+  color: @text-primary;
+  cursor: pointer;
+  padding: @spacing-xs;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: @border-radius-sm;
+  transition: background-color @transition-fast;
+
+  &:hover {
+    background-color: @bg-hover;
+  }
+
+  &:active {
+    background-color: @bg-active;
+  }
+
+  .codicon {
+    font-size: 16px;
+  }
+}
+
+// Codicons (VS Code icons) - basic support
+.codicon {
+  font-family: @font-family-mono;
+  display: inline-block;
+  text-align: center;
+  
+  &.codicon-add::before { content: '+'; }
+  &.codicon-play::before { content: '▶'; }
+  &.codicon-trash::before { content: '🗑'; }
+  &.codicon-debug-pause::before { content: '⏸'; }
+  &.codicon-debug-stop::before { content: '⏹'; }
+  &.codicon-debug-step-back::before { content: '⏮'; }
+  &.codicon-screen-normal::before { content: '🖥'; }
+  &.codicon-eye::before { content: '👁'; }
+  &.codicon-text-size::before { content: '📝'; }
+  &.codicon-play-circle::before { content: '⏯'; }
+}
+
+// Scrollbar styling
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: @bg-primary;
+}
+
+::-webkit-scrollbar-thumb {
+  background: @bg-tertiary;
+  border-radius: 5px;
+
+  &:hover {
+    background: @bg-hover;
+  }
+}

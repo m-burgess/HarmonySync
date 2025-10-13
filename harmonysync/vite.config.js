@@ -22,6 +22,7 @@ export default defineConfig({
                 audience: 'audience.html',
                 confidence: 'confidence.html',
                 lowerthirds: 'lowerthirds.html',
+                typescript: 'index-ts.html', // Add TypeScript version
               },
       external: ['@tauri-apps/api'], // Add this line
     },
@@ -29,6 +30,13 @@ export default defineConfig({
   optimizeDeps: {
     esbuildOptions: {
       target: 'es2022',
+    },
+  },
+  css: {
+    preprocessorOptions: {
+      less: {
+        javascriptEnabled: true,
+      },
     },
   },
 });
