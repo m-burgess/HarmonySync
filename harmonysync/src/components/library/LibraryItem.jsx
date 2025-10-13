@@ -1,4 +1,5 @@
 import React from 'react';
+import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import Button from '../ui/Button.jsx';
 import './LibraryItem.css';
 
@@ -6,14 +7,23 @@ const LibraryItem = ({
   item,
   onAdd,
   onSelect,
+  onExport,
   isSelected = false,
   showAddButton = true,
+  showExportButton = false,
   className = ''
 }) => {
   const handleAdd = (e) => {
     e.stopPropagation();
     if (onAdd) {
       onAdd(item);
+    }
+  };
+
+  const handleExport = (e) => {
+    e.stopPropagation();
+    if (onExport) {
+      onExport(item);
     }
   };
 
@@ -39,17 +49,30 @@ const LibraryItem = ({
           <span className="library-item-type">{item.type}</span>
         )}
       </div>
-      {showAddButton && (
-        <Button
-          size="small"
-          variant="primary"
-          onClick={handleAdd}
-          className="library-item-add-button"
-          title={`Add ${item.name} to setlist`}
-        >
-          +
-        </Button>
-      )}
+      <div className="library-item-actions">
+        {showExportButton && (
+          <Button
+            size="small"
+            variant="secondary"
+            onClick={handleExport}
+            className="library-item-export-button"
+            title={`Export ${item.name}`}
+          >
+            <ArrowDownTrayIcon style={{ width: '16px', height: '16px' }} />
+          </Button>
+        )}
+        {showAddButton && (
+          <Button
+            size="small"
+            variant="primary"
+            onClick={handleAdd}
+            className="library-item-add-button"
+            title={`Add ${item.name} to setlist`}
+          >
+            +
+          </Button>
+        )}
+      </div>
     </div>
   );
 };
