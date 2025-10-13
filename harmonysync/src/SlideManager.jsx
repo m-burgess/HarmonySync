@@ -8,12 +8,14 @@ import { FixedSizeGrid as Grid } from 'react-window';
 const SlideManager = ({ allSlides, setAllSlides, selectedSlide, setSelectedSlide }) => {
   const [thumbnailSize, setThumbnailSize] = useState(220); // Initial reasonable thumbnail size
   const [columns, setColumns] = useState(4);
+  const [gridHeight, setGridHeight] = useState(400);
   const gridRef = useRef(null);
   const [gridKey, setGridKey] = useState(0);
   const selectedSlideIndex = allSlides.findIndex(slide => slide === selectedSlide);
   const dragItem = useRef(null);
   const dragOverItem = useRef(null);
   const slideColRef = useRef(null);
+  const gridContainerRef = useRef(null);
 
   // New function to update the slide after transcoding
   const handleVideoTranscoded = (index, transcodedPath) => {
@@ -25,6 +27,25 @@ const SlideManager = ({ allSlides, setAllSlides, selectedSlide, setSelectedSlide
       return newSlides;
     });
   };
+
+  // Calculate grid height based on available space
+  const updateGridHeight = useCallback(() => {
+    if (gridContainerRef.current) {
+      const containerHeight = gridContainerRef.current.clientHeight;
+      setGridHeight(Math.max(200, containerHeight));
+    }
+  }, []);
+
+  useEffect(() => {
+    updateGridHeight();
+    window.addEventListener('resize', updateGridHeight);
+    return () => window.removeEventListener('resize', updateGridHeight);
+  }, [updateGridHeight]);
+
+  useEffect(() => {
+    // Update grid height when thumbnail size changes
+    updateGridHeight();
+  }, [thumbnailSize, updateGridHeight]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -141,14 +162,14 @@ const SlideManager = ({ allSlides, setAllSlides, selectedSlide, setSelectedSlide
   };
 
   return (
-    <div className="p-3 h-full flex flex-col" id="slide-col" ref={slideColRef} onDragOver={handleDragOver}>
+    <div className="pl-3 pt-3 pb-3 h-full flex flex-col" id="slide-col" ref={slideColRef} onDragOver={handleDragOver}>
       {/* Screen Controls */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-3 pr-3">
         <h2 className="text-sm font-semibold text-primary">Slides</h2>
         <ScreenButtons />
       </div>
       
-      <div className="flex items-center gap-4 mb-3">
+      <div className="flex items-center gap-4 mb-3 pr-3">
         <label htmlFor="thumbnail-size-slider" className="text-sm text-muted">Thumbnail Size</label>
         <input
           aria-label="Thumbnail Size"
@@ -166,15 +187,15 @@ const SlideManager = ({ allSlides, setAllSlides, selectedSlide, setSelectedSlide
         </button>
       </div>
 
-      <div className="flex-1">
+      <div className="flex-1 -mr-3" ref={gridContainerRef} style={{ height: '100%' }}>
         <Grid
           key={gridKey}
           ref={gridRef}
           columnCount={columns}
-          columnWidth={thumbnailSize + 16}
-          height={Math.max(300, window.innerHeight - 420)}
+          columnWidth={thumbnailSize + 8}
+          height={gridHeight}
           rowCount={Math.ceil(allSlides.length / columns)}
-          rowHeight={thumbnailSize + 24}
+          rowHeight={Math.round(thumbnailSize * 0.56) + 12}
           width={slideColRef.current ? slideColRef.current.clientWidth : 800}
           itemData={{ allSlides, columns, thumbnailSize, selectedSlide, handleSlideClick, handleDragStart, handleDragEnter, handleDrop, handleDragEnd, handleVideoTranscoded }}
         >
@@ -183,7 +204,7 @@ const SlideManager = ({ allSlides, setAllSlides, selectedSlide, setSelectedSlide
             if (index >= data.allSlides.length) return null;
             const slide = data.allSlides[index];
             return (
-              <div style={style} className="p-2">
+              <div style={style} className="p-1">
                 <SlideItem
                   slide={slide}
                   index={index}

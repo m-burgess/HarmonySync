@@ -3,16 +3,15 @@ import { setPan } from './audio.js';
 import { TrackControlCard } from './components/audio';
 
 const TrackControl = ({ track, onPanChange, onMuteToggle }) => {
-  const [volume, setVolume] = useState(track.individualVolume || 1);
   const [isMuted, setIsMuted] = useState(track.isMuted || false);
   const [panValue, setPanValue] = useState(track.panValue || 0);
 
   useEffect(() => {
-    // Update track's gain node when volume or mute state changes
+    // Update track's gain node when mute state changes
     if (track.gainNode) {
-      track.gainNode.gain.value = isMuted ? 0 : volume;
+      track.gainNode.gain.value = isMuted ? 0 : track.individualVolume || 1;
     }
-  }, [volume, isMuted, track.gainNode]);
+  }, [isMuted, track.gainNode, track.individualVolume]);
 
   useEffect(() => {
     // Update track's panner node when pan value changes
@@ -20,11 +19,6 @@ const TrackControl = ({ track, onPanChange, onMuteToggle }) => {
       setPan(track, panValue);
     }
   }, [panValue, track.pannerNode, track]);
-
-  const handleVolumeChange = (trackId, newVolume) => {
-    setVolume(newVolume);
-    // The gainNode update is handled by the useEffect above
-  };
 
   const handleMuteToggle = (trackId, newMuteState) => {
     setIsMuted(newMuteState);
@@ -40,10 +34,8 @@ const TrackControl = ({ track, onPanChange, onMuteToggle }) => {
     <TrackControlCard
       trackId={track.path}
       trackName={track.name}
-      volume={volume}
       panValue={panValue}
       isMuted={isMuted}
-      onVolumeChange={handleVolumeChange}
       onPanChange={handlePanChange}
       onMuteToggle={handleMuteToggle}
     />

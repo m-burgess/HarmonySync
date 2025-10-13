@@ -1,7 +1,7 @@
 import React from 'react';
 import './Card.css';
 
-const Card = ({ 
+const Card = React.forwardRef(({ 
   children, 
   className = '', 
   variant = 'default',
@@ -11,7 +11,7 @@ const Card = ({
   header,
   footer,
   ...props 
-}) => {
+}, ref) => {
   const cardClass = [
     'card',
     `card-${variant}`,
@@ -28,12 +28,14 @@ const Card = ({
   };
 
   return (
-    <div className={cardClass} onClick={handleClick} {...props}>
+    <div ref={ref} className={cardClass} onClick={handleClick} {...props}>
       {header && <div className="card-header">{header}</div>}
       <div className="card-body">{children}</div>
       {footer && <div className="card-footer">{footer}</div>}
     </div>
   );
-};
+});
+
+Card.displayName = 'Card';
 
 export default Card;

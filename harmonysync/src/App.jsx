@@ -7,7 +7,6 @@ import './App.css';
 import LibraryTabs from './LibraryTabs.jsx';
 import SetlistManager from './SetlistManager.jsx';
 import SlideManager from './SlideManager.jsx';
-import SlideInfo from './SlideInfo.jsx';
 import MultitrackPlayer from './MultitrackPlayer.jsx';
 import DisplaySettings from './DisplaySettings.jsx';
 
@@ -266,10 +265,9 @@ const App = () => {
             <SetlistManager setAllSlides={setAllSlides} setAllTracks={setAllTracks} serviceOrder={serviceOrder} setServiceOrder={setServiceOrder} />
           </div>
 
-          {/* Right column - now contains both slides and slide info */}
-          <div className="right-col overflow-auto flex flex-col">
+          {/* Right column - slides only */}
+          <div className="right-col">
             <SlideManager allSlides={allSlides} setAllSlides={setAllSlides} selectedSlide={selectedSlide} setSelectedSlide={setSelectedSlide} />
-            <SlideInfo selectedSlide={selectedSlide} />
           </div>
 
           {/* Gutter (between left and right) */}

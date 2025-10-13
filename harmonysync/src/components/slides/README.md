@@ -116,11 +116,12 @@ The `slide` prop expects an object with the following structure:
 ## Events and Interactions
 
 ### Enlarged Preview
-- **5-Second Hover**: Displays full-size image overlay for better readability
+- **5-Second Hover**: Displays enlarged image popup that appears to emerge from the slide
+- **Popup Style**: Image "pops out" from the slide with a bounce animation effect
 - **Supported Types**: Images, video thumbnails, and YouTube thumbnails  
-- **Keyboard Control**: Press Escape to close enlarged preview
-- **Click to Close**: Click outside the image to close
+- **Move Away to Close**: Simply move mouse away from slide to close preview
 - **Perfect for Scripture**: Enlarged text makes scripture images easy to read
+- **Contextual**: Preview appears near the original slide for better context
 
 ### Tauri Events
 The component automatically emits Tauri events when slides are clicked:
