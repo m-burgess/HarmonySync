@@ -13,6 +13,7 @@ A comprehensive presentation software built with a Tauri (Rust) backend and a Re
 ### 🎵 Multitrack Audio Player
 - **Flexible Track Controls**: Individual volume faders, LCR pan, and mute controls for each audio track.
 - **Efficient Audio Handling**: Utilizes FFmpeg for on-the-fly conversion of various audio formats to Ogg, optimizing memory usage and playback performance.
+- **Cloud Folder Export/Import**: Export songs with pre-converted OGG files to cloud storage (Google Drive, Dropbox, OneDrive) and import them on other machines without reconversion. See [CLOUD_FOLDER_EXPORT_GUIDE.md](CLOUD_FOLDER_EXPORT_GUIDE.md) for details.
 - **Intuitive Layout**: Track controls arranged in a grid (6 per row) with vertical scrolling for easy access.
 - **Visual Feedback**: LCR pan buttons highlight yellow when active; mute button highlights red when engaged.
 - **Default Volume**: All track faders initialize at 100% volume on load.
