@@ -138,6 +138,7 @@ pub fn run() {
             application::commands::stop_http_server,
             application::commands::add_song,
             application::commands::import_song_folder,
+            application::commands::export_song_folder,
             application::commands::search_songs,
             application::commands::search_presentations,
             application::commands::get_song_details,

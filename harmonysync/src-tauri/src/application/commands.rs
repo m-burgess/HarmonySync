@@ -686,14 +686,21 @@ pub async fn import_song_folder(
     let lyrics_path = folder_path_p.join("lyrics.txt");
     let lyrics = fs::read_to_string(lyrics_path).map_err(|e| format!("Failed to read lyrics.txt: {}", e))?;
 
-    // 3. Find audio files
+    // 3. Find audio files (both OGG and other formats)
     let mut audio_files = Vec::new();
+    let mut ogg_files = Vec::new();
     let supported_extensions = ["wav", "mp3", "aiff", "flac", "m4a"];
     for entry in fs::read_dir(folder_path_p).map_err(|e| format!("Failed to read folder: {}", e))? {
         let entry = entry.map_err(|e| format!("Failed to read directory entry: {}", e))?;
         let path = entry.path();
         if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
-            if supported_extensions.contains(&ext.to_lowercase().as_str()) {
+            let ext_lower = ext.to_lowercase();
+            if ext_lower == "ogg" {
+                // Already in OGG format - no conversion needed
+                if let Some(path_str) = path.to_str() {
+                    ogg_files.push(path_str.to_string());
+                }
+            } else if supported_extensions.contains(&ext_lower.as_str()) {
                 if let Some(path_str) = path.to_str() {
                     audio_files.push(path_str.to_string());
                 }
@@ -701,17 +708,20 @@ pub async fn import_song_folder(
         }
     }
 
-    if audio_files.is_empty() {
+    // Check if we have any audio files at all
+    let total_files = audio_files.len() + ogg_files.len();
+    if total_files == 0 {
         return Err("No supported audio files found in the folder.".to_string());
     }
 
     // Check for reasonable number of tracks (Web Audio API supports up to 32 channels comfortably)
-    if audio_files.len() > 32 {
-        return Err(format!("Too many audio files ({}). Maximum supported is 32 tracks.", audio_files.len()));
+    if total_files > 32 {
+        return Err(format!("Too many audio files ({}). Maximum supported is 32 tracks.", total_files));
     }
 
-    // Sort audio files to ensure consistent track ordering
+    // Sort files to ensure consistent track ordering
     audio_files.sort();
+    ogg_files.sort();
 
     // 4. Create song library folder
     let song_library_dir = app_handle
@@ -724,23 +734,47 @@ pub async fn import_song_folder(
     fs::create_dir_all(&specific_song_dir)
         .map_err(|e| format!("Failed to create song library directory: {}", e))?;
 
-    // 5. Convert all audio files to individual track files for streaming
-    let track_files = convert_to_individual_tracks(&app_handle, &audio_files, &title).await?;
-    
-    // 6. Copy track files to the song library folder and collect their final paths
+    // 5. Handle audio files - convert if needed, or directly copy OGG files
     let mut final_track_paths = Vec::new();
-    for (track_name, temp_path) in &track_files {
-        let temp_path_buf = Path::new(temp_path);
-        let filename = temp_path_buf.file_name()
-            .ok_or_else(|| format!("Track file path has no filename: {}", temp_path))?;
-        let final_path = specific_song_dir.join(filename);
-        fs::copy(temp_path, &final_path)
-            .map_err(|e| format!("Failed to copy track file {}: {}", track_name, e))?;
-        final_track_paths.push((track_name.clone(), final_path.to_str().unwrap().to_string()));
+    
+    // If files are already in OGG format, just copy them directly
+    if !ogg_files.is_empty() && audio_files.is_empty() {
+        info!("Found {} pre-converted OGG files, copying directly without conversion", ogg_files.len());
+        for (i, ogg_file) in ogg_files.iter().enumerate() {
+            let source_path = Path::new(ogg_file);
+            let track_name = source_path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or(&format!("Track_{}", i))
+                .to_string();
+            
+            let filename = source_path.file_name()
+                .ok_or_else(|| format!("OGG file path has no filename: {}", ogg_file))?;
+            let final_path = specific_song_dir.join(filename);
+            fs::copy(source_path, &final_path)
+                .map_err(|e| format!("Failed to copy OGG file {}: {}", ogg_file, e))?;
+            info!("Copied pre-converted track: {}", track_name);
+            final_track_paths.push((track_name, final_path.to_str().unwrap().to_string()));
+        }
+    } else {
+        // Convert non-OGG files to OGG format
+        info!("Converting {} audio files to OGG format", audio_files.len());
+        let track_files = convert_to_individual_tracks(&app_handle, &audio_files, &title).await?;
+        
+        // Copy track files to the song library folder and collect their final paths
+        for (track_name, temp_path) in &track_files {
+            let temp_path_buf = Path::new(temp_path);
+            let filename = temp_path_buf.file_name()
+                .ok_or_else(|| format!("Track file path has no filename: {}", temp_path))?;
+            let final_path = specific_song_dir.join(filename);
+            fs::copy(temp_path, &final_path)
+                .map_err(|e| format!("Failed to copy track file {}: {}", track_name, e))?;
+            final_track_paths.push((track_name.clone(), final_path.to_str().unwrap().to_string()));
+        }
     }
 
-    // 7. Store track names from the converted files
-    let track_names: Vec<String> = track_files.iter().map(|(name, _)| name.clone()).collect();
+    // 7. Store track names from the final files
+    let track_names: Vec<String> = final_track_paths.iter().map(|(name, _)| name.clone()).collect();
 
     // 8. Add to database (no mogg_file_path since we have individual tracks)
     let new_song = Song {
@@ -767,6 +801,64 @@ pub async fn import_song_folder(
     if let Err(e) = app_handle.emit("song-imported", ()) {
         eprintln!("Failed to emit song-imported event: {}", e);
     }
+    Ok(())
+}
+
+#[command]
+pub async fn export_song_folder(
+    app_handle: AppHandle,
+    song_id: i64,
+    destination_path: String,
+    repository: State<'_, SqliteRepository>,
+) -> Result<(), String> {
+    info!("Exporting song {} to {}", song_id, destination_path);
+    
+    // Get song details
+    let song = SongRepository::get_by_id(repository.inner(), song_id)
+        .map_err(|e| format!("Failed to get song: {}", e))?
+        .ok_or_else(|| format!("Song with id {} not found", song_id))?;
+    
+    // Get all tracks for the song
+    let tracks = TrackRepository::get_all_for_song(repository.inner(), song_id)
+        .map_err(|e| format!("Failed to get tracks: {}", e))?;
+    
+    if tracks.is_empty() {
+        return Err("No tracks found for this song".to_string());
+    }
+    
+    // Create destination folder with song title
+    let dest_path = Path::new(&destination_path).join(&song.title);
+    fs::create_dir_all(&dest_path)
+        .map_err(|e| format!("Failed to create destination folder: {}", e))?;
+    
+    // Copy all track files
+    for track in &tracks {
+        let source_path = Path::new(&track.file_path);
+        if source_path.exists() {
+            let filename = source_path.file_name()
+                .ok_or_else(|| format!("Invalid track file path: {}", track.file_path))?;
+            let dest_file = dest_path.join(filename);
+            fs::copy(source_path, &dest_file)
+                .map_err(|e| format!("Failed to copy track file {}: {}", track.file_path, e))?;
+            info!("Copied track file: {:?}", filename);
+        } else {
+            return Err(format!("Track file not found: {}", track.file_path));
+        }
+    }
+    
+    // Write lyrics.txt
+    if let Some(lyrics) = &song.lyrics {
+        let lyrics_path = dest_path.join("lyrics.txt");
+        fs::write(&lyrics_path, lyrics)
+            .map_err(|e| format!("Failed to write lyrics.txt: {}", e))?;
+        info!("Wrote lyrics.txt");
+    }
+    
+    // Generate and write background.css
+    css_generator::generate_and_write_css(dest_path.to_str().unwrap());
+    info!("Generated background.css");
+    
+    info!("Successfully exported song '{}' to {}", song.title, dest_path.display());
     Ok(())
 }
 
