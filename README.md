@@ -1,6 +1,15 @@
 # HarmonySync Presenter - Modern Worship & Media Software
 
-A comprehensive presentation software built with a Tauri (Rust) backend and a React (JavaScript) frontend, designed for worship services and live events. HarmonySync offers robust multitrack audio playback, dynamic media display, and flexible presentation capabilities.
+A comprehensive presentation software built with a Tauri (Rust) backend and dual frontend options (React or TypeScript), designed for worship services and live events. HarmonySync offers robust multitrack audio playback, dynamic media display, and flexible presentation capabilities.
+
+## 🎨 Two UI Implementations Available
+
+HarmonySync now offers **two frontend implementations** to choose from:
+
+1. **React Version** (`index.html`) - Full-featured React app with Tailwind CSS
+2. **TypeScript Version** (`index-ts.html`) - Lightweight VS Code-inspired UI with LESS
+
+See [IMPLEMENTATION_COMPARISON.md](harmonysync/IMPLEMENTATION_COMPARISON.md) for detailed comparison and guidance on which to choose.
 
 ## ✨ Key Features
 
