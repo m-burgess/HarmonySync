@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 import AudienceScreen from './AudienceScreen.jsx';
-import './audience.css'; // Import audience.css
+import './styles/audience.css'; // Import audience.css
 import * as TauriCore from '@tauri-apps/api/core';
 import * as TauriEvent from '@tauri-apps/api/event';
 import * as TauriPath from '@tauri-apps/api/path'; // Add this import

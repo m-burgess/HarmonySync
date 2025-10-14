@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as Tauri from '@tauri-apps/api';
 
-import './App.css';
+import './styles/App.css';
 import LibraryTabs from './LibraryTabs.jsx';
 import ScreenButtons from './ScreenButtons.jsx';
 import SetlistManager from './SetlistManager.jsx';
@@ -10,8 +10,8 @@ import SlideInfo from './SlideInfo.jsx';
 import MultitrackPlayer from './MultitrackPlayer.jsx';
 
 
-import { parseLyricsToSlides } from './lyrics.js';
-import { loadAudioFile, getAudioContext, getTracks, applyDefaultPanning } from './audio.js';
+import { parseLyricsToSlides } from './utils/lyrics.js';
+import { loadAudioFile, getAudioContext, getTracks, applyDefaultPanning } from './utils/audio.js';
 
 
 // This function lets the user select a folder and then calls the backend to import it.

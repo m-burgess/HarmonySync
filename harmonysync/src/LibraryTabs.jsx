@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import SongLibrary from './SongLibrary.jsx';
-import './LibraryTabs.css';
+import './styles/LibraryTabs.css';
 import PresentationLibrary from './PresentationLibrary.jsx';
 
 const LibraryTabs = ({ onAddSongToSetlist, onAddPresentationToSetlist, songImportedTrigger, presentationImportedTrigger }) => {

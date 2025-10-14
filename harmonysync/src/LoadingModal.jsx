@@ -1,5 +1,5 @@
 import React from 'react';
-import './LoadingModal.css'; // We'll create this CSS file next
+import './styles/LoadingModal.css'; // We'll create this CSS file next
 
 const LoadingModal = ({ progress, message }) => {
   if (progress === 0 || progress === 100) {
