@@ -1,6 +1,6 @@
 import React from 'react';
-import Button from '../ui/Button.jsx';
-import './TransitionButton.css';
+import Button from './Button.jsx';
+import './styles/components/TransitionButton.css';
 
 const TransitionButton = ({
   type,

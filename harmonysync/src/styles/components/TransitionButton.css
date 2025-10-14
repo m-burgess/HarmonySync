@@ -1,5 +1,3 @@
-/* Transition Button Styles */
-
 .transition-button {
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -29,7 +27,6 @@
   background: linear-gradient(135deg, #607D8B, #455a64) !important;
 }
 
-/* Animation for active states */
 .transition-button:hover {
   animation: pulse 0.3s ease-in-out;
 }
@@ -40,7 +37,6 @@
   100% { transform: scale(1); }
 }
 
-/* Responsive adjustments */
 @media (max-width: 768px) {
   .transition-button {
     min-width: 50px;

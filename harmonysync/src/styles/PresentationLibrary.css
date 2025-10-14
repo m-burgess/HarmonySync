@@ -1,0 +1,71 @@
+/* Presentation Library styles moved into styles/ */
+.song-library {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.search-input {
+  width: 100%;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  background-color: #252526;
+  border: 1px solid #2f2f2f;
+  color: #d4d4d4;
+  border-radius: 6px;
+}
+
+.search-results {
+  flex-grow: 1;
+  overflow-y: auto;
+}
+
+.song-item {
+  /* Reuse library-item visual style */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.12s ease, transform 0.12s ease;
+  background-color: transparent;
+  border: 1px solid transparent;
+}
+
+.song-item:hover {
+  background-color: #252526;
+  transform: translateY(-1px);
+  border-color: #313131;
+}
+
+.song-item span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.add-button {
+  background: #0e639c;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  cursor: pointer;
+  margin-left: 10px;
+  flex-shrink: 0;
+}
+
+.add-button:hover {
+  background: #007acc;
+}
+
+.error-message {
+    color: #f44336;
+    text-align: center;
+}

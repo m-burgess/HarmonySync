@@ -11,8 +11,8 @@ import {
   BoltIcon
 } from '@heroicons/react/24/outline';
 
-import './App.css';
-import './vscode-theme.css';
+import './styles/App.css';
+import './styles/vscode-theme.css';
 import { 
   ActivityBarIcon, 
   VSCodeStatusBar 

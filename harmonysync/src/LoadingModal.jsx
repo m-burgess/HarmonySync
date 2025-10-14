@@ -1,6 +1,6 @@
 import React from 'react';
 import { Modal } from './components/ui';
-import './LoadingModal.css';
+import './styles/LoadingModal.css';
 
 const LoadingModal = ({ progress, message }) => {
   const isLoading = progress > 0 && progress < 100;

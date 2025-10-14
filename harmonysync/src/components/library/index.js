@@ -1,2 +1,2 @@
 // Library Components
-export { default as LibraryItem } from './LibraryItem.jsx';
+export { default as LibraryItem } from '../../LibraryItem.jsx';

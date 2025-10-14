@@ -1,5 +1,3 @@
-/* Modal Component Styles */
-
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -27,7 +25,6 @@
   animation: modalSlideIn 0.3s ease-out;
 }
 
-/* Sizes */
 .modal-small {
   width: 400px;
   max-width: 90vw;
@@ -53,7 +50,6 @@
   height: 95vh;
 }
 
-/* Header */
 .modal-header {
   display: flex;
   align-items: center;
@@ -84,7 +80,6 @@
   background: rgba(255, 255, 255, 0.1) !important;
 }
 
-/* Body */
 .modal-body {
   flex: 1;
   padding: 20px;
@@ -92,7 +87,6 @@
   color: #d4d4d4;
 }
 
-/* Footer */
 .modal-footer {
   padding: 16px 20px;
   border-top: 1px solid #3a3a3a;
@@ -102,7 +96,6 @@
   gap: 12px;
 }
 
-/* Animations */
 @keyframes modalOverlayFadeIn {
   from {
     opacity: 0;
@@ -123,7 +116,6 @@
   }
 }
 
-/* Responsive */
 @media (max-width: 768px) {
   .modal-overlay {
     padding: 10px;
