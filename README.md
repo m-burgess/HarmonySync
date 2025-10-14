@@ -67,34 +67,21 @@ npm install
 npm run tauri dev
 ```
 
-### Building for Production
+### Building Installers
 
-#### Development Build
+HarmonySync provides build scripts for creating platform-specific installers:
+
+#### macOS (DMG)
 ```bash
-cd harmonysync
-npm run tauri build
+./build-macos.sh
 ```
 
-#### Windows Installer
-To create Windows installers (NSIS and/or MSI), see the detailed guide:
-[Building Windows Installer](docs/BUILDING_WINDOWS_INSTALLER.md)
-
-Quick build commands:
+#### Linux (AppImage)
 ```bash
-# Build NSIS installer (.exe)
-npm run tauri build -- --target nsis
-
-# Build MSI installer (requires WiX Toolset)
-npm run tauri build -- --target msi
-
-# Build both
-npm run tauri build
+./build-appimage.sh
 ```
 
-The installers will be created in:
-- NSIS: `src-tauri/target/release/bundle/nsis/`
-- MSI: `src-tauri/target/release/bundle/msi/`
-
+For detailed build instructions, troubleshooting, and CI/CD setup, see [BUILD.md](BUILD.md).
 
 ## 📁 Project Structure
 
