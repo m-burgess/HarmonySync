@@ -1,0 +1,49 @@
+body {
+    background-color: black;
+    color: white; /* Assuming white text for visibility on black */
+    font-family: sans-serif;
+    height: 100vh;
+    margin: 0;
+    overflow: hidden;
+}
+
+#root {
+    width: 100%;
+    height: 100%;
+}
+
+#audience-container {
+    width: 100%;
+    height: 100%;
+    background-color: black;
+}
+
+#lyric-display {
+    width: 100%;
+    height: 100%;
+    display: flex; /* Use flexbox for centering */
+    flex-direction: column; /* Stack lines vertically */
+    justify-content: center; /* Center vertically */
+    align-items: center; /* Center horizontally */
+    text-align: center;
+    font-size: 72px; /* Changed from 48px to 72px */
+    text-transform: uppercase;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 5px #000; /* Black outline */
+}
+
+iframe {
+    border: none;
+}
+
+.fade-out {
+    animation: fadeOut 3s forwards;
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}

@@ -1,5 +1,3 @@
-/* Pan Control Styles */
-
 .pan-control {
   display: flex;
   flex-direction: column;
@@ -38,7 +36,6 @@
   background: #e0a800 !important;
 }
 
-/* Position-specific styling */
 .pan-left.active {
   background: linear-gradient(135deg, #ff6b6b, #ee5a52) !important;
 }
@@ -51,7 +48,6 @@
   background: linear-gradient(135deg, #4ecdc4, #44a08d) !important;
 }
 
-/* Responsive */
 @media (max-width: 768px) {
   .pan-button {
     min-width: 20px !important;

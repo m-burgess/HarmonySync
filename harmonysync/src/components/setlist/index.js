@@ -1,2 +1,2 @@
 // Setlist Components
-export { default as SetlistItem } from './SetlistItem.jsx';
+export { default as SetlistItem } from '../../SetlistItem.jsx';

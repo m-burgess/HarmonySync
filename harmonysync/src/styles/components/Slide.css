@@ -9,7 +9,6 @@
   user-select: none;
 }
 
-/* Size Variants */
 .slide-small {
   width: 160px;
   height: 90px;
@@ -25,13 +24,11 @@
   height: 169px;
 }
 
-/* Custom size - dimensions set via inline styles */
 .slide-custom {
   min-width: 80px;
   min-height: 45px;
 }
 
-/* Responsive text sizing for custom slides */
 .slide-custom .slide-lyrics-section {
   font-size: clamp(0.5rem, 1.5vw, 0.75rem);
 }
@@ -40,7 +37,6 @@
   font-size: clamp(0.45rem, 1.2vw, 0.75rem);
 }
 
-/* State Styles */
 .slide-component:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
@@ -62,7 +58,6 @@
   pointer-events: none;
 }
 
-/* Content Container */
 .slide-content {
   width: 100%;
   height: 100%;
@@ -71,7 +66,6 @@
   position: relative;
 }
 
-/* Type Icon */
 .slide-type-indicator {
   position: absolute;
   top: 0.5rem;
@@ -89,7 +83,6 @@
   color: white;
 }
 
-/* Image Slides */
 .slide-image-container {
   width: 100%;
   height: 100%;
@@ -129,7 +122,6 @@
   opacity: 0.6;
 }
 
-/* Video Slides */
 .slide-video-container {
   position: relative;
   width: 100%;
@@ -149,7 +141,6 @@
   backdrop-filter: blur(4px);
 }
 
-/* YouTube Slides */
 .slide-youtube-container {
   position: relative;
   width: 100%;
@@ -176,7 +167,6 @@
   height: 0.875rem;
 }
 
-/* Lyrics Slides */
 .slide-lyrics-container {
   width: 100%;
   height: 100%;
@@ -224,7 +214,6 @@
   font-size: 0.875rem;
 }
 
-/* Loading Overlay */
 .slide-loading-overlay {
   position: absolute;
   top: 0;
@@ -258,7 +247,6 @@
   to { transform: rotate(360deg); }
 }
 
-/* Actions Overlay */
 .slide-actions-overlay {
   position: absolute;
   top: 0;
@@ -285,7 +273,6 @@
   gap: 0.5rem;
 }
 
-/* Selection Indicator */
 .slide-selection-indicator {
   position: absolute;
   top: -2px;
@@ -313,241 +300,4 @@
 @keyframes slideSelectionPulse {
   0%, 100% { opacity: 0.4; }
   50% { opacity: 0.8; }
-}
-
-/* Enlarged Preview Overlay */
-.slide-enlarged-preview-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.9);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(8px);
-  animation: slidePreviewFadeIn 0.3s ease-out;
-}
-
-/* Enlarged Preview Popup - Appears from slide */
-.slide-enlarged-preview-popup {
-  position: fixed;
-  z-index: 1000;
-  pointer-events: none;
-  animation: slidePreviewPopOut 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.slide-enlarged-preview-container {
-  position: relative;
-  max-width: 800px;
-  max-height: 600px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.75rem;
-  background: rgba(0, 0, 0, 0.95);
-  border-radius: 1rem;
-  padding: 1rem;
-  box-shadow: 
-    0 25px 50px rgba(0, 0, 0, 0.8),
-    0 0 0 1px rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.slide-enlarged-preview-image {
-  max-width: 100%;
-  max-height: 500px;
-  object-fit: contain;
-  border-radius: 0.5rem;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-}
-
-.slide-enlarged-preview-info {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  color: white;
-  text-align: center;
-}
-
-.slide-enlarged-preview-title {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #f9fafb;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-}
-
-.slide-enlarged-preview-duration {
-  background: rgba(0, 0, 0, 0.8);
-  color: #22d3ee;
-  padding: 0.25rem 0.75rem;
-  border-radius: 1rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  backdrop-filter: blur(4px);
-}
-
-.slide-enlarged-preview-hint {
-  color: #9ca3af;
-  font-size: 0.75rem;
-  margin-top: 0.25rem;
-  opacity: 0.8;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-}
-
-@keyframes slidePreviewFadeIn {
-  from { 
-    opacity: 0;
-  }
-  to { 
-    opacity: 1;
-  }
-}
-
-@keyframes slidePreviewZoomIn {
-  from { 
-    opacity: 0;
-    transform: scale(0.8);
-  }
-  to { 
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes slidePreviewPopOut {
-  0% { 
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.3);
-  }
-  60% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1.1);
-  }
-  100% { 
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-}
-
-/* Focus Styles */
-.slide-component:focus {
-  outline: 2px solid #22d3ee;
-  outline-offset: 2px;
-}
-
-.slide-component:focus:not(:focus-visible) {
-  outline: none;
-}
-
-/* Responsive Adjustments */
-@media (max-width: 768px) {
-  .slide-small {
-    width: 120px;
-    height: 68px;
-  }
-  
-  .slide-medium {
-    width: 160px;
-    height: 90px;
-  }
-  
-  .slide-large {
-    width: 240px;
-    height: 135px;
-  }
-  
-  .slide-lyrics-container {
-    padding: 0.5rem;
-  }
-  
-  .slide-lyrics-line {
-    font-size: 0.625rem;
-  }
-}
-
-/* Dark Mode Enhancements */
-@media (prefers-color-scheme: dark) {
-  .slide-component {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
-  }
-  
-  .slide-component:hover {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.8);
-  }
-}
-
-/* High Contrast Mode */
-@media (prefers-contrast: high) {
-  .slide-component {
-    border: 1px solid #ffffff;
-  }
-  
-  .slide-selected {
-    border: 3px solid #22d3ee;
-  }
-}
-
-/* Reduced Motion */
-@media (prefers-reduced-motion: reduce) {
-  .slide-component {
-    transition: none;
-  }
-  
-  .slide-component:hover {
-    transform: none;
-  }
-  
-  .slide-loading-spinner {
-    animation: none;
-  }
-  
-  .slide-selection-indicator::before {
-    animation: none;
-  }
-
-  .slide-enlarged-preview-overlay {
-    animation: none;
-  }
-
-  .slide-enlarged-preview-image {
-    animation: none;
-  }
-
-  .slide-enlarged-preview-popup {
-    animation: none;
-    transform: translate(-50%, -50%) scale(1);
-  }
-}
-
-/* Responsive Enlarged Preview */
-@media (max-width: 768px) {
-  .slide-enlarged-preview-container {
-    max-width: 350px;
-    max-height: 300px;
-    gap: 0.5rem;
-    padding: 0.75rem;
-  }
-
-  .slide-enlarged-preview-image {
-    max-height: 200px;
-  }
-
-  .slide-enlarged-preview-title {
-    font-size: 0.875rem;
-  }
-
-  .slide-enlarged-preview-duration {
-    font-size: 0.75rem;
-    padding: 0.25rem 0.5rem;
-  }
-
-  .slide-enlarged-preview-hint {
-    font-size: 0.625rem;
-  }
 }
