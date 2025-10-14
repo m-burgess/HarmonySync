@@ -128,7 +128,58 @@ const SetlistManager = ({ setAllSlides, setAllTracks }) => {
       } else {
         const videoFiles = entries.filter(entry => entry.children === undefined && (entry.name.endsWith('.mp4') || entry.name.endsWith('.mov') || entry.name.endsWith('.mkv'))).sort((a,b)=>a.name.localeCompare(b.name));
         const imageFiles = entries.filter(entry => entry.children === undefined && (entry.name.endsWith('.png') || entry.name.endsWith('.jpg') || entry.name.endsWith('.jpeg') || entry.name.endsWith('.gif') || entry.name.endsWith('.webp'))).sort((a,b)=>a.name.localeCompare(b.name));
-        loadedSlides = [...videoFiles.map(f=>({type:'video', path:`${itemPath}/${f.name}`, name:f.name})), ...imageFiles.map(f=>({type:'image', path:`${itemPath}/${f.name}`, name:f.name}))];
+
+        // Fetch metadata (duration, thumbnail) for videos via Tauri command
+        setLoadingMessage('Loading video metadata...');
+        const videoSlidesPromises = videoFiles.map(async (file) => {
+          const filePath = `${itemPath}/${file.name}`;
+          try {
+            const metadata = await TauriCore.invoke('get_video_metadata', { path: filePath });
+            return {
+              type: 'video',
+              path: filePath,
+              name: file.name,
+              duration: metadata && metadata.duration ? metadata.duration : undefined,
+              thumbnail_path: metadata && metadata.thumbnail_path ? metadata.thumbnail_path : undefined,
+            };
+          } catch (err) {
+            console.warn('Failed to get metadata for', filePath, err);
+            return { type: 'video', path: filePath, name: file.name };
+          }
+        });
+
+        const videoSlides = (await Promise.all(videoSlidesPromises)).filter(Boolean);
+        const imageSlides = imageFiles.map(file => ({ type: 'image', path: `${itemPath}/${file.name}`, name: file.name }));
+
+        // Check for a youtube.txt file listing YouTube links (one per line)
+        const youtubeFile = entries.find(entry => entry.name === 'youtube.txt' && entry.children === undefined);
+        if (youtubeFile) {
+          setLoadingMessage('Loading YouTube links...');
+          const youtubePath = `${itemPath}/${youtubeFile.name}`;
+          let youtubeContent = await TauriFs.readFile(youtubePath, { encoding: 'utf8' });
+          if (youtubeContent instanceof Uint8Array) youtubeContent = new TextDecoder().decode(youtubeContent);
+          if (typeof youtubeContent === 'string' && youtubeContent.length > 0) {
+            const youtubeSlides = youtubeContent.split('\n').map(line => {
+              line = line.trim();
+              if (!line) return null;
+              const parts = line.split(',');
+              let url = parts[0].trim();
+              if (!url.startsWith('http')) {
+                url = 'https://' + url;
+              }
+              const name = parts[1] ? parts[1].trim() : '';
+              const m = url.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+              const videoId = m && m[1] ? m[1] : null;
+              if (!videoId) return null;
+              return { type: 'youtube', videoId, name };
+            }).filter(Boolean);
+            loadedSlides = [...videoSlides, ...imageSlides, ...youtubeSlides];
+          } else {
+            loadedSlides = [...videoSlides, ...imageSlides];
+          }
+        } else {
+          loadedSlides = [...videoSlides, ...imageSlides];
+        }
       }
 
       setAllSlides(loadedSlides);
