@@ -1,0 +1,129 @@
+/* Setlist Item Styles */
+
+.setlist-item {
+  /* VS Code Dark-like card */
+  background-color: #1e1e1e;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  overflow: hidden;
+  transition: background-color 0.12s ease, transform 0.12s ease;
+}
+
+.setlist-item:hover {
+  background-color: #252526;
+  transform: translateY(-1px);
+  border-color: #3a3a3a;
+}
+
+.setlist-item-loaded {
+  border-left: 4px solid #28a745;
+  background-color: rgba(40, 167, 69, 0.1);
+}
+
+.setlist-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  cursor: pointer;
+}
+
+.setlist-item-name {
+  flex: 1;
+  color: #d4d4d4;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.1s ease;
+}
+
+.setlist-item-name:hover {
+  color: #569cd6; /* VS Code blue */
+}
+
+.loaded-indicator {
+  color: #28a745;
+  font-weight: bold;
+  margin-left: 8px;
+}
+
+.setlist-item-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  width: 28px !important;
+  height: 28px !important;
+  padding: 4px !important;
+  margin-left: 8px;
+  background: transparent !important;
+  color: #c5c5c5;
+  border: 1px solid transparent;
+  transition: background-color 0.12s ease, color 0.12s ease, transform 0.12s ease;
+}
+
+.setlist-item-remove svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
+.setlist-item-remove:hover {
+  background-color: rgba(255,255,255,0.03) !important;
+  color: #f14c4c;
+  transform: translateY(-1px);
+}
+
+.setlist-item-transitions {
+  padding: 8px 12px 12px;
+  border-top: 1px solid #4a4a4a;
+  background-color: rgba(0, 0, 0, 0.1);
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Status indicators */
+.setlist-item.preloaded {
+  border-left-color: #9C27B0;
+  background-color: rgba(156, 39, 176, 0.1);
+}
+
+.setlist-item.playing {
+  border-left-color: #4CAF50;
+  background-color: rgba(76, 175, 80, 0.1);
+  animation: playingPulse 2s ease-in-out infinite;
+}
+
+@keyframes playingPulse {
+  0%, 100% { 
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4);
+  }
+  50% { 
+    box-shadow: 0 0 0 4px rgba(76, 175, 80, 0.1);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .setlist-item-header {
+    padding: 10px;
+  }
+  
+  .setlist-item-name {
+    font-size: 13px;
+  }
+  
+  .setlist-item-remove {
+    width: 24px !important;
+    height: 24px !important;
+  }
+  
+  .setlist-item-transitions {
+    padding: 6px 10px 10px;
+    gap: 4px;
+  }
+}

@@ -12,6 +12,8 @@ const AudienceApp = () => {
   const videoRef = useRef(null); // Create a ref for the video element
   const httpServerUrl = useRef(null); // Ref to store the HTTP server URL
 
+  console.log('AudienceApp component loading...');
+
       const handleVideoEnded = () => {
         if (videoRef.current) {
           videoRef.current.style.display = 'none'; // Hide the video
@@ -96,11 +98,11 @@ const AudienceApp = () => {
   }, []); // Run once on component mount
 
   return (
-    <>
+    <div style={{ width: '100%', height: '100vh', backgroundColor: 'black' }}>
       {dynamicBackgroundCss && <style>{dynamicBackgroundCss}</style>}
       <video id="audience-video" ref={videoRef} autoPlay muted playsInline type="video/mp4" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'none' }}></video> {/* Removed controls, added autoPlay, muted, playsInline */}
       <AudienceScreen />
-    </>
+    </div>
   );
 };
 

@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { setPan } from './audio.js';
+import { TrackControlCard } from './components/audio';
 
 const TrackControl = ({ track, onPanChange, onMuteToggle }) => {
-  const [volume, setVolume] = useState(track.individualVolume || 1);
   const [isMuted, setIsMuted] = useState(track.isMuted || false);
   const [panValue, setPanValue] = useState(track.panValue || 0);
 
   useEffect(() => {
-    // Update track's gain node when volume or mute state changes
+    // Update track's gain node when mute state changes
     if (track.gainNode) {
-      track.gainNode.gain.value = isMuted ? 0 : volume;
+      track.gainNode.gain.value = isMuted ? 0 : track.individualVolume || 1;
     }
-  }, [volume, isMuted, track.gainNode]);
+  }, [isMuted, track.gainNode, track.individualVolume]);
 
   useEffect(() => {
     // Update track's panner node when pan value changes
@@ -20,65 +20,25 @@ const TrackControl = ({ track, onPanChange, onMuteToggle }) => {
     }
   }, [panValue, track.pannerNode, track]);
 
-  const handleVolumeChange = (e) => {
-    const newVolume = parseFloat(e.target.value);
-    setVolume(newVolume);
-    // The gainNode update is handled by the useEffect above
+  const handleMuteToggle = (trackId, newMuteState) => {
+    setIsMuted(newMuteState);
+    onMuteToggle(track, newMuteState); // Notify parent of mute state change
   };
 
-  const handleMuteToggle = () => {
-    setIsMuted(prev => !prev);
-    onMuteToggle(track, !isMuted); // Notify parent of mute state change
-  };
-
-  const handlePanChange = (newPanValue) => {
+  const handlePanChange = (trackId, newPanValue) => {
     setPanValue(newPanValue);
     onPanChange(track, newPanValue); // Notify parent of pan state change
   };
 
   return (
-    <div className="track-control" data-path={track.path}>
-      <span className="track-name">{track.name}</span>
-
-      <input
-        type="range"
-        min="0"
-        max="1"
-        step="0.01"
-        value={volume}
-        className="volume-slider"
-        onChange={handleVolumeChange}
-        disabled={isMuted}
-      />
-
-      <div className="pan-controls">
-        <button
-          className={`pan-button pan-left ${panValue === -1 ? 'active-pan' : ''}`}
-          onClick={() => handlePanChange(-1)}
-        >
-          L
-        </button>
-        <button
-          className={`pan-button pan-center ${panValue === 0 ? 'active-pan' : ''}`}
-          onClick={() => handlePanChange(0)}
-        >
-          C
-        </button>
-        <button
-          className={`pan-button pan-right ${panValue === 1 ? 'active-pan' : ''}`}
-          onClick={() => handlePanChange(1)}
-        >
-          R
-        </button>
-      </div>
-
-      <button
-        className={`mute-button ${isMuted ? 'active' : ''}`}
-        onClick={handleMuteToggle}
-      >
-        {isMuted ? 'Unmute' : 'Mute'}
-      </button>
-    </div>
+    <TrackControlCard
+      trackId={track.path}
+      trackName={track.name}
+      panValue={panValue}
+      isMuted={isMuted}
+      onPanChange={handlePanChange}
+      onMuteToggle={handleMuteToggle}
+    />
   );
 };
 

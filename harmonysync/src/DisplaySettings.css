@@ -1,0 +1,213 @@
+/* Display Settings Modal Overlay */
+.display-settings-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+/* Display Settings Modal */
+.display-settings-modal {
+  background-color: #1f2937;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* Modal Header */
+.display-settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #374151;
+}
+
+.display-settings-header h2 {
+  color: #f9fafb;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  padding: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.2s, background-color 0.2s;
+}
+
+.close-button:hover {
+  color: #f9fafb;
+  background-color: #374151;
+}
+
+/* Modal Content */
+.display-settings-content {
+  padding: 24px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+/* Settings Sections */
+.settings-section {
+  margin-bottom: 32px;
+}
+
+.settings-section h3 {
+  color: #f9fafb;
+  font-size: 1.125rem;
+  font-weight: 500;
+  margin: 0 0 16px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #374151;
+}
+
+.settings-section h4 {
+  color: #d1d5db;
+  font-size: 1rem;
+  font-weight: 500;
+  margin: 16px 0 8px 0;
+}
+
+/* Setting Rows */
+.setting-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 16px;
+}
+
+.setting-row label {
+  color: #d1d5db;
+  font-weight: 500;
+  flex: 1;
+  font-size: 0.875rem;
+}
+
+.setting-row select,
+.setting-row input {
+  flex: 1;
+  padding: 8px 12px;
+  background-color: #374151;
+  border: 1px solid #4b5563;
+  border-radius: 6px;
+  color: #f9fafb;
+  font-size: 0.875rem;
+  min-width: 0;
+}
+
+.setting-row select:focus,
+.setting-row input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.setting-row input[type="number"] {
+  max-width: 100px;
+}
+
+/* Font Preview */
+.font-preview {
+  margin-top: 24px;
+  padding: 16px;
+  background-color: #374151;
+  border-radius: 6px;
+}
+
+.preview-text {
+  border: 1px solid #4b5563;
+}
+
+/* Loading Spinner */
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  color: #9ca3af;
+  font-size: 1.125rem;
+}
+
+/* Modal Footer */
+.display-settings-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid #374151;
+  background-color: #111827;
+}
+
+.cancel-button,
+.save-button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.cancel-button {
+  background-color: transparent;
+  border: 1px solid #4b5563;
+  color: #d1d5db;
+}
+
+.cancel-button:hover {
+  background-color: #374151;
+  border-color: #6b7280;
+}
+
+.save-button {
+  background-color: #3b82f6;
+  border: 1px solid #3b82f6;
+  color: white;
+}
+
+.save-button:hover:not(:disabled) {
+  background-color: #2563eb;
+  border-color: #2563eb;
+}
+
+.save-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+  .display-settings-modal {
+    width: 95%;
+    margin: 16px;
+  }
+  
+  .setting-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .setting-row label {
+    flex: none;
+  }
+  
+  .setting-row input[type="number"] {
+    max-width: none;
+  }
+}

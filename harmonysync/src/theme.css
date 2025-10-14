@@ -1,0 +1,59 @@
+:root {
+  /* ProPresenter-like dark stage palette */
+  --bg: #0f1724; /* very dark navy */
+  --surface: #111827; /* charcoal surface */
+  --card: #151a23; /* card background */
+  --accent: #ff8a00; /* warm orange accent */
+  --accent-2: #06b6d4; /* cyan secondary */
+  --muted: #9ca3af; /* muted text */
+  --text: #e6eef6; /* primary text */
+  --radius: 8px;
+  --elevation-1: 0 1px 3px rgba(0,0,0,0.4);
+  --elevation-2: 0 6px 18px rgba(0,0,0,0.6);
+}
+
+/* utility classes for quick use */
+.bg-stage { background-color: var(--bg); }
+.bg-surface { background-color: var(--surface); }
+.bg-card { background-color: var(--card); }
+.text-accent { color: var(--accent); }
+.text-muted { color: var(--muted); }
+.text-primary { color: var(--text); }
+.ring-accent { box-shadow: 0 0 0 3px rgba(255,138,0,0.12); }
+
+/* Ensure heroicons inherit proper colors and dimensions */
+svg {
+  fill: currentColor;
+  flex-shrink: 0;
+}
+
+/* Specific styling for heroicons to prevent Tailwind base reset issues */
+svg[data-slot="icon"] {
+  width: 1em;
+  height: 1em;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Ensure buttons with icons display properly */
+button svg {
+  pointer-events: none;
+}
+
+/* Fix for buttons that might have Tailwind reset issues */
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Ensure add-button icons display correctly */
+.add-button svg {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+/* Override player-controls button styles for multitrack player */
+#multitrack-player button {
+  background-color: var(--bg) !important;
+}

@@ -43,8 +43,9 @@ function getGainNode() {
 export function stopAllAudio() {
   audioSources.forEach(source => {
     try {
-      source.stop();
-      source.disconnect(); // Disconnect the source from the gain node
+      // source might be a BufferSource or a MediaElementSourceNode wrapper
+      try { source.stop(); } catch (e) {}
+      try { source.disconnect(); } catch (e) {}
     } catch (e) {
       console.warn("Error stopping or disconnecting audio source:", e);
     }
@@ -157,27 +158,47 @@ export function playAllTracks() {
 
   currentTracks.forEach(track => {
     if (!track.isPlaying) {
-      const source = currentAudioContext.createBufferSource();
-      source.buffer = track.buffer;
+      if (track.buffer) {
+        const source = currentAudioContext.createBufferSource();
+        source.buffer = track.buffer;
 
-      source.connect(track.pannerNode);
-      track.pannerNode.connect(track.gainNode);
-      track.gainNode.connect(getGainNode());
+        source.connect(track.pannerNode);
+        track.pannerNode.connect(track.gainNode);
+        track.gainNode.connect(getGainNode());
 
-      source.start(0, track.offset);
-      track.startTime = currentAudioContext.currentTime - track.offset;
-      track.isPlaying = true;
-      track.source = source;
-      audioSources.push(source);
+        source.start(0, track.offset);
+        track.startTime = currentAudioContext.currentTime - track.offset;
+        track.isPlaying = true;
+        track.source = source;
+        audioSources.push(source);
 
-      source.onended = () => {
-        track.isPlaying = false;
-        track.offset = 0; // Reset offset when track ends
-        const index = audioSources.indexOf(source);
-        if (index > -1) {
-          audioSources.splice(index, 1);
+        source.onended = () => {
+          track.isPlaying = false;
+          track.offset = 0; // Reset offset when track ends
+          const index = audioSources.indexOf(source);
+          if (index > -1) {
+            audioSources.splice(index, 1);
+          }
+        };
+      } else if (track.audioEl) {
+        // Create MediaElementAudioSourceNode if not already
+        try {
+          if (!track.source) {
+            track.source = currentAudioContext.createMediaElementSource(track.audioEl);
+            track.gainNode = currentAudioContext.createGain();
+            track.pannerNode = currentAudioContext.createStereoPanner();
+            track.source.connect(track.gainNode);
+            track.gainNode.connect(track.pannerNode);
+            track.pannerNode.connect(getGainNode());
+          }
+          try { track.audioEl.currentTime = track.offset || 0; } catch (e) {}
+          track.audioEl.play().catch(e => console.warn('Media element play failed:', e));
+          track.isPlaying = true;
+          audioSources.push(track.source);
+        } catch (e) {
+          console.error('Error starting media element track:', e);
         }
-      };
+      }
     }
   });
 }
