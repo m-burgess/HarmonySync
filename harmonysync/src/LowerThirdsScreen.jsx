@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { listen } from '@tauri-apps/api/event';
-import './lowerthirds.css';
+import './styles/lowerthirds.css';
 
 const LowerThirdsScreen = () => {
   const [line1, setLine1] = useState('Line 1');
