@@ -1,32 +1,22 @@
 import React from 'react';
-import { Modal } from './components/ui';
-import './LoadingModal.css';
+import './styles/LoadingModal.css'; // We'll create this CSS file next
 
 const LoadingModal = ({ progress, message }) => {
-  const isLoading = progress > 0 && progress < 100;
+  if (progress === 0 || progress === 100) {
+    return null; // Don't show modal if not loading or loading is complete
+  }
 
   return (
-    <Modal
-      isOpen={isLoading}
-      closeOnOverlayClick={false}
-      closeOnEscape={false}
-      showCloseButton={false}
-      title="Loading..."
-      size="small"
-    >
+    <div className="loading-modal-overlay">
       <div className="loading-modal-content">
-        <p className="loading-message">{message}</p>
-        <div className="loading-progress-container">
-          <div className="loading-progress-bar">
-            <div 
-              className="loading-progress-fill" 
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <span className="loading-percentage">{progress}%</span>
+        <h2>Loading...</h2>
+        <p>{message}</p>
+        <div className="loading-progress-bar-container">
+          <div className="loading-progress-bar" style={{ width: `${progress}%` }}></div>
         </div>
+        <span>{progress}%</span>
       </div>
-    </Modal>
+    </div>
   );
 };
 

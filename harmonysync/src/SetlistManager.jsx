@@ -4,10 +4,10 @@ import * as TauriFs from '@tauri-apps/plugin-fs';
 import * as TauriPath from '@tauri-apps/api/path';
 import * as TauriCore from '@tauri-apps/api/core';
 import * as TauriEvent from '@tauri-apps/api/event';
-import { loadAudioFile, setPan, playAllTracks, stopAllAudio, goToBeginningAllTracks, applyDefaultPanning, getAudioContext, getTracks, clearAudioBufferCache, clearTracks, cleanupAudio, addTracks } from './audio.js';
+import { loadAudioFile, setPan, playAllTracks, stopAllAudio, goToBeginningAllTracks, applyDefaultPanning, getAudioContext, getTracks, clearAudioBufferCache, clearTracks, cleanupAudio, addTracks } from './utils/audio.js';
 import LoadingModal from './LoadingModal.jsx';
-import { parseLyricsToSlides } from './lyrics.js';
-import { getVideoMetadata } from './video.js';
+import { parseLyricsToSlides } from './utils/lyrics.js';
+import { getVideoMetadata } from './utils/video.js';
 
 import { TrashIcon } from '@heroicons/react/24/solid';
 import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';

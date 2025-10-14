@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { setPan } from './audio.js';
+import { setPan } from './utils/audio.js';
 import { SpeakerWaveIcon, SpeakerXMarkIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
 
 const TrackControl = ({ track, onPanChange, onMuteToggle }) => {
