@@ -1,4 +1,4 @@
-name: Rust
+name: Rust CI
 
 on:
   push:
@@ -10,13 +10,65 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
-
+  test:
+    name: Test Suite
     runs-on: ubuntu-latest
-
+    
     steps:
     - uses: actions/checkout@v4
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose
+    
+    - name: Install Rust
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        toolchain: stable
+    
+    - name: Cache cargo dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          harmonysync/src-tauri/target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+    
+    - name: Run unit tests
+      working-directory: harmonysync/src-tauri
+      run: cargo test --lib --verbose
+      continue-on-error: false
+    
+    - name: Run integration tests
+      working-directory: harmonysync/src-tauri
+      run: cargo test --test tests --verbose
+      continue-on-error: false
+    
+    - name: Run all tests with coverage info
+      working-directory: harmonysync/src-tauri
+      run: cargo test --verbose -- --show-output
+      continue-on-error: true
+
+  lint:
+    name: Linting
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        toolchain: stable
+        components: rustfmt, clippy
+    
+    - name: Check formatting
+      working-directory: harmonysync/src-tauri
+      run: cargo fmt -- --check
+      continue-on-error: true
+    
+    - name: Run clippy
+      working-directory: harmonysync/src-tauri
+      run: cargo clippy -- -D warnings
+      continue-on-error: true

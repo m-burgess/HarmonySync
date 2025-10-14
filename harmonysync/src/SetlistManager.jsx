@@ -1,19 +1,209 @@
 import React, { useState } from 'react';
 import * as TauriDialog from '@tauri-apps/plugin-dialog';
-import * as TauriPath from '@tauri-apps/api/path';
 import * as TauriFs from '@tauri-apps/plugin-fs';
+import * as TauriPath from '@tauri-apps/api/path';
 import * as TauriCore from '@tauri-apps/api/core';
 import * as TauriEvent from '@tauri-apps/api/event';
-import { loadAudioFile, setPan, playAllTracks, stopAllAudio, goToBeginningAllTracks, applyDefaultPanning, getAudioContext, getTracks, clearAudioBufferCache, clearTracks, cleanupAudio } from './audio.js';
-import { songTransitionManager } from './song-transition.js';
+import { loadAudioFile, setPan, playAllTracks, stopAllAudio, goToBeginningAllTracks, applyDefaultPanning, getAudioContext, getTracks, clearAudioBufferCache, clearTracks, cleanupAudio, addTracks } from './utils/audio.js';
+import LoadingModal from './LoadingModal.jsx';
+import { parseLyricsToSlides } from './utils/lyrics.js';
+import { getVideoMetadata } from './utils/video.js';
 
-import { parseLyricsToSlides } from './lyrics.js';
+import { TrashIcon } from '@heroicons/react/24/solid';
+import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 
-const SetlistManager = ({ setAllSlides, setAllTracks }) => {
-  const [setlist, setSetlist] = useState([]);
+const SetlistManager = ({ setAllSlides, setAllTracks, serviceOrder, setServiceOrder }) => {
   const [currentBackgroundCssContent, setCurrentBackgroundCssContent] = useState('');
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadingMessage, setLoadingMessage] = useState('');
+
+  const loadFolderContents = async (itemPath) => {
+    if (!itemPath || typeof itemPath !== 'string') {
+      console.error('Invalid itemPath provided to loadFolderContents:', itemPath);
+      return { loadedSlides: [], loadedTracks: [], unlistenOgg: () => {}, unlistenVideoTranscode: () => {} };
+    }
+    const unlistenOgg = await TauriEvent.listen('ogg-conversion-progress', (event) => {
+      const payload = event.payload;
+      setLoadingProgress(payload.progress);
+      setLoadingMessage(payload.message);
+    });
+
+    const unlistenVideoTranscode = await TauriEvent.listen('video-transcode-progress', (event) => {
+      const payload = event.payload;
+      setLoadingProgress(payload.progress);
+      setLoadingMessage(payload.message);
+    });
+
+    try {
+      const entries = await TauriFs.readDir(itemPath, { recursive: false });
+      const audioFiles = entries.filter(entry => {
+        const isFile = entry.children === undefined; // Check if it's a file
+        const isAudio = isFile && (entry.name.endsWith('.mp3') || entry.name.endsWith('.wav') || entry.name.endsWith('.ogg'));
+        return isAudio;
+      }).sort((a, b) => a.name.localeCompare(b.name));
+
+      const processedAudioFiles = await Promise.all(audioFiles.map(async (file) => {
+        const originalPath = `${itemPath}/${file.name}`;
+        const fileNameWithOgg = file.name.endsWith('.ogg') ? file.name : `${file.name}.ogg`;
+        const targetCachePathAbsolute = await TauriPath.join(await TauriPath.appLocalDataDir(), 'harmonysync', 'cache', fileNameWithOgg);
+
+        if (!file.name.endsWith('.ogg')) {
+          setLoadingMessage(`Converting ${file.name} to Ogg...`);
+          try {
+            const tempOggPath = await TauriCore.invoke('convert_to_ogg', { inputPath: originalPath });
+            const cacheDirAbsolute = await TauriPath.join(await TauriPath.appLocalDataDir(), 'harmonysync', 'cache');
+            await TauriFs.mkdir(cacheDirAbsolute, { recursive: true });
+            await TauriFs.copyFile(tempOggPath, targetCachePathAbsolute);
+            await TauriFs.remove(tempOggPath);
+            return { ...file, path: targetCachePathAbsolute, name: fileNameWithOgg };
+          } catch (error) {
+            console.error(`Error converting ${file.name} to Ogg:`, error);
+            return null;
+          }
+        } else {
+          const sourcePath = originalPath;
+          const cacheDirAbsolute = await TauriPath.join(await TauriPath.appLocalDataDir(), 'harmonysync', 'cache');
+          await TauriFs.mkdir(cacheDirAbsolute, { recursive: true });
+          await TauriFs.copyFile(sourcePath, targetCachePathAbsolute);
+          return { ...file, path: targetCachePathAbsolute, name: fileNameWithOgg };
+        }
+      }));
+      const validAudioFiles = processedAudioFiles.filter(Boolean);
+
+      let loadedSlides = [];
+      const lyricsFile = entries.find(entry => entry.name === 'lyrics.txt' && entry.children === undefined);
+      if (lyricsFile) {
+        setLoadingMessage('Loading lyrics...');
+        const lyricsPath = `${itemPath}/${lyricsFile.name}`;
+        let content = await TauriFs.readFile(lyricsPath, { encoding: 'utf8' });
+        if (content instanceof Uint8Array) {
+          content = new TextDecoder().decode(content);
+        }
+        if (typeof content === 'string' && content.length > 0) {
+          loadedSlides = parseLyricsToSlides(content);
+        }
+      } else {
+        const videoFiles = entries.filter(entry => {
+          const isFile = entry.children === undefined;
+          const isVideo = isFile && (entry.name.endsWith('.mp4') || entry.name.endsWith('.mov') || entry.name.endsWith('.avi') || entry.name.endsWith('.mkv'));
+          return isVideo;
+        }).sort((a, b) => a.name.localeCompare(b.name));
+
+        setLoadingMessage('Loading video metadata...');
+        const videoSlidesPromises = videoFiles.map(async (file) => {
+          const fullPath = `${itemPath}/${file.name}`;
+          const metadata = await getVideoMetadata(fullPath);
+          if (metadata) {
+            // Construct the expected transcoded path
+            const fileNameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.'));
+            const transcodedFileName = `${fileNameWithoutExt}_youtube.mp4`;
+            const cacheDirAbsolute = await TauriPath.join(await TauriPath.appLocalDataDir(), 'harmonysync', 'cache');
+            const expectedTranscodedPath = await TauriPath.join(cacheDirAbsolute, transcodedFileName);
+
+            let videoPathToUse = fullPath;
+
+            // Check if the transcoded file already exists
+            const transcodedExists = await TauriFs.exists(expectedTranscodedPath);
+
+            if (transcodedExists) {
+              console.log(`Found existing transcoded video: ${expectedTranscodedPath}`);
+              videoPathToUse = expectedTranscodedPath;
+            } else {
+              console.log(`Transcoded video not found for ${file.name}. Will transcode on first play.`);
+            }
+
+            return {
+              type: 'video',
+              path: videoPathToUse, // Use transcoded path if exists, else original
+              name: file.name,
+              duration: metadata.duration,
+              thumbnail_path: metadata.thumbnail_path,
+            };
+          }
+          return null; // Skip if metadata fetching fails
+        });
+        const videoSlides = (await Promise.all(videoSlidesPromises)).filter(Boolean);
+
+        const imageFiles = entries.filter(entry => {
+          const isFile = entry.children === undefined;
+          const isImage = isFile && (entry.name.endsWith('.png') || entry.name.endsWith('.jpg') || entry.name.endsWith('.jpeg') || entry.name.endsWith('.gif') || entry.name.endsWith('.webp'));
+          return isImage;
+        }).sort((a, b) => a.name.localeCompare(b.name));
+
+        const imageSlides = imageFiles.map(file => ({
+          type: 'image',
+          path: `${itemPath}/${file.name}`,
+          name: file.name
+        }));
+
+        const youtubeFile = entries.find(entry => entry.name === 'youtube.txt' && entry.children === undefined);
+        if (youtubeFile) {
+            setLoadingMessage('Loading YouTube links...');
+            const youtubePath = `${itemPath}/${youtubeFile.name}`;
+            let youtubeContent = await TauriFs.readFile(youtubePath, { encoding: 'utf8' });
+            if (youtubeContent instanceof Uint8Array) {
+                youtubeContent = new TextDecoder().decode(youtubeContent);
+            }
+            if (typeof youtubeContent === 'string' && youtubeContent.length > 0) {
+                const youtubeSlides = youtubeContent.split('\n').map(line => {
+                    line = line.trim();
+                    if (!line) return null;
+                    const parts = line.split(',');
+                    let url = parts[0].trim();
+                    if (!url.startsWith('http')) {
+                        url = 'https://' + url;
+                    }
+                    const name = parts[1] ? parts[1].trim() : '';
+                    const videoId = url.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/)[1];
+                    return { type: 'youtube', videoId, name };
+                }).filter(Boolean);
+                loadedSlides = [...videoSlides, ...imageSlides, ...youtubeSlides];
+            }
+        } else {
+          loadedSlides = [...videoSlides, ...imageFiles.map(file => ({ type: 'image', path: `${itemPath}/${file.name}`, name: file.name }))];
+        }
+      }
+
+      // Load audio tracks
+      setLoadingMessage('Loading audio tracks...');
+      const loadedTracks = [];
+      const loadingPromises = validAudioFiles.map(async (file) => {
+        try {
+          const audioBuffer = await loadAudioFile(file.path);
+          if (audioBuffer) {
+            const track = {
+              buffer: audioBuffer,
+              source: null,
+              gainNode: getAudioContext().createGain(),
+              pannerNode: getAudioContext().createStereoPanner(),
+              isPlaying: false,
+              isMuted: false,
+              startTime: 0,
+              offset: 0,
+              path: file.path,
+              name: file.name,
+              panValue: 0,
+              individualVolume: 0.7,
+            };
+            getTracks().push(track);
+            loadedTracks.push(track);
+          }
+        } catch (audioError) {
+          console.error(`Error loading audio file ${file.name}:`, audioError);
+        }
+        return null;
+      });
+
+      await Promise.all(loadingPromises);
+      addTracks(loadedTracks);
+      applyDefaultPanning(loadedTracks);
+
+      return { loadedSlides, loadedTracks, unlistenOgg, unlistenVideoTranscode };
+
+    } finally {
+      // Listeners are now unlistened in the calling function
+    }
+  };
 
   const handleAddFolder = async () => {
     try {
@@ -27,38 +217,8 @@ const SetlistManager = ({ setAllSlides, setAllTracks }) => {
         // selectedPaths will be an array if multiple is true
         for (const path of selectedPaths) {
           const folderName = await TauriPath.basename(path);
-
-          // Detect an 'ogg' subfolder. If present, treat this as a song and record its tracks and optional lyrics.
-          const oggDir = await TauriPath.join(path, 'ogg');
-          const oggExists = await TauriFs.exists(oggDir);
-
-          let item = { path: path, name: folderName };
-
-          if (oggExists) {
-            try {
-              const oggEntries = await TauriFs.readDir(oggDir, { recursive: false });
-              const tracks = oggEntries
-                .filter(e => e.children === undefined && e.name.endsWith('.ogg'))
-                .sort((a, b) => a.name.localeCompare(b.name))
-                .map(e => ({ file_path: `${oggDir}/${e.name}`, track_name: e.name }));
-
-              // attempt to read lyrics.txt from the root folder
-              let lyrics = '';
-              const entries = await TauriFs.readDir(path, { recursive: false });
-              const lyricsFile = entries.find(entry => entry.name === 'lyrics.txt' && entry.children === undefined);
-              if (lyricsFile) {
-                let lyricsContent = await TauriFs.readFile(`${path}/${lyricsFile.name}`, { encoding: 'utf8' });
-                if (lyricsContent instanceof Uint8Array) lyricsContent = new TextDecoder().decode(lyricsContent);
-                lyrics = typeof lyricsContent === 'string' ? lyricsContent : '';
-              }
-
-              item = { ...item, type: 'song', tracks, lyrics, loaded: false };
-            } catch (e) {
-              console.warn('Failed to read ogg dir contents for', path, e);
-            }
-          }
-
-          setSetlist((prevSetlist) => [...prevSetlist, item]);
+          // Update serviceOrder prop
+          setServiceOrder((prevOrder) => [...prevOrder, { type: 'folder', path: path, name: folderName }]);
         }
       }
     } catch (error) {
@@ -66,214 +226,165 @@ const SetlistManager = ({ setAllSlides, setAllTracks }) => {
     }
   };
 
-  const handlePreloadSong = async (item) => {
-    if (!item || item.type !== 'song') {
-      console.warn('Preload called for non-song item:', item);
-      return;
-    }
-
-    setLoadingMessage(`Preloading ${item.name}...`);
-    setLoadingProgress(0);
+  const handleSetBackgroundClick = async (itemPath) => {
     try {
-      const songDetails = {
-        id: item.id || item.path,
-        title: item.name,
-        tracks: item.tracks || []
-      };
-
-      const result = await songTransitionManager.preloadNextSong(songDetails);
-      if (result) {
-        setLoadingMessage(`Preloaded ${item.name} (${result.length} tracks)`);
+      const backgroundCssPath = await TauriPath.join(itemPath, 'background.css');
+      const exists = await TauriFs.exists(backgroundCssPath);
+      if (exists) {
+        const backgroundCssContent = await TauriCore.invoke('generate_background_css', { path: itemPath });
+        TauriEvent.emit('set-background', backgroundCssContent);
       } else {
-        setLoadingMessage(`Preload failed for ${item.name}`);
+        console.log('No background.css file found in this folder.');
       }
-    } catch (e) {
-      console.error('Error preloading song', e);
-      setLoadingMessage('Error during preload');
+    } catch (error) {
+      console.error('Error setting background:', error);
     }
-
-    setTimeout(() => {
-      setLoadingMessage('');
-      setLoadingProgress(0);
-    }, 1500);
   };
 
-  const handleSetlistItemClick = async (itemOrPath) => {
-    // itemOrPath may be an object (from setlist) or a path string (legacy). Support both.
-    const item = typeof itemOrPath === 'string' ? { path: itemOrPath } : itemOrPath;
-    const itemPath = item.path;
-    console.log('Setlist item clicked:', item);
+  const handleRemoveItem = (indexToRemove) => {
+    setServiceOrder((prevOrder) => prevOrder.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handleSetlistItemClick = async (clickedItem, index) => {
+    console.log('Item clicked:', clickedItem);
     setLoadingProgress(0);
-    setLoadingMessage('Loading folder contents...');
+    setLoadingMessage('Loading item contents...');
+
+    let unlistenOgg = () => {}; // Initialize with a no-op function
+    let unlistenVideoTranscode = () => {}; // Initialize with a no-op function
 
     try {
+      // Clear previous tracks and reset audio context if a new folder is loaded
       cleanupAudio();
       clearTracks();
+
       TauriEvent.emit('clear-lyric-display');
       TauriEvent.emit('clear-confidence-display');
 
-      // Read folder entries
-      const entries = await TauriFs.readDir(itemPath, { recursive: false });
+      let currentSlides = [];
+      let currentTracks = [];
 
-      // Slides: prefer lyrics.txt, else images/videos
-      const lyricsFile = entries.find(e => e.name === 'lyrics.txt' && e.children === undefined);
-      let loadedSlides = [];
-      if (lyricsFile) {
-        setLoadingMessage('Loading lyrics...');
-        let lyricsContent = await TauriFs.readFile(`${itemPath}/${lyricsFile.name}`, { encoding: 'utf8' });
-        if (lyricsContent instanceof Uint8Array) lyricsContent = new TextDecoder().decode(lyricsContent);
-        if (typeof lyricsContent === 'string' && lyricsContent.length > 0) {
-          loadedSlides = parseLyricsToSlides(lyricsContent);
-        }
+      if (clickedItem.loaded) {
+        // If already loaded, use the stored slides and tracks
+        currentSlides = clickedItem.slides;
+        currentTracks = clickedItem.tracks;
+        setLoadingMessage('Item already loaded.');
+        setLoadingProgress(100);
       } else {
-        const videoFiles = entries.filter(entry => entry.children === undefined && (entry.name.endsWith('.mp4') || entry.name.endsWith('.mov') || entry.name.endsWith('.mkv'))).sort((a,b)=>a.name.localeCompare(b.name));
-        const imageFiles = entries.filter(entry => entry.children === undefined && (entry.name.endsWith('.png') || entry.name.endsWith('.jpg') || entry.name.endsWith('.jpeg') || entry.name.endsWith('.gif') || entry.name.endsWith('.webp'))).sort((a,b)=>a.name.localeCompare(b.name));
+        // Item not loaded, fetch details and process
+        let details;
+        if (clickedItem.type === 'song') {
+          details = await TauriCore.invoke('get_song_details', { songId: clickedItem.id });
+          // 1. Create slides from lyrics
+          currentSlides = parseLyricsToSlides(details.lyrics);
 
-        // Fetch metadata (duration, thumbnail) for videos via Tauri command
-        setLoadingMessage('Loading video metadata...');
-        const videoSlidesPromises = videoFiles.map(async (file) => {
-          const filePath = `${itemPath}/${file.name}`;
-          try {
-            const metadata = await TauriCore.invoke('get_video_metadata', { path: filePath });
-            return {
-              type: 'video',
-              path: filePath,
-              name: file.name,
-              duration: metadata && metadata.duration ? metadata.duration : undefined,
-              thumbnail_path: metadata && metadata.thumbnail_path ? metadata.thumbnail_path : undefined,
-            };
-          } catch (err) {
-            console.warn('Failed to get metadata for', filePath, err);
-            return { type: 'video', path: filePath, name: file.name };
-          }
-        });
-
-        const videoSlides = (await Promise.all(videoSlidesPromises)).filter(Boolean);
-        const imageSlides = imageFiles.map(file => ({ type: 'image', path: `${itemPath}/${file.name}`, name: file.name }));
-
-        // Check for a youtube.txt file listing YouTube links (one per line)
-        const youtubeFile = entries.find(entry => entry.name === 'youtube.txt' && entry.children === undefined);
-        if (youtubeFile) {
-          setLoadingMessage('Loading YouTube links...');
-          const youtubePath = `${itemPath}/${youtubeFile.name}`;
-          let youtubeContent = await TauriFs.readFile(youtubePath, { encoding: 'utf8' });
-          if (youtubeContent instanceof Uint8Array) youtubeContent = new TextDecoder().decode(youtubeContent);
-          if (typeof youtubeContent === 'string' && youtubeContent.length > 0) {
-            const youtubeSlides = youtubeContent.split('\n').map(line => {
-              line = line.trim();
-              if (!line) return null;
-              const parts = line.split(',');
-              let url = parts[0].trim();
-              if (!url.startsWith('http')) {
-                url = 'https://' + url;
+          // 2. Create and load audio tracks
+          const newLoadedTracks = [];
+          const loadingPromises = details.tracks.map(async (trackInfo) => {
+            try {
+              const audioBuffer = await loadAudioFile(trackInfo.file_path);
+              if (audioBuffer) {
+                const track = {
+                  buffer: audioBuffer,
+                  source: null,
+                  gainNode: getAudioContext().createGain(),
+                  pannerNode: getAudioContext().createStereoPanner(),
+                  isPlaying: false,
+                  isMuted: false,
+                  startTime: 0,
+                  offset: 0,
+                  path: trackInfo.file_path,
+                  name: trackInfo.track_name,
+                  panValue: 0,
+                  individualVolume: 0.7,
+                };
+                getTracks().push(track); // Add to global tracks array in audio.js
+                newLoadedTracks.push(track);
               }
-              const name = parts[1] ? parts[1].trim() : '';
-              const m = url.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-              const videoId = m && m[1] ? m[1] : null;
-              if (!videoId) return null;
-              return { type: 'youtube', videoId, name };
-            }).filter(Boolean);
-            loadedSlides = [...videoSlides, ...imageSlides, ...youtubeSlides];
-          } else {
-            loadedSlides = [...videoSlides, ...imageSlides];
-          }
-        } else {
-          loadedSlides = [...videoSlides, ...imageSlides];
+            } catch (audioError) {
+              console.error(`Error loading audio file ${trackInfo.track_name}:`, audioError);
+            }
+          });
+
+          await Promise.all(loadingPromises);
+          applyDefaultPanning(newLoadedTracks);
+          addTracks(newLoadedTracks);
+          currentTracks = newLoadedTracks;
+
+        } else if (clickedItem.type === 'presentation') {
+          details = await TauriCore.invoke('get_presentation_details', { presentationId: clickedItem.id });
+          const { loadedSlides, loadedTracks, unlistenOgg: newUnlistenOgg, unlistenVideoTranscode: newUnlistenVideoTranscode } = await loadFolderContents(details.path);
+          unlistenOgg = newUnlistenOgg;
+          unlistenVideoTranscode = newUnlistenVideoTranscode;
+          currentSlides = loadedSlides;
+          currentTracks = loadedTracks;
+        }
+
+        // Update the serviceOrder to mark this item as loaded
+        setServiceOrder(prevOrder =>
+          prevOrder.map((item, idx) =>
+            idx === index
+              ? { ...item, loaded: true, slides: currentSlides, tracks: currentTracks }
+              : item
+          )
+        );
+        setLoadingMessage('Loading complete!');
+        setLoadingProgress(100);
+      }
+
+      setAllSlides(currentSlides);
+      setAllTracks(currentTracks);
+
+      // Automatically 'click' the first slide to display it
+      if (currentSlides.length > 0) {
+        const firstSlide = currentSlides[0];
+        if (firstSlide.type === 'image') {
+          TauriEvent.emit('display-image-slide', { path: firstSlide.path, name: firstSlide.name });
+        } else if (firstSlide.type === 'video') {
+          TauriCore.invoke('display_video_slide', { path: firstSlide.path, duration: firstSlide.duration })
+            .catch(e => console.error('Error displaying video slide:', e));
+        } else if (firstSlide.type === 'youtube') {
+          TauriEvent.emit('navigate', { videoId: firstSlide.videoId });
+        } else { // Lyrics slide
+          TauriEvent.emit('display-lyric-slide', { text: firstSlide.text, section: firstSlide.section });
+          const line1 = firstSlide.text && firstSlide.text.length > 0 ? firstSlide.text[0] : '';
+          const line2 = firstSlide.text && firstSlide.text.length > 1 ? firstSlide.text[1] : '';
+          TauriEvent.emit('set-lower-thirds-text', { line1, line2 });
         }
       }
-
-      setAllSlides(loadedSlides);
-
-      // Emit background CSS
-      try {
-        const backgroundCssContent = await TauriCore.invoke('generate_background_css', { path: itemPath });
-        setCurrentBackgroundCssContent(backgroundCssContent);
-        TauriEvent.emit('set-background', backgroundCssContent);
-      } catch (e) {
-        // non-fatal
-      }
-
-      // Audio tracks: if the setlist item already has `tracks` metadata (from Add Folder ogg detection), use that, else scan for audio files
-      let trackEntries = [];
-      if (item.tracks && Array.isArray(item.tracks) && item.tracks.length > 0) {
-        trackEntries = item.tracks.map(t => ({ file_path: t.file_path, track_name: t.track_name }));
-      } else {
-        const audioFiles = entries.filter(entry => entry.children === undefined && (entry.name.endsWith('.mp3') || entry.name.endsWith('.wav') || entry.name.endsWith('.ogg'))).sort((a,b)=>a.name.localeCompare(b.name));
-        trackEntries = audioFiles.map(f => ({ file_path: `${itemPath}/${f.name}`, track_name: f.name }));
-      }
-
-      setLoadingMessage('Loading audio tracks...');
-      const loadedTracks = [];
-      for (let i = 0; i < trackEntries.length; i++) {
-        const t = trackEntries[i];
-        try {
-          const buffer = await loadAudioFile(t.file_path);
-          if (buffer) {
-            const track = {
-              buffer,
-              source: null,
-              gainNode: getAudioContext().createGain(),
-              pannerNode: getAudioContext().createStereoPanner(),
-              isPlaying: false,
-              isMuted: false,
-              startTime: 0,
-              offset: 0,
-              path: t.file_path,
-              name: t.track_name,
-              panValue: 0,
-              individualVolume: 0.7,
-            };
-            getTracks().push(track);
-            loadedTracks.push(track);
-          }
-        } catch (err) {
-          console.error('Error loading audio file', t.file_path, err);
-        }
-        setLoadingProgress(Math.round(((i+1)/Math.max(1, trackEntries.length))*100));
-      }
-
-      applyDefaultPanning(loadedTracks);
-      // replace allTracks in App
-      setAllTracks([...loadedTracks]);
-
-      setLoadingMessage('Loading complete!');
-      setLoadingProgress(100);
 
     } catch (error) {
       console.error('Error loading setlist item:', error);
-      try { TauriDialog.message(`Failed to load setlist from ${itemPath}.`, { title: 'Error', type: 'error' }); } catch(e){}
-      setLoadingMessage('Error loading folder.');
+      TauriDialog.message(`Failed to load item. It might have been moved or deleted.`, { title: 'Error Loading Item', type: 'error' });
+      setLoadingMessage('Error loading item.');
       setLoadingProgress(0);
+    } finally {
+      unlistenOgg(); // Clean up the event listener
+      unlistenVideoTranscode();
     }
   };
 
   return (
-    <div className="col" id="setlist-col">
-      <button onClick={handleAddFolder} id="add-folder-button">Add Folder to Presentation</button>
-      {loadingProgress > 0 && loadingProgress < 100 && (
-        <div className="progress-container">
-          <div className="progress-bar" style={{ width: `${loadingProgress}%` }}></div>
-          <div className="progress-text">{loadingMessage} ({loadingProgress}%)</div>
-        </div>
-      )}
-      {loadingProgress === 100 && (
-        <div className="progress-container">
-          <div className="progress-text">{loadingMessage}</div>
-        </div>
-      )}
-      <ul id="setlist">
-        {setlist.map((item, index) => (
-          <li key={index} className="setlist-item" onClick={() => handleSetlistItemClick(item)}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ flex: 1 }} onClick={() => handleSetlistItemClick(item)}>{item.name}</span>
-              {item.type === 'song' && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); handlePreloadSong(item); }}
-                  title="Preload song"
-                  style={{ marginLeft: 8 }}
-                >Preload</button>
-              )}
-            </div>
+    <div className="col p-3 bg-card rounded-md" id="setlist-col">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-semibold text-primary">Service Order</h2>
+        <button title="Add Folder" onClick={handleAddFolder} className="p-1 rounded bg-surface hover:bg-surface/80">
+          <ArrowDownTrayIcon className="w-5 h-5 text-muted" />
+        </button>
+      </div>
+
+      <LoadingModal progress={loadingProgress} message={loadingMessage} />
+
+      <ul id="setlist" className="space-y-2">
+        {serviceOrder.map((item, index) => (
+          <li key={index} className="flex items-center justify-between p-2 bg-surface rounded">
+            <button className="text-left flex-1 pr-2" onClick={() => handleSetlistItemClick(item, index)}>
+              <div className="text-sm text-primary truncate">{item.name}</div>
+              <div className="text-xs text-muted">{item.type}</div>
+            </button>
+            <button onClick={() => handleRemoveItem(index)} className="ml-2 p-1 rounded hover:bg-red-600/10" title="Remove">
+              <TrashIcon className="w-5 h-5 text-muted" />
+            </button>
           </li>
         ))}
       </ul>
