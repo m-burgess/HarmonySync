@@ -17,6 +17,6 @@
 /* Ensure the existing container within main-content flexes properly */
 .main-content .container {
     flex-grow: 1;
-    display: flex;
+    display: grid;
     overflow: hidden; /* Contained elements should handle their own scrolling */
 }

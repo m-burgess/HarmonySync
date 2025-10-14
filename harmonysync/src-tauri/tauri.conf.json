@@ -26,9 +26,11 @@
         "height": 600,
         "resizable": true,
         "fullscreen": false,
+        "decorations": false,
         "title": "Audience Screen",
-        "devtools": true,
-        "visible": false
+        "devtools": false,
+        "visible": false,
+        "titleBarStyle": "Overlay"
       },
       {
         "label": "confidence",
@@ -37,9 +39,11 @@
         "height": 600,
         "resizable": true,
         "fullscreen": false,
+        "decorations": false,
         "title": "Confidence Monitor",
         "devtools": true,
-        "visible": false
+        "visible": false,
+        "titleBarStyle": "Overlay"
       },
       {
         "label": "lowerthirds",
@@ -48,9 +52,13 @@
         "height": 1080,
         "resizable": false,
         "fullscreen": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
         "title": "Lower Thirds",
-        "devtools": true,
-        "visible": false
+        "devtools": false,
+        "visible": false,
+        "titleBarStyle": "Overlay"
       }
     ],
     "security": {
@@ -58,7 +66,13 @@
       "capabilities": ["main-capability", "fs-cache-capability", "event-capability"],
       "assetProtocol": {
         "enable": true,
-        "scope": ["$LOCALDATA/**"]
+        "scope": [
+          "$LOCALDATA/**",
+          "$DESKTOP/**", 
+          "$HOME/Desktop/**",
+          "$DOWNLOAD/**",
+          "$HOME/Downloads/**"
+        ]
       }
     }
   },

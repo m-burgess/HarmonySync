@@ -24,6 +24,21 @@
     "fs:allow-create",
     "fs:allow-write",
     "fs:allow-remove",
+    "fs:allow-write-file",
+    "fs:allow-exists",
+    "fs:allow-mkdir",
     "core:event:allow-unlisten"
-  ]
+  ],
+  "fs": {
+    "scope": [
+      {
+        "path": "$HOME/**",
+        "allow": ["read", "write", "create", "remove"]
+      },
+      {
+        "path": "/home/burg316/**",
+        "allow": ["read", "write", "create", "remove"]
+      }
+    ]
+  }
 }

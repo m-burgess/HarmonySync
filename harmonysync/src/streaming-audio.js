@@ -1,36 +1,34 @@
 // Streaming audio functionality for individual track files
 // This approach loads tracks as individual files for streaming playback
 
-const audioBufferCache = new Map();
+// Cache audio elements (by path) to avoid recreating them
+const audioElementCache = new Map();
 
 // Load a single track file for streaming playback
 export async function loadTrackForStreaming(trackPath, trackName) {
-  const cacheKey = `${trackPath}_${trackName}`;
-  
-  // Check cache first
-  if (audioBufferCache.has(cacheKey)) {
-    return audioBufferCache.get(cacheKey);
+  const cacheKey = `${trackPath}`;
+
+  if (audioElementCache.has(cacheKey)) {
+    return audioElementCache.get(cacheKey);
   }
 
   try {
-    const audioContext = getAudioContext();
     const assetUrl = TauriCore.convertFileSrc(trackPath);
-    console.log(`Loading streaming track "${trackName}" from:`, assetUrl);
-    
-    const response = await fetch(assetUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch track file: ${response.statusText}`);
-    }
-    
-    const arrayBuffer = await response.arrayBuffer();
-    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-    
-    // Cache the decoded buffer
-    audioBufferCache.set(cacheKey, audioBuffer);
-    console.log(`Successfully loaded streaming track: ${trackName}`);
-    return audioBuffer;
+    console.log(`Creating audio element for streaming track "${trackName}" from:`, assetUrl);
+
+    const audioEl = new Audio();
+    audioEl.src = assetUrl;
+    // Let the browser decide how much to preload; we can set 'metadata' or 'auto'
+    audioEl.preload = 'metadata';
+    audioEl.crossOrigin = 'anonymous';
+
+    // Return a small wrapper once element is usable
+    const wrapper = { audioEl, filePath: trackPath, name: trackName };
+    audioElementCache.set(cacheKey, wrapper);
+    console.log(`Created streaming audio element for: ${trackName}`);
+    return wrapper;
   } catch (error) {
-    console.error(`Error loading streaming track ${trackName} from ${trackPath}:`, error);
+    console.error(`Error creating audio element for ${trackName} from ${trackPath}:`, error);
     return null;
   }
 }
@@ -69,23 +67,22 @@ export async function loadSongTracksForStreaming(tracks) {
     try {
       let trackName = trackInfo.track_name || 'Unknown Track';
       
-      // For the new streaming approach, each track has its own file path
-      const audioBuffer = await loadTrackForStreaming(trackInfo.file_path, trackName);
-      
-      if (!audioBuffer) {
-        console.error(`Failed to load streaming track: ${trackName}`);
+      // For streaming now we create an HTMLAudioElement wrapper
+      const mediaWrapper = await loadTrackForStreaming(trackInfo.file_path, trackName);
+      if (!mediaWrapper) {
+        console.error(`Failed to create media element for: ${trackName}`);
         return null;
       }
-      
+
       return {
         name: trackName,
-        buffer: audioBuffer,
-        filePath: trackInfo.file_path,
+        audioEl: mediaWrapper.audioEl,
+        filePath: mediaWrapper.filePath,
         isPlaying: false,
         isPaused: false,
         panValue: 0,
         volume: 1.0,
-        source: null,
+        source: null, // will be MediaElementAudioSourceNode when connected
         gainNode: null,
         pannerNode: null
       };

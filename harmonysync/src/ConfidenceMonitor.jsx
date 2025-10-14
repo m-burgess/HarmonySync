@@ -69,11 +69,6 @@ const ConfidenceMonitor = () => {
       setVideoCountdown(null);
     });
 
-    const unlistenNavigate = TauriEvent.listen('navigate', (event) => {
-      console.log('Confidence: navigate event received:', event.payload);
-      setCurrentSlide({ type: 'video', videoId: event.payload.videoId });
-    });
-
     const unlistenVideoProgress = TauriEvent.listen('video-progress', (event) => {
       console.log('Confidence: video-progress event received:', event.payload);
       console.log('Current slide:', currentSlideRef.current);
@@ -88,8 +83,7 @@ const ConfidenceMonitor = () => {
 
     return () => {
       unlistenDisplay.then(f => f());
-      unlistenClear.then(f => f());
-      unlistenNavigate.then(f => f());
+      unlistenClearDisplay.then(f => f());
       unlistenVideoProgress.then(f => f());
     };
   }, []);

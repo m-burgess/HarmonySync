@@ -1,10 +1,7 @@
 mod application;
-mod domain;
-mod infrastructure;
 
 use tauri::menu::{Menu, Submenu, MenuItem, PredefinedMenuItem};
 use tauri::{Manager, Emitter};
-use crate::infrastructure::sqlite_repository::SqliteRepository;
 
 
 fn setup_windows(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
@@ -19,13 +16,7 @@ fn setup_windows(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>>
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let conn = rusqlite::Connection::open("harmonylink.sqlite")
-        .expect("Failed to open database connection");
-    let repository = SqliteRepository::new(conn);
-    repository.init_database().expect("Failed to initialize database");
-
     tauri::Builder::default()
-        .manage(repository)
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
@@ -57,11 +48,22 @@ pub fn run() {
                 ],
             )?;
 
-            // Create the main menu bar
-            let menu = Menu::with_items(handle, &[&file_submenu])?;
+            // Create the 'Settings' menu
+            let display_settings_item = MenuItem::with_id(handle, "display-settings", "Display Settings", true, None as Option<&str>)?;
+            let settings_submenu = Submenu::with_items(
+                handle,
+                "Settings",
+                true,
+                &[&display_settings_item],
+            )?;
 
-            // Set the menu
-            app.set_menu(menu)?;
+            // Create the main menu bar
+            let menu = Menu::with_items(handle, &[&file_submenu, &settings_submenu])?;
+
+            // Set the menu only for the main window, not child windows
+            if let Some(main_window) = app.get_webview_window("main") {
+                main_window.set_menu(menu)?;
+            }
 
             setup_windows(app)?;
             Ok(())
@@ -76,6 +78,11 @@ pub fn run() {
                 "import-presentation" => {
                     if let Err(e) = app.emit("import-presentation-clicked", ()) {
                         eprintln!("Failed to emit import-presentation-clicked event: {}", e);
+                    }
+                }
+                "display-settings" => {
+                    if let Err(e) = app.emit("display-settings-clicked", ()) {
+                        eprintln!("Failed to emit display-settings-clicked event: {}", e);
                     }
                 }
                 _ => {}
@@ -112,24 +119,14 @@ pub fn run() {
                 }
             }
         })
-        .invoke_handler(tauri::generate_handler![
+                .invoke_handler(tauri::generate_handler![
             application::commands::generate_background_css,
             application::commands::display_video_slide,
             application::commands::get_video_metadata,
             application::commands::transcode_video,
-
-
             application::commands::convert_to_ogg,
             application::commands::start_http_server,
             application::commands::stop_http_server,
-            application::commands::add_song,
-            application::commands::import_song_folder,
-            application::commands::search_songs,
-            application::commands::search_presentations,
-            application::commands::get_song_details,
-            application::commands::get_presentation_details,
-            application::commands::import_presentation_folder,
-            application::commands::get_all_presentations,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

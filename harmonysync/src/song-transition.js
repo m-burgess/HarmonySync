@@ -28,9 +28,11 @@ class SongTransitionManager {
       // Load tracks for the next song
       const streamingTracks = await loadSongTracksForStreaming(songDetails.tracks);
       
-      // Convert to our track format - Don't create audio nodes yet, they'll be created during transition
+      // Convert to our track format - streamingTrack may now be a media element wrapper
       const tracks = streamingTracks.map(streamingTrack => ({
-        buffer: streamingTrack.buffer,
+        // If streamingTrack has an AudioBuffer, keep it in `buffer`; otherwise it may have `audioEl`.
+        buffer: streamingTrack.buffer || null,
+        audioEl: streamingTrack.audioEl || null,
         source: null,
         gainNode: null, // Will be created during transition with correct context
         pannerNode: null, // Will be created during transition with correct context
@@ -102,10 +104,11 @@ class SongTransitionManager {
         console.log('Loading tracks on-demand');
         const streamingTracks = await loadSongTracksForStreaming(songDetails.tracks);
         nextTracks = streamingTracks.map(streamingTrack => ({
-          buffer: streamingTrack.buffer,
+          buffer: streamingTrack.buffer || null,
+          audioEl: streamingTrack.audioEl || null,
           source: null,
-          gainNode: null, // Will be created during transition with correct context
-          pannerNode: null, // Will be created during transition with correct context
+          gainNode: null,
+          pannerNode: null,
           isPlaying: false,
           isMuted: false,
           startTime: 0,
@@ -179,6 +182,27 @@ class SongTransitionManager {
           track.isPlaying = true;
         } catch (error) {
           console.error('Error setting up track for crossfade:', error);
+        }
+      } else if (track.audioEl) {
+        try {
+          // For media elements, create MediaElementSource and connect to gain/panner
+          track.source = audioContext.createMediaElementSource(track.audioEl);
+          track.gainNode = audioContext.createGain();
+          track.pannerNode = audioContext.createStereoPanner();
+
+          track.gainNode.gain.value = 0;
+          track.pannerNode.pan.value = track.panValue || 0;
+
+          track.source.connect(track.gainNode);
+          track.gainNode.connect(track.pannerNode);
+          track.pannerNode.connect(audioContext.destination);
+
+          // Ensure element is at start and play
+          try { track.audioEl.currentTime = 0; } catch (e) {}
+          track.audioEl.play().catch(e => console.warn('Media element play() failed:', e));
+          track.isPlaying = true;
+        } catch (error) {
+          console.error('Error setting up media element for crossfade:', error);
         }
       }
     });
