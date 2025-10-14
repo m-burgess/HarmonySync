@@ -4,35 +4,21 @@ import { PlusIcon } from '@heroicons/react/24/solid';
 import './PresentationLibrary.css';
 
 const PresentationLibrary = ({ onAddPresentationToSetlist, presentationImportedTrigger }) => {
-  const [searchTerm, setSearchTerm] = useState('');
   const [results, setResults] = useState([]);
   const [error, setError] = useState('');
 
-  // Debounce search term to avoid too many backend calls
+  // Load presentations once; searching is handled externally by file explorer
   useEffect(() => {
-    const handler = setTimeout(() => {
-      Tauri.core.invoke('search_presentations', { searchTerm })
-        .then(setResults)
-        .catch(err => {
-          console.error(err);
-          setError('Failed to search for presentations.');
-        });
-    }, 300); // 300ms delay
-
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [searchTerm, presentationImportedTrigger]); // Dependencies remain the same
+    Tauri.core.invoke('search_presentations', { searchTerm: '' })
+      .then(setResults)
+      .catch(err => {
+        console.error(err);
+        setError('Failed to load presentations.');
+      });
+  }, [presentationImportedTrigger]);
 
   return (
     <div className="song-library">
-      <input
-        type="text"
-        placeholder="Search for a presentation..."
-        className="search-input"
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-      />
       {error && <p className="error-message">{error}</p>}
       <div className="search-results">
         {results.map((presentation) => (

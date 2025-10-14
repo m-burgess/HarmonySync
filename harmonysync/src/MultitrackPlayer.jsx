@@ -4,6 +4,9 @@ import TrackControl from './TrackControl.jsx';
 import { PlayIcon, PauseIcon, BackwardIcon } from '@heroicons/react/24/solid';
 
 const MultitrackPlayer = ({ allTracks }) => {
+  useEffect(() => {
+    console.log('[MultitrackPlayer] allTracks prop:', allTracks);
+  }, [allTracks]);
   const [globalVolume, setGlobalVolumeState] = useState(1);
 
   const handleVolumeChange = (e) => {

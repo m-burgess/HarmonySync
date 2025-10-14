@@ -66,7 +66,13 @@
       "capabilities": ["main-capability", "fs-cache-capability", "event-capability"],
       "assetProtocol": {
         "enable": true,
-        "scope": ["$LOCALDATA/**"]
+        "scope": [
+          "$LOCALDATA/**",
+          "$DESKTOP/**", 
+          "$HOME/Desktop/**",
+          "$DOWNLOAD/**",
+          "$HOME/Downloads/**"
+        ]
       }
     }
   },

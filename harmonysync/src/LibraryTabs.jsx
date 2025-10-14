@@ -1,34 +1,16 @@
 import React, { useState } from 'react';
-import SongLibrary from './SongLibrary.jsx';
 import './LibraryTabs.css';
-import PresentationLibrary from './PresentationLibrary.jsx';
 
 const LibraryTabs = ({ onAddSongToSetlist, onAddPresentationToSetlist, songImportedTrigger, presentationImportedTrigger }) => {
-  const [activeTab, setActiveTab] = useState('songs');
-
   return (
     <div className="library-container">
-      <div className="library-tabs">
-        <button
-          className={`tab-button ${activeTab === 'songs' ? 'active' : ''}`}
-          onClick={() => setActiveTab('songs')}
-        >
-          Songs
-        </button>
-        <button
-          className={`tab-button ${activeTab === 'presentations' ? 'active' : ''}`}
-          onClick={() => setActiveTab('presentations')}
-        >
-          Presentations
-        </button>
-      </div>
       <div className="library-content">
-        {activeTab === 'songs' && (
-          <SongLibrary onAddSong={onAddSongToSetlist} songImportedTrigger={songImportedTrigger} />
-        )}
-        {activeTab === 'presentations' && (
-          <PresentationLibrary onAddPresentationToSetlist={onAddPresentationToSetlist} presentationImportedTrigger={presentationImportedTrigger} />
-        )}
+        <div className="placeholder-content">
+          <div>
+            <p style={{color: '#bbb'}}>Song and Presentation libraries have been removed.</p>
+            <p style={{color: '#888', fontSize: 13}}>Use your file explorer and the "Add Folder" button to add content to the setlist.</p>
+          </div>
+        </div>
       </div>
     </div>
   );
