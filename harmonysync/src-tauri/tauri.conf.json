@@ -71,6 +71,29 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "publisher": "HarmonySync",
+    "copyright": "Copyright (c) 2025 Michael Burgess. All rights reserved.",
+    "category": "Productivity",
+    "shortDescription": "Modern worship & media presentation software",
+    "longDescription": "HarmonySync Presenter is a comprehensive presentation software built with a Tauri (Rust) backend and a React (JavaScript) frontend, designed for worship services and live events. It offers robust multitrack audio playback, dynamic media display, and flexible presentation capabilities.",
+    "macOS": {
+      "frameworks": [],
+      "minimumSystemVersion": "10.13",
+      "license": "../LICENSE",
+      "entitlements": null,
+      "exceptionDomain": "",
+      "signingIdentity": null,
+      "providerShortName": null,
+      "hardenedRuntime": true
+    },
+    "linux": {
+      "appimage": {
+        "bundleMediaFramework": false
+      },
+      "deb": {
+        "depends": []
+      }
+    }
   }
 }

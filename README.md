@@ -67,6 +67,22 @@ npm install
 npm run tauri dev
 ```
 
+### Building Installers
+
+HarmonySync provides build scripts for creating platform-specific installers:
+
+#### macOS (DMG)
+```bash
+./build-macos.sh
+```
+
+#### Linux (AppImage)
+```bash
+./build-appimage.sh
+```
+
+For detailed build instructions, troubleshooting, and CI/CD setup, see [BUILD.md](BUILD.md).
+
 ## 📁 Project Structure
 
 ```
