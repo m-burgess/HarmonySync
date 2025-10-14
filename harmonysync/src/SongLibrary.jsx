@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as Tauri from '@tauri-apps/api';
 import { PlusIcon } from '@heroicons/react/24/solid';
-import './SongLibrary.css';
+import './styles/SongLibrary.css';
 
 const SongLibrary = ({ onAddSong, songImportedTrigger }) => {
   const [searchTerm, setSearchTerm] = useState('');
