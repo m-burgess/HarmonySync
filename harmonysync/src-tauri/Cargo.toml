@@ -36,3 +36,7 @@ ffmpeg-next = { version = "7.0.0", features = ["codec", "device", "filter", "for
 anyhow = "1.0"
 image = "0.25.1"
 rusqlite = { version = "0.37.0", features = ["bundled"] }
+
+[dev-dependencies]
+mockall = "0.13"
+tempfile = "3.15"
