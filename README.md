@@ -74,8 +74,6 @@ harmonysync/
 ├── public/                  # Static assets
 ├── src/                     # React frontend source code
 │   ├── App.jsx
-│   ├── audio.js             # Web Audio API utilities
-│   ├── lyrics.js            # Lyric parsing and formatting
 │   ├── MultitrackPlayer.jsx # Multitrack player component
 │   ├── ScreenButtons.jsx    # Controls for opening display windows
 │   ├── SlideManager.jsx     # Manages presentation slides
@@ -85,7 +83,18 @@ harmonysync/
 │   ├── confidence-main.jsx  # Entry point for Confidence Monitor
 │   ├── ConfidenceMonitor.jsx# Confidence Monitor component
 │   ├── lowerthirds-main.jsx # Entry point for Lower Thirds Window
-│   └── LowerThirdsScreen.jsx# Lower Thirds display component
+│   ├── LowerThirdsScreen.jsx# Lower Thirds display component
+│   ├── styles/              # CSS stylesheets
+│   │   ├── App.css
+│   │   ├── audience.css
+│   │   ├── confidence.css
+│   │   ├── lowerthirds.css
+│   │   └── ...
+│   └── utils/               # Utility functions
+│       ├── audio.js         # Web Audio API utilities
+│       ├── lyrics.js        # Lyric parsing and formatting
+│       ├── video.js         # Video utilities
+│       └── ui.js            # UI helper functions
 ├── src-tauri/               # Rust backend (Tauri) source code
 │   ├── src/                 # Rust application logic
 │   │   ├── main.rs
