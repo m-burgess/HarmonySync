@@ -71,6 +71,44 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "publisher": "HarmonySync Team",
+    "copyright": "Copyright © 2024 HarmonySync Team. All rights reserved.",
+    "category": "Productivity",
+    "shortDescription": "Modern Worship & Media Software",
+    "longDescription": "A comprehensive presentation software built with a Tauri (Rust) backend and a React (JavaScript) frontend, designed for worship services and live events. HarmonySync offers robust multitrack audio playback, dynamic media display, and flexible presentation capabilities.",
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "",
+      "wix": {
+        "language": "en-US",
+        "template": null,
+        "fragmentPaths": [],
+        "componentRefs": [],
+        "featureGroupRefs": [],
+        "featureRefs": [],
+        "mergeRefs": [],
+        "skipWebviewInstall": false,
+        "license": null,
+        "enableElevatedUpdateRuntime": false,
+        "bannerPath": null,
+        "dialogImagePath": null
+      },
+      "nsis": {
+        "license": null,
+        "headerImage": null,
+        "sidebarImage": null,
+        "installerIcon": null,
+        "uninstallerIcon": null,
+        "installMode": "perMachine",
+        "languages": ["English"],
+        "displayLanguageSelector": false,
+        "compression": "lzma",
+        "startMenuFolder": "HarmonySync",
+        "installerHooks": null,
+        "minimumWebview2Version": null
+      }
+    }
   }
 }
