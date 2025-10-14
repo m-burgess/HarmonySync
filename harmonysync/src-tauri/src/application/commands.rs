@@ -1,5 +1,4 @@
-use tauri::{command, AppHandle, Emitter, Manager, State};
-use crate::domain::css_generator;
+use tauri::{command, AppHandle, Emitter, Manager};
 use std::fs;
 use std::path::PathBuf;
 use serde::{Serialize, Deserialize};
@@ -14,20 +13,54 @@ use anyhow::Result;
 use image::{ImageBuffer, Rgb};
 use tokio::sync::oneshot; // Import oneshot
 use tokio::io::AsyncBufReadExt;
-use super::file_manager;
-
-
-
+use rand::Rng;
 
 // Import the new http_server module
 use super::http_server;
-use crate::domain::repositories::{SongRepository, TrackRepository, MacroRepository, SettingRepository, ScheduleRepository, PresentationRepository, YouTubeLinkRepository};
-use crate::domain::entities::{Song, Track, Macro, Setting, ScheduleEvent, Presentation, YouTubeLink, SongSearchResult, SongDetails, PresentationSearchResult};
-use crate::infrastructure::sqlite_repository::SqliteRepository;
 
 // Global variable to hold the server shutdown sender
 static HTTP_SERVER_SHUTDOWN_TX: Lazy<Arc<Mutex<Option<oneshot::Sender<()>>>>> = // Changed type
     Lazy::new(|| Arc::new(Mutex::new(None)));
+
+// CSS Generator functions
+fn generate_and_write_css(path: &str) {
+    let mut file_path = PathBuf::from(path);
+    file_path.push("background.css");
+
+    if !file_path.exists() {
+        let css_content = generate_css_content();
+        write_css_file(&file_path, &css_content);
+    }
+}
+
+fn generate_css_content() -> String {
+    let mut rng = rand::thread_rng();
+    let r1 = rng.gen_range(100..256);
+    let g1 = rng.gen_range(100..256);
+    let b1 = rng.gen_range(100..256);
+
+    let r2 = rng.gen_range(100..256);
+    let g2 = rng.gen_range(100..256);
+    let b2 = rng.gen_range(100..256);
+
+    let r3 = rng.gen_range(100..256);
+    let g3 = rng.gen_range(100..256);
+    let b3 = rng.gen_range(100..256);
+
+    format!(
+        "body {{\n    background: linear-gradient(-45deg, rgb({}, {}, {}), rgb({}, {}, {}), rgb({}, {}, {}));\n    background-size: 400% 400%;\n    animation: gradient 15s ease infinite;\n}}\n\n@keyframes gradient {{\n    0% {{\n        background-position: 0% 50%;\n    }}\n    50% {{\n        background-position: 100% 50%;\n    }}\n    100% {{\n        background-position: 0% 50%;\n    }}\n}}",
+        r1, g1, b1, r2, g2, b2, r3, g3, b3
+    )
+}
+
+fn write_css_file(file_path: &PathBuf, content: &str) {
+    if let Some(parent_dir) = file_path.parent() {
+        if !parent_dir.exists() {
+            fs::create_dir_all(parent_dir).unwrap();
+        }
+    }
+    fs::write(file_path, content).unwrap();
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct VideoMetadata {
@@ -52,7 +85,7 @@ struct VideoTranscodeProgressPayload {
 
 #[command]
 pub async fn generate_background_css(_app: AppHandle, path: String) -> Result<String, String> {
-    css_generator::generate_and_write_css(&path);
+    generate_and_write_css(&path);
 
     let mut file_path = PathBuf::from(&path);
     file_path.push("background.css");
@@ -181,14 +214,16 @@ async fn generate_thumbnail(video_path: &str, app_handle: &AppHandle) -> Result<
 }
 
 
-async fn convert_to_ogg_helper(app_handle: &AppHandle, input_path: &str) -> Result<String, String> {
+async fn convert_to_ogg_with_output_dir(app_handle: &AppHandle, input_path: &str, output_dir: &str) -> Result<String, String> {
     let window = app_handle.get_webview_window("main").ok_or_else(|| "Main window not found".to_string())?;
-    info!("Converting {} to Ogg", input_path);
-    let output_dir = app_handle.path().app_local_data_dir().map_err(|e| format!("Failed to get app local data directory: {}", e))?.join("harmonysync").join("cache");
-    fs::create_dir_all(&output_dir).map_err(|e| format!("Failed to create output directory: {}", e))?;
+    info!("Converting {} to Ogg in directory {}", input_path, output_dir);
+    
+    let output_dir_path = Path::new(output_dir);
+    fs::create_dir_all(&output_dir_path).map_err(|e| format!("Failed to create output directory: {}", e))?;
+    
     let file_name_os = Path::new(input_path).file_name().ok_or_else(|| "Invalid input path".to_string())?;
     let file_name = file_name_os.to_str().ok_or_else(|| "Invalid file name".to_string())?;
-    let output_path = output_dir.join(format!("{}.ogg", Path::new(file_name).file_stem().unwrap().to_str().unwrap()));
+    let output_path = output_dir_path.join(format!("{}.ogg", Path::new(file_name).file_stem().unwrap().to_str().unwrap()));
 
     let mut command = Command::new("ffmpeg");
     command
@@ -341,8 +376,8 @@ async fn convert_to_individual_tracks(
 }
 
 #[command]
-pub async fn convert_to_ogg(app_handle: AppHandle, input_path: String) -> Result<String, String> {
-    convert_to_ogg_helper(&app_handle, &input_path).await
+pub async fn convert_to_ogg(app_handle: AppHandle, input_path: String, output_dir: String) -> Result<String, String> {
+    convert_to_ogg_with_output_dir(&app_handle, &input_path, &output_dir).await
 }
 
 #[command]
@@ -477,6 +512,7 @@ pub async fn stop_http_server() -> Result<(), String> {
     }
 }
 
+/*
 #[command]
 pub fn add_song(
     title: String,
@@ -924,3 +960,4 @@ pub fn get_all_presentations(
 ) -> Result<Vec<Presentation>, String> {
     PresentationRepository::get_all(repository.inner()).map_err(|e| e.to_string())
 }
+*/

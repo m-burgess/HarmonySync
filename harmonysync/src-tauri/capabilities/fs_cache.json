@@ -1,16 +1,17 @@
 {
   "identifier": "fs-cache-capability",
-  "description": "Capability for file system access to the harmonysync cache directory.",
+  "description": "Capability for unrestricted file system access.",
   "windows": ["main"],
   "permissions": [
-    "fs:default"
-  ],
-  "fs": {
-    "scope": [
-      {
-        "path": "$LOCALDATA/harmonysync/cache",
-        "allow": ["read", "write", "create", "remove"]
-      }
-    ]
-  }
+    "fs:default",
+    "fs:allow-read-dir",
+    "fs:allow-read-file", 
+    "fs:allow-write-file",
+    "fs:allow-create",
+    "fs:allow-remove",
+    "fs:allow-exists",
+    "fs:allow-mkdir",
+    "fs:allow-copy-file",
+    "fs:allow-rename"
+  ]
 }

@@ -1,10 +1,7 @@
 mod application;
-mod domain;
-mod infrastructure;
 
 use tauri::menu::{Menu, Submenu, MenuItem, PredefinedMenuItem};
 use tauri::{Manager, Emitter};
-use crate::infrastructure::sqlite_repository::SqliteRepository;
 
 
 fn setup_windows(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
@@ -19,13 +16,7 @@ fn setup_windows(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>>
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let conn = rusqlite::Connection::open("harmonylink.sqlite")
-        .expect("Failed to open database connection");
-    let repository = SqliteRepository::new(conn);
-    repository.init_database().expect("Failed to initialize database");
-
     tauri::Builder::default()
-        .manage(repository)
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
@@ -128,7 +119,7 @@ pub fn run() {
                 }
             }
         })
-        .invoke_handler(tauri::generate_handler![
+                .invoke_handler(tauri::generate_handler![
             application::commands::generate_background_css,
             application::commands::display_video_slide,
             application::commands::get_video_metadata,
@@ -136,16 +127,6 @@ pub fn run() {
             application::commands::convert_to_ogg,
             application::commands::start_http_server,
             application::commands::stop_http_server,
-            application::commands::add_song,
-            application::commands::import_song_folder,
-            application::commands::search_songs,
-            application::commands::search_presentations,
-            application::commands::get_song_details,
-            application::commands::get_presentation_details,
-            application::commands::import_presentation_folder,
-            application::commands::get_all_presentations,
-            application::commands::get_setting,
-            application::commands::set_setting,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
