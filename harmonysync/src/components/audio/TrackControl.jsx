@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { setPan } from '../../utils/audio';
-import { TrackControlCard } from './components/audio';
+import TrackControlCard from './TrackControlCard.jsx';
 
 const TrackControl = ({ track, onPanChange, onMuteToggle }) => {
   const [isMuted, setIsMuted] = useState(track.isMuted || false);
