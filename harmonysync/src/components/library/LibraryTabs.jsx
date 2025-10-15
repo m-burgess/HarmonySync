@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import './styles/LibraryTabs.css';
+import '../../styles/LibraryTabs.css';
 
 const LibraryTabs = ({ onAddSongToSetlist, onAddPresentationToSetlist, songImportedTrigger, presentationImportedTrigger }) => {
   return (

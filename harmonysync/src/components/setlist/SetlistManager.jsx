@@ -5,10 +5,10 @@ import * as TauriFs from '@tauri-apps/plugin-fs';
 import * as TauriCore from '@tauri-apps/api/core';
 import * as TauriEvent from '@tauri-apps/api/event';
 import { ArrowDownTrayIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
-import { loadAudioFile, setPan, playAllTracks, stopAllAudio, goToBeginningAllTracks, applyDefaultPanning, getAudioContext, getTracks, clearAudioBufferCache, clearTracks, cleanupAudio, preloadTrack } from './utils/audio';
-import { songTransitionManager } from './utils/audio';
+import { loadAudioFile, setPan, playAllTracks, stopAllAudio, goToBeginningAllTracks, applyDefaultPanning, getAudioContext, getTracks, clearAudioBufferCache, clearTracks, cleanupAudio, preloadTrack } from '../../utils/audio';
+import { songTransitionManager } from '../../utils/audio';
 
-import { parseLyricsToSlides } from './utils/lyrics';
+import { parseLyricsToSlides } from '../../utils/lyrics';
 
 const SetlistManager = ({ setAllSlides, setAllTracks }) => {
   const [setlist, setSetlist] = useState([]);

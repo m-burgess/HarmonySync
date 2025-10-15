@@ -1,6 +1,6 @@
 import React from 'react';
 import PanControl from './PanControl.jsx';
-import './styles/components/TrackControlCard.css';
+import '../../styles/components/TrackControlCard.css';
 
 const TrackControlCard = ({
   trackId,

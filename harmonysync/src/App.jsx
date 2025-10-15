@@ -17,10 +17,10 @@ import {
   ActivityBarIcon, 
   VSCodeStatusBar 
 } from './components/VSCodeUI.jsx';
-import SetlistManager from './SetlistManager.jsx';
-import SlideManager from './SlideManager.jsx';
-import MultitrackPlayer from './MultitrackPlayer.jsx';
-import DisplaySettings from './DisplaySettings.jsx';
+import SetlistManager from './components/setlist/SetlistManager.jsx';
+import SlideManager from './components/slides/SlideManager.jsx';
+import MultitrackPlayer from './components/audio/MultitrackPlayer.jsx';
+import DisplaySettings from './components/screens/DisplaySettings.jsx';
 
 
 import { parseLyricsToSlides } from './utils/lyrics';

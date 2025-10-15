@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import ConfidenceMonitor from './ConfidenceMonitor.jsx';
+import ConfidenceMonitor from './components/screens/ConfidenceMonitor.jsx';
 import './styles/confidence.css';
 import './styles/lyric-transitions.css'; // Import transition effects
 

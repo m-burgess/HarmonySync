@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { setPan } from './utils/audio';
+import { setPan } from '../../utils/audio';
 import { TrackControlCard } from './components/audio';
 
 const TrackControl = ({ track, onPanChange, onMuteToggle }) => {
