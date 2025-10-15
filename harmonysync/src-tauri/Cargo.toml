@@ -32,7 +32,7 @@ rodio = "0.18.0"
 once_cell = "1.19.0"
 uuid = { version = "1.8.0", features = ["v4", "serde"] }
 cpal = "0.15"
-ffmpeg-next = { version = "7.0.0", features = ["codec", "device", "filter", "format", "software-scaling", "image"] }
+ffmpeg-next = { version = "7.0.0", features = ["codec", "device", "filter", "format", "software-scaling", "image", "build"] }
 anyhow = "1.0"
 image = "0.25.1"
 rusqlite = { version = "0.37.0", features = ["bundled"] }

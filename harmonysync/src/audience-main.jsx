@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
-import AudienceScreen from './AudienceScreen.jsx';
+import AudienceScreen from './components/screens/AudienceScreen.jsx';
 import './styles/audience.css'; // Import audience.css
+import './styles/lyric-transitions.css'; // Import transition effects
 import * as TauriCore from '@tauri-apps/api/core';
 import * as TauriEvent from '@tauri-apps/api/event';
 import * as TauriPath from '@tauri-apps/api/path'; // Add this import
@@ -10,6 +11,8 @@ const AudienceApp = () => {
   const [dynamicBackgroundCss, setDynamicBackgroundCss] = useState('');
   const videoRef = useRef(null); // Create a ref for the video element
   const httpServerUrl = useRef(null); // Ref to store the HTTP server URL
+
+  console.log('AudienceApp component loading...');
 
       const handleVideoEnded = () => {
         if (videoRef.current) {
@@ -95,11 +98,11 @@ const AudienceApp = () => {
   }, []); // Run once on component mount
 
   return (
-    <>
+    <div style={{ width: '100%', height: '100vh', backgroundColor: 'black' }}>
       {dynamicBackgroundCss && <style>{dynamicBackgroundCss}</style>}
       <video id="audience-video" ref={videoRef} autoPlay muted playsInline type="video/mp4" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'none' }}></video> {/* Removed controls, added autoPlay, muted, playsInline */}
       <AudienceScreen />
-    </>
+    </div>
   );
 };
 
