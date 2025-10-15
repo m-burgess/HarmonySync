@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as TauriCore from '@tauri-apps/api/core';
+import * as TauriFs from '@tauri-apps/plugin-fs';
+import * as TauriPath from '@tauri-apps/api/path';
 import { XMarkIcon } from '@heroicons/react/24/solid';
 import '../../styles/DisplaySettings.css';
 
@@ -44,24 +46,25 @@ const DisplaySettings = ({ isOpen, onClose }) => {
     try {
       setIsLoading(true);
       
-      // Load display settings
-      const audienceDisplaySetting = await TauriCore.invoke('get_setting', { key: 'audience_display' });
-      const confidenceDisplaySetting = await TauriCore.invoke('get_setting', { key: 'confidence_display' });
-      const lowerThirdsDisplaySetting = await TauriCore.invoke('get_setting', { key: 'lower_thirds_display' });
+      // Use Tauri's fs plugin to read settings from a JSON file
+      const appDataPath = await TauriPath.appDataDir();
+      const settingsPath = await TauriPath.join(appDataPath, 'display_settings.json');
       
-      // Load font settings
-      const audienceFontSizeSetting = await TauriCore.invoke('get_setting', { key: 'audience_font_size' });
-      const confidenceFontSizeSetting = await TauriCore.invoke('get_setting', { key: 'confidence_font_size' });
-      const audienceFontFamilySetting = await TauriCore.invoke('get_setting', { key: 'audience_font_family' });
-      const confidenceFontFamilySetting = await TauriCore.invoke('get_setting', { key: 'confidence_font_family' });
-
-      setAudienceDisplay(audienceDisplaySetting?.value || '');
-      setConfidenceDisplay(confidenceDisplaySetting?.value || '');
-      setLowerThirdsDisplay(lowerThirdsDisplaySetting?.value || '');
-      setAudienceFontSize(audienceFontSizeSetting?.value || '72');
-      setConfidenceFontSize(confidenceFontSizeSetting?.value || '72');
-      setAudienceFontFamily(audienceFontFamilySetting?.value || 'Arial');
-      setConfidenceFontFamily(confidenceFontFamilySetting?.value || 'Arial');
+      try {
+        const settingsContent = await TauriFs.readTextFile(settingsPath);
+        const settings = JSON.parse(settingsContent);
+        
+        setAudienceDisplay(settings.audienceDisplay || '');
+        setConfidenceDisplay(settings.confidenceDisplay || '');
+        setLowerThirdsDisplay(settings.lowerThirdsDisplay || '');
+        setAudienceFontSize(settings.audienceFontSize || '72');
+        setConfidenceFontSize(settings.confidenceFontSize || '72');
+        setAudienceFontFamily(settings.audienceFontFamily || 'Arial');
+        setConfidenceFontFamily(settings.confidenceFontFamily || 'Arial');
+      } catch (readError) {
+        // File doesn't exist yet, use defaults
+        console.log('No settings file found, using defaults');
+      }
     } catch (error) {
       console.error('Error loading settings:', error);
     } finally {
@@ -88,16 +91,27 @@ const DisplaySettings = ({ isOpen, onClose }) => {
     try {
       setIsLoading(true);
       
-      // Save display settings
-      await TauriCore.invoke('set_setting', { key: 'audience_display', value: audienceDisplay });
-      await TauriCore.invoke('set_setting', { key: 'confidence_display', value: confidenceDisplay });
-      await TauriCore.invoke('set_setting', { key: 'lower_thirds_display', value: lowerThirdsDisplay });
+      // Save all settings to a JSON file
+      const appDataPath = await TauriPath.appDataDir();
+      const settingsPath = await TauriPath.join(appDataPath, 'display_settings.json');
       
-      // Save font settings  
-      await TauriCore.invoke('set_setting', { key: 'audience_font_size', value: audienceFontSize });
-      await TauriCore.invoke('set_setting', { key: 'confidence_font_size', value: confidenceFontSize });
-      await TauriCore.invoke('set_setting', { key: 'audience_font_family', value: audienceFontFamily });
-      await TauriCore.invoke('set_setting', { key: 'confidence_font_family', value: confidenceFontFamily });
+      const settings = {
+        audienceDisplay,
+        confidenceDisplay,
+        lowerThirdsDisplay,
+        audienceFontSize,
+        confidenceFontSize,
+        audienceFontFamily,
+        confidenceFontFamily
+      };
+      
+      await TauriFs.writeTextFile(settingsPath, JSON.stringify(settings, null, 2));
+      
+      // Emit event to update other windows
+      await TauriCore.invoke('plugin:event|emit', {
+        event: 'font-settings-changed',
+        payload: { audienceFontSize, confidenceFontSize, audienceFontFamily, confidenceFontFamily }
+      });
       
       onClose();
     } catch (error) {
