@@ -111,7 +111,37 @@ src/
 
 ## Notes
 - The embedded player respects YouTube's terms of service
-- Shuffle and loop are handled by YouTube's player parameters
+- Shuffle is enabled via YouTube IFrame Player API (`setShuffle(true)`)
+- Loop is enabled via both URL parameter and API call (`setLoop(true)`)
+- The YouTube Player API dynamically creates the iframe (replaces div with id `youtube-player-container`)
+- Error 150 (video not embeddable) is handled gracefully - playlist continues with next video
 - The modal uses a semi-transparent overlay
 - Configuration persists across app restarts
 - Works offline if YouTube is accessible
+
+## Technical Details
+
+### YouTube Player API Integration
+The feature uses the [YouTube IFrame Player API](https://developers.google.com/youtube/iframe_api_reference) for enhanced control:
+
+1. **API Loading**: Dynamically injects `https://www.youtube.com/iframe_api` script
+2. **Player Creation**: Creates player programmatically with `new YT.Player()`
+3. **Player Configuration**:
+   ```javascript
+   {
+     playerVars: {
+       listType: 'playlist',
+       list: playlistId,
+       autoplay: 1,
+       loop: 1,
+       enablejsapi: 1,
+       origin: window.location.origin
+     }
+   }
+   ```
+4. **Shuffle Activation**: Called in `onReady` event: `player.setShuffle(true)`
+5. **Error Handling**: Catches error code 150 (embed restriction) and continues playlist
+
+### Why Not Use URL Parameter `shuffle=1`?
+YouTube's embed URL doesn't support `shuffle=1` as a parameter. The only way to enable shuffle for playlists is via the IFrame Player API's `setShuffle()` method.
+
