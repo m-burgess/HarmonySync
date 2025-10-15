@@ -8,7 +8,8 @@ import {
   CogIcon,
   SpeakerWaveIcon,
   ClipboardDocumentListIcon,
-  BoltIcon
+  BoltIcon,
+  PlayIcon
 } from '@heroicons/react/24/outline';
 
 import './styles/App.css';
@@ -21,6 +22,7 @@ import SetlistManager from './components/setlist/SetlistManager.jsx';
 import SlideManager from './components/slides/SlideManager.jsx';
 import MultitrackPlayer from './components/audio/MultitrackPlayer.jsx';
 import DisplaySettings from './components/screens/DisplaySettings.jsx';
+import PreserviceMusic from './components/screens/PreserviceMusic.jsx';
 
 
 import { parseLyricsToSlides } from './utils/lyrics';
@@ -84,6 +86,7 @@ const App = () => {
   const [serviceOrder, setServiceOrder] = useState([]); // New state for service order
   const [selectedSlide, setSelectedSlide] = useState(null);
   const [isDisplaySettingsOpen, setIsDisplaySettingsOpen] = useState(false);
+  const [isPreserviceMusicOpen, setIsPreserviceMusicOpen] = useState(false);
   const containerRef = useRef(null);
 
   // Resizable layout: Service Order sidebar and Multitrack panel
@@ -326,22 +329,27 @@ const App = () => {
       {/* VS Code Activity Bar */}
       <div className="vscode-activity-bar">
         <ActivityBarIcon 
-          icon={<PresentationChartBarIcon className="w-6 h-6" />} 
+          icon={<PresentationChartBarIcon className="w-8 h-8" />} 
           label="Service Order" 
           active={true}
         />
         <ActivityBarIcon 
-          icon={<MusicalNoteIcon className="w-6 h-6" />} 
+          icon={<PlayIcon className="w-8 h-8" />} 
+          label="Pre-Service Music" 
+          onClick={() => setIsPreserviceMusicOpen(true)}
+        />
+        <ActivityBarIcon 
+          icon={<MusicalNoteIcon className="w-8 h-8" />} 
           label="Import Song" 
           onClick={() => handleDirectImport('song')}
         />
         <ActivityBarIcon 
-          icon={<PresentationChartBarIcon className="w-6 h-6" />} 
+          icon={<PresentationChartBarIcon className="w-8 h-8" />} 
           label="Import Presentation" 
           onClick={() => handleDirectImport('presentation')}
         />
         <ActivityBarIcon 
-          icon={<CogIcon className="w-6 h-6" />} 
+          icon={<CogIcon className="w-8 h-8" />} 
           label="Settings" 
           onClick={() => setIsDisplaySettingsOpen(true)}
         />
@@ -401,6 +409,11 @@ const App = () => {
       <DisplaySettings
         isOpen={isDisplaySettingsOpen}
         onClose={() => setIsDisplaySettingsOpen(false)}
+      />
+
+      <PreserviceMusic
+        isOpen={isPreserviceMusicOpen}
+        onClose={() => setIsPreserviceMusicOpen(false)}
       />
     </div>
   );

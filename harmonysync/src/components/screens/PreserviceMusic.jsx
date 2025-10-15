@@ -1,0 +1,227 @@
+import React, { useState, useEffect } from 'react';
+import * as TauriCore from '@tauri-apps/api/core';
+import * as TauriFs from '@tauri-apps/plugin-fs';
+import * as TauriPath from '@tauri-apps/api/path';
+import { XMarkIcon } from '@heroicons/react/24/solid';
+import Button from '../ui/Button.jsx';
+import Input from '../ui/Input.jsx';
+
+const PreserviceMusic = ({ isOpen, onClose }) => {
+  const [playlistUrl, setPlaylistUrl] = useState('');
+  const [savedUrl, setSavedUrl] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasUrl, setHasUrl] = useState(false);
+
+  // Load saved playlist URL on mount
+  useEffect(() => {
+    if (isOpen) {
+      loadPlaylistUrl();
+    }
+  }, [isOpen]);
+
+  const loadPlaylistUrl = async () => {
+    try {
+      setIsLoading(true);
+      const configPath = await getConfigPath();
+      
+      try {
+        const content = await TauriFs.readTextFile(configPath);
+        const config = JSON.parse(content);
+        
+        if (config.preservicePlaylistUrl) {
+          setSavedUrl(config.preservicePlaylistUrl);
+          setPlaylistUrl(config.preservicePlaylistUrl);
+          setHasUrl(true);
+        }
+      } catch (err) {
+        // File doesn't exist yet, that's okay
+        console.log('No saved playlist URL found');
+      }
+    } catch (error) {
+      console.error('Error loading playlist URL:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getConfigPath = async () => {
+    const appDataDir = await TauriPath.appDataDir();
+    return await TauriPath.join(appDataDir, 'preservice-config.json');
+  };
+
+  const handleSaveUrl = async () => {
+    if (!playlistUrl.trim()) {
+      alert('Please enter a valid playlist URL');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const configPath = await getConfigPath();
+      
+      // Ensure the directory exists
+      const appDataDir = await TauriPath.appDataDir();
+      try {
+        await TauriFs.mkdir(appDataDir, { recursive: true });
+      } catch (err) {
+        // Directory might already exist
+      }
+
+      const config = {
+        preservicePlaylistUrl: playlistUrl.trim(),
+        savedAt: new Date().toISOString()
+      };
+
+      await TauriFs.writeTextFile(configPath, JSON.stringify(config, null, 2));
+      
+      setSavedUrl(playlistUrl.trim());
+      setHasUrl(true);
+      console.log('Playlist URL saved successfully');
+    } catch (error) {
+      console.error('Error saving playlist URL:', error);
+      alert('Failed to save playlist URL: ' + error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleChangeUrl = () => {
+    setHasUrl(false);
+    setPlaylistUrl(savedUrl);
+  };
+
+  const getEmbedUrl = (url) => {
+    // Convert YouTube Music playlist URL to embeddable format with loop and shuffle
+    try {
+      const urlObj = new URL(url);
+      
+      // Handle YouTube Music URLs
+      if (urlObj.hostname.includes('music.youtube.com')) {
+        const listMatch = url.match(/[?&]list=([^&]+)/);
+        if (listMatch) {
+          return `https://www.youtube.com/embed/videoseries?list=${listMatch[1]}&autoplay=1&loop=1&shuffle=1`;
+        }
+      }
+      
+      // Handle regular YouTube playlist URLs
+      if (urlObj.hostname.includes('youtube.com')) {
+        const listMatch = url.match(/[?&]list=([^&]+)/);
+        if (listMatch) {
+          return `https://www.youtube.com/embed/videoseries?list=${listMatch[1]}&autoplay=1&loop=1&shuffle=1`;
+        }
+      }
+      
+      // If it's already an embed URL, just add the params
+      if (url.includes('youtube.com/embed')) {
+        return `${url}${url.includes('?') ? '&' : '?'}autoplay=1&loop=1&shuffle=1`;
+      }
+      
+      return url;
+    } catch (error) {
+      console.error('Error parsing URL:', error);
+      return url;
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl h-3/4 flex flex-col border border-gray-700">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-700">
+          <h2 className="text-xl font-semibold text-gray-100">Pre-Service Music</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-200 transition-colors"
+          >
+            <XMarkIcon className="w-6 h-6" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 p-6 overflow-hidden">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-gray-400">Loading...</p>
+            </div>
+          ) : !hasUrl ? (
+            // URL Input Form
+            <div className="flex flex-col items-center justify-center h-full space-y-6">
+              <div className="text-center mb-4">
+                <h3 className="text-lg font-medium text-gray-200 mb-2">
+                  Enter Your Playlist URL
+                </h3>
+                <p className="text-sm text-gray-400">
+                  Paste a YouTube Music or YouTube playlist link to play pre-service music
+                </p>
+              </div>
+
+              <div className="w-full max-w-2xl space-y-4">
+                <Input
+                  type="text"
+                  value={playlistUrl}
+                  onChange={(e) => setPlaylistUrl(e.target.value)}
+                  placeholder="https://music.youtube.com/playlist?list=..."
+                  className="w-full"
+                />
+
+                <div className="flex gap-3 justify-center">
+                  <Button
+                    onClick={handleSaveUrl}
+                    variant="primary"
+                    disabled={!playlistUrl.trim()}
+                  >
+                    Save & Play
+                  </Button>
+                  <Button
+                    onClick={onClose}
+                    variant="secondary"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+
+              <div className="text-xs text-gray-500 max-w-2xl">
+                <p className="mb-2">Examples:</p>
+                <ul className="list-disc list-inside space-y-1 text-gray-600">
+                  <li>YouTube Music: https://music.youtube.com/playlist?list=...</li>
+                  <li>YouTube Playlist: https://www.youtube.com/playlist?list=...</li>
+                </ul>
+              </div>
+            </div>
+          ) : (
+            // Music Player
+            <div className="flex flex-col h-full">
+              <div className="mb-4 flex items-center justify-between">
+                <p className="text-sm text-gray-400">
+                  Playing playlist with shuffle and loop enabled
+                </p>
+                <Button
+                  onClick={handleChangeUrl}
+                  variant="secondary"
+                  size="small"
+                >
+                  Change Playlist
+                </Button>
+              </div>
+
+              <div className="flex-1 bg-black rounded-lg overflow-hidden">
+                <iframe
+                  src={getEmbedUrl(savedUrl)}
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  title="Pre-service Music Player"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default PreserviceMusic;
