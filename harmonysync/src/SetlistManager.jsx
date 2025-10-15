@@ -4,16 +4,18 @@ import * as TauriPath from '@tauri-apps/api/path';
 import * as TauriFs from '@tauri-apps/plugin-fs';
 import * as TauriCore from '@tauri-apps/api/core';
 import * as TauriEvent from '@tauri-apps/api/event';
-import { loadAudioFile, setPan, playAllTracks, stopAllAudio, goToBeginningAllTracks, applyDefaultPanning, getAudioContext, getTracks, clearAudioBufferCache, clearTracks, cleanupAudio } from './audio.js';
-import { songTransitionManager } from './song-transition.js';
+import { ArrowDownTrayIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { loadAudioFile, setPan, playAllTracks, stopAllAudio, goToBeginningAllTracks, applyDefaultPanning, getAudioContext, getTracks, clearAudioBufferCache, clearTracks, cleanupAudio, preloadTrack } from './utils/audio';
+import { songTransitionManager } from './utils/audio';
 
-import { parseLyricsToSlides } from './lyrics.js';
+import { parseLyricsToSlides } from './utils/lyrics';
 
 const SetlistManager = ({ setAllSlides, setAllTracks }) => {
   const [setlist, setSetlist] = useState([]);
   const [currentBackgroundCssContent, setCurrentBackgroundCssContent] = useState('');
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadingMessage, setLoadingMessage] = useState('');
+  const [preloadedSongs, setPreloadedSongs] = useState(new Set()); // Track which songs are preloaded
 
   const handleAddFolder = async () => {
     try {
@@ -74,28 +76,52 @@ const SetlistManager = ({ setAllSlides, setAllTracks }) => {
 
     setLoadingMessage(`Preloading ${item.name}...`);
     setLoadingProgress(0);
+    
     try {
-      const songDetails = {
-        id: item.id || item.path,
-        title: item.name,
-        tracks: item.tracks || []
-      };
+      const tracks = item.tracks || [];
+      if (tracks.length === 0) {
+        console.warn('No tracks to preload for:', item);
+        setLoadingMessage(`No tracks found for ${item.name}`);
+        setTimeout(() => { setLoadingMessage(''); setLoadingProgress(0); }, 1500);
+        return;
+      }
 
-      const result = await songTransitionManager.preloadNextSong(songDetails);
-      if (result) {
-        setLoadingMessage(`Preloaded ${item.name} (${result.length} tracks)`);
+      // Preload each track using streaming mode (low memory)
+      let successCount = 0;
+      for (let i = 0; i < tracks.length; i++) {
+        const track = tracks[i];
+        try {
+          // Convert file path to Tauri asset URL
+          const assetUrl = TauriCore.convertFileSrc(track.file_path);
+          console.log(`[handlePreloadSong] Preloading track ${i + 1}/${tracks.length}: ${track.track_name}`);
+          
+          // Use streaming mode (decode: false) for low memory footprint
+          await preloadTrack(assetUrl, { decode: false, timeout: 15000 });
+          successCount++;
+          
+          setLoadingProgress(Math.round(((i + 1) / tracks.length) * 100));
+        } catch (err) {
+          console.error(`[handlePreloadSong] Error preloading track ${track.track_name}:`, err);
+          // Continue with other tracks even if one fails
+        }
+      }
+
+      if (successCount > 0) {
+        setLoadingMessage(`✓ ${item.name} ready (${successCount}/${tracks.length} tracks)`);
+        // Mark song as preloaded
+        setPreloadedSongs(prev => new Set([...prev, item.path]));
       } else {
         setLoadingMessage(`Preload failed for ${item.name}`);
       }
     } catch (e) {
-      console.error('Error preloading song', e);
+      console.error('Error preloading song:', e);
       setLoadingMessage('Error during preload');
     }
 
     setTimeout(() => {
       setLoadingMessage('');
       setLoadingProgress(0);
-    }, 1500);
+    }, 2000);
   };
 
   const handleSetlistItemClick = async (itemOrPath) => {
@@ -262,20 +288,48 @@ const SetlistManager = ({ setAllSlides, setAllTracks }) => {
         </div>
       )}
       <ul id="setlist">
-        {setlist.map((item, index) => (
-          <li key={index} className="setlist-item" onClick={() => handleSetlistItemClick(item)}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ flex: 1 }} onClick={() => handleSetlistItemClick(item)}>{item.name}</span>
-              {item.type === 'song' && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); handlePreloadSong(item); }}
-                  title="Preload song"
-                  style={{ marginLeft: 8 }}
-                >Preload</button>
-              )}
-            </div>
-          </li>
-        ))}
+        {setlist.map((item, index) => {
+          const isPreloaded = preloadedSongs.has(item.path);
+          
+          return (
+            <li key={index} className="setlist-item" onClick={() => handleSetlistItemClick(item)}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ flex: 1 }} onClick={() => handleSetlistItemClick(item)}>{item.name}</span>
+                {item.type === 'song' && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handlePreloadSong(item); }}
+                    title={isPreloaded ? "Song is preloaded and ready" : "Preload song"}
+                    style={{ 
+                      marginLeft: 8,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '4px 8px',
+                      backgroundColor: isPreloaded ? '#10b981' : 'transparent',
+                      color: isPreloaded ? 'white' : 'inherit',
+                      border: isPreloaded ? 'none' : '1px solid currentColor',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    {isPreloaded ? (
+                      <>
+                        <CheckCircleIcon className="w-4 h-4" />
+                        <span>Ready</span>
+                      </>
+                    ) : (
+                      <>
+                        <ArrowDownTrayIcon className="w-4 h-4" />
+                        <span>Preload</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

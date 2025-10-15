@@ -23,8 +23,8 @@ import MultitrackPlayer from './MultitrackPlayer.jsx';
 import DisplaySettings from './DisplaySettings.jsx';
 
 
-import { parseLyricsToSlides } from './lyrics.js';
-import { loadAudioFile, getAudioContext, getTracks, applyDefaultPanning } from './audio.js';
+import { parseLyricsToSlides } from './utils/lyrics';
+import { loadAudioFile, getAudioContext, getTracks, applyDefaultPanning } from './utils/audio';
 
 
 // This function lets the user select a folder and then calls the backend to import it.
