@@ -127,8 +127,6 @@ pub fn run() {
             application::commands::convert_to_ogg,
             application::commands::start_http_server,
             application::commands::stop_http_server,
-            application::commands::get_setting,
-            application::commands::set_setting,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
