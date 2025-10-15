@@ -34,36 +34,64 @@ const PreserviceMusic = ({ isOpen, onClose }) => {
       return;
     }
 
-    // Wait a bit for iframe to be ready
+    // Wait a bit for DOM to be ready
     const timer = setTimeout(() => {
       try {
         const listMatch = savedUrl.match(/[?&]list=([^&]+)/);
-        if (!listMatch) return;
+        if (!listMatch) {
+          console.log('No playlist ID found in URL');
+          return;
+        }
 
         const playlistId = listMatch[1];
+        console.log('Initializing player with playlist:', playlistId);
         
-        playerRef.current = new window.YT.Player('youtube-player', {
+        // Create player from scratch (replaces div content)
+        playerRef.current = new window.YT.Player('youtube-player-container', {
+          height: '100%',
+          width: '100%',
+          playerVars: {
+            listType: 'playlist',
+            list: playlistId,
+            autoplay: 1,
+            loop: 1,
+            enablejsapi: 1,
+            origin: window.location.origin
+          },
           events: {
             onReady: (event) => {
               console.log('YouTube Player Ready');
               // Enable shuffle
               event.target.setShuffle(true);
-              console.log('Shuffle enabled');
+              event.target.setLoop(true);
+              console.log('Shuffle and loop enabled');
             },
             onError: (event) => {
               console.error('YouTube Player Error:', event.data);
+              // Error codes: 2=invalid ID, 5=HTML5 error, 100=not found, 101/150=not embeddable
+              if (event.data === 150 || event.data === 101) {
+                console.warn('Video cannot be embedded, but playlist should continue...');
+              }
+            },
+            onStateChange: (event) => {
+              console.log('Player state:', event.data);
             }
           }
         });
       } catch (error) {
         console.error('Error initializing YouTube Player:', error);
       }
-    }, 1000);
+    }, 1500);
 
     return () => {
       clearTimeout(timer);
       if (playerRef.current && playerRef.current.destroy) {
-        playerRef.current.destroy();
+        try {
+          playerRef.current.destroy();
+          playerRef.current = null;
+        } catch (e) {
+          console.error('Error destroying player:', e);
+        }
       }
     };
   }, [hasUrl, savedUrl]);
@@ -266,14 +294,11 @@ const PreserviceMusic = ({ isOpen, onClose }) => {
               </div>
 
               <div className="flex-1 bg-black rounded-lg overflow-hidden">
-                <iframe
-                  id="youtube-player"
+                {/* YouTube Player API will replace this div with an iframe */}
+                <div
+                  id="youtube-player-container"
                   ref={iframeRef}
-                  src={getEmbedUrl(savedUrl)}
                   className="w-full h-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  title="Pre-service Music Player"
                 />
               </div>
             </div>
