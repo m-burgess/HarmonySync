@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import * as TauriCore from '@tauri-apps/api/core';
 import * as TauriFs from '@tauri-apps/plugin-fs';
 import * as TauriPath from '@tauri-apps/api/path';
@@ -11,6 +11,62 @@ const PreserviceMusic = ({ isOpen, onClose }) => {
   const [savedUrl, setSavedUrl] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [hasUrl, setHasUrl] = useState(false);
+  const iframeRef = useRef(null);
+  const playerRef = useRef(null);
+
+  // Load YouTube IFrame API
+  useEffect(() => {
+    if (!window.YT) {
+      const tag = document.createElement('script');
+      tag.src = 'https://www.youtube.com/iframe_api';
+      const firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+      window.onYouTubeIframeAPIReady = () => {
+        console.log('YouTube IFrame API Ready');
+      };
+    }
+  }, []);
+
+  // Initialize YouTube Player with shuffle when URL is available
+  useEffect(() => {
+    if (!hasUrl || !savedUrl || !window.YT || !window.YT.Player) {
+      return;
+    }
+
+    // Wait a bit for iframe to be ready
+    const timer = setTimeout(() => {
+      try {
+        const listMatch = savedUrl.match(/[?&]list=([^&]+)/);
+        if (!listMatch) return;
+
+        const playlistId = listMatch[1];
+        
+        playerRef.current = new window.YT.Player('youtube-player', {
+          events: {
+            onReady: (event) => {
+              console.log('YouTube Player Ready');
+              // Enable shuffle
+              event.target.setShuffle(true);
+              console.log('Shuffle enabled');
+            },
+            onError: (event) => {
+              console.error('YouTube Player Error:', event.data);
+            }
+          }
+        });
+      } catch (error) {
+        console.error('Error initializing YouTube Player:', error);
+      }
+    }, 1000);
+
+    return () => {
+      clearTimeout(timer);
+      if (playerRef.current && playerRef.current.destroy) {
+        playerRef.current.destroy();
+      }
+    };
+  }, [hasUrl, savedUrl]);
 
   // Load saved playlist URL on mount
   useEffect(() => {
@@ -92,6 +148,7 @@ const PreserviceMusic = ({ isOpen, onClose }) => {
 
   const getEmbedUrl = (url) => {
     // Convert YouTube Music playlist URL to embeddable format with loop and shuffle
+    // Note: YouTube requires enablejsapi=1 and we'll shuffle via the API
     try {
       const urlObj = new URL(url);
       
@@ -99,7 +156,7 @@ const PreserviceMusic = ({ isOpen, onClose }) => {
       if (urlObj.hostname.includes('music.youtube.com')) {
         const listMatch = url.match(/[?&]list=([^&]+)/);
         if (listMatch) {
-          return `https://www.youtube.com/embed/videoseries?list=${listMatch[1]}&autoplay=1&loop=1&shuffle=1`;
+          return `https://www.youtube.com/embed/videoseries?list=${listMatch[1]}&autoplay=1&loop=1&enablejsapi=1&origin=${window.location.origin}`;
         }
       }
       
@@ -107,13 +164,14 @@ const PreserviceMusic = ({ isOpen, onClose }) => {
       if (urlObj.hostname.includes('youtube.com')) {
         const listMatch = url.match(/[?&]list=([^&]+)/);
         if (listMatch) {
-          return `https://www.youtube.com/embed/videoseries?list=${listMatch[1]}&autoplay=1&loop=1&shuffle=1`;
+          return `https://www.youtube.com/embed/videoseries?list=${listMatch[1]}&autoplay=1&loop=1&enablejsapi=1&origin=${window.location.origin}`;
         }
       }
       
       // If it's already an embed URL, just add the params
       if (url.includes('youtube.com/embed')) {
-        return `${url}${url.includes('?') ? '&' : '?'}autoplay=1&loop=1&shuffle=1`;
+        const separator = url.includes('?') ? '&' : '?';
+        return `${url}${separator}autoplay=1&loop=1&enablejsapi=1&origin=${window.location.origin}`;
       }
       
       return url;
@@ -209,6 +267,8 @@ const PreserviceMusic = ({ isOpen, onClose }) => {
 
               <div className="flex-1 bg-black rounded-lg overflow-hidden">
                 <iframe
+                  id="youtube-player"
+                  ref={iframeRef}
                   src={getEmbedUrl(savedUrl)}
                   className="w-full h-full"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
