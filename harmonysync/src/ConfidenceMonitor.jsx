@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as TauriEvent from '@tauri-apps/api/event';
 import * as TauriCore from '@tauri-apps/api/core';
-import { lyricTransitionManager } from './lyric-transitions.js';
+import { lyricTransitionManager } from './utils/lyrics';
 
 const ConfidenceMonitor = () => {
   const [currentTime, setCurrentTime] = useState('');

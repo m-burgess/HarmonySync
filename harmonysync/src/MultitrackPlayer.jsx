@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { playAllTracks, stopAllAudio, goToBeginningAllTracks, getTracks, setGlobalVolume } from './audio.js';
+import { playAllTracks, stopAllAudio, goToBeginningAllTracks, getTracks, setGlobalVolume } from './utils/audio';
 import TrackControl from './TrackControl.jsx';
 import { PlayIcon, PauseIcon, BackwardIcon } from '@heroicons/react/24/solid';
 
