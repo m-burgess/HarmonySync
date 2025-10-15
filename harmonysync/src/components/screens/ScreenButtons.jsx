@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Window } from '@tauri-apps/api/window';
 import { emit } from '@tauri-apps/api/event';
 import { ComputerDesktopIcon, TvIcon, WindowIcon } from '@heroicons/react/24/solid';
-import { Button } from './components/ui';
+import Button from '../ui/Button.jsx';
 
 const ScreenButtons = () => {
   const [audienceWindow, setAudienceWindow] = useState(null);

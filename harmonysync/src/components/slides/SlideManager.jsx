@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ArrowPathIcon } from '@heroicons/react/24/solid';
 import SlideItem from './SlideItem.jsx';
-import ScreenButtons from './ScreenButtons.jsx';
+import ScreenButtons from '../screens/ScreenButtons.jsx';
 import * as TauriEvent from '@tauri-apps/api/event';
 import { FixedSizeGrid as Grid } from 'react-window';
 

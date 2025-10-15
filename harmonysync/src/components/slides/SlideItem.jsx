@@ -1,5 +1,5 @@
 import React from 'react';
-import { Slide } from './components';
+import Slide from './Slide.jsx';
 
 const SlideItem = ({
   slide,
