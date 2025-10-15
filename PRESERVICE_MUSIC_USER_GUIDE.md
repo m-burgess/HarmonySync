@@ -101,6 +101,12 @@ Click the **✕** button in the top-right corner to close the Pre-Service Music 
 - Close and reopen the Pre-Service Music window
 - Click "Change Playlist" and re-enter the URL
 
+**Console shows CORS errors?**
+- These are **normal and expected** when embedding YouTube
+- Error messages like "Fetch API cannot load" are from YouTube's analytics/tracking being blocked
+- They **do not** prevent the playlist from playing
+- The CSP (Content Security Policy) is configured to allow YouTube playback while blocking unnecessary tracking
+
 ## Activity Bar Icons (Left Side)
 
 From top to bottom:
