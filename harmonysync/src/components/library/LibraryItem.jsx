@@ -1,6 +1,6 @@
 import React from 'react';
-import Button from './Button.jsx';
-import './styles/components/LibraryItem.css';
+import Button from '../ui/Button.jsx';
+import '../../styles/components/LibraryItem.css';
 
 const LibraryItem = ({
   item,

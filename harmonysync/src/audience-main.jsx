@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
-import AudienceScreen from './AudienceScreen.jsx';
+import AudienceScreen from './components/screens/AudienceScreen.jsx';
 import './styles/audience.css'; // Import audience.css
 import './styles/lyric-transitions.css'; // Import transition effects
 import * as TauriCore from '@tauri-apps/api/core';

@@ -1,7 +1,7 @@
 import React from 'react';
-import Button from './Button.jsx';
-import TransitionButton from './TransitionButton.jsx';
-import './styles/components/SetlistItem.css';
+import Button from '../ui/Button.jsx';
+import TransitionButton from '../audio/TransitionButton.jsx';
+import '../../styles/components/SetlistItem.css';
 
 const SetlistItem = ({
   item,

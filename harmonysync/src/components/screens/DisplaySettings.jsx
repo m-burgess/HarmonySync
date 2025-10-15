@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as TauriCore from '@tauri-apps/api/core';
 import { XMarkIcon } from '@heroicons/react/24/solid';
-import './styles/DisplaySettings.css';
+import '../../styles/DisplaySettings.css';
 
 const DisplaySettings = ({ isOpen, onClose }) => {
   const [audienceDisplay, setAudienceDisplay] = useState('');

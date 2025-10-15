@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as TauriEvent from '@tauri-apps/api/event';
 import * as TauriCore from '@tauri-apps/api/core';
-import { lyricTransitionManager } from './utils/lyrics';
+import { lyricTransitionManager } from '../../utils/lyrics';
 
 const AudienceScreen = () => {
   const [content, setContent] = useState(null); // { type: 'lyrics', text: [] }, { type: 'image', path: '', name: '' }, { type: 'video', videoId: '' }

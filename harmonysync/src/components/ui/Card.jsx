@@ -1,5 +1,5 @@
 import React from 'react';
-import './styles/components/Card.css';
+import '../../styles/components/Card.css';
 
 const Card = React.forwardRef(({ 
   children, 

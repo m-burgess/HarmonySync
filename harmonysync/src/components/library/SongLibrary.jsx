@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as Tauri from '@tauri-apps/api';
 import { LibraryItem } from './components';
-import './styles/SongLibrary.css';
+import '../../styles/SongLibrary.css';
 
 const SongLibrary = ({ onAddSong, songImportedTrigger }) => {
   const [results, setResults] = useState([]);

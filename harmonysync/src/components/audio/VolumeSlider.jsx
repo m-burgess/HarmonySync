@@ -1,5 +1,5 @@
 import React from 'react';
-import './styles/components/VolumeSlider.css';
+import '../../styles/components/VolumeSlider.css';
 
 const VolumeSlider = ({
   value = 0.5,

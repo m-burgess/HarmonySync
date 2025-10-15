@@ -1,6 +1,6 @@
 import React from 'react';
-import Button from './Button.jsx';
-import './styles/components/PanControl.css';
+import Button from '../ui/Button.jsx';
+import '../../styles/components/PanControl.css';
 
 const PanControl = ({
   value = 0, // -1 (left) to 1 (right), 0 is center

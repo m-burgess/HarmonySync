@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import Button from './Button.jsx';
-import './styles/components/Modal.css';
+import '../../styles/components/Modal.css';
 
 const Modal = ({
   isOpen = false,
