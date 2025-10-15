@@ -47,8 +47,6 @@
   transition: width 0.3s ease-in-out;
 }
 
-/* Loading Modal Content Styles */
-
 .loading-modal-content {
   display: flex;
   flex-direction: column;

@@ -20,7 +20,6 @@
 }
 
 .song-item {
-  /* Reuse library-item visual style */
   display: flex;
   justify-content: space-between;
   align-items: center;

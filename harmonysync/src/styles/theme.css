@@ -20,3 +20,35 @@
 .text-muted { color: var(--muted); }
 .text-primary { color: var(--text); }
 .ring-accent { box-shadow: 0 0 0 3px rgba(255,138,0,0.12); }
+
+/* Ensure heroicons inherit proper colors and dimensions */
+svg {
+  fill: currentColor;
+  flex-shrink: 0;
+}
+
+/* Specific styling for heroicons to prevent Tailwind base reset issues */
+svg[data-slot="icon"] {
+  width: 1em;
+  height: 1em;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Ensure buttons with icons display properly */
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Ensure add-button icons display correctly */
+.add-button svg {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+/* Override player-controls button styles for multitrack player */
+#multitrack-player button {
+  background-color: var(--bg) !important;
+}

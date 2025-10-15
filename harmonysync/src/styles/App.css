@@ -1,22 +1,14 @@
-.app-container {
-  display: flex;
-  height: 100vh;
-  width: 100vw;
-  background-color: #1e1e1e;
-  color: #d4d4d4;
+@import './theme.css';
+
+/* App-level styles (moved) */
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  background: var(--vscode-bg);
 }
 
-.main-content {
-  flex-grow: 1;
+.app-root {
+  height: 100vh;
   display: flex;
   flex-direction: column;
-  height: 100%;
-  overflow: hidden; /* Prevent main content from causing scrollbars */
-}
-
-/* Ensure the existing container within main-content flexes properly */
-.main-content .container {
-    flex-grow: 1;
-    display: grid;
-    overflow: hidden; /* Contained elements should handle their own scrolling */
 }

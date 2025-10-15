@@ -3,7 +3,7 @@ import { ArrowTopRightOnSquareIcon, PlayIcon, PhotoIcon, FilmIcon, GlobeAltIcon,
 import * as TauriEvent from '@tauri-apps/api/event';
 import * as TauriCore from '@tauri-apps/api/core';
 import { Card, Button } from '../ui';
-import './Slide.css';
+import '../../styles/components/Slide.css';
 
 const Slide = ({
   slide,
