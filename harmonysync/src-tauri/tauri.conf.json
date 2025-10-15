@@ -62,7 +62,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost",
+      "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost https://i.ytimg.com https://*.ytimg.com; frame-src 'self' https://www.youtube.com https://youtube.com; media-src 'self' https://*.googlevideo.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.youtube.com https://youtube.com; style-src 'self' 'unsafe-inline' https://www.youtube.com; connect-src 'self' https://www.youtube.com https://*.googlevideo.com https://youtube.com",
       "capabilities": ["main-capability", "fs-cache-capability", "event-capability"],
       "assetProtocol": {
         "enable": true,
