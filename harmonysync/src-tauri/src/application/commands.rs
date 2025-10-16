@@ -584,7 +584,7 @@ pub fn delete_track(
     TrackRepository::delete(repository.inner(), id).map_err(|e| e.to_string())
 }
 
-#[command]
+#[tauri::command]
 pub fn get_setting(
     key: String,
     repository: State<'_, SqliteRepository>,
@@ -592,7 +592,7 @@ pub fn get_setting(
     SettingRepository::get(repository.inner(), &key).map_err(|e| e.to_string())
 }
 
-#[command]
+#[tauri::command]
 pub fn set_setting(
     key: String,
     value: String,
