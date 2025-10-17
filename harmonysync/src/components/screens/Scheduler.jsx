@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/solid';
+import * as TauriCore from '@tauri-apps/api/core';
 import Button from '../ui/Button.jsx';
 import Input from '../ui/Input.jsx';
 import commonMacros from '../../data/common_macros.json';
@@ -91,21 +92,23 @@ const Scheduler = ({ isOpen, onClose }) => {
     return () => clearInterval(interval);
   }, [scheduledEvents, isOpen]);
 
-  const executeMacro = (macroId) => {
+  const executeMacro = async (macroId) => {
     const macro = commonMacros.find(m => m.id === macroId);
     if (!macro) return;
 
     console.log(`Executing scheduled macro: ${macro.name}`);
     
-    // Emit event based on macro action
-    if (macro.action === 'start_preservice_music') {
-      window.dispatchEvent(new CustomEvent('start-preservice-music'));
-    } else if (macro.action === 'stop_preservice_music') {
-      window.dispatchEvent(new CustomEvent('stop-preservice-music'));
-    } else if (macro.action === 'send_midi_note') {
-      window.dispatchEvent(new CustomEvent('send-midi-note', {
-        detail: { note: macro.midiNote, velocity: 127 }
-      }));
+    try {
+      // Call backend command to execute macro
+      await TauriCore.invoke('execute_macro', {
+        macroId: macro.id,
+        macroAction: macro.action,
+        midiNote: macro.midiNote
+      });
+      
+      console.log(`Successfully executed macro: ${macro.name}`);
+    } catch (error) {
+      console.error(`Failed to execute macro ${macro.name}:`, error);
     }
   };
 
