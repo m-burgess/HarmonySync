@@ -8,17 +8,23 @@ const TrackControl = ({ track, onPanChange, onMuteToggle }) => {
 
   useEffect(() => {
     // Update track's gain node when mute state changes
+    // Note: gainNode is created lazily on first play
     if (track.gainNode) {
-      track.gainNode.gain.value = isMuted ? 0 : track.individualVolume || 1;
+      track.gainNode.gain.value = isMuted ? 0 : (track.volume || 0.7);
     }
-  }, [isMuted, track.gainNode, track.individualVolume]);
+    // Store mute state on track for playAllTracks to use
+    track.isMuted = isMuted;
+  }, [isMuted, track]);
 
   useEffect(() => {
     // Update track's panner node when pan value changes
+    // Note: pannerNode is created lazily on first play
     if (track.pannerNode) {
       setPan(track, panValue);
     }
-  }, [panValue, track.pannerNode, track]);
+    // Store pan value on track for later use
+    track.panValue = panValue;
+  }, [panValue, track]);
 
   const handleMuteToggle = (trackId, newMuteState) => {
     setIsMuted(newMuteState);

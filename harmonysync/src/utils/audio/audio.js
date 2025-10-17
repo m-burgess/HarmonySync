@@ -182,20 +182,34 @@ export function playAllTracks() {
 					}
 				};
 			} else if (track.audioEl) {
-				// Create MediaElementAudioSourceNode if not already
+				// Create MediaElementAudioSourceNode and audio graph if not already created
 				try {
 					if (!track.source) {
+						// Create audio nodes on first play
 						track.source = currentAudioContext.createMediaElementSource(track.audioEl);
 						track.gainNode = currentAudioContext.createGain();
 						track.pannerNode = currentAudioContext.createStereoPanner();
-						track.source.connect(track.gainNode);
-						track.gainNode.connect(track.pannerNode);
-						track.pannerNode.connect(getGainNode());
+						
+						// Set initial gain value
+						track.gainNode.gain.value = track.volume || 0.7;
+						
+						// Connect the audio graph: source -> panner -> gain -> destination
+						track.source.connect(track.pannerNode);
+						track.pannerNode.connect(track.gainNode);
+						track.gainNode.connect(getGainNode());
 					}
+					
+					// Set current time if offset exists
 					try { track.audioEl.currentTime = track.offset || 0; } catch (e) {}
+					
+					// Play the audio element
 					track.audioEl.play().catch(e => console.warn('Media element play failed:', e));
 					track.isPlaying = true;
-					audioSources.push(track.source);
+					
+					// Only add to audioSources if not already there
+					if (!audioSources.includes(track.source)) {
+						audioSources.push(track.source);
+					}
 				} catch (e) {
 					console.error('Error starting media element track:', e);
 				}
