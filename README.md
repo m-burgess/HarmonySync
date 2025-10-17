@@ -27,6 +27,17 @@ A comprehensive presentation software built with a Tauri (Rust) backend and a Re
 
 ## 🚀 New Features Highlight
 
+### Scheduler (Latest)
+Automate your worship service with the new Scheduler feature:
+- **Calendar Icon**: Quick access from the activity bar to schedule recurring macros.
+- **Pre-Service Music Automation**: Schedule YouTube playlist music to start/stop automatically.
+- **MIDI Note Scheduling**: Send MIDI notes at specific times for lighting, sound, or video cues.
+- **Weekly Recurring Events**: Set it once and forget it - events repeat every week.
+- **Easy Management**: Enable/disable or delete scheduled events with a single click.
+- **Visual Calendar**: See all your scheduled events for the week at a glance.
+
+See [SCHEDULER_FEATURE.md](SCHEDULER_FEATURE.md) for detailed documentation.
+
 ### Lower Thirds Window
 Introduced a new dedicated window for displaying lower third graphics. This window features:
 - A **bright green background** (`#00FF00`) for seamless chroma keying.
