@@ -224,6 +224,11 @@ export function playAllTracks() {
 						track.source.connect(track.pannerNode);
 						track.pannerNode.connect(track.gainNode);
 						track.gainNode.connect(getGainNode());
+						
+						// Only add to audioSources if not already there
+						if (!audioSources.includes(track.source)) {
+							audioSources.push(track.source);
+						}
 					}
 					
 					// Set current time if offset exists
@@ -232,11 +237,6 @@ export function playAllTracks() {
 					// Play the audio element
 					track.audioEl.play().catch(e => console.warn('Media element play failed:', e));
 					track.isPlaying = true;
-					
-					// Only add to audioSources if not already there
-					if (!audioSources.includes(track.source)) {
-						audioSources.push(track.source);
-					}
 				} catch (e) {
 					console.error('Error starting media element track:', e);
 				}
