@@ -17,6 +17,7 @@ use rand::Rng;
 
 // Import the new http_server module
 use super::http_server;
+use super::audio_decoder;
 
 // Global variable to hold the server shutdown sender
 static HTTP_SERVER_SHUTDOWN_TX: Lazy<Arc<Mutex<Option<oneshot::Sender<()>>>>> = // Changed type
@@ -961,3 +962,46 @@ pub fn get_all_presentations(
     PresentationRepository::get_all(repository.inner()).map_err(|e| e.to_string())
 }
 */
+
+// ===== Audio Decoding Commands =====
+
+/// Decode an audio file and return the decoded samples
+#[tauri::command]
+pub async fn decode_audio_file(path: String) -> Result<audio_decoder::DecodedAudio, String> {
+    // Run decoding in a blocking task since Symphonia is CPU-intensive
+    tokio::task::spawn_blocking(move || {
+        audio_decoder::decode_audio_file(&path)
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
+}
+
+/// Get audio from cache or decode it if not cached
+#[tauri::command]
+pub async fn get_or_decode_audio(path: String) -> Result<audio_decoder::DecodedAudio, String> {
+    tokio::task::spawn_blocking(move || {
+        let arc_decoded = audio_decoder::get_or_decode_audio(&path)?;
+        // Clone the Arc's inner data to return
+        Ok((*arc_decoded).clone())
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
+}
+
+/// Clear the audio cache
+#[tauri::command]
+pub fn clear_audio_cache() {
+    audio_decoder::clear_audio_cache();
+}
+
+/// Remove a specific file from the audio cache
+#[tauri::command]
+pub fn remove_from_audio_cache(path: String) {
+    audio_decoder::remove_from_cache(&path);
+}
+
+/// Get audio cache statistics
+#[tauri::command]
+pub fn get_audio_cache_stats() -> audio_decoder::AudioCacheStats {
+    audio_decoder::get_cache_stats()
+}
