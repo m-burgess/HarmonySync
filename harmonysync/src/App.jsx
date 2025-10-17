@@ -9,7 +9,8 @@ import {
   SpeakerWaveIcon,
   ClipboardDocumentListIcon,
   BoltIcon,
-  PlayIcon
+  PlayIcon,
+  CalendarIcon
 } from '@heroicons/react/24/outline';
 
 import './styles/App.css';
@@ -23,6 +24,7 @@ import SlideManager from './components/slides/SlideManager.jsx';
 import MultitrackPlayer from './components/audio/MultitrackPlayer.jsx';
 import DisplaySettings from './components/screens/DisplaySettings.jsx';
 import PreserviceMusic from './components/screens/PreserviceMusic.jsx';
+import Scheduler from './components/screens/Scheduler.jsx';
 
 
 import { parseLyricsToSlides } from './utils/lyrics';
@@ -87,6 +89,7 @@ const App = () => {
   const [selectedSlide, setSelectedSlide] = useState(null);
   const [isDisplaySettingsOpen, setIsDisplaySettingsOpen] = useState(false);
   const [isPreserviceMusicOpen, setIsPreserviceMusicOpen] = useState(false);
+  const [isSchedulerOpen, setIsSchedulerOpen] = useState(false);
   const containerRef = useRef(null);
 
   // Resizable layout: Service Order sidebar and Multitrack panel
@@ -334,6 +337,11 @@ const App = () => {
           active={true}
         />
         <ActivityBarIcon 
+          icon={<CalendarIcon className="w-8 h-8" />} 
+          label="Scheduler" 
+          onClick={() => setIsSchedulerOpen(true)}
+        />
+        <ActivityBarIcon 
           icon={<PlayIcon className="w-8 h-8" />} 
           label="Pre-Service Music" 
           onClick={() => setIsPreserviceMusicOpen(true)}
@@ -414,6 +422,11 @@ const App = () => {
       <PreserviceMusic
         isOpen={isPreserviceMusicOpen}
         onClose={() => setIsPreserviceMusicOpen(false)}
+      />
+
+      <Scheduler
+        isOpen={isSchedulerOpen}
+        onClose={() => setIsSchedulerOpen(false)}
       />
     </div>
   );
