@@ -23,29 +23,12 @@ export async function loadTrackForStreaming(trackPath, trackName) {
 
 		const audioEl = new Audio();
 		audioEl.src = assetUrl;
-		// Use 'auto' to preload the audio data so it's ready to play
-		audioEl.preload = 'auto';
-		audioEl.crossOrigin = 'anonymous';
+		// Use 'none' - we'll rely on streaming rather than preloading
+		// This avoids CSP issues with loading audio elements
+		audioEl.preload = 'none';
 
-		// Wait for the audio to be ready to play
-		await new Promise((resolve, reject) => {
-			const timeoutId = setTimeout(() => {
-				reject(new Error(`Timeout loading ${trackName}`));
-			}, 10000); // 10 second timeout
-
-			audioEl.addEventListener('canplaythrough', () => {
-				clearTimeout(timeoutId);
-				resolve();
-			}, { once: true });
-
-			audioEl.addEventListener('error', (e) => {
-				clearTimeout(timeoutId);
-				reject(new Error(`Error loading ${trackName}: ${e.message || 'Unknown error'}`));
-			}, { once: true });
-
-			// Start loading
-			audioEl.load();
-		});
+		// Don't wait - just return immediately and let playback handle loading
+		// The browser will load on-demand when play() is called
 
 		// Return a small wrapper once element is usable
 		const wrapper = { audioEl, filePath: trackPath, name: trackName };
