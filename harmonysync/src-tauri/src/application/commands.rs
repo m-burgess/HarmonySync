@@ -979,13 +979,21 @@ pub async fn decode_audio_file(path: String) -> Result<audio_decoder::DecodedAud
 /// Get audio from cache or decode it if not cached
 #[tauri::command]
 pub async fn get_or_decode_audio(path: String) -> Result<audio_decoder::DecodedAudio, String> {
-    tokio::task::spawn_blocking(move || {
+    let start_time = std::time::Instant::now();
+    
+    let result = tokio::task::spawn_blocking(move || -> Result<audio_decoder::DecodedAudio, String> {
         let arc_decoded = audio_decoder::get_or_decode_audio(&path)?;
         // Clone the Arc's inner data to return
-        Ok((*arc_decoded).clone())
+        let clone_start = std::time::Instant::now();
+        let decoded = (*arc_decoded).clone();
+        info!("[Tauri] Clone took {:.2}ms", clone_start.elapsed().as_secs_f64() * 1000.0);
+        Ok(decoded)
     })
     .await
-    .map_err(|e| format!("Task join error: {}", e))?
+    .map_err(|e| format!("Task join error: {}", e))??;
+    
+    info!("[Tauri] Total command time: {:.2}ms", start_time.elapsed().as_secs_f64() * 1000.0);
+    Ok(result)
 }
 
 /// Clear the audio cache

@@ -50,6 +50,7 @@ pub fn decode_audio_file<P: AsRef<Path>>(path: P) -> Result<DecodedAudio, String
     let path = path.as_ref();
     let path_str = path.to_string_lossy().to_string();
     
+    let start_time = std::time::Instant::now();
     info!("Decoding audio file: {}", path_str);
 
     // Open the file
@@ -97,7 +98,15 @@ pub fn decode_audio_file<P: AsRef<Path>>(path: P) -> Result<DecodedAudio, String
         .map_err(|e| format!("Failed to create decoder: {}", e))?;
 
     // Decode all packets and collect samples
-    let mut all_samples: Vec<f32> = Vec::new();
+    // Pre-allocate capacity based on estimated duration (reduces reallocations)
+    let estimated_capacity = if let Some(n_frames) = codec_params.n_frames {
+        (n_frames as usize) * channels
+    } else {
+        // Estimate 3 minutes at given sample rate if unknown
+        sample_rate as usize * channels * 180
+    };
+    
+    let mut all_samples: Vec<f32> = Vec::with_capacity(estimated_capacity);
     let mut total_frames = 0u64;
 
     loop {
@@ -125,7 +134,7 @@ pub fn decode_audio_file<P: AsRef<Path>>(path: P) -> Result<DecodedAudio, String
                 // Convert the decoded audio to f32 samples
                 let samples = convert_audio_buffer_to_f32(&decoded, channels);
                 total_frames += (samples.len() / channels) as u64;
-                all_samples.extend(samples);
+                all_samples.extend_from_slice(&samples);
             }
             Err(SymphoniaError::DecodeError(err)) => {
                 warn!("Decode error: {}", err);
@@ -137,15 +146,21 @@ pub fn decode_audio_file<P: AsRef<Path>>(path: P) -> Result<DecodedAudio, String
             }
         }
     }
+    
+    // Shrink to fit actual size (free unused capacity)
+    all_samples.shrink_to_fit();
 
     // Calculate duration
     let duration = total_frames as f64 / sample_rate as f64;
+    
+    let decode_time = start_time.elapsed();
 
     info!(
-        "Decoded {} samples ({:.2}s) from {}",
+        "Decoded {} samples ({:.2}s) from {} in {:.2}ms",
         all_samples.len(),
         duration,
-        path_str
+        path_str,
+        decode_time.as_secs_f64() * 1000.0
     );
 
     Ok(DecodedAudio {
