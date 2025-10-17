@@ -6,6 +6,12 @@ import {
     getAudioCacheStatsRust,
     clearAudioCacheRust 
 } from '../../utils/audio/rust-audio';
+import {
+    loadAudioFileBinary,
+    getAudioCacheStatsBinary,
+    clearAudioCacheBinary
+} from '../../utils/audio/rust-audio-binary';
+import { getAudioContext } from '../../utils/audio';
 
 /**
  * Debug component to test Rust audio decoding
@@ -15,6 +21,7 @@ const RustAudioDebug = () => {
     const [lastDecoded, setLastDecoded] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [useBinary, setUseBinary] = useState(true); // Default to binary (faster)
 
     const handleSelectAndDecode = async () => {
         try {
@@ -33,7 +40,24 @@ const RustAudioDebug = () => {
             if (selectedPath) {
                 console.log('Decoding:', selectedPath);
                 const startTime = performance.now();
-                const decoded = await getOrDecodeAudioRust(selectedPath);
+                
+                let decoded;
+                if (useBinary) {
+                    // Binary mode - get metadata and create AudioBuffer
+                    const audioContext = getAudioContext();
+                    const audioBuffer = await loadAudioFileBinary(selectedPath, audioContext);
+                    decoded = {
+                        path: selectedPath,
+                        duration: audioBuffer.duration,
+                        sample_rate: audioBuffer.sampleRate,
+                        channels: audioBuffer.numberOfChannels,
+                        samples: { length: audioBuffer.length * audioBuffer.numberOfChannels }
+                    };
+                } else {
+                    // JSON mode (original, slower)
+                    decoded = await getOrDecodeAudioRust(selectedPath);
+                }
+                
                 const duration = performance.now() - startTime;
 
                 setLastDecoded({
@@ -54,7 +78,9 @@ const RustAudioDebug = () => {
 
     const refreshStats = async () => {
         try {
-            const cacheStats = await getAudioCacheStatsRust();
+            const cacheStats = useBinary 
+                ? await getAudioCacheStatsBinary()
+                : await getAudioCacheStatsRust();
             setStats(cacheStats);
         } catch (err) {
             console.error('Stats error:', err);
@@ -63,7 +89,11 @@ const RustAudioDebug = () => {
 
     const handleClearCache = async () => {
         try {
-            await clearAudioCacheRust();
+            if (useBinary) {
+                await clearAudioCacheBinary();
+            } else {
+                await clearAudioCacheRust();
+            }
             await refreshStats();
             alert('Cache cleared!');
         } catch (err) {
@@ -74,7 +104,22 @@ const RustAudioDebug = () => {
 
     return (
         <div className="p-4 bg-gray-800 text-white rounded-md space-y-4">
-            <h2 className="text-xl font-bold">Rust Audio Decoder Test</h2>
+            <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold">Rust Audio Decoder Test</h2>
+                <div className="flex items-center gap-2">
+                    <span className="text-sm">Mode:</span>
+                    <button
+                        onClick={() => setUseBinary(!useBinary)}
+                        className={`px-3 py-1 rounded text-sm font-semibold ${
+                            useBinary 
+                                ? 'bg-green-600 hover:bg-green-700' 
+                                : 'bg-yellow-600 hover:bg-yellow-700'
+                        }`}
+                    >
+                        {useBinary ? '⚡ Binary (Fast)' : '📦 JSON (Slow)'}
+                    </button>
+                </div>
+            </div>
 
             <div className="flex gap-2">
                 <button

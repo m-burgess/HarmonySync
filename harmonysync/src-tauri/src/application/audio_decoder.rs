@@ -27,6 +27,21 @@ pub struct DecodedAudio {
     pub path: String,
 }
 
+/// Lightweight metadata without samples (for fast transfer)
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct AudioMetadata {
+    /// Number of channels (1 = mono, 2 = stereo, etc.)
+    pub channels: usize,
+    /// Sample rate (e.g., 44100, 48000)
+    pub sample_rate: u32,
+    /// Duration in seconds
+    pub duration: f64,
+    /// Original file path
+    pub path: String,
+    /// Total number of samples (includes all channels)
+    pub sample_count: usize,
+}
+
 /// Memory statistics for the audio cache
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AudioCacheStats {
@@ -386,6 +401,33 @@ pub fn get_cache_stats() -> AudioCacheStats {
         memory_bytes,
         memory_mb,
     }
+}
+
+/// Get audio metadata without samples (fast, small transfer)
+pub fn get_audio_metadata<P: AsRef<Path>>(path: P) -> Result<AudioMetadata, String> {
+    let decoded = get_or_decode_audio(path)?;
+    
+    Ok(AudioMetadata {
+        channels: decoded.channels,
+        sample_rate: decoded.sample_rate,
+        duration: decoded.duration,
+        path: decoded.path.clone(),
+        sample_count: decoded.samples.len(),
+    })
+}
+
+/// Get audio samples as bytes (binary transfer, fast)
+pub fn get_audio_samples_binary<P: AsRef<Path>>(path: P) -> Result<Vec<u8>, String> {
+    let decoded = get_or_decode_audio(path)?;
+    
+    // Convert f32 samples to bytes (little-endian)
+    let bytes: Vec<u8> = decoded.samples
+        .iter()
+        .flat_map(|f| f.to_le_bytes())
+        .collect();
+    
+    info!("Converted {} samples to {} bytes", decoded.samples.len(), bytes.len());
+    Ok(bytes)
 }
 
 #[cfg(test)]
