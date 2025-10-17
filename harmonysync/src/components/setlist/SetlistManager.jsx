@@ -222,11 +222,24 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
 
       // Audio tracks: if the setlist item already has `tracks` metadata (from Add Folder ogg detection), use that, else scan for audio files
       let trackEntries = [];
+      let hasOggFolder = false;
+      
       if (item.tracks && Array.isArray(item.tracks) && item.tracks.length > 0) {
+        // This item has pre-scanned tracks (from Add Folder with ogg detection)
         trackEntries = item.tracks.map(t => ({ file_path: t.file_path, track_name: t.track_name }));
+        hasOggFolder = true; // If tracks are present, it means an ogg folder existed
       } else {
+        // Check if this folder has audio files directly
         const audioFiles = entries.filter(entry => entry.children === undefined && (entry.name.endsWith('.mp3') || entry.name.endsWith('.wav') || entry.name.endsWith('.ogg'))).sort((a,b)=>a.name.localeCompare(b.name));
         trackEntries = audioFiles.map(f => ({ file_path: `${itemPath}/${f.name}`, track_name: f.name }));
+        hasOggFolder = audioFiles.some(f => f.name.endsWith('.ogg')); // Consider it has ogg content if there are ogg files
+      }
+
+      // Auto-clear cache if this is a presentation folder (no OGG folder/tracks)
+      if (!hasOggFolder && trackEntries.length === 0) {
+        console.log('No audio tracks found - clearing cache automatically');
+        clearAudioBufferCache();
+        setPreloadedSongs(new Set());
       }
 
       setLoadingMessage('Loading audio tracks...');
