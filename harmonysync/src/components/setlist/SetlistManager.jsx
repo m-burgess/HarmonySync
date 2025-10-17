@@ -5,7 +5,7 @@ import * as TauriFs from '@tauri-apps/plugin-fs';
 import * as TauriCore from '@tauri-apps/api/core';
 import * as TauriEvent from '@tauri-apps/api/event';
 import { ArrowDownTrayIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
-import { loadAudioFile, setPan, playAllTracks, stopAllAudio, goToBeginningAllTracks, applyDefaultPanning, getAudioContext, getTracks, clearAudioBufferCache, clearTracks, cleanupAudio, preloadTrack, loadSongTracksForStreaming } from '../../utils/audio';
+import { loadAudioFile, setPan, playAllTracks, stopAllAudio, goToBeginningAllTracks, applyDefaultPanning, getAudioContext, getTracks, clearAudioBufferCache, clearTracks, cleanupAudio, preloadTrack } from '../../utils/audio';
 import { songTransitionManager } from '../../utils/audio';
 
 import { parseLyricsToSlides } from '../../utils/lyrics';
@@ -229,19 +229,33 @@ const SetlistManager = ({ setAllSlides, setAllTracks }) => {
       }
 
       setLoadingMessage('Loading audio tracks...');
-      setLoadingProgress(50);
-      
-      // Use streaming audio system
-      const loadedTracks = await loadSongTracksForStreaming(trackEntries);
-      
-      // Add tracks to global tracks array
-      // Note: Web Audio nodes (source, gainNode, pannerNode) will be created 
-      // lazily by playAllTracks() when first played
-      for (const track of loadedTracks) {
-        track.isMuted = false;
-        track.offset = 0;
-        track.volume = 0.7;
-        getTracks().push(track);
+      const loadedTracks = [];
+      for (let i = 0; i < trackEntries.length; i++) {
+        const t = trackEntries[i];
+        try {
+          const buffer = await loadAudioFile(t.file_path);
+          if (buffer) {
+            const track = {
+              buffer,
+              source: null,
+              gainNode: getAudioContext().createGain(),
+              pannerNode: getAudioContext().createStereoPanner(),
+              isPlaying: false,
+              isMuted: false,
+              startTime: 0,
+              offset: 0,
+              path: t.file_path,
+              name: t.track_name,
+              panValue: 0,
+              individualVolume: 0.7,
+            };
+            getTracks().push(track);
+            loadedTracks.push(track);
+          }
+        } catch (err) {
+          console.error('Error loading audio file', t.file_path, err);
+        }
+        setLoadingProgress(Math.round(((i+1)/Math.max(1, trackEntries.length))*100));
       }
 
       applyDefaultPanning(loadedTracks);

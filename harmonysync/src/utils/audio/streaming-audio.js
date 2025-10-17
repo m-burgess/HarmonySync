@@ -23,12 +23,9 @@ export async function loadTrackForStreaming(trackPath, trackName) {
 
 		const audioEl = new Audio();
 		audioEl.src = assetUrl;
-		// Use 'none' - we'll rely on streaming rather than preloading
-		// This avoids CSP issues with loading audio elements
-		audioEl.preload = 'none';
-
-		// Don't wait - just return immediately and let playback handle loading
-		// The browser will load on-demand when play() is called
+		// Let the browser decide how much to preload; we can set 'metadata' or 'auto'
+		audioEl.preload = 'metadata';
+		audioEl.crossOrigin = 'anonymous';
 
 		// Return a small wrapper once element is usable
 		const wrapper = { audioEl, filePath: trackPath, name: trackName };

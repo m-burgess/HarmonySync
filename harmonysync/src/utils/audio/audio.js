@@ -42,7 +42,6 @@ function getGainNode() {
 }
 
 export function stopAllAudio() {
-	// Stop all audio sources (BufferSource nodes)
 	audioSources.forEach(source => {
 		try {
 			// source might be a BufferSource or a MediaElementSourceNode wrapper
@@ -53,32 +52,6 @@ export function stopAllAudio() {
 		}
 	});
 	audioSources.length = 0; // Clear the array
-	
-	// Stop all tracks and preserve their playback position
-	const currentTracks = getTracks();
-	currentTracks.forEach(track => {
-		if (track.isPlaying) {
-			// Calculate the current offset for buffer-based tracks
-			if (track.buffer && track.startTime !== undefined) {
-				const currentAudioContext = getAudioContext();
-				track.offset = currentAudioContext.currentTime - track.startTime;
-				if (track.offset < 0) track.offset = 0;
-				if (track.buffer && track.offset > track.buffer.duration) {
-					track.offset = 0;
-				}
-			} else if (track.audioEl) {
-				// For audio elements, pause and store the current time as offset
-				try {
-					track.offset = track.audioEl.currentTime;
-					track.audioEl.pause();
-				} catch (e) {
-					console.warn("Error pausing audio element:", e);
-					track.offset = 0;
-				}
-			}
-			track.isPlaying = false;
-		}
-	});
 }
 
 export function cleanupAudio() {
@@ -209,34 +182,20 @@ export function playAllTracks() {
 					}
 				};
 			} else if (track.audioEl) {
-				// Create MediaElementAudioSourceNode and audio graph if not already created
+				// Create MediaElementAudioSourceNode if not already
 				try {
 					if (!track.source) {
-						// Create audio nodes on first play
 						track.source = currentAudioContext.createMediaElementSource(track.audioEl);
 						track.gainNode = currentAudioContext.createGain();
 						track.pannerNode = currentAudioContext.createStereoPanner();
-						
-						// Set initial gain value
-						track.gainNode.gain.value = track.volume || 0.7;
-						
-						// Connect the audio graph: source -> panner -> gain -> destination
-						track.source.connect(track.pannerNode);
-						track.pannerNode.connect(track.gainNode);
-						track.gainNode.connect(getGainNode());
-						
-						// Only add to audioSources if not already there
-						if (!audioSources.includes(track.source)) {
-							audioSources.push(track.source);
-						}
+						track.source.connect(track.gainNode);
+						track.gainNode.connect(track.pannerNode);
+						track.pannerNode.connect(getGainNode());
 					}
-					
-					// Set current time if offset exists
 					try { track.audioEl.currentTime = track.offset || 0; } catch (e) {}
-					
-					// Play the audio element
 					track.audioEl.play().catch(e => console.warn('Media element play failed:', e));
 					track.isPlaying = true;
+					audioSources.push(track.source);
 				} catch (e) {
 					console.error('Error starting media element track:', e);
 				}
@@ -251,7 +210,7 @@ function goToBeginningAllTracks() {
 
 	if (!currentAudioContext || currentTracks.length === 0) return;
 
-	stopAllAudio();
+	stopAllTracks();
 	currentTracks.forEach(track => {
 		track.offset = 0;
 	});
