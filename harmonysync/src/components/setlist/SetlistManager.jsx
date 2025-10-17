@@ -10,7 +10,7 @@ import { songTransitionManager } from '../../utils/audio';
 
 import { parseLyricsToSlides } from '../../utils/lyrics';
 
-const SetlistManager = ({ setAllSlides, setAllTracks }) => {
+const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
   const [setlist, setSetlist] = useState([]);
   const [currentBackgroundCssContent, setCurrentBackgroundCssContent] = useState('');
   const [loadingProgress, setLoadingProgress] = useState(0);
@@ -230,6 +230,7 @@ const SetlistManager = ({ setAllSlides, setAllTracks }) => {
       }
 
       setLoadingMessage('Loading audio tracks...');
+      setIsLoadingTracks(true);
       const loadedTracks = [];
       for (let i = 0; i < trackEntries.length; i++) {
         const t = trackEntries[i];
@@ -265,12 +266,14 @@ const SetlistManager = ({ setAllSlides, setAllTracks }) => {
 
       setLoadingMessage('Loading complete!');
       setLoadingProgress(100);
+      setIsLoadingTracks(false);
 
     } catch (error) {
       console.error('Error loading setlist item:', error);
       try { TauriDialog.message(`Failed to load setlist from ${itemPath}.`, { title: 'Error', type: 'error' }); } catch(e){}
       setLoadingMessage('Error loading folder.');
       setLoadingProgress(0);
+      setIsLoadingTracks(false);
     }
   };
 

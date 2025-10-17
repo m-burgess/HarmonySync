@@ -3,7 +3,7 @@ import { playAllTracks, stopAllAudio, goToBeginningAllTracks, getTracks, setGlob
 import TrackControl from './TrackControl.jsx';
 import { PlayIcon, PauseIcon, BackwardIcon } from '@heroicons/react/24/solid';
 
-const MultitrackPlayer = ({ allTracks }) => {
+const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
   useEffect(() => {
     console.log('[MultitrackPlayer] allTracks prop:', allTracks);
   }, [allTracks]);
@@ -65,17 +65,26 @@ const MultitrackPlayer = ({ allTracks }) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-0.5 overflow-auto" id="track-controls">
-        {allTracks.sort(sortTracks).map((track, index) => (
-          <div key={index} className="bg-surface rounded">
-            <TrackControl
-              track={track}
-              onPanChange={handlePanChange}
-              onMuteToggle={handleMuteToggle}
-            />
+      {isLoadingTracks ? (
+        <div className="flex items-center justify-center py-8 text-muted">
+          <div className="flex items-center gap-2">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+            <span>Loading tracks...</span>
           </div>
-        ))}
-      </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-0.5 overflow-auto" id="track-controls">
+          {allTracks.sort(sortTracks).map((track, index) => (
+            <div key={index} className="bg-surface rounded">
+              <TrackControl
+                track={track}
+                onPanChange={handlePanChange}
+                onMuteToggle={handleMuteToggle}
+              />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
