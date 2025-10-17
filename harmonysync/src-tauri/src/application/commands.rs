@@ -961,3 +961,39 @@ pub fn get_all_presentations(
     PresentationRepository::get_all(repository.inner()).map_err(|e| e.to_string())
 }
 */
+
+#[command]
+pub async fn execute_macro(app_handle: AppHandle, macro_id: String, macro_action: String, midi_note: Option<u8>) -> Result<(), String> {
+    match macro_action.as_str() {
+        "start_preservice_music" => {
+            app_handle.emit_to("main", "start-preservice-music", ())
+                .map_err(|e| format!("Failed to emit start-preservice-music event: {}", e))?;
+            Ok(())
+        },
+        "stop_preservice_music" => {
+            app_handle.emit_to("main", "stop-preservice-music", ())
+                .map_err(|e| format!("Failed to emit stop-preservice-music event: {}", e))?;
+            Ok(())
+        },
+        "send_midi_note" => {
+            if let Some(note) = midi_note {
+                #[derive(Clone, serde::Serialize)]
+                struct MidiNotePayload {
+                    note: u8,
+                    velocity: u8,
+                }
+                
+                app_handle.emit_to("main", "send-midi-note", MidiNotePayload {
+                    note,
+                    velocity: 127,
+                })
+                .map_err(|e| format!("Failed to emit send-midi-note event: {}", e))?;
+                Ok(())
+            } else {
+                Err("MIDI note value is required for send_midi_note action".to_string())
+            }
+        },
+        _ => Err(format!("Unknown macro action: {}", macro_action))
+    }
+}
+

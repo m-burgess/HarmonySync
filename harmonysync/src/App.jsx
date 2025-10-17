@@ -327,6 +327,22 @@ const App = () => {
     };
   }, []);
 
+  // Listen for preservice music events from scheduler
+  useEffect(() => {
+    const unlistenStart = Tauri.event.listen('start-preservice-music', () => {
+      setIsPreserviceMusicOpen(true);
+    });
+
+    const unlistenStop = Tauri.event.listen('stop-preservice-music', () => {
+      setIsPreserviceMusicOpen(false);
+    });
+
+    return () => {
+      unlistenStart.then(f => f());
+      unlistenStop.then(f => f());
+    };
+  }, []);
+
   return (
     <div className="h-screen w-screen bg-gray-900 text-gray-300 vscode-ui-font flex" ref={containerRef}>
       {/* VS Code Activity Bar */}
