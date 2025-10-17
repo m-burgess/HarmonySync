@@ -42,6 +42,7 @@ function getGainNode() {
 }
 
 export function stopAllAudio() {
+	// Stop all audio sources (BufferSource nodes)
 	audioSources.forEach(source => {
 		try {
 			// source might be a BufferSource or a MediaElementSourceNode wrapper
@@ -52,6 +53,32 @@ export function stopAllAudio() {
 		}
 	});
 	audioSources.length = 0; // Clear the array
+	
+	// Stop all tracks and preserve their playback position
+	const currentTracks = getTracks();
+	currentTracks.forEach(track => {
+		if (track.isPlaying) {
+			// Calculate the current offset for buffer-based tracks
+			if (track.buffer && track.startTime !== undefined) {
+				const currentAudioContext = getAudioContext();
+				track.offset = currentAudioContext.currentTime - track.startTime;
+				if (track.offset < 0) track.offset = 0;
+				if (track.buffer && track.offset > track.buffer.duration) {
+					track.offset = 0;
+				}
+			} else if (track.audioEl) {
+				// For audio elements, pause and store the current time as offset
+				try {
+					track.offset = track.audioEl.currentTime;
+					track.audioEl.pause();
+				} catch (e) {
+					console.warn("Error pausing audio element:", e);
+					track.offset = 0;
+				}
+			}
+			track.isPlaying = false;
+		}
+	});
 }
 
 export function cleanupAudio() {
@@ -224,7 +251,7 @@ function goToBeginningAllTracks() {
 
 	if (!currentAudioContext || currentTracks.length === 0) return;
 
-	stopAllTracks();
+	stopAllAudio();
 	currentTracks.forEach(track => {
 		track.offset = 0;
 	});
