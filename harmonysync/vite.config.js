@@ -23,7 +23,6 @@ export default defineConfig({
                 confidence: 'confidence.html',
                 lowerthirds: 'lowerthirds.html',
               },
-      external: ['@tauri-apps/api'], // Add this line
     },
   },
   optimizeDeps: {
