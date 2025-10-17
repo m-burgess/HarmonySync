@@ -234,12 +234,13 @@ const SetlistManager = ({ setAllSlides, setAllTracks }) => {
       // Use streaming audio system
       const loadedTracks = await loadSongTracksForStreaming(trackEntries);
       
-      // Initialize Web Audio nodes for each track
+      // Add tracks to global tracks array
+      // Note: Web Audio nodes (source, gainNode, pannerNode) will be created 
+      // lazily by playAllTracks() when first played
       for (const track of loadedTracks) {
-        track.gainNode = getAudioContext().createGain();
-        track.pannerNode = getAudioContext().createStereoPanner();
-        track.gainNode.gain.value = 0.7;
         track.isMuted = false;
+        track.offset = 0;
+        track.volume = 0.7;
         getTracks().push(track);
       }
 
