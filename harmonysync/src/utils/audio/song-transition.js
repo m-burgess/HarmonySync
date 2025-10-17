@@ -67,14 +67,16 @@ class SongTransitionManager {
           track.source.start(startTime);
           track.isPlaying = true;
         } else if (track.audioEl) {
-          track.source = audioContext.createMediaElementSource(track.audioEl);
-          track.gainNode = audioContext.createGain();
-          track.pannerNode = audioContext.createStereoPanner();
+          if (!track.source) {
+            track.source = audioContext.createMediaElementSource(track.audioEl);
+            track.gainNode = audioContext.createGain();
+            track.pannerNode = audioContext.createStereoPanner();
+            track.source.connect(track.gainNode);
+            track.gainNode.connect(track.pannerNode);
+            track.pannerNode.connect(audioContext.destination);
+          }
           track.gainNode.gain.value = 0;
           track.pannerNode.pan.value = track.panValue || 0;
-          track.source.connect(track.gainNode);
-          track.gainNode.connect(track.pannerNode);
-          track.pannerNode.connect(audioContext.destination);
           try { track.audioEl.currentTime = 0; } catch (e) {}
           track.audioEl.play().catch(()=>{});
           track.isPlaying = true;
