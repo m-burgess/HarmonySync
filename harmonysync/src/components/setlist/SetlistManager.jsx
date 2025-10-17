@@ -133,7 +133,8 @@ const SetlistManager = ({ setAllSlides, setAllTracks }) => {
     setLoadingMessage('Loading folder contents...');
 
     try {
-      cleanupAudio();
+      // Stop current audio but keep the cache and audio context alive
+      stopAllAudio();
       clearTracks();
       TauriEvent.emit('clear-lyric-display');
       TauriEvent.emit('clear-confidence-display');
@@ -273,9 +274,33 @@ const SetlistManager = ({ setAllSlides, setAllTracks }) => {
     }
   };
 
+  const handleClearCache = () => {
+    clearAudioBufferCache();
+    setPreloadedSongs(new Set());
+    console.log('Audio buffer cache cleared');
+  };
+
   return (
     <div className="col" id="setlist-col">
-      <button onClick={handleAddFolder} id="add-folder-button">Add Folder to Presentation</button>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+        <button onClick={handleAddFolder} id="add-folder-button" style={{ flex: 1 }}>
+          Add Folder to Presentation
+        </button>
+        <button 
+          onClick={handleClearCache} 
+          title="Clear audio cache to free memory"
+          style={{ 
+            padding: '8px 12px',
+            backgroundColor: '#ef4444',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+        >
+          Clear Cache
+        </button>
+      </div>
       {loadingProgress > 0 && loadingProgress < 100 && (
         <div className="progress-container">
           <div className="progress-bar" style={{ width: `${loadingProgress}%` }}></div>
