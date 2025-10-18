@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:dev:release": "tauri dev --release"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.8.4",
