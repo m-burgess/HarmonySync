@@ -127,6 +127,13 @@ pub fn run() {
             application::commands::convert_to_ogg,
             application::commands::start_http_server,
             application::commands::stop_http_server,
+            application::commands::decode_audio_file,
+            application::commands::get_or_decode_audio,
+            application::commands::get_audio_metadata,
+            application::commands::get_audio_samples_binary,
+            application::commands::clear_audio_cache,
+            application::commands::remove_from_audio_cache,
+            application::commands::get_audio_cache_stats,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

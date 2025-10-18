@@ -5,12 +5,12 @@ import * as TauriFs from '@tauri-apps/plugin-fs';
 import * as TauriCore from '@tauri-apps/api/core';
 import * as TauriEvent from '@tauri-apps/api/event';
 import { ArrowDownTrayIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
-import { loadAudioFile, setPan, playAllTracks, stopAllAudio, goToBeginningAllTracks, applyDefaultPanning, getAudioContext, getTracks, clearAudioBufferCache, clearTracks, cleanupAudio, preloadTrack, loadSongTracksForStreaming } from '../../utils/audio';
+import { loadAudioFile, setPan, playAllTracks, stopAllAudio, goToBeginningAllTracks, applyDefaultPanning, getAudioContext, getTracks, clearAudioBufferCache, clearTracks, cleanupAudio, preloadTrack } from '../../utils/audio';
 import { songTransitionManager } from '../../utils/audio';
 
 import { parseLyricsToSlides } from '../../utils/lyrics';
 
-const SetlistManager = ({ setAllSlides, setAllTracks }) => {
+const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
   const [setlist, setSetlist] = useState([]);
   const [currentBackgroundCssContent, setCurrentBackgroundCssContent] = useState('');
   const [loadingProgress, setLoadingProgress] = useState(0);
@@ -133,7 +133,8 @@ const SetlistManager = ({ setAllSlides, setAllTracks }) => {
     setLoadingMessage('Loading folder contents...');
 
     try {
-      cleanupAudio();
+      // Stop current audio but keep the cache and audio context alive
+      stopAllAudio();
       clearTracks();
       TauriEvent.emit('clear-lyric-display');
       TauriEvent.emit('clear-confidence-display');
@@ -221,27 +222,55 @@ const SetlistManager = ({ setAllSlides, setAllTracks }) => {
 
       // Audio tracks: if the setlist item already has `tracks` metadata (from Add Folder ogg detection), use that, else scan for audio files
       let trackEntries = [];
+      let hasOggFolder = false;
+      
       if (item.tracks && Array.isArray(item.tracks) && item.tracks.length > 0) {
+        // This item has pre-scanned tracks (from Add Folder with ogg detection)
         trackEntries = item.tracks.map(t => ({ file_path: t.file_path, track_name: t.track_name }));
+        hasOggFolder = true; // If tracks are present, it means an ogg folder existed
       } else {
+        // Check if this folder has audio files directly
         const audioFiles = entries.filter(entry => entry.children === undefined && (entry.name.endsWith('.mp3') || entry.name.endsWith('.wav') || entry.name.endsWith('.ogg'))).sort((a,b)=>a.name.localeCompare(b.name));
         trackEntries = audioFiles.map(f => ({ file_path: `${itemPath}/${f.name}`, track_name: f.name }));
+        hasOggFolder = audioFiles.some(f => f.name.endsWith('.ogg')); // Consider it has ogg content if there are ogg files
+      }
+
+      // Auto-clear cache if this is a presentation folder (no OGG folder/tracks)
+      if (!hasOggFolder && trackEntries.length === 0) {
+        console.log('No audio tracks found - clearing cache automatically');
+        clearAudioBufferCache();
+        setPreloadedSongs(new Set());
       }
 
       setLoadingMessage('Loading audio tracks...');
-      setLoadingProgress(50);
-      
-      // Use streaming audio system
-      const loadedTracks = await loadSongTracksForStreaming(trackEntries);
-      
-      // Add tracks to global tracks array
-      // Note: Web Audio nodes (source, gainNode, pannerNode) will be created 
-      // lazily by playAllTracks() when first played
-      for (const track of loadedTracks) {
-        track.isMuted = false;
-        track.offset = 0;
-        track.volume = 0.7;
-        getTracks().push(track);
+      setIsLoadingTracks(true);
+      const loadedTracks = [];
+      for (let i = 0; i < trackEntries.length; i++) {
+        const t = trackEntries[i];
+        try {
+          const buffer = await loadAudioFile(t.file_path);
+          if (buffer) {
+            const track = {
+              buffer,
+              source: null,
+              gainNode: getAudioContext().createGain(),
+              pannerNode: getAudioContext().createStereoPanner(),
+              isPlaying: false,
+              isMuted: false,
+              startTime: 0,
+              offset: 0,
+              path: t.file_path,
+              name: t.track_name,
+              panValue: 0,
+              individualVolume: 0.7,
+            };
+            getTracks().push(track);
+            loadedTracks.push(track);
+          }
+        } catch (err) {
+          console.error('Error loading audio file', t.file_path, err);
+        }
+        setLoadingProgress(Math.round(((i+1)/Math.max(1, trackEntries.length))*100));
       }
 
       applyDefaultPanning(loadedTracks);
@@ -250,18 +279,24 @@ const SetlistManager = ({ setAllSlides, setAllTracks }) => {
 
       setLoadingMessage('Loading complete!');
       setLoadingProgress(100);
+      setIsLoadingTracks(false);
 
     } catch (error) {
       console.error('Error loading setlist item:', error);
       try { TauriDialog.message(`Failed to load setlist from ${itemPath}.`, { title: 'Error', type: 'error' }); } catch(e){}
       setLoadingMessage('Error loading folder.');
       setLoadingProgress(0);
+      setIsLoadingTracks(false);
     }
   };
 
   return (
     <div className="col" id="setlist-col">
-      <button onClick={handleAddFolder} id="add-folder-button">Add Folder to Presentation</button>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+        <button onClick={handleAddFolder} id="add-folder-button" style={{ flex: 1 }}>
+          Add to Service Order
+        </button>
+      </div>
       {loadingProgress > 0 && loadingProgress < 100 && (
         <div className="progress-container">
           <div className="progress-bar" style={{ width: `${loadingProgress}%` }}></div>
