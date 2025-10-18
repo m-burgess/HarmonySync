@@ -17,6 +17,7 @@ use rand::Rng;
 
 // Import the new http_server module
 use super::http_server;
+use super::audio_decoder;
 
 // Global variable to hold the server shutdown sender
 static HTTP_SERVER_SHUTDOWN_TX: Lazy<Arc<Mutex<Option<oneshot::Sender<()>>>>> = // Changed type
@@ -961,3 +962,82 @@ pub fn get_all_presentations(
     PresentationRepository::get_all(repository.inner()).map_err(|e| e.to_string())
 }
 */
+
+// ===== Audio Decoding Commands =====
+
+/// Decode an audio file and return the decoded samples
+#[tauri::command]
+pub async fn decode_audio_file(path: String) -> Result<audio_decoder::DecodedAudio, String> {
+    // Run decoding in a blocking task since Symphonia is CPU-intensive
+    tokio::task::spawn_blocking(move || {
+        audio_decoder::decode_audio_file(&path)
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
+}
+
+/// Get audio from cache or decode it if not cached
+#[tauri::command]
+pub async fn get_or_decode_audio(path: String) -> Result<audio_decoder::DecodedAudio, String> {
+    let start_time = std::time::Instant::now();
+    
+    let result = tokio::task::spawn_blocking(move || -> Result<audio_decoder::DecodedAudio, String> {
+        let arc_decoded = audio_decoder::get_or_decode_audio(&path)?;
+        // Clone the Arc's inner data to return
+        let clone_start = std::time::Instant::now();
+        let decoded = (*arc_decoded).clone();
+        info!("[Tauri] Clone took {:.2}ms", clone_start.elapsed().as_secs_f64() * 1000.0);
+        Ok(decoded)
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))??;
+    
+    info!("[Tauri] Total command time: {:.2}ms", start_time.elapsed().as_secs_f64() * 1000.0);
+    Ok(result)
+}
+
+/// Get audio metadata only (fast, small transfer)
+#[tauri::command]
+pub async fn get_audio_metadata(path: String) -> Result<audio_decoder::AudioMetadata, String> {
+    tokio::task::spawn_blocking(move || {
+        audio_decoder::get_audio_metadata(&path)
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
+}
+
+/// Get audio samples as binary data (fast binary transfer)
+#[tauri::command]
+pub async fn get_audio_samples_binary(path: String) -> Result<Vec<u8>, String> {
+    let start_time = std::time::Instant::now();
+    
+    let result = tokio::task::spawn_blocking(move || -> Result<Vec<u8>, String> {
+        audio_decoder::get_audio_samples_binary(&path)
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))??;
+    
+    info!("[Tauri] Binary transfer time: {:.2}ms, {} bytes", 
+          start_time.elapsed().as_secs_f64() * 1000.0,
+          result.len());
+    
+    Ok(result)
+}
+
+/// Clear the audio cache
+#[tauri::command]
+pub fn clear_audio_cache() {
+    audio_decoder::clear_audio_cache();
+}
+
+/// Remove a specific file from the audio cache
+#[tauri::command]
+pub fn remove_from_audio_cache(path: String) {
+    audio_decoder::remove_from_cache(&path);
+}
+
+/// Get audio cache statistics
+#[tauri::command]
+pub fn get_audio_cache_stats() -> audio_decoder::AudioCacheStats {
+    audio_decoder::get_cache_stats()
+}

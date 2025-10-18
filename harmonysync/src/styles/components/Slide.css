@@ -30,11 +30,12 @@
 }
 
 .slide-custom .slide-lyrics-section {
-  font-size: clamp(0.5rem, 1.5vw, 0.75rem);
+  font-size: clamp(0.5rem, calc(var(--slide-width) / 20), 1.25rem);
 }
 
 .slide-custom .slide-lyrics-line {
-  font-size: clamp(0.45rem, 1.2vw, 0.75rem);
+  font-size: clamp(0.5rem, calc(var(--slide-width) / 16), 1.5rem);
+  line-height: 1.3;
 }
 
 .slide-component:hover {
@@ -193,16 +194,13 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 0.25rem;
+  gap: clamp(0.125rem, calc(var(--slide-width) / 80), 0.5rem);
 }
 
 .slide-lyrics-line {
   margin: 0;
   font-size: 0.75rem;
-  line-height: 1.2;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.3;
   opacity: 0.9;
 }
 
