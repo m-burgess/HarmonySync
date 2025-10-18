@@ -288,7 +288,8 @@ const Slide = ({
   // Calculate custom dimensions when thumbnailSize is provided
   const customStyle = thumbnailSize ? {
     width: `${thumbnailSize}px`,
-    height: `${Math.round(thumbnailSize * 0.56)}px` // 16:9 aspect ratio
+    height: `${Math.round(thumbnailSize * 0.56)}px`, // 16:9 aspect ratio
+    '--slide-width': `${thumbnailSize}px`
   } : {};
 
   return (
