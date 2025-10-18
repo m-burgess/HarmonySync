@@ -170,9 +170,9 @@ const SlideManager = ({ allSlides, setAllSlides, selectedSlide, setSelectedSlide
       </div>
       
       <div className="flex items-center gap-4 mb-3 pr-3">
-        <label htmlFor="thumbnail-size-slider" className="text-sm text-muted">Thumbnail Size</label>
+        <label htmlFor="thumbnail-size-slider" className="text-sm text-muted">Slide Size</label>
         <input
-          aria-label="Thumbnail Size"
+          aria-label="Slide Size"
           type="range"
           id="thumbnail-size-slider"
           min="80"
@@ -182,7 +182,7 @@ const SlideManager = ({ allSlides, setAllSlides, selectedSlide, setSelectedSlide
           className="w-48"
         />
         <div className="text-sm text-muted">{thumbnailSize}px</div>
-        <button aria-label="Reset thumbnail size" title="Reset" className="ml-auto p-2 bg-surface rounded-md" onClick={() => setThumbnailSize(220)}>
+        <button aria-label="Reset slide size" title="Reset" className="ml-auto p-2 bg-surface rounded-md" onClick={() => setThumbnailSize(220)}>
           <ArrowPathIcon className="w-4 h-4 text-muted" />
         </button>
       </div>

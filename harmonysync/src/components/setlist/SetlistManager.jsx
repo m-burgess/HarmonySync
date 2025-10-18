@@ -290,31 +290,11 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
     }
   };
 
-  const handleClearCache = () => {
-    clearAudioBufferCache();
-    setPreloadedSongs(new Set());
-    console.log('Audio buffer cache cleared');
-  };
-
   return (
     <div className="col" id="setlist-col">
       <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
         <button onClick={handleAddFolder} id="add-folder-button" style={{ flex: 1 }}>
-          Add Folder to Presentation
-        </button>
-        <button 
-          onClick={handleClearCache} 
-          title="Clear audio cache to free memory"
-          style={{ 
-            padding: '8px 12px',
-            backgroundColor: '#ef4444',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          Clear Cache
+          Add to Service Order
         </button>
       </div>
       {loadingProgress > 0 && loadingProgress < 100 && (

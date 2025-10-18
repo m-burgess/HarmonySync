@@ -23,7 +23,6 @@ import SlideManager from './components/slides/SlideManager.jsx';
 import MultitrackPlayer from './components/audio/MultitrackPlayer.jsx';
 import DisplaySettings from './components/screens/DisplaySettings.jsx';
 import PreserviceMusic from './components/screens/PreserviceMusic.jsx';
-import RustAudioDebug from './components/debug/RustAudioDebug.jsx';
 
 
 import { parseLyricsToSlides } from './utils/lyrics';
@@ -419,12 +418,6 @@ const App = () => {
         onClose={() => setIsPreserviceMusicOpen(false)}
       />
 
-      {/* Debug: Rust Audio Decoder Test (remove in production) */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="fixed bottom-4 right-4 w-96 max-h-96 overflow-auto z-50">
-          <RustAudioDebug />
-        </div>
-      )}
     </div>
   );
 };
