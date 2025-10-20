@@ -1,5 +1,6 @@
 use std::path::Path;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
 use serde::{Serialize, Deserialize};
@@ -51,10 +52,55 @@ pub struct AudioCacheStats {
     pub memory_bytes: usize,
     /// Memory in megabytes (for convenience)
     pub memory_mb: f64,
+    /// Maximum cache size in bytes
+    pub max_cache_bytes: usize,
+    /// Maximum cache size in megabytes
+    pub max_cache_mb: f64,
 }
 
+/// Cache entry with timestamp for LRU eviction
+#[derive(Clone, Debug)]
+struct CacheEntry {
+    audio: Arc<DecodedAudio>,
+    last_access: Arc<AtomicU64>,
+}
+
+impl CacheEntry {
+    fn new(audio: Arc<DecodedAudio>) -> Self {
+        Self {
+            audio,
+            last_access: Arc::new(AtomicU64::new(current_timestamp())),
+        }
+    }
+
+    fn touch(&self) {
+        self.last_access.store(current_timestamp(), Ordering::Relaxed);
+    }
+
+    fn last_access_time(&self) -> u64 {
+        self.last_access.load(Ordering::Relaxed)
+    }
+
+    fn memory_size(&self) -> usize {
+        let samples_size = self.audio.samples.len() * std::mem::size_of::<f32>();
+        let string_size = self.audio.path.len();
+        samples_size + string_size + std::mem::size_of::<DecodedAudio>()
+    }
+}
+
+fn current_timestamp() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
+}
+
+/// Maximum cache size in bytes (default: 512 MB)
+/// This prevents unbounded memory growth
+const MAX_CACHE_SIZE_BYTES: usize = 512 * 1024 * 1024;
+
 /// Global audio buffer cache using DashMap for thread-safe access
-static AUDIO_CACHE: Lazy<Arc<DashMap<String, Arc<DecodedAudio>>>> = 
+static AUDIO_CACHE: Lazy<Arc<DashMap<String, CacheEntry>>> = 
     Lazy::new(|| Arc::new(DashMap::new()));
 
 /// Decode an audio file using Symphonia
@@ -343,15 +389,70 @@ fn interleave_channels_f64(buf: &symphonia::core::audio::AudioBuffer<f64>, chann
     output
 }
 
+/// Evict least recently used items from cache if over size limit
+fn evict_if_needed() {
+    let current_size = get_cache_memory_usage();
+    
+    if current_size <= MAX_CACHE_SIZE_BYTES {
+        return; // Under limit, no eviction needed
+    }
+
+    info!("Cache size ({:.2} MB) exceeds limit ({:.2} MB), starting eviction", 
+        current_size as f64 / (1024.0 * 1024.0),
+        MAX_CACHE_SIZE_BYTES as f64 / (1024.0 * 1024.0)
+    );
+
+    // Collect all entries with their access times and sizes
+    let mut entries: Vec<(String, u64, usize)> = AUDIO_CACHE.iter()
+        .map(|entry| {
+            let key = entry.key().clone();
+            let last_access = entry.value().last_access_time();
+            let size = entry.value().memory_size();
+            (key, last_access, size)
+        })
+        .collect();
+
+    // Sort by last access time (oldest first)
+    entries.sort_by_key(|(_, last_access, _)| *last_access);
+
+    // Evict oldest entries until we're under the limit
+    let mut bytes_freed = 0;
+    let target_size = (MAX_CACHE_SIZE_BYTES as f64 * 0.75) as usize; // Evict to 75% capacity
+    
+    for (key, _, size) in entries {
+        if current_size - bytes_freed <= target_size {
+            break;
+        }
+        
+        if AUDIO_CACHE.remove(&key).is_some() {
+            bytes_freed += size;
+            info!("Evicted from cache: {} ({:.2} MB)", key, size as f64 / (1024.0 * 1024.0));
+        }
+    }
+
+    info!("Cache eviction complete: freed {:.2} MB, new size: {:.2} MB",
+        bytes_freed as f64 / (1024.0 * 1024.0),
+        (current_size - bytes_freed) as f64 / (1024.0 * 1024.0)
+    );
+}
+
+/// Get current cache memory usage in bytes
+fn get_cache_memory_usage() -> usize {
+    AUDIO_CACHE.iter()
+        .map(|entry| entry.value().memory_size())
+        .sum()
+}
+
 /// Get audio from cache or decode it
 pub fn get_or_decode_audio<P: AsRef<Path>>(path: P) -> Result<Arc<DecodedAudio>, String> {
     let path = path.as_ref();
     let path_str = path.to_string_lossy().to_string();
 
     // Check cache first
-    if let Some(cached) = AUDIO_CACHE.get(&path_str) {
+    if let Some(cached_entry) = AUDIO_CACHE.get(&path_str) {
         info!("Audio cache hit: {}", path_str);
-        return Ok(cached.clone());
+        cached_entry.touch(); // Update last access time
+        return Ok(cached_entry.audio.clone());
     }
 
     // Cache miss - decode the file
@@ -359,8 +460,14 @@ pub fn get_or_decode_audio<P: AsRef<Path>>(path: P) -> Result<Arc<DecodedAudio>,
     let decoded = decode_audio_file(path)?;
     let arc_decoded = Arc::new(decoded);
     
+    // Create cache entry
+    let entry = CacheEntry::new(arc_decoded.clone());
+    
     // Store in cache
-    AUDIO_CACHE.insert(path_str.clone(), arc_decoded.clone());
+    AUDIO_CACHE.insert(path_str.clone(), entry);
+    
+    // Check if we need to evict old entries
+    evict_if_needed();
     
     Ok(arc_decoded)
 }
@@ -383,23 +490,16 @@ pub fn remove_from_cache<P: AsRef<Path>>(path: P) {
 /// Get cache statistics
 pub fn get_cache_stats() -> AudioCacheStats {
     let count = AUDIO_CACHE.len();
-    
-    let memory_bytes: usize = AUDIO_CACHE.iter()
-        .map(|entry| {
-            let decoded = entry.value();
-            // Calculate memory: samples + overhead
-            let samples_size = decoded.samples.len() * std::mem::size_of::<f32>();
-            let string_size = decoded.path.len();
-            samples_size + string_size + std::mem::size_of::<DecodedAudio>()
-        })
-        .sum();
-    
+    let memory_bytes = get_cache_memory_usage();
     let memory_mb = memory_bytes as f64 / (1024.0 * 1024.0);
+    let max_cache_mb = MAX_CACHE_SIZE_BYTES as f64 / (1024.0 * 1024.0);
     
     AudioCacheStats {
         count,
         memory_bytes,
         memory_mb,
+        max_cache_bytes: MAX_CACHE_SIZE_BYTES,
+        max_cache_mb,
     }
 }
 
@@ -428,6 +528,34 @@ pub fn get_audio_samples_binary<P: AsRef<Path>>(path: P) -> Result<Vec<u8>, Stri
     
     info!("Converted {} samples to {} bytes", decoded.samples.len(), bytes.len());
     Ok(bytes)
+}
+
+// Tauri command wrappers
+use tauri::command;
+
+#[command]
+pub fn get_audio_metadata_command(path: String) -> Result<AudioMetadata, String> {
+    get_audio_metadata(path)
+}
+
+#[command]
+pub fn get_audio_samples_binary_command(path: String) -> Result<Vec<u8>, String> {
+    get_audio_samples_binary(path)
+}
+
+#[command]
+pub fn clear_audio_cache_command() {
+    clear_audio_cache();
+}
+
+#[command]
+pub fn remove_from_cache_command(path: String) {
+    remove_from_cache(path);
+}
+
+#[command]
+pub fn get_cache_stats_command() -> AudioCacheStats {
+    get_cache_stats()
 }
 
 #[cfg(test)]

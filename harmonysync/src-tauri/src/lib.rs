@@ -128,6 +128,12 @@ pub fn run() {
             application::commands::start_http_server,
             application::commands::stop_http_server,
             application::commands::execute_macro,
+            // Audio decoder commands
+            application::audio_decoder::get_audio_metadata_command,
+            application::audio_decoder::get_audio_samples_binary_command,
+            application::audio_decoder::clear_audio_cache_command,
+            application::audio_decoder::remove_from_cache_command,
+            application::audio_decoder::get_cache_stats_command,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
