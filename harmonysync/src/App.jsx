@@ -85,6 +85,7 @@ async function handleImportPresentation() {
 const App = () => {
   const [allSlides, setAllSlides] = useState([]);
   const [allTracks, setAllTracks] = useState([]);
+  const [isLoadingTracks, setIsLoadingTracks] = useState(false);
   const [serviceOrder, setServiceOrder] = useState([]); // New state for service order
   const [selectedSlide, setSelectedSlide] = useState(null);
   const [isDisplaySettingsOpen, setIsDisplaySettingsOpen] = useState(false);
@@ -389,6 +390,7 @@ const App = () => {
           <SetlistManager 
             setAllSlides={setAllSlides} 
             setAllTracks={setAllTracks} 
+            setIsLoadingTracks={setIsLoadingTracks}
             serviceOrder={serviceOrder} 
             setServiceOrder={setServiceOrder} 
           />
@@ -425,7 +427,7 @@ const App = () => {
             className="bg-gray-800 border-t border-gray-700"
             style={{ height: `${multitrackHeight}px` }}
           >
-            <MultitrackPlayer allTracks={allTracks} />
+            <MultitrackPlayer allTracks={allTracks} isLoadingTracks={isLoadingTracks} />
           </div>
         </div>
       </div>

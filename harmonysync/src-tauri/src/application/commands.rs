@@ -17,6 +17,7 @@ use rand::Rng;
 
 // Import the new http_server module
 use super::http_server;
+use super::audio_decoder;
 
 // Global variable to hold the server shutdown sender
 static HTTP_SERVER_SHUTDOWN_TX: Lazy<Arc<Mutex<Option<oneshot::Sender<()>>>>> = // Changed type
