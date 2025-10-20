@@ -997,3 +997,239 @@ pub async fn execute_macro(app_handle: AppHandle, macro_id: String, macro_action
     }
 }
 
+#[command]
+pub async fn start_audio_service() -> Result<String, String> {
+    info!("Starting Node.js audio service...");
+    
+    // First check if the service is already running
+    match check_audio_service_status().await {
+        Ok(true) => {
+            info!("Audio service is already running");
+            return Ok("Audio service is already running".to_string());
+        }
+        Ok(false) => {
+            info!("Audio service is not running, starting new instance...");
+        }
+        Err(e) => {
+            info!("Could not check service status ({}), attempting to start...", e);
+        }
+    }
+    
+    // In development, use the project directory structure
+    // In production, we'll need to adjust this path
+    let audio_service_dir = if cfg!(debug_assertions) {
+        // Development mode: go from src-tauri to project root and then to audio service
+        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
+            .map_err(|_| "Failed to get manifest directory")?;
+        
+        info!("Manifest directory: {}", manifest_dir);
+        
+        // Navigate from harmonysync/src-tauri -> harmonysync -> RustPresenter -> harmonysync-audio-service
+        let manifest_path = std::path::PathBuf::from(manifest_dir);
+        let harmonysync_dir = manifest_path
+            .parent()  // from src-tauri to harmonysync
+            .ok_or("Failed to get harmonysync directory")?;
+        let project_root = harmonysync_dir
+            .parent()  // from harmonysync to RustPresenter
+            .ok_or("Failed to get project root")?;
+            
+        info!("Project root: {:?}", project_root);
+        
+        project_root.join("harmonysync-audio-service")
+    } else {
+        // Production mode: look relative to executable
+        let exe_path = std::env::current_exe()
+            .map_err(|e| format!("Failed to get executable path: {}", e))?;
+        
+        let exe_dir = exe_path.parent()
+            .ok_or("Failed to get executable directory")?;
+        
+        exe_dir.join("harmonysync-audio-service")
+    };
+    
+    info!("Looking for audio service at: {:?}", audio_service_dir);
+    
+    if !audio_service_dir.exists() {
+        return Err(format!("Audio service directory not found: {:?}", audio_service_dir));
+    }
+    
+    info!("Audio service directory: {:?}", audio_service_dir);
+    
+    // Check if Node.js is available
+    let node_check = Command::new("node")
+        .arg("--version")
+        .output()
+        .await;
+    
+    if node_check.is_err() {
+        return Err("Node.js is not installed or not in PATH".to_string());
+    }
+    
+    // Check if the server.js file exists
+    let server_js_path = audio_service_dir.join("server.js");
+    if !server_js_path.exists() {
+        return Err(format!("server.js not found at: {:?}", server_js_path));
+    }
+    
+    // Start the audio service
+    let mut child = Command::new("node")
+        .arg("server.js")
+        .current_dir(&audio_service_dir)
+        .spawn()
+        .map_err(|e| format!("Failed to start audio service: {}", e))?;
+    
+    // Give it a moment to start
+    tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
+    
+    // Check if the process is still running
+    match child.try_wait() {
+        Ok(Some(status)) => {
+            // Process exited, check if it was due to port conflict
+            if status.code() == Some(1) {
+                info!("Audio service failed to start, likely due to port conflict. Attempting cleanup...");
+                
+                // Try to kill any existing audio service processes
+                #[cfg(unix)]
+                {
+                    let _ = Command::new("pkill")
+                        .args(&["-f", "harmonysync-audio-service"])
+                        .output()
+                        .await;
+                    
+                    info!("Cleaned up potential conflicting processes, retrying...");
+                    tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+                    
+                    // Retry starting the service
+                    let mut retry_child = Command::new("node")
+                        .arg("server.js")
+                        .current_dir(&audio_service_dir)
+                        .spawn()
+                        .map_err(|e| format!("Failed to restart audio service: {}", e))?;
+                    
+                    tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
+                    
+                    match retry_child.try_wait() {
+                        Ok(Some(retry_status)) => {
+                            Err(format!("Audio service failed to start after cleanup. Status: {:?}", retry_status))
+                        }
+                        Ok(None) => {
+                            info!("Audio service started successfully after cleanup (PID: {})", retry_child.id().unwrap_or(0));
+                            std::mem::forget(retry_child);
+                            Ok("Audio service started successfully after cleanup".to_string())
+                        }
+                        Err(e) => {
+                            Err(format!("Failed to check retry service status: {}", e))
+                        }
+                    }
+                }
+                
+                #[cfg(not(unix))]
+                {
+                    Err(format!("Audio service exited immediately with status: {:?}. Try manually stopping any existing audio service.", status))
+                }
+            } else {
+                Err(format!("Audio service exited immediately with status: {:?}", status))
+            }
+        }
+        Ok(None) => {
+            // Process is still running, detach it
+            info!("Audio service started successfully (PID: {})", child.id().unwrap_or(0));
+            std::mem::forget(child); // Detach the process
+            Ok("Audio service started successfully".to_string())
+        }
+        Err(e) => {
+            Err(format!("Failed to check audio service status: {}", e))
+        }
+    }
+}
+
+#[command]
+pub async fn check_audio_service_status() -> Result<bool, String> {
+    // Try to connect to the audio service health endpoint
+    let client = reqwest::Client::new();
+    
+    match client
+        .get("http://localhost:3001/api/health")
+        .timeout(std::time::Duration::from_secs(3))
+        .send()
+        .await
+    {
+        Ok(response) => Ok(response.status().is_success()),
+        Err(_) => Ok(false), // Service is not running
+    }
+}
+
+#[command]
+pub async fn stop_audio_service() -> Result<String, String> {
+    info!("Stopping Node.js audio service...");
+    
+    // Try to gracefully shutdown the service via API first
+    let client = reqwest::Client::new();
+    
+    match client
+        .post("http://localhost:3001/api/shutdown")
+        .timeout(std::time::Duration::from_secs(5))
+        .send()
+        .await
+    {
+        Ok(response) => {
+            if response.status().is_success() {
+                info!("Audio service shutdown gracefully");
+                return Ok("Audio service stopped gracefully".to_string());
+            }
+        }
+        Err(e) => {
+            info!("Failed to shutdown audio service gracefully: {}", e);
+        }
+    }
+    
+    // If graceful shutdown failed, try to kill the process
+    info!("Attempting to kill audio service process...");
+    
+    #[cfg(unix)]
+    {
+        match Command::new("pkill")
+            .args(&["-f", "harmonysync-audio-service"])
+            .output()
+            .await
+        {
+            Ok(output) => {
+                if output.status.success() {
+                    info!("Audio service process killed successfully");
+                    Ok("Audio service stopped forcefully".to_string())
+                } else {
+                    info!("No audio service process found to kill");
+                    Ok("Audio service was not running".to_string())
+                }
+            }
+            Err(e) => {
+                error!("Failed to kill audio service process: {}", e);
+                Err(format!("Failed to stop audio service: {}", e))
+            }
+        }
+    }
+    
+    #[cfg(windows)]
+    {
+        match Command::new("taskkill")
+            .args(&["/F", "/IM", "node.exe", "/FI", "WINDOWTITLE eq harmonysync-audio-service*"])
+            .output()
+            .await
+        {
+            Ok(output) => {
+                if output.status.success() {
+                    info!("Audio service process killed successfully");
+                    Ok("Audio service stopped forcefully".to_string())
+                } else {
+                    info!("No audio service process found to kill");
+                    Ok("Audio service was not running".to_string())
+                }
+            }
+            Err(e) => {
+                error!("Failed to kill audio service process: {}", e);
+                Err(format!("Failed to stop audio service: {}", e))
+            }
+        }
+    }
+}
+
