@@ -9,7 +9,8 @@ import {
   SpeakerWaveIcon,
   ClipboardDocumentListIcon,
   BoltIcon,
-  PlayIcon
+  PlayIcon,
+  CalendarIcon
 } from '@heroicons/react/24/outline';
 
 import './styles/App.css';
@@ -23,6 +24,7 @@ import SlideManager from './components/slides/SlideManager.jsx';
 import MultitrackPlayer from './components/audio/MultitrackPlayer.jsx';
 import DisplaySettings from './components/screens/DisplaySettings.jsx';
 import PreserviceMusic from './components/screens/PreserviceMusic.jsx';
+import Scheduler from './components/screens/Scheduler.jsx';
 
 
 import { parseLyricsToSlides } from './utils/lyrics';
@@ -88,6 +90,7 @@ const App = () => {
   const [selectedSlide, setSelectedSlide] = useState(null);
   const [isDisplaySettingsOpen, setIsDisplaySettingsOpen] = useState(false);
   const [isPreserviceMusicOpen, setIsPreserviceMusicOpen] = useState(false);
+  const [isSchedulerOpen, setIsSchedulerOpen] = useState(false);
   const containerRef = useRef(null);
 
   // Resizable layout: Service Order sidebar and Multitrack panel
@@ -325,6 +328,22 @@ const App = () => {
     };
   }, []);
 
+  // Listen for preservice music events from scheduler
+  useEffect(() => {
+    const unlistenStart = Tauri.event.listen('start-preservice-music', () => {
+      setIsPreserviceMusicOpen(true);
+    });
+
+    const unlistenStop = Tauri.event.listen('stop-preservice-music', () => {
+      setIsPreserviceMusicOpen(false);
+    });
+
+    return () => {
+      unlistenStart.then(f => f());
+      unlistenStop.then(f => f());
+    };
+  }, []);
+
   return (
     <div className="h-screen w-screen bg-gray-900 text-gray-300 vscode-ui-font flex" ref={containerRef}>
       {/* VS Code Activity Bar */}
@@ -333,6 +352,11 @@ const App = () => {
           icon={<PresentationChartBarIcon className="w-8 h-8" />} 
           label="Service Order" 
           active={true}
+        />
+        <ActivityBarIcon 
+          icon={<CalendarIcon className="w-8 h-8" />} 
+          label="Scheduler" 
+          onClick={() => setIsSchedulerOpen(true)}
         />
         <ActivityBarIcon 
           icon={<PlayIcon className="w-8 h-8" />} 
@@ -418,6 +442,10 @@ const App = () => {
         onClose={() => setIsPreserviceMusicOpen(false)}
       />
 
+      <Scheduler
+        isOpen={isSchedulerOpen}
+        onClose={() => setIsSchedulerOpen(false)}
+      />
     </div>
   );
 };

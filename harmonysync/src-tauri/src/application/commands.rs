@@ -963,81 +963,38 @@ pub fn get_all_presentations(
 }
 */
 
-// ===== Audio Decoding Commands =====
-
-/// Decode an audio file and return the decoded samples
-#[tauri::command]
-pub async fn decode_audio_file(path: String) -> Result<audio_decoder::DecodedAudio, String> {
-    // Run decoding in a blocking task since Symphonia is CPU-intensive
-    tokio::task::spawn_blocking(move || {
-        audio_decoder::decode_audio_file(&path)
-    })
-    .await
-    .map_err(|e| format!("Task join error: {}", e))?
+#[command]
+pub async fn execute_macro(app_handle: AppHandle, macro_id: String, macro_action: String, midi_note: Option<u8>) -> Result<(), String> {
+    match macro_action.as_str() {
+        "start_preservice_music" => {
+            app_handle.emit_to("main", "start-preservice-music", ())
+                .map_err(|e| format!("Failed to emit start-preservice-music event: {}", e))?;
+            Ok(())
+        },
+        "stop_preservice_music" => {
+            app_handle.emit_to("main", "stop-preservice-music", ())
+                .map_err(|e| format!("Failed to emit stop-preservice-music event: {}", e))?;
+            Ok(())
+        },
+        "send_midi_note" => {
+            if let Some(note) = midi_note {
+                #[derive(Clone, serde::Serialize)]
+                struct MidiNotePayload {
+                    note: u8,
+                    velocity: u8,
+                }
+                
+                app_handle.emit_to("main", "send-midi-note", MidiNotePayload {
+                    note,
+                    velocity: 127,
+                })
+                .map_err(|e| format!("Failed to emit send-midi-note event: {}", e))?;
+                Ok(())
+            } else {
+                Err("MIDI note value is required for send_midi_note action".to_string())
+            }
+        },
+        _ => Err(format!("Unknown macro action: {}", macro_action))
+    }
 }
 
-/// Get audio from cache or decode it if not cached
-#[tauri::command]
-pub async fn get_or_decode_audio(path: String) -> Result<audio_decoder::DecodedAudio, String> {
-    let start_time = std::time::Instant::now();
-    
-    let result = tokio::task::spawn_blocking(move || -> Result<audio_decoder::DecodedAudio, String> {
-        let arc_decoded = audio_decoder::get_or_decode_audio(&path)?;
-        // Clone the Arc's inner data to return
-        let clone_start = std::time::Instant::now();
-        let decoded = (*arc_decoded).clone();
-        info!("[Tauri] Clone took {:.2}ms", clone_start.elapsed().as_secs_f64() * 1000.0);
-        Ok(decoded)
-    })
-    .await
-    .map_err(|e| format!("Task join error: {}", e))??;
-    
-    info!("[Tauri] Total command time: {:.2}ms", start_time.elapsed().as_secs_f64() * 1000.0);
-    Ok(result)
-}
-
-/// Get audio metadata only (fast, small transfer)
-#[tauri::command]
-pub async fn get_audio_metadata(path: String) -> Result<audio_decoder::AudioMetadata, String> {
-    tokio::task::spawn_blocking(move || {
-        audio_decoder::get_audio_metadata(&path)
-    })
-    .await
-    .map_err(|e| format!("Task join error: {}", e))?
-}
-
-/// Get audio samples as binary data (fast binary transfer)
-#[tauri::command]
-pub async fn get_audio_samples_binary(path: String) -> Result<Vec<u8>, String> {
-    let start_time = std::time::Instant::now();
-    
-    let result = tokio::task::spawn_blocking(move || -> Result<Vec<u8>, String> {
-        audio_decoder::get_audio_samples_binary(&path)
-    })
-    .await
-    .map_err(|e| format!("Task join error: {}", e))??;
-    
-    info!("[Tauri] Binary transfer time: {:.2}ms, {} bytes", 
-          start_time.elapsed().as_secs_f64() * 1000.0,
-          result.len());
-    
-    Ok(result)
-}
-
-/// Clear the audio cache
-#[tauri::command]
-pub fn clear_audio_cache() {
-    audio_decoder::clear_audio_cache();
-}
-
-/// Remove a specific file from the audio cache
-#[tauri::command]
-pub fn remove_from_audio_cache(path: String) {
-    audio_decoder::remove_from_cache(&path);
-}
-
-/// Get audio cache statistics
-#[tauri::command]
-pub fn get_audio_cache_stats() -> audio_decoder::AudioCacheStats {
-    audio_decoder::get_cache_stats()
-}
