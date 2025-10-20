@@ -569,5 +569,56 @@ mod tests {
         let stats = get_cache_stats();
         assert_eq!(stats.count, 0);
         assert_eq!(stats.memory_bytes, 0);
+        assert_eq!(stats.max_cache_bytes, MAX_CACHE_SIZE_BYTES);
+    }
+
+    #[test]
+    fn test_cache_entry_memory_size() {
+        // Create a test audio buffer
+        let samples = vec![0.0f32; 44100 * 2 * 10]; // 10 seconds stereo at 44.1kHz
+        let decoded = Arc::new(DecodedAudio {
+            samples: samples.clone(),
+            channels: 2,
+            sample_rate: 44100,
+            duration: 10.0,
+            path: "/test/audio.wav".to_string(),
+        });
+        
+        let entry = CacheEntry::new(decoded);
+        let size = entry.memory_size();
+        
+        // Verify size calculation
+        let expected_samples_size = samples.len() * std::mem::size_of::<f32>();
+        assert!(size >= expected_samples_size);
+    }
+
+    #[test]
+    fn test_cache_entry_touch() {
+        let decoded = Arc::new(DecodedAudio {
+            samples: vec![0.0; 100],
+            channels: 2,
+            sample_rate: 44100,
+            duration: 1.0,
+            path: "/test/audio.wav".to_string(),
+        });
+        
+        let entry = CacheEntry::new(decoded);
+        let first_access = entry.last_access_time();
+        
+        // Wait a bit and touch
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        entry.touch();
+        
+        let second_access = entry.last_access_time();
+        assert!(second_access > first_access);
+    }
+
+    #[test]
+    fn test_cache_stats_with_limit() {
+        clear_audio_cache();
+        
+        let stats = get_cache_stats();
+        assert_eq!(stats.count, 0);
+        assert_eq!(stats.max_cache_mb, MAX_CACHE_SIZE_BYTES as f64 / (1024.0 * 1024.0));
     }
 }
