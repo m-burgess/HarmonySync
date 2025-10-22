@@ -31,21 +31,4 @@ pub fn create_dir_if_not_exists(path: &Path) -> Result<(), String> {
     Ok(())
 }
 
-pub fn copy_directory(from: &Path, to: &Path) -> Result<usize, String> {
-    let mut count = 0;
-    create_dir_if_not_exists(to)?;
 
-    for entry in std::fs::read_dir(from).map_err(|e| e.to_string())? {
-        let entry = entry.map_err(|e| e.to_string())?;
-        let path = entry.path();
-        let dest_path = to.join(path.file_name().unwrap());
-
-        if path.is_dir() {
-            count += copy_directory(&path, &dest_path)?;
-        } else {
-            fs::copy(&path, &dest_path).map_err(|e| e.to_string())?;
-            count += 1;
-        }
-    }
-    Ok(count)
-}
