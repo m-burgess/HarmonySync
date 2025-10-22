@@ -1,9 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as Tauri from '@tauri-apps/api';
-import * as TauriDialog from '@tauri-apps/plugin-dialog';
-import * as TauriCore from '@tauri-apps/api/core';
 import { 
-  MusicalNoteIcon, 
   PresentationChartBarIcon, 
   CogIcon,
   SpeakerWaveIcon,
@@ -25,60 +22,8 @@ import MultitrackPlayer from './components/audio/MultitrackPlayer.jsx';
 import DisplaySettings from './components/screens/DisplaySettings.jsx';
 
 
-import { parseLyricsToSlides } from './utils/lyrics';
-import { getTracks, cleanupAudio, initializeAudioService } from './utils/audio';
 
 
-// This function lets the user select a folder and then calls the backend to import it.
-async function handleImportSong() {
-  try {
-    // Open a dialog for the user to select a directory.
-    const selectedPath = await TauriDialog.open({
-      directory: true,
-      multiple: false,
-      title: 'Select Song Folder',
-    });
-
-    if (typeof selectedPath === 'string') {
-      // If a folder was selected, call the import command.
-      console.log(`Importing song from: ${selectedPath}`);
-      await TauriCore.invoke('import_song_folder', {
-        folderPath: selectedPath,
-      });
-      alert('Song imported successfully!');
-    } else {
-      // The user cancelled the dialog.
-      console.log('Folder selection cancelled.');
-    }
-  } catch (error) {
-    console.error('Failed to import song:', error);
-    alert(`Error: ${error}`);
-  }
-}
-
-async function handleImportPresentation() {
-    try {
-        const selectedPath = await TauriDialog.open({
-            directory: true,
-            multiple: false,
-            title: 'Select Presentation Folder',
-        });
-
-        if (typeof selectedPath === 'string') {
-            console.log(`Importing presentation from: ${selectedPath}`);
-            await TauriCore.invoke('import_presentation_folder', {
-                sourceFolderPath: selectedPath,
-                category: 'presentation',
-            });
-            alert('Presentation imported successfully!');
-        } else {
-            console.log('Folder selection cancelled.');
-        }
-    } catch (error) {
-        console.error('Failed to import presentation:', error);
-        alert(`Error: ${error}`);
-    }
-}
 
 const App = () => {
   const [allSlides, setAllSlides] = useState([]);
@@ -264,32 +209,7 @@ const App = () => {
     localStorage.removeItem('rp_multitrackHeight');
   };
 
-  // Direct import handlers (no library dependency)
-  const handleDirectImport = async (type) => {
-    try {
-      if (type === 'song') {
-        await handleImportSong();
-        // Add to service order directly
-        addToServiceOrder({
-          type: 'song',
-          name: 'Imported Song',
-          slides: [],
-          tracks: []
-        });
-      } else if (type === 'presentation') {
-        await handleImportPresentation();
-        // Add to service order directly
-        addToServiceOrder({
-          type: 'presentation', 
-          name: 'Imported Presentation',
-          slides: [],
-          tracks: []
-        });
-      }
-    } catch (error) {
-      console.error('Import failed:', error);
-    }
-  };
+
 
   // Listen for display settings menu event
   useEffect(() => {
@@ -302,16 +222,7 @@ const App = () => {
     };
   }, []);
 
-  // Listen for presentation imported event to trigger library refresh
-  useEffect(() => {
-    const unlisten = Tauri.event.listen('presentation-imported', () => {
-        setPresentationImportedTrigger(prev => prev + 1);
-    });
 
-    return () => {
-        unlisten.then(f => f());
-    };
-  }, []);
 
   // Listen for display settings menu event
   useEffect(() => {
@@ -380,16 +291,7 @@ const App = () => {
             }
           }}
         />
-        <ActivityBarIcon 
-          icon={<MusicalNoteIcon className="w-8 h-8" />} 
-          label="Import Song" 
-          onClick={() => handleDirectImport('song')}
-        />
-        <ActivityBarIcon 
-          icon={<PresentationChartBarIcon className="w-8 h-8" />} 
-          label="Import Presentation" 
-          onClick={() => handleDirectImport('presentation')}
-        />
+
         <ActivityBarIcon 
           icon={<CogIcon className="w-8 h-8" />} 
           label="Settings" 
