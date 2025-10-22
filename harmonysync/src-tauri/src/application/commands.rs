@@ -1031,3 +1031,166 @@ pub async fn close_preservice_music_window(app_handle: AppHandle) -> Result<(), 
     Ok(())
 }
 
+#[derive(Clone, serde::Serialize)]
+struct TransposeProgressPayload {
+    current_file: String,
+    total_files: usize,
+    completed_files: usize,
+    message: String,
+}
+
+#[command]
+pub async fn transpose_audio_files(
+    app_handle: AppHandle,
+    directory: String,
+    semitones: i32,
+) -> Result<String, String> {
+    info!("🎵 Transposing audio files in directory: {}, semitones: {}", directory, semitones);
+    
+    // Read directory entries
+    let dir_path = Path::new(&directory);
+    let entries = fs::read_dir(dir_path)
+        .map_err(|e| format!("Failed to read directory: {}", e))?;
+    
+    // Filter audio files and identify files to exclude from transposition
+    let mut audio_files = Vec::new();
+    let mut files_to_copy = Vec::new();
+    
+    for entry in entries {
+        let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+        let path = entry.path();
+        
+        if !path.is_file() {
+            continue;
+        }
+        
+        let file_name = path.file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("");
+        
+        // Check if it's an audio file
+        let is_audio = file_name.ends_with(".mp3") || 
+                      file_name.ends_with(".wav") || 
+                      file_name.ends_with(".ogg") ||
+                      file_name.ends_with(".m4a") ||
+                      file_name.ends_with(".flac");
+        
+        if !is_audio {
+            continue;
+        }
+        
+        // Check if file should be excluded from transposition
+        let name_lower = file_name.to_lowercase();
+        let should_exclude = name_lower.contains("guide") ||
+                            name_lower.contains("click") ||
+                            name_lower.contains("drums") ||
+                            name_lower.contains("percussion") ||
+                            name_lower.contains("shakers");
+        
+        if should_exclude {
+            files_to_copy.push(path);
+        } else {
+            audio_files.push(path);
+        }
+    }
+    
+    info!("📁 Found {} audio files to transpose, {} files to copy", audio_files.len(), files_to_copy.len());
+    
+    // Create output directory with semitone notation
+    let dir_name = dir_path.file_name()
+        .and_then(|n| n.to_str())
+        .ok_or("Invalid directory name")?;
+    
+    let parent_dir = dir_path.parent()
+        .ok_or("Directory has no parent")?;
+    
+    let sign = if semitones >= 0 { "+" } else { "" };
+    let output_dir_name = format!("{} {} {} semitones", dir_name, sign, semitones);
+    let output_dir = parent_dir.join(&output_dir_name);
+    
+    // Create output directory
+    fs::create_dir_all(&output_dir)
+        .map_err(|e| format!("Failed to create output directory: {}", e))?;
+    
+    info!("📂 Created output directory: {:?}", output_dir);
+    
+    let total_files = audio_files.len() + files_to_copy.len();
+    let mut completed_files = 0;
+    
+    // Copy excluded files
+    for file_path in &files_to_copy {
+        let file_name = file_path.file_name()
+            .and_then(|n| n.to_str())
+            .ok_or("Invalid file name")?;
+        
+        let output_path = output_dir.join(file_name);
+        
+        app_handle.emit("transpose-progress", TransposeProgressPayload {
+            current_file: file_name.to_string(),
+            total_files,
+            completed_files,
+            message: format!("Copying {} (excluded from transposition)", file_name),
+        }).map_err(|e| format!("Failed to emit progress: {}", e))?;
+        
+        fs::copy(file_path, &output_path)
+            .map_err(|e| format!("Failed to copy file {}: {}", file_name, e))?;
+        
+        completed_files += 1;
+        info!("📋 Copied: {}", file_name);
+    }
+    
+    // Transpose audio files using ffmpeg
+    for file_path in &audio_files {
+        let file_name = file_path.file_name()
+            .and_then(|n| n.to_str())
+            .ok_or("Invalid file name")?;
+        
+        let output_path = output_dir.join(file_name);
+        
+        app_handle.emit("transpose-progress", TransposeProgressPayload {
+            current_file: file_name.to_string(),
+            total_files,
+            completed_files,
+            message: format!("Transposing {}", file_name),
+        }).map_err(|e| format!("Failed to emit progress: {}", e))?;
+        
+        // Use ffmpeg to transpose the audio
+        // The asetrate filter speeds up/slows down, and atempo compensates to maintain duration
+        // Formula: for N semitones, multiply rate by 2^(N/12)
+        let rate_multiplier = 2.0_f64.powf(semitones as f64 / 12.0);
+        let rate = (48000.0 * rate_multiplier) as u32;
+        
+        let mut command = Command::new("ffmpeg");
+        command
+            .arg("-i")
+            .arg(file_path.to_str().unwrap())
+            .arg("-af")
+            .arg(format!("asetrate={},aresample=48000,atempo={}", rate, 1.0 / rate_multiplier))
+            .arg("-y") // Overwrite output file
+            .arg(output_path.to_str().unwrap())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null());
+        
+        let status = command.status().await
+            .map_err(|e| format!("Failed to execute ffmpeg: {}", e))?;
+        
+        if !status.success() {
+            return Err(format!("ffmpeg failed to transpose {}", file_name));
+        }
+        
+        completed_files += 1;
+        info!("✅ Transposed: {}", file_name);
+    }
+    
+    app_handle.emit("transpose-progress", TransposeProgressPayload {
+        current_file: String::new(),
+        total_files,
+        completed_files,
+        message: "Transposition complete!".to_string(),
+    }).map_err(|e| format!("Failed to emit progress: {}", e))?;
+    
+    info!("✅ Transposition complete. Output directory: {:?}", output_dir);
+    
+    Ok(output_dir.to_str().unwrap().to_string())
+}
+
