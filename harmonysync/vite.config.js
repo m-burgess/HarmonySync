@@ -22,6 +22,8 @@ export default defineConfig({
                 audience: 'audience.html',
                 confidence: 'confidence.html',
                 lowerthirds: 'lowerthirds.html',
+                'preservice-music': 'preservice-music.html',
+                scheduler: 'scheduler.html',
               },
     },
   },

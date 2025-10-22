@@ -23,8 +23,6 @@ import SetlistManager from './components/setlist/SetlistManager.jsx';
 import SlideManager from './components/slides/SlideManager.jsx';
 import MultitrackPlayer from './components/audio/MultitrackPlayer.jsx';
 import DisplaySettings from './components/screens/DisplaySettings.jsx';
-import PreserviceMusic from './components/screens/PreserviceMusic.jsx';
-import Scheduler from './components/screens/Scheduler.jsx';
 
 
 import { parseLyricsToSlides } from './utils/lyrics';
@@ -89,8 +87,6 @@ const App = () => {
   const [serviceOrder, setServiceOrder] = useState([]); // New state for service order
   const [selectedSlide, setSelectedSlide] = useState(null);
   const [isDisplaySettingsOpen, setIsDisplaySettingsOpen] = useState(false);
-  const [isPreserviceMusicOpen, setIsPreserviceMusicOpen] = useState(false);
-  const [isSchedulerOpen, setIsSchedulerOpen] = useState(false);
   const containerRef = useRef(null);
 
   // Resizable layout: Service Order sidebar and Multitrack panel
@@ -330,12 +326,21 @@ const App = () => {
 
   // Listen for preservice music events from scheduler
   useEffect(() => {
-    const unlistenStart = Tauri.event.listen('start-preservice-music', () => {
-      setIsPreserviceMusicOpen(true);
+    const unlistenStart = Tauri.event.listen('start-preservice-music', async () => {
+      try {
+        await TauriCore.invoke('open_preservice_music_window');
+      } catch (error) {
+        console.error('Failed to open pre-service music window:', error);
+      }
     });
 
-    const unlistenStop = Tauri.event.listen('stop-preservice-music', () => {
-      setIsPreserviceMusicOpen(false);
+    const unlistenStop = Tauri.event.listen('stop-preservice-music', async () => {
+      // Close the preservice music window if it's open
+      try {
+        await TauriCore.invoke('close_preservice_music_window');
+      } catch (error) {
+        console.error('Failed to close pre-service music window:', error);
+      }
     });
 
     return () => {
@@ -356,12 +361,24 @@ const App = () => {
         <ActivityBarIcon 
           icon={<CalendarIcon className="w-8 h-8" />} 
           label="Scheduler" 
-          onClick={() => setIsSchedulerOpen(true)}
+          onClick={async () => {
+            try {
+              await TauriCore.invoke('open_scheduler_window');
+            } catch (error) {
+              console.error('Failed to open scheduler window:', error);
+            }
+          }}
         />
         <ActivityBarIcon 
           icon={<PlayIcon className="w-8 h-8" />} 
           label="Pre-Service Music" 
-          onClick={() => setIsPreserviceMusicOpen(true)}
+          onClick={async () => {
+            try {
+              await TauriCore.invoke('open_preservice_music_window');
+            } catch (error) {
+              console.error('Failed to open pre-service music window:', error);
+            }
+          }}
         />
         <ActivityBarIcon 
           icon={<MusicalNoteIcon className="w-8 h-8" />} 
@@ -435,16 +452,6 @@ const App = () => {
       <DisplaySettings
         isOpen={isDisplaySettingsOpen}
         onClose={() => setIsDisplaySettingsOpen(false)}
-      />
-
-      <PreserviceMusic
-        isOpen={isPreserviceMusicOpen}
-        onClose={() => setIsPreserviceMusicOpen(false)}
-      />
-
-      <Scheduler
-        isOpen={isSchedulerOpen}
-        onClose={() => setIsSchedulerOpen(false)}
       />
     </div>
   );

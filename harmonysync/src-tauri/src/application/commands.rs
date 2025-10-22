@@ -1233,3 +1233,75 @@ pub async fn stop_audio_service() -> Result<String, String> {
     }
 }
 
+#[command]
+pub async fn open_preservice_music_window(app_handle: AppHandle) -> Result<(), String> {
+    use tauri::{WebviewUrl, WebviewWindowBuilder};
+    
+    // Check if window already exists
+    if let Some(window) = app_handle.get_webview_window("preservice-music") {
+        // If it exists, just focus it
+        window.set_focus().map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+    
+    // Get main window position to open near it
+    let main_window = app_handle.get_webview_window("main")
+        .ok_or("Main window not found")?;
+    let main_position = main_window.outer_position().map_err(|e| e.to_string())?;
+    
+    // Create new window
+    let window = WebviewWindowBuilder::new(
+        &app_handle,
+        "preservice-music",
+        WebviewUrl::App("preservice-music.html".into())
+    )
+    .title("Pre-Service Music")
+    .inner_size(900.0, 600.0)
+    .resizable(true)
+    .position(main_position.x as f64 + 50.0, main_position.y as f64 + 50.0)
+    .build()
+    .map_err(|e| e.to_string())?;
+    
+    Ok(())
+}
+
+#[command]
+pub async fn open_scheduler_window(app_handle: AppHandle) -> Result<(), String> {
+    use tauri::{WebviewUrl, WebviewWindowBuilder};
+    
+    // Check if window already exists
+    if let Some(window) = app_handle.get_webview_window("scheduler") {
+        // If it exists, just focus it
+        window.set_focus().map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+    
+    // Get main window position to open near it
+    let main_window = app_handle.get_webview_window("main")
+        .ok_or("Main window not found")?;
+    let main_position = main_window.outer_position().map_err(|e| e.to_string())?;
+    
+    // Create new window
+    let window = WebviewWindowBuilder::new(
+        &app_handle,
+        "scheduler",
+        WebviewUrl::App("scheduler.html".into())
+    )
+    .title("Scheduler")
+    .inner_size(850.0, 700.0)
+    .resizable(true)
+    .position(main_position.x as f64 + 50.0, main_position.y as f64 + 50.0)
+    .build()
+    .map_err(|e| e.to_string())?;
+    
+    Ok(())
+}
+
+#[command]
+pub async fn close_preservice_music_window(app_handle: AppHandle) -> Result<(), String> {
+    if let Some(window) = app_handle.get_webview_window("preservice-music") {
+        window.close().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
