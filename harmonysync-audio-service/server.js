@@ -147,8 +147,12 @@ class AudioTrack {
             try {
                 const mpvVolume = this.volume * 100;
                 const command = `{ "command": ["set_property", "volume", ${mpvVolume}] }\n`;
-                this.audioProcess.stdin.write(command);
-                console.log(`🎚️ Applied volume=${this.volume} (mpv=${mpvVolume}) to track: ${this.name}`);
+                if (this.audioProcess.stdin && this.audioProcess.stdin.writable) {
+                    this.audioProcess.stdin.write(command);
+                    console.log(`🎚️ Applied volume=${this.volume} (mpv=${mpvVolume}) to track: ${this.name}`);
+                } else {
+                    console.log(`⚠️ Cannot apply volume to ${this.name}: stdin not writable`);
+                }
             } catch (error) {
                 console.error(`❌ Failed to apply volume to track ${this.name}:`, error.message);
             }
@@ -161,12 +165,14 @@ class AudioTrack {
         // Apply pan to running mpv process
         if (this.audioProcess && !this.audioProcess.killed) {
             try {
-                // Convert pan (-1 to 1) to mpv balance (-1 to 1)
-                const balance = pan;
-                const command = `{ "command": ["set_property", "balance", ${balance}] }\n`;
+                // Convert pan (-1 to 1) to mpv audio-balance (-1 to 1)
+                const audioBalance = pan;
+                const command = `{ "command": ["set_property", "audio-balance", ${audioBalance}] }\n`;
                 if (this.audioProcess.stdin && this.audioProcess.stdin.writable) {
                     this.audioProcess.stdin.write(command);
-                    console.log(`🎛️ Applied pan=${pan} (balance=${balance}) to track: ${this.name}`);
+                    console.log(`🎛️ Applied pan=${pan} (audio-balance=${audioBalance}) to track: ${this.name}`);
+                } else {
+                    console.log(`⚠️ Cannot apply pan to ${this.name}: stdin not writable`);
                 }
             } catch (error) {
                 console.error(`❌ Failed to apply pan to track ${this.name}:`, error.message);
@@ -188,6 +194,8 @@ class AudioTrack {
                 if (this.audioProcess.stdin && this.audioProcess.stdin.writable) {
                     this.audioProcess.stdin.write(command);
                     console.log(`🔇 Applied mute=${muted} (volume=${volume}) to track: ${this.name}`);
+                } else {
+                    console.log(`⚠️ Cannot apply mute to ${this.name}: stdin not writable`);
                 }
             } catch (error) {
                 console.error(`❌ Failed to apply mute to track ${this.name}:`, error.message);
@@ -395,18 +403,29 @@ class AudioMixer {
         return new Promise((resolve, reject) => {
             try {
                 const playerCmd = 'mpv';
+                
+                // Calculate initial volume based on mute state
+                const initialVolume = track.isMuted ? 0 : Math.round(track.volume * 100);
+                
+                // Calculate audio balance from pan (-1 to 1)
+                const audioBalance = track.pan || 0;
+                
                 const playerArgs = [
                     '--no-video',
                     '--keep-open=no',
                     '--really-quiet',
-                    '--volume=' + Math.round(track.volume * 100),
+                    '--volume=' + initialVolume,
+                    '--audio-balance=' + audioBalance,  // Apply pan at startup
                     '--audio-channels=stereo',
                     '--audio-device=auto',
                     '--ao=pulse,alsa,oss',  // Try multiple audio outputs
                     '--gapless-audio=yes',
                     '--input-terminal=no',  // Disable terminal input
                     '--input-default-bindings=no',  // Disable default key bindings
+                    '--input-ipc-server=/tmp/mpv-socket-' + track.id,  // Enable IPC for runtime control
                 ];
+                
+                console.log(`🎛️ Starting track ${track.name} with volume=${initialVolume}, pan=${audioBalance}, muted=${track.isMuted}`);
                 
                 // Master clock gets priority and real-time scheduling
                 if (isMaster) {
