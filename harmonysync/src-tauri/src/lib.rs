@@ -23,30 +23,13 @@ pub fn run() {
         .setup(|app| {
             let handle = app.handle();
 
-            // Create the 'Song' item with a specific ID
-            let song_item = MenuItem::with_id(handle, "import-song", "Song", true, Some("CmdOrCtrl+Shift+I"))?;
-            let presentation_item = MenuItem::with_id(handle, "import-presentation", "Presentation", true, None as Option<&str>)?;
-
-            // Create the 'Import' submenu
-            let import_submenu = Submenu::with_items(
-                handle,
-                "Import",
-                true,
-                &[&song_item, &presentation_item],
-            )?;
-
             // Create the 'File' menu
-            let separator = PredefinedMenuItem::separator(handle)?;
             let close_item = PredefinedMenuItem::close_window(handle, None)?;
             let file_submenu = Submenu::with_items(
                 handle,
                 "File",
                 true,
-                &[
-                    &import_submenu,
-                    &separator,
-                    &close_item,
-                ],
+                &[&close_item],
             )?;
 
             // Create the 'Settings' menu
@@ -71,16 +54,6 @@ pub fn run() {
         })
         .on_menu_event(|app, event| {
             match event.id().0.as_str() {
-                "import-song" => {
-                    if let Err(e) = app.emit("import-song-clicked", ()) {
-                        eprintln!("Failed to emit import-song-clicked event: {}", e);
-                    }
-                }
-                "import-presentation" => {
-                    if let Err(e) = app.emit("import-presentation-clicked", ()) {
-                        eprintln!("Failed to emit import-presentation-clicked event: {}", e);
-                    }
-                }
                 "display-settings" => {
                     if let Err(e) = app.emit("display-settings-clicked", ()) {
                         eprintln!("Failed to emit display-settings-clicked event: {}", e);
