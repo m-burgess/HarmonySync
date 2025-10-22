@@ -11,10 +11,15 @@ import {
   cleanupAudio,
   getServiceChecker,
   startAudioServiceFromApp,
-  checkAudioServiceStatusFromApp
+  checkAudioServiceStatusFromApp,
+  clearTracks,
+  addTracks
 } from '../../utils/audio';
 import TrackControl from './TrackControl.jsx';
-import { PlayIcon, PauseIcon, BackwardIcon, RocketLaunchIcon } from '@heroicons/react/24/solid';
+import TransposeModal from './TransposeModal.jsx';
+import { PlayIcon, PauseIcon, BackwardIcon, RocketLaunchIcon, ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/solid';
+import * as TauriCore from '@tauri-apps/api/core';
+import * as TauriEvent from '@tauri-apps/api/event';
 
 const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
   const [globalVolume, setGlobalVolumeState] = useState(1);
@@ -22,10 +27,29 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
   const [memoryUsage, setMemoryUsage] = useState(null);
   const [serviceError, setServiceError] = useState(null);
   const [isStartingService, setIsStartingService] = useState(false);
+  const [currentDirectory, setCurrentDirectory] = useState(null);
+  
+  // Transpose modal state
+  const [isTransposeModalOpen, setIsTransposeModalOpen] = useState(false);
+  const [transposeProgress, setTransposeProgress] = useState({
+    currentFile: '',
+    totalFiles: 0,
+    completedFiles: 0,
+    message: '',
+  });
 
   // Initialize audio service on component mount
   useEffect(() => {
     console.log('[MultitrackPlayer] allTracks prop:', allTracks);
+    
+    // Update current directory based on loaded tracks
+    if (allTracks.length > 0 && allTracks[0].path) {
+      const trackPath = allTracks[0].path;
+      // Extract directory from file path
+      const dirPath = trackPath.substring(0, trackPath.lastIndexOf('/'));
+      setCurrentDirectory(dirPath);
+      console.log('[MultitrackPlayer] Current directory:', dirPath);
+    }
     
     const initAudio = async () => {
       try {
@@ -55,7 +79,7 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
     return () => {
       cleanupAudio();
     };
-  }, []);
+  }, [allTracks]);
 
   // Update memory usage periodically
   useEffect(() => {
@@ -75,6 +99,31 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
   useEffect(() => {
     console.log('[MultitrackPlayer] allTracks prop:', allTracks);
   }, [allTracks]);
+
+  // Listen for transpose progress events
+  useEffect(() => {
+    let unlisten;
+    
+    const setupListener = async () => {
+      unlisten = await TauriEvent.listen('transpose-progress', (event) => {
+        console.log('Transpose progress:', event.payload);
+        setTransposeProgress({
+          currentFile: event.payload.current_file || '',
+          totalFiles: event.payload.total_files || 0,
+          completedFiles: event.payload.completed_files || 0,
+          message: event.payload.message || '',
+        });
+      });
+    };
+    
+    setupListener();
+    
+    return () => {
+      if (unlisten) {
+        unlisten.then(fn => fn());
+      }
+    };
+  }, []);
 
   const handleVolumeChange = (e) => {
     const newVolume = parseFloat(e.target.value);
@@ -142,6 +191,113 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
     } finally {
       setIsStartingService(false);
     }
+  };
+
+  const handleTranspose = async (semitones) => {
+    if (!currentDirectory) {
+      console.error('No directory loaded to transpose');
+      alert('Please load audio files first before transposing');
+      return;
+    }
+
+    if (allTracks.length === 0) {
+      console.error('No tracks loaded');
+      alert('No tracks loaded to transpose');
+      return;
+    }
+
+    console.log(`🎵 Starting transposition: ${semitones} semitones`);
+    setIsTransposeModalOpen(true);
+    setTransposeProgress({
+      currentFile: '',
+      totalFiles: 0,
+      completedFiles: 0,
+      message: 'Starting transposition...',
+    });
+
+    try {
+      // Call the Rust command to transpose files
+      const outputDir = await TauriCore.invoke('transpose_audio_files', {
+        directory: currentDirectory,
+        semitones: semitones,
+      });
+
+      console.log('✅ Transposition complete! Output directory:', outputDir);
+      
+      // Stop current audio and clear tracks
+      stopAllAudio();
+      await clearTracks();
+      
+      // Load the new transposed tracks
+      console.log('🔄 Loading transposed tracks from:', outputDir);
+      
+      // Read the new directory to get track paths
+      const fs = await import('@tauri-apps/plugin-fs');
+      const entries = await fs.readDir(outputDir, { recursive: false });
+      const audioFiles = entries
+        .filter(e => e.children === undefined && (
+          e.name.endsWith('.mp3') || 
+          e.name.endsWith('.wav') || 
+          e.name.endsWith('.ogg') ||
+          e.name.endsWith('.m4a') ||
+          e.name.endsWith('.flac')
+        ))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      
+      const trackPaths = audioFiles.map(f => `${outputDir}/${f.name}`);
+      
+      // Add the new tracks
+      const results = await addTracks(trackPaths);
+      
+      // Update the tracks in the UI
+      const loadedTracks = results
+        .filter(result => result.success)
+        .map((result, index) => {
+          const audioFile = audioFiles.find(f => `${outputDir}/${f.name}` === result.path);
+          return {
+            id: result.trackId,
+            path: result.path,
+            name: audioFile?.name || 'Unknown Track',
+            panValue: 0,
+            isMuted: false,
+            isPlaying: false,
+            individualVolume: 0.7,
+          };
+        });
+      
+      // Emit event to update tracks in parent component
+      // Since we can't directly call setAllTracks from parent, we'll emit an event
+      TauriEvent.emit('tracks-updated', loadedTracks);
+      
+      // Update current directory
+      setCurrentDirectory(outputDir);
+      
+      setTransposeProgress(prev => ({
+        ...prev,
+        message: 'Transposition complete! New tracks loaded.',
+      }));
+      
+    } catch (error) {
+      console.error('❌ Failed to transpose audio files:', error);
+      setTransposeProgress(prev => ({
+        ...prev,
+        message: `Error: ${error}`,
+      }));
+      alert(`Failed to transpose audio files: ${error}`);
+    }
+  };
+
+  const handleTransposeUp = () => handleTranspose(1);
+  const handleTransposeDown = () => handleTranspose(-1);
+
+  const handleCloseTransposeModal = () => {
+    setIsTransposeModalOpen(false);
+    setTransposeProgress({
+      currentFile: '',
+      totalFiles: 0,
+      completedFiles: 0,
+      message: '',
+    });
   };
 
   return (
@@ -215,6 +371,29 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
           <BackwardIcon className="w-5 h-5 text-primary" />
         </button>
 
+        {/* Transpose buttons */}
+        <div className="flex items-center gap-1 ml-3">
+          <button 
+            aria-label="Transpose up" 
+            title="Transpose Up (1 semitone)" 
+            className="p-2 bg-green-700 hover:bg-green-600 rounded-md text-white disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
+            onClick={handleTransposeUp}
+            disabled={allTracks.length === 0 || !currentDirectory}
+          >
+            <ArrowUpIcon className="w-5 h-5" />
+          </button>
+
+          <button 
+            aria-label="Transpose down" 
+            title="Transpose Down (1 semitone)" 
+            className="p-2 bg-red-700 hover:bg-red-600 rounded-md text-white disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
+            onClick={handleTransposeDown}
+            disabled={allTracks.length === 0 || !currentDirectory}
+          >
+            <ArrowDownIcon className="w-5 h-5" />
+          </button>
+        </div>
+
         <div className="ml-auto flex items-center gap-2">
           <input
             type="range"
@@ -229,6 +408,16 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
           <label htmlFor="volume-slider" className="text-sm text-muted">Volume</label>
         </div>
       </div>
+
+      {/* Transpose Modal */}
+      <TransposeModal
+        isOpen={isTransposeModalOpen}
+        currentFile={transposeProgress.currentFile}
+        totalFiles={transposeProgress.totalFiles}
+        completedFiles={transposeProgress.completedFiles}
+        message={transposeProgress.message}
+        onClose={handleCloseTransposeModal}
+      />
 
       {isLoadingTracks ? (
         <div className="flex items-center justify-center py-8 text-muted">
