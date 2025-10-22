@@ -1155,17 +1155,28 @@ pub async fn transpose_audio_files(
         }).map_err(|e| format!("Failed to emit progress: {}", e))?;
         
         // Use ffmpeg to transpose the audio
-        // The asetrate filter speeds up/slows down, and atempo compensates to maintain duration
-        // Formula: for N semitones, multiply rate by 2^(N/12)
+        // We use the asetrate filter to change pitch while maintaining duration
+        // Formula: for N semitones up, multiply rate by 2^(N/12)
         let rate_multiplier = 2.0_f64.powf(semitones as f64 / 12.0);
-        let rate = (48000.0 * rate_multiplier) as u32;
+        
+        // Standard sample rate
+        let base_rate = 48000.0;
+        let new_rate = (base_rate * rate_multiplier) as u32;
+        
+        // Build the filter: asetrate changes the sample rate (which changes pitch and duration),
+        // then atempo restores original duration
+        let filter = format!("asetrate={},aresample={},atempo={}", 
+            new_rate, 
+            base_rate as u32,
+            1.0 / rate_multiplier
+        );
         
         let mut command = Command::new("ffmpeg");
         command
             .arg("-i")
             .arg(file_path.to_str().unwrap())
-            .arg("-af")
-            .arg(format!("asetrate={},aresample=48000,atempo={}", rate, 1.0 / rate_multiplier))
+            .arg("-filter:a")
+            .arg(&filter)
             .arg("-y") // Overwrite output file
             .arg(output_path.to_str().unwrap())
             .stdout(std::process::Stdio::null())
