@@ -74,6 +74,18 @@ const App = () => {
     console.log('[App] allTracks state updated:', allTracks);
   }, [allTracks]);
   
+  // Listen for tracks-updated events (from transpose)
+  useEffect(() => {
+    const unlisten = Tauri.event.listen('tracks-updated', (event) => {
+      console.log('[App] Tracks updated event received:', event.payload);
+      setAllTracks(event.payload);
+    });
+
+    return () => {
+      unlisten.then(f => f());
+    };
+  }, []);
+  
   // Listen for video-ended events (separate effect)
   useEffect(() => {
     const unlisten = Tauri.event.listen('video-ended', () => {
