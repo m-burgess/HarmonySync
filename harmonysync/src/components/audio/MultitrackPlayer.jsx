@@ -20,6 +20,7 @@ import TransposeModal from './TransposeModal.jsx';
 import { PlayIcon, PauseIcon, BackwardIcon, RocketLaunchIcon, ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/solid';
 import * as TauriCore from '@tauri-apps/api/core';
 import * as TauriEvent from '@tauri-apps/api/event';
+import * as TauriFs from '@tauri-apps/plugin-fs';
 
 const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
   const [globalVolume, setGlobalVolumeState] = useState(1);
@@ -232,8 +233,7 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
       console.log('🔄 Loading transposed tracks from:', outputDir);
       
       // Read the new directory to get track paths
-      const fs = await import('@tauri-apps/plugin-fs');
-      const entries = await fs.readDir(outputDir, { recursive: false });
+      const entries = await TauriFs.readDir(outputDir, { recursive: false });
       const audioFiles = entries
         .filter(e => e.children === undefined && (
           e.name.endsWith('.mp3') || 
