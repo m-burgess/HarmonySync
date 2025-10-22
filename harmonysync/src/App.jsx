@@ -337,12 +337,7 @@ const App = () => {
     const unlistenStop = Tauri.event.listen('stop-preservice-music', async () => {
       // Close the preservice music window if it's open
       try {
-        const { getCurrentWebviewWindow } = await import('@tauri-apps/api/webviewWindow');
-        const windows = await getCurrentWebviewWindow().getAll();
-        const preserviceWindow = windows.find(w => w.label === 'preservice-music');
-        if (preserviceWindow) {
-          await preserviceWindow.close();
-        }
+        await TauriCore.invoke('close_preservice_music_window');
       } catch (error) {
         console.error('Failed to close pre-service music window:', error);
       }

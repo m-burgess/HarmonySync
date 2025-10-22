@@ -1297,3 +1297,11 @@ pub async fn open_scheduler_window(app_handle: AppHandle) -> Result<(), String> 
     Ok(())
 }
 
+#[command]
+pub async fn close_preservice_music_window(app_handle: AppHandle) -> Result<(), String> {
+    if let Some(window) = app_handle.get_webview_window("preservice-music") {
+        window.close().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
