@@ -30,14 +30,21 @@ const TrackControlCard = ({
     className
   ].filter(Boolean).join(' ');
 
+  // Format track name for display (remove file extensions, clean up)
+  const displayName = trackName
+    .replace(/\.(mp3|wav|ogg|m4a|flac)$/i, '')
+    .replace(/[-_]/g, ' ')
+    .trim();
+
   return (
     <div className={cardClass}>
       <button 
         className={`track-name-button ${isMuted ? 'muted' : ''}`}
         onClick={handleMuteToggle}
-        title={`${isMuted ? 'Unmute' : 'Mute'} ${trackName}`}
+        title={`${isMuted ? 'Unmute' : 'Mute'} ${displayName}`}
       >
-        {trackName}
+        {isMuted && <span className="mute-indicator">🔇 </span>}
+        {displayName}
       </button>
       
       <div className="track-pan-section">

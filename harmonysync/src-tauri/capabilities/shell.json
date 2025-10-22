@@ -1,0 +1,35 @@
+{
+  "identifier": "shell-capability",
+  "description": "Capability for running shell commands to manage audio service",
+  "windows": ["main"],
+  "permissions": [
+    "shell:allow-execute",
+    "shell:allow-spawn",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "bash",
+          "args": [
+            "/home/mikeb/projects/RustPresenter/harmonysync-audio-service/start-service.sh",
+            "start"
+          ]
+        },
+        {
+          "name": "bash", 
+          "args": [
+            "/home/mikeb/projects/RustPresenter/harmonysync-audio-service/start-service.sh",
+            "stop"
+          ]
+        },
+        {
+          "name": "bash",
+          "args": [
+            "/home/mikeb/projects/RustPresenter/harmonysync-audio-service/start-service.sh", 
+            "status"
+          ]
+        }
+      ]
+    }
+  ]
+}

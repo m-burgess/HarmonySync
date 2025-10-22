@@ -172,6 +172,11 @@
   border-color: #ef4444;
 }
 
+.mute-indicator {
+  font-size: 10px;
+  margin-right: 2px;
+}
+
 .track-pan-section {
   display: flex;
   justify-content: center;

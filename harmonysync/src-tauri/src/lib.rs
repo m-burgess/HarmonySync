@@ -19,6 +19,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_shell::init())
         .setup(|app| {
             let handle = app.handle();
 
@@ -113,6 +114,13 @@ pub fn run() {
                             eprintln!("Failed to stop HTTP server: {}", e);
                         }
 
+                        // Stop the audio service
+                        if let Err(e) = application::commands::stop_audio_service().await {
+                            eprintln!("Failed to stop audio service: {}", e);
+                        } else {
+                            println!("Audio service stopped successfully");
+                        }
+
                         // Exit the app
                         app_handle.exit(0);
                     });
@@ -128,6 +136,10 @@ pub fn run() {
             application::commands::start_http_server,
             application::commands::stop_http_server,
             application::commands::execute_macro,
+            application::commands::start_audio_service,
+            application::commands::check_audio_service_status,
+            application::commands::stop_audio_service,
+            // Legacy audio decoder commands removed - now using Node.js service
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

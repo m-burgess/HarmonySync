@@ -1,11 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import * as TauriDialog from '@tauri-apps/plugin-dialog';
 import * as TauriPath from '@tauri-apps/api/path';
 import * as TauriFs from '@tauri-apps/plugin-fs';
 import * as TauriCore from '@tauri-apps/api/core';
 import * as TauriEvent from '@tauri-apps/api/event';
 import { ArrowDownTrayIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
-import { loadAudioFile, setPan, playAllTracks, stopAllAudio, goToBeginningAllTracks, applyDefaultPanning, getAudioContext, getTracks, clearAudioBufferCache, clearTracks, cleanupAudio, preloadTrack } from '../../utils/audio';
+import { 
+  addTracks, 
+  setPan, 
+  playAllTracks, 
+  stopAllAudio, 
+  goToBeginningAllTracks, 
+  getTracks, 
+  clearAudioBufferCache, 
+  clearTracks, 
+  cleanupAudio,
+  initializeAudioService,
+  crossfadeToTracks,
+  setCrossfadeDuration,
+  onPlaybackComplete,
+  offPlaybackComplete
+} from '../../utils/audio';
 import { songTransitionManager } from '../../utils/audio';
 
 import { parseLyricsToSlides } from '../../utils/lyrics';
@@ -16,6 +31,50 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [preloadedSongs, setPreloadedSongs] = useState(new Set()); // Track which songs are preloaded
+  const [crossfadeDuration, setCrossfadeDurationState] = useState(3000); // 3 second default
+  const [isFirstLoad, setIsFirstLoad] = useState(true); // Track if this is the first song load
+  const [currentLoadedFolder, setCurrentLoadedFolder] = useState(null); // Track currently loaded folder
+  const [currentSongIndex, setCurrentSongIndex] = useState(-1); // Track current song in setlist
+  const [autoplayEnabled, setAutoplayEnabled] = useState(false); // Enable/disable autoplay
+  
+  // Ref to prevent duplicate loading calls (React.StrictMode protection)
+  const loadingInProgressRef = useRef(false);
+
+  // Autoplay effect - listen for playback completion and advance to next song
+  useEffect(() => {
+    const handlePlaybackComplete = (data) => {
+      console.log('🎵 Playback completed, checking autoplay...', { autoplayEnabled, currentSongIndex, setlistLength: setlist.length });
+      
+      if (autoplayEnabled && currentSongIndex >= 0 && currentSongIndex < setlist.length - 1) {
+        const nextIndex = currentSongIndex + 1;
+        const nextSong = setlist[nextIndex];
+        
+        console.log(`🎵 Auto-advancing to next song: ${nextSong.name} (${nextIndex + 1}/${setlist.length})`);
+        
+        setTimeout(() => {
+          handleSetlistItemClick(nextSong);
+          setCurrentSongIndex(nextIndex);
+        }, 1000); // 1 second delay before next song
+      } else if (autoplayEnabled && currentSongIndex >= setlist.length - 1) {
+        console.log('🎵 Reached end of setlist, autoplay stopping');
+        setCurrentSongIndex(-1);
+      }
+    };
+
+    // Register the event handler
+    onPlaybackComplete(handlePlaybackComplete);
+
+    // Cleanup on unmount
+    return () => {
+      offPlaybackComplete(handlePlaybackComplete);
+    };
+  }, [autoplayEnabled, currentSongIndex, setlist]);
+
+  // Update current song index when manually clicking setlist items
+  const handleSetlistItemClickWithIndex = async (item, index) => {
+    setCurrentSongIndex(index);
+    await handleSetlistItemClick(item);
+  };
 
   const handleAddFolder = async () => {
     try {
@@ -30,11 +89,24 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
         for (const path of selectedPaths) {
           const folderName = await TauriPath.basename(path);
 
+          // Check if this path is already in the setlist
+          const existingItem = setlist.find(item => item.path === path);
+          if (existingItem) {
+            console.log(`📁 Folder "${folderName}" is already in the setlist, skipping...`);
+            continue;
+          }
+
           // Detect an 'ogg' subfolder. If present, treat this as a song and record its tracks and optional lyrics.
           const oggDir = await TauriPath.join(path, 'ogg');
           const oggExists = await TauriFs.exists(oggDir);
 
-          let item = { path: path, name: folderName };
+          // Generate a unique ID for this setlist item
+          const itemId = `setlist-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          let item = { 
+            id: itemId,
+            path: path, 
+            name: folderName 
+          };
 
           if (oggExists) {
             try {
@@ -108,8 +180,8 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
 
       if (successCount > 0) {
         setLoadingMessage(`✓ ${item.name} ready (${successCount}/${tracks.length} tracks)`);
-        // Mark song as preloaded
-        setPreloadedSongs(prev => new Set([...prev, item.path]));
+        // Mark song as preloaded using item ID for better tracking
+        setPreloadedSongs(prev => new Set([...prev, item.id || item.path]));
       } else {
         setLoadingMessage(`Preload failed for ${item.name}`);
       }
@@ -128,14 +200,46 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
     // itemOrPath may be an object (from setlist) or a path string (legacy). Support both.
     const item = typeof itemOrPath === 'string' ? { path: itemOrPath } : itemOrPath;
     const itemPath = item.path;
-    console.log('Setlist item clicked:', item);
+    console.log('📁 [SetlistManager] Setlist item clicked:', item);
+    
+    // Prevent duplicate calls (React.StrictMode protection)
+    if (loadingInProgressRef.current) {
+      console.log('🚫 [SetlistManager] Loading already in progress, ignoring duplicate call');
+      return;
+    }
+    
+    // Check if this folder is already loaded
+    if (currentLoadedFolder === itemPath) {
+      console.log('⚠️  Same folder already loaded, ignoring duplicate request:', itemPath);
+      setLoadingMessage('This song is already loaded');
+      setTimeout(() => setLoadingMessage(''), 2000);
+      return;
+    }
+    
+    // Set loading flag to prevent duplicates
+    loadingInProgressRef.current = true;
+    
+    console.log(`🎵 Loading setlist item: ${item.name}`);
+    console.log(`🔍 Current folder: ${currentLoadedFolder} | New folder: ${itemPath}`);
+    console.log(`🔍 isFirstLoad: ${isFirstLoad}, currentLoadedFolder: ${currentLoadedFolder}`);
+    
+    // Set the current folder immediately to prevent race conditions
+    setCurrentLoadedFolder(itemPath);
+    
     setLoadingProgress(0);
     setLoadingMessage('Loading folder contents...');
 
     try {
-      // Stop current audio but keep the cache and audio context alive
-      stopAllAudio();
-      clearTracks();
+      // If this is not the first load, use crossfade for smooth transition
+      const shouldUseCrossfade = !isFirstLoad && currentLoadedFolder;
+      
+      if (!shouldUseCrossfade) {
+        // First load or no previous tracks - clear everything
+        stopAllAudio();
+        await clearTracks();  // Wait for tracks to be cleared before proceeding
+        console.log('🧹 Tracks cleared, proceeding with fresh load');
+      }
+      
       TauriEvent.emit('clear-lyric-display');
       TauriEvent.emit('clear-confidence-display');
 
@@ -244,42 +348,81 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
 
       setLoadingMessage('Loading audio tracks...');
       setIsLoadingTracks(true);
-      const loadedTracks = [];
-      for (let i = 0; i < trackEntries.length; i++) {
-        const t = trackEntries[i];
-        try {
-          const buffer = await loadAudioFile(t.file_path);
-          if (buffer) {
-            const track = {
-              buffer,
-              source: null,
-              gainNode: getAudioContext().createGain(),
-              pannerNode: getAudioContext().createStereoPanner(),
-              isPlaying: false,
-              isMuted: false,
-              startTime: 0,
-              offset: 0,
-              path: t.file_path,
-              name: t.track_name,
-              panValue: 0,
-              individualVolume: 0.7,
-            };
-            getTracks().push(track);
-            loadedTracks.push(track);
-          }
-        } catch (err) {
-          console.error('Error loading audio file', t.file_path, err);
+
+      // Extract file paths from track entries
+      const trackPaths = trackEntries.map(t => t.file_path);
+      
+      console.log(`🎵 About to load ${trackPaths.length} tracks from folder: ${itemPath}`);
+      console.log(`🔍 Track paths:`, trackPaths);
+      
+      try {
+        let results;
+        
+        // Use crossfade if this isn't the first load and we have tracks to fade from
+        const existingTracks = getTracks();
+        const shouldUseCrossfade = !isFirstLoad && trackPaths.length > 0 && existingTracks.length > 0;
+        
+        console.log(`🎵 Crossfade decision: shouldUseCrossfade=${shouldUseCrossfade}`);
+        console.log(`  - isFirstLoad: ${isFirstLoad}`);
+        console.log(`  - trackPaths.length: ${trackPaths.length}`);
+        console.log(`  - existingTracks.length: ${existingTracks.length}`);
+        console.log(`  - existingTracks:`, existingTracks.map(t => t.name || t.id || 'unnamed'));
+        
+        if (shouldUseCrossfade) {
+          setLoadingMessage(`Crossfading to ${trackPaths.length} tracks...`);
+          console.log(`🎵 Crossfading to new tracks (${crossfadeDuration}ms duration)`);
+          
+          // Use crossfade for smooth transitions
+          results = await crossfadeToTracks(trackPaths, crossfadeDuration);
+          
+          // Get the updated track list after crossfade
+          const updatedTracks = getTracks();
+          setAllTracks([...updatedTracks]);
+          
+          setLoadingMessage(`Crossfade complete! ${trackPaths.length} tracks loaded.`);
+        } else {
+          // First load or no existing tracks - use regular loading
+          setLoadingMessage('Loading audio tracks...');
+          results = await addTracks(trackPaths);
+          
+          // Create track objects for UI (lightweight, no audio buffers)
+          const loadedTracks = results
+            .filter(result => result.success)
+            .map((result, index) => {
+              const trackEntry = trackEntries.find(t => t.file_path === result.path);
+              return {
+                id: result.trackId, // Node.js service track ID
+                path: result.path,
+                name: trackEntry?.track_name || 'Unknown Track',
+                panValue: 0,
+                isMuted: false,
+                isPlaying: false,
+                individualVolume: 0.7,
+                // No buffer, gainNode, pannerNode - handled by Node.js service
+              };
+            });
+
+          // Update tracks in state
+          setAllTracks([...loadedTracks]);
+          setLoadingMessage(`Loading complete! ${loadedTracks.length} tracks loaded.`);
         }
-        setLoadingProgress(Math.round(((i+1)/Math.max(1, trackEntries.length))*100));
+        
+        console.log(`✅ Loaded ${trackPaths.length} tracks using Node.js audio service`);
+        
+        // Note: currentLoadedFolder was already set at the beginning to prevent race conditions
+        setIsFirstLoad(false); // Mark that we've loaded at least one song
+        
+      } catch (error) {
+        console.error('Failed to load tracks:', error);
+        setLoadingMessage('Error loading tracks');
+        // Reset current folder on error so user can retry
+        setCurrentLoadedFolder(null);
       }
-
-      applyDefaultPanning(loadedTracks);
-      // replace allTracks in App
-      setAllTracks([...loadedTracks]);
-
-      setLoadingMessage('Loading complete!');
       setLoadingProgress(100);
       setIsLoadingTracks(false);
+      
+      // Clear loading flag
+      loadingInProgressRef.current = false;
 
     } catch (error) {
       console.error('Error loading setlist item:', error);
@@ -287,11 +430,67 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
       setLoadingMessage('Error loading folder.');
       setLoadingProgress(0);
       setIsLoadingTracks(false);
+      // Reset current folder on error so user can retry
+      setCurrentLoadedFolder(null);
+      
+      // Clear loading flag
+      loadingInProgressRef.current = false;
     }
   };
 
   return (
     <div className="col" id="setlist-col">
+      {/* Crossfade Control */}
+      <div className="mb-2 p-2 bg-stage rounded border border-surface">
+        <div className="flex items-center gap-2 text-xs">
+          <label htmlFor="crossfade-duration" className="font-medium text-primary">
+            Crossfade:
+          </label>
+          <input
+            id="crossfade-duration"
+            type="range"
+            min="500"
+            max="8000"
+            step="500"
+            value={crossfadeDuration}
+            onChange={async (e) => {
+              const duration = parseInt(e.target.value);
+              setCrossfadeDurationState(duration);
+              try {
+                await setCrossfadeDuration(duration);
+              } catch (error) {
+                console.error('Failed to set crossfade duration:', error);
+              }
+            }}
+            className="w-20"
+          />
+          <span className="text-muted min-w-fit">
+            {(crossfadeDuration / 1000).toFixed(1)}s
+          </span>
+        </div>
+      </div>
+
+      {/* Autoplay Control */}
+      <div className="mb-2 p-2 bg-stage rounded border border-surface">
+        <div className="flex items-center gap-2 text-xs">
+          <input
+            id="autoplay-enabled"
+            type="checkbox"
+            checked={autoplayEnabled}
+            onChange={(e) => setAutoplayEnabled(e.target.checked)}
+            className="w-4 h-4"
+          />
+          <label htmlFor="autoplay-enabled" className="font-medium text-primary">
+            Autoplay next song
+          </label>
+          {currentSongIndex >= 0 && (
+            <span className="text-muted ml-auto">
+              {currentSongIndex + 1}/{setlist.length}
+            </span>
+          )}
+        </div>
+      </div>
+
       <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
         <button onClick={handleAddFolder} id="add-folder-button" style={{ flex: 1 }}>
           Add to Service Order
@@ -310,12 +509,23 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
       )}
       <ul id="setlist">
         {setlist.map((item, index) => {
-          const isPreloaded = preloadedSongs.has(item.path);
+          const isPreloaded = preloadedSongs.has(item.id || item.path);
+          const isCurrentSong = currentSongIndex === index;
           
           return (
-            <li key={index} className="setlist-item" onClick={() => handleSetlistItemClick(item)}>
+            <li 
+              key={item.id || `fallback-${index}`} 
+              className={`setlist-item ${isCurrentSong ? 'current-song' : ''}`}
+              onClick={() => handleSetlistItemClickWithIndex(item, index)}
+              style={{ 
+                backgroundColor: isCurrentSong ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                borderLeft: isCurrentSong ? '3px solid #3b82f6' : '3px solid transparent'
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ flex: 1 }} onClick={() => handleSetlistItemClick(item)}>{item.name}</span>
+                <span style={{ flex: 1 }} onClick={() => handleSetlistItemClickWithIndex(item, index)}>
+                  {isCurrentSong && '▶ '}{item.name}
+                </span>
                 {item.type === 'song' && (
                   <button
                     onClick={(e) => { e.stopPropagation(); handlePreloadSong(item); }}
