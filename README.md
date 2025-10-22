@@ -13,6 +13,7 @@ A comprehensive presentation software built with a Tauri (Rust) backend and a Re
 ### 🎵 Multitrack Audio Player
 - **Flexible Track Controls**: Individual volume faders, LCR pan, and mute controls for each audio track.
 - **Efficient Audio Handling**: Utilizes FFmpeg for on-the-fly conversion of various audio formats to Ogg, optimizing memory usage and playback performance.
+- **Audio Transposition**: Transpose audio files up or down by semitones using FFmpeg. Creates a new folder with transposed files while preserving rhythm section tracks (guide, click, drums, percussion, shakers).
 - **Intuitive Layout**: Track controls arranged in a grid (6 per row) with vertical scrolling for easy access.
 - **Visual Feedback**: LCR pan buttons highlight yellow when active; mute button highlights red when engaged.
 - **Default Volume**: All track faders initialize at 100% volume on load.
@@ -64,6 +65,7 @@ To enhance readability and visual appeal:
 - [Rust](https://www.rust-lang.org/tools/install) (latest stable version)
 - [Node.js](https://nodejs.org/en/download/) (LTS version) and npm
 - Tauri prerequisites for your operating system (see [Tauri documentation](https://tauri.app/v1/guides/getting-started/prerequisites))
+- [FFmpeg](https://ffmpeg.org/download.html) - Required for audio processing and transposition. Ensure `ffmpeg` is in your system PATH.
 
 ### Installation
 ```bash

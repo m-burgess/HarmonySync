@@ -115,6 +115,7 @@ pub fn run() {
             application::commands::open_preservice_music_window,
             application::commands::open_scheduler_window,
             application::commands::close_preservice_music_window,
+            application::commands::transpose_audio_files,
             // Legacy audio decoder commands removed - now using Node.js service
         ])
         .run(tauri::generate_context!())
