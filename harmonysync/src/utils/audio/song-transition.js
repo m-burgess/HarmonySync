@@ -2,7 +2,7 @@
 // Clean, focused implementation (no duplicated content)
 
 import { loadSongTracksForStreaming } from './streaming-audio.js';
-import { getAudioContext, getTracks } from './audio.js';
+import { getAudioContext, getTracks } from './audio-nodejs.js';
 
 class SongTransitionManager {
   constructor() {
