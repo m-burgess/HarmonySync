@@ -28,7 +28,7 @@ import Scheduler from './components/screens/Scheduler.jsx';
 
 
 import { parseLyricsToSlides } from './utils/lyrics';
-import { loadAudioFile, getAudioContext, getTracks, applyDefaultPanning } from './utils/audio';
+import { getTracks, cleanupAudio, initializeAudioService } from './utils/audio';
 
 
 // This function lets the user select a folder and then calls the backend to import it.

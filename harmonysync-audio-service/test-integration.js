@@ -1,0 +1,177 @@
+#!/usr/bin/env node
+
+// Simple test script to verify Node.js audio service functionality
+const axios = require('axios');
+const io = require('socket.io-client');
+
+const SERVICE_URL = 'http://localhost:3001';
+
+class AudioServiceTester {
+    constructor() {
+        this.socket = null;
+    }
+
+    async testRestAPI() {
+        console.log('🔍 Testing REST API endpoints...\n');
+
+        try {
+            // Test health endpoint
+            console.log('1. Testing health endpoint...');
+            const health = await axios.get(`${SERVICE_URL}/api/health`);
+            console.log('✅ Health check passed');
+            console.log(`   Memory usage: ${(health.data.memoryUsage.rss / 1024 / 1024).toFixed(1)}MB\n`);
+
+            // Test mixer state
+            console.log('2. Testing mixer state...');
+            const state = await axios.get(`${SERVICE_URL}/api/mixer/state`);
+            console.log('✅ Mixer state retrieved');
+            console.log(`   Tracks: ${state.data.tracks.length}`);
+            console.log(`   Master volume: ${state.data.masterVolume}`);
+            console.log(`   Memory: ${(state.data.memoryUsage.rss / 1024 / 1024).toFixed(1)}MB\n`);
+
+            // Test master volume control
+            console.log('3. Testing master volume control...');
+            await axios.post(`${SERVICE_URL}/api/mixer/master-volume`, { volume: 0.8 });
+            const newState = await axios.get(`${SERVICE_URL}/api/mixer/state`);
+            console.log('✅ Master volume updated');
+            console.log(`   New master volume: ${newState.data.masterVolume}\n`);
+
+            // Reset master volume
+            await axios.post(`${SERVICE_URL}/api/mixer/master-volume`, { volume: 1.0 });
+
+            return true;
+        } catch (error) {
+            console.error('❌ REST API test failed:', error.message);
+            return false;
+        }
+    }
+
+    async testWebSocket() {
+        console.log('🔌 Testing WebSocket connection...\n');
+
+        return new Promise((resolve) => {
+            try {
+                this.socket = io(SERVICE_URL, {
+                    transports: ['websocket', 'polling'],
+                    timeout: 5000
+                });
+
+                this.socket.on('connect', () => {
+                    console.log('✅ WebSocket connected successfully');
+                    console.log(`   Socket ID: ${this.socket.id}\n`);
+                });
+
+                this.socket.on('mixer_state_changed', (state) => {
+                    console.log('✅ Received mixer state update via WebSocket');
+                    console.log(`   Tracks: ${state.tracks.length}`);
+                    console.log(`   Memory: ${(state.memoryUsage.rss / 1024 / 1024).toFixed(1)}MB\n`);
+                    
+                    // Disconnect after receiving state
+                    this.socket.disconnect();
+                    resolve(true);
+                });
+
+                this.socket.on('connect_error', (error) => {
+                    console.error('❌ WebSocket connection failed:', error.message);
+                    resolve(false);
+                });
+
+                // Request initial state
+                setTimeout(() => {
+                    if (this.socket.connected) {
+                        // The server automatically sends state on connection
+                        console.log('📡 Waiting for initial state...');
+                    }
+                }, 1000);
+
+            } catch (error) {
+                console.error('❌ WebSocket test failed:', error.message);
+                resolve(false);
+            }
+        });
+    }
+
+    async testMemoryEfficiency() {
+        console.log('📊 Testing memory efficiency...\n');
+
+        try {
+            const initialState = await axios.get(`${SERVICE_URL}/api/mixer/state`);
+            const initialMemory = initialState.data.memoryUsage.rss / 1024 / 1024;
+            
+            console.log(`Initial memory usage: ${initialMemory.toFixed(1)}MB`);
+
+            // Simulate some operations to see memory behavior
+            console.log('Performing multiple operations...');
+            
+            for (let i = 0; i < 10; i++) {
+                await axios.post(`${SERVICE_URL}/api/mixer/master-volume`, { 
+                    volume: Math.random() 
+                });
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            const finalState = await axios.get(`${SERVICE_URL}/api/mixer/state`);
+            const finalMemory = finalState.data.memoryUsage.rss / 1024 / 1024;
+            
+            console.log(`Final memory usage: ${finalMemory.toFixed(1)}MB`);
+            console.log(`Memory change: ${(finalMemory - initialMemory).toFixed(1)}MB`);
+            
+            if (finalMemory < 200) { // Less than 200MB is excellent
+                console.log('✅ Memory usage is excellent (< 200MB)');
+            } else if (finalMemory < 500) { // Less than 500MB is good
+                console.log('✅ Memory usage is good (< 500MB)');
+            } else {
+                console.log('⚠️  Memory usage is higher than expected');
+            }
+
+            return true;
+        } catch (error) {
+            console.error('❌ Memory test failed:', error.message);
+            return false;
+        }
+    }
+
+    async runAllTests() {
+        console.log('🧪 HarmonySync Audio Service Integration Test\n');
+        console.log('='.repeat(50) + '\n');
+
+        const results = [];
+
+        // Test REST API
+        results.push(await this.testRestAPI());
+
+        // Test WebSocket
+        results.push(await this.testWebSocket());
+
+        // Test memory efficiency
+        results.push(await this.testMemoryEfficiency());
+
+        // Summary
+        console.log('\n' + '='.repeat(50));
+        console.log('📋 Test Summary:');
+        console.log(`✅ REST API: ${results[0] ? 'PASSED' : 'FAILED'}`);
+        console.log(`✅ WebSocket: ${results[1] ? 'PASSED' : 'FAILED'}`);
+        console.log(`✅ Memory Efficiency: ${results[2] ? 'PASSED' : 'FAILED'}`);
+        
+        const passedTests = results.filter(r => r).length;
+        console.log(`\n🎯 Overall: ${passedTests}/3 tests passed`);
+        
+        if (passedTests === 3) {
+            console.log('🎉 All tests passed! The audio service is ready for integration.');
+        } else {
+            console.log('⚠️  Some tests failed. Check the logs above for details.');
+        }
+
+        return passedTests === 3;
+    }
+}
+
+// Run tests if this script is executed directly
+if (require.main === module) {
+    const tester = new AudioServiceTester();
+    tester.runAllTests().then(success => {
+        process.exit(success ? 0 : 1);
+    });
+}
+
+module.exports = AudioServiceTester;
