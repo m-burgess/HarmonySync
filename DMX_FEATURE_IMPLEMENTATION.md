@@ -171,8 +171,8 @@ Scenes:
 ### Current Limitations
 1. **No Hardware Output**: DMX commands are logged but not sent to physical devices
 2. **Single Universe**: Only Universe 1 (512 channels) is supported
-3. **No Slide Triggers**: Scenes cannot yet be triggered directly from presentation slides
-4. **No Macro Integration**: Scenes cannot be added to custom macros (only scheduler)
+3. **No Direct Slide Triggers**: Scenes cannot yet be triggered directly from presentation slides (use scheduler as workaround)
+4. **Limited Macro Integration**: Database structure exists for macro integration, but UI for linking scenes to custom macros not yet implemented
 
 ### Future Enhancements
 1. **Hardware Support**:
@@ -293,6 +293,7 @@ CREATE TABLE dmx_scene_macros (
    - Uses existing SQLite connection
    - Follows established schema patterns
    - Proper foreign key constraints
+   - `dmx_scene_macros` table exists for future macro linking
 
 3. **UI Framework**: ✅ Fully integrated
    - Uses existing Button and Card components
@@ -300,7 +301,7 @@ CREATE TABLE dmx_scene_macros (
    - Consistent styling with rest of application
 
 ### Future Integration
-1. **Macros**: Can be added by linking scenes to macro table
+1. **Macros**: Database structure in place, needs UI implementation
 2. **Slides**: Can be added by extending slide_macros table
 3. **MIDI**: Can be added by mapping MIDI notes to scene recall
 
@@ -367,6 +368,6 @@ The implementation provides a solid foundation for future enhancements, includin
 
 ---
 
-**Implementation Date**: 2025-10-24  
+**Implementation Date**: October 2024  
 **Status**: ✅ Complete - Ready for User Testing  
 **Next Step**: Add hardware DMX output support
