@@ -1344,44 +1344,6 @@ pub async fn get_available_displays() -> Result<Vec<DisplayInfo>, String> {
     ])
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct AudioDeviceInfo {
-    id: String,
-    name: String,
-}
-
-#[command]
-pub async fn get_available_audio_devices() -> Result<Vec<AudioDeviceInfo>, String> {
-    info!("Getting available audio devices");
-    
-    // For now, return a simple list
-    // In production, you'd use cpal or similar crate to enumerate audio devices
-    Ok(vec![
-        AudioDeviceInfo {
-            id: "default".to_string(),
-            name: "Default Audio Device".to_string(),
-        },
-    ])
-}
-
-#[command]
-pub async fn get_available_midi_inputs() -> Result<Vec<AudioDeviceInfo>, String> {
-    info!("Getting available MIDI input devices");
-    
-    // For now, return empty list
-    // In production, you'd use midir crate to enumerate MIDI devices
-    Ok(vec![])
-}
-
-#[command]
-pub async fn get_available_midi_outputs() -> Result<Vec<AudioDeviceInfo>, String> {
-    info!("Getting available MIDI output devices");
-    
-    // For now, return empty list
-    // In production, you'd use midir crate to enumerate MIDI devices
-    Ok(vec![])
-}
-
 // ============================================================================
 // Carla Plugin Manager Commands
 // ============================================================================
@@ -1546,6 +1508,22 @@ pub async fn get_available_midi_inputs() -> Result<Vec<MidiDevice>, String> {
     if let Some(manager) = midi_lock.as_ref() {
         manager.get_input_devices()
             .map_err(|e| format!("Failed to get MIDI inputs: {}", e))
+    } else {
+        Err("MIDI manager not initialized".to_string())
+    }
+}
+
+/// Get available MIDI output devices
+#[command]
+pub async fn get_available_midi_outputs() -> Result<Vec<MidiDevice>, String> {
+    info!("Getting available MIDI output devices");
+    
+    let midi_guard = midi_manager::get_midi_manager().await;
+    let midi_lock = midi_guard.lock().await;
+    
+    if let Some(manager) = midi_lock.as_ref() {
+        manager.get_output_devices()
+            .map_err(|e| format!("Failed to get MIDI outputs: {}", e))
     } else {
         Err("MIDI manager not initialized".to_string())
     }

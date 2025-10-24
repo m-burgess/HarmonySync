@@ -1,4 +1,4 @@
-mod application;
+pub mod application;
 
 use tauri::menu::{Menu, Submenu, MenuItem, PredefinedMenuItem};
 use tauri::{Manager, Emitter};

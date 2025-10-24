@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod carla_plugin_manager_tests {
-    use crate::application::carla_plugin_manager::*;
+    use app_lib::application::carla_plugin_manager::*;
 
     #[tokio::test]
     async fn test_plugin_manager_creation() {
@@ -153,7 +153,7 @@ mod carla_plugin_manager_tests {
 
 #[cfg(test)]
 mod midi_manager_tests {
-    use crate::application::midi_manager::*;
+    use app_lib::application::midi_manager::*;
 
     #[test]
     fn test_midi_manager_creation() {
@@ -194,7 +194,7 @@ mod midi_manager_tests {
 
 #[cfg(test)]
 mod audio_router_tests {
-    use crate::application::audio_router::*;
+    use app_lib::application::audio_router::*;
 
     #[tokio::test]
     async fn test_audio_router_creation() {
