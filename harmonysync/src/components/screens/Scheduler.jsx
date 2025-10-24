@@ -12,6 +12,8 @@ const Scheduler = ({ isOpen, onClose }) => {
   const [selectedDay, setSelectedDay] = useState('Saturday');
   const [selectedTime, setSelectedTime] = useState('16:30');
   const [isRecurring, setIsRecurring] = useState(true);
+  const [dmxScenes, setDmxScenes] = useState([]);
+  const [selectedEventType, setSelectedEventType] = useState('macro');
 
   const daysOfWeek = [
     'Sunday',
@@ -31,6 +33,22 @@ const Scheduler = ({ isOpen, onClose }) => {
     }
   }, []);
 
+  // Load DMX scenes
+  useEffect(() => {
+    const loadDmxScenes = async () => {
+      try {
+        const scenes = await TauriCore.invoke('get_dmx_scenes');
+        setDmxScenes(scenes);
+      } catch (error) {
+        console.error('Failed to load DMX scenes:', error);
+      }
+    };
+    
+    if (isOpen) {
+      loadDmxScenes();
+    }
+  }, [isOpen]);
+
   // Save scheduled events to localStorage
   const saveEvents = (events) => {
     localStorage.setItem('scheduled_events', JSON.stringify(events));
@@ -38,21 +56,41 @@ const Scheduler = ({ isOpen, onClose }) => {
   };
 
   const addScheduledEvent = () => {
-    if (!selectedMacro) {
+    if (selectedEventType === 'macro' && !selectedMacro) {
       alert('Please select a macro');
       return;
     }
+    if (selectedEventType === 'dmx_scene' && !selectedMacro) {
+      alert('Please select a DMX scene');
+      return;
+    }
 
-    const macro = commonMacros.find(m => m.id === selectedMacro);
-    const newEvent = {
-      id: Date.now(),
-      macroId: selectedMacro,
-      macroName: macro.name,
-      day: selectedDay,
-      time: selectedTime,
-      recurring: isRecurring,
-      enabled: true
-    };
+    let newEvent;
+    if (selectedEventType === 'macro') {
+      const macro = commonMacros.find(m => m.id === selectedMacro);
+      newEvent = {
+        id: Date.now(),
+        type: 'macro',
+        macroId: selectedMacro,
+        macroName: macro.name,
+        day: selectedDay,
+        time: selectedTime,
+        recurring: isRecurring,
+        enabled: true
+      };
+    } else {
+      const scene = dmxScenes.find(s => s.id === selectedMacro);
+      newEvent = {
+        id: Date.now(),
+        type: 'dmx_scene',
+        sceneId: selectedMacro,
+        sceneName: scene.name,
+        day: selectedDay,
+        time: selectedTime,
+        recurring: isRecurring,
+        enabled: true
+      };
+    }
 
     const updatedEvents = [...scheduledEvents, newEvent];
     saveEvents(updatedEvents);
@@ -81,7 +119,11 @@ const Scheduler = ({ isOpen, onClose }) => {
 
       scheduledEvents.forEach(event => {
         if (event.enabled && event.day === currentDay && event.time === currentTime) {
-          executeMacro(event.macroId);
+          if (event.type === 'dmx_scene') {
+            executeDmxScene(event.sceneId);
+          } else {
+            executeMacro(event.macroId);
+          }
         }
       });
     };
@@ -92,6 +134,17 @@ const Scheduler = ({ isOpen, onClose }) => {
 
     return () => clearInterval(interval);
   }, [scheduledEvents, isOpen]);
+
+  const executeDmxScene = async (sceneId) => {
+    console.log(`Executing scheduled DMX scene: ${sceneId}`);
+    
+    try {
+      await TauriCore.invoke('recall_dmx_scene', { sceneId });
+      console.log(`Successfully recalled DMX scene: ${sceneId}`);
+    } catch (error) {
+      console.error(`Failed to recall DMX scene ${sceneId}:`, error);
+    }
+  };
 
   const executeMacro = async (macroId) => {
     const macro = commonMacros.find(m => m.id === macroId);
@@ -133,30 +186,54 @@ const Scheduler = ({ isOpen, onClose }) => {
             <h3>Schedule New Event</h3>
             
             <div className="setting-row">
-              <label>Select Macro</label>
+              <label>Event Type</label>
+              <select
+                value={selectedEventType}
+                onChange={(e) => {
+                  setSelectedEventType(e.target.value);
+                  setSelectedMacro('');
+                }}
+              >
+                <option value="macro">Macro</option>
+                <option value="dmx_scene">DMX Scene</option>
+              </select>
+            </div>
+
+            <div className="setting-row">
+              <label>{selectedEventType === 'macro' ? 'Select Macro' : 'Select DMX Scene'}</label>
               <select
                 value={selectedMacro}
                 onChange={(e) => setSelectedMacro(e.target.value)}
               >
-                <option value="">-- Select a macro --</option>
-                <optgroup label="Pre-service Music">
-                  {commonMacros
-                    .filter(m => m.action.includes('preservice'))
-                    .map(macro => (
-                      <option key={macro.id} value={macro.id}>
-                        {macro.name}
-                      </option>
-                    ))}
-                </optgroup>
-                <optgroup label="MIDI Notes">
-                  {commonMacros
-                    .filter(m => m.action === 'send_midi_note')
-                    .map(macro => (
-                      <option key={macro.id} value={macro.id}>
-                        {macro.name}
-                      </option>
-                    ))}
-                </optgroup>
+                <option value="">-- Select {selectedEventType === 'macro' ? 'a macro' : 'a DMX scene'} --</option>
+                {selectedEventType === 'macro' ? (
+                  <>
+                    <optgroup label="Pre-service Music">
+                      {commonMacros
+                        .filter(m => m.action.includes('preservice'))
+                        .map(macro => (
+                          <option key={macro.id} value={macro.id}>
+                            {macro.name}
+                          </option>
+                        ))}
+                    </optgroup>
+                    <optgroup label="MIDI Notes">
+                      {commonMacros
+                        .filter(m => m.action === 'send_midi_note')
+                        .map(macro => (
+                          <option key={macro.id} value={macro.id}>
+                            {macro.name}
+                          </option>
+                        ))}
+                    </optgroup>
+                  </>
+                ) : (
+                  dmxScenes.map(scene => (
+                    <option key={scene.id} value={scene.id}>
+                      {scene.name}
+                    </option>
+                  ))
+                )}
               </select>
             </div>
 
@@ -236,9 +313,11 @@ const Scheduler = ({ isOpen, onClose }) => {
                         style={{ width: '16px', height: '16px' }}
                       />
                       <div>
-                        <div style={{ color: 'white', fontWeight: '500' }}>{event.macroName}</div>
+                        <div style={{ color: 'white', fontWeight: '500' }}>
+                          {event.type === 'dmx_scene' ? event.sceneName : event.macroName}
+                        </div>
                         <div style={{ fontSize: '0.875rem', color: '#9ca3af' }}>
-                          {event.recurring ? 'Every' : ''} {event.day} at {event.time}
+                          {event.type === 'dmx_scene' ? '💡 DMX Scene' : '⚡ Macro'} • {event.recurring ? 'Every' : ''} {event.day} at {event.time}
                         </div>
                       </div>
                     </div>
