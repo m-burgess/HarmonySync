@@ -1237,3 +1237,76 @@ pub async fn open_lyrics_file(path: String) -> Result<(), String> {
     Ok(())
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DisplayInfo {
+    id: String,
+    name: String,
+}
+
+#[command]
+pub async fn get_available_displays() -> Result<Vec<DisplayInfo>, String> {
+    info!("Getting available displays");
+    
+    // For now, we'll return a simple list based on the platform
+    // In a production app, you'd use platform-specific APIs to enumerate displays
+    // On Linux: xrandr or wayland protocols
+    // On macOS: CoreGraphics
+    // On Windows: EnumDisplayDevices
+    
+    #[cfg(target_os = "linux")]
+    {
+        // Try to get display info from xrandr
+        match tokio::process::Command::new("xrandr")
+            .arg("--query")
+            .output()
+            .await
+        {
+            Ok(output) => {
+                if output.status.success() {
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    let mut displays = Vec::new();
+                    
+                    // Parse xrandr output for connected displays
+                    for (i, line) in stdout.lines().enumerate() {
+                        if line.contains(" connected") {
+                            let parts: Vec<&str> = line.split_whitespace().collect();
+                            if !parts.is_empty() {
+                                let display_name = parts[0];
+                                displays.push(DisplayInfo {
+                                    id: format!("display_{}", i),
+                                    name: format!("{} (Connected)", display_name),
+                                });
+                            }
+                        }
+                    }
+                    
+                    if displays.is_empty() {
+                        // Fallback if no displays found
+                        displays.push(DisplayInfo {
+                            id: "primary".to_string(),
+                            name: "Primary Display".to_string(),
+                        });
+                    }
+                    
+                    return Ok(displays);
+                }
+            }
+            Err(_) => {
+                info!("xrandr not available, using fallback");
+            }
+        }
+    }
+    
+    // Fallback for all platforms
+    Ok(vec![
+        DisplayInfo {
+            id: "primary".to_string(),
+            name: "Primary Display".to_string(),
+        },
+        DisplayInfo {
+            id: "secondary".to_string(),
+            name: "Secondary Display".to_string(),
+        },
+    ])
+}
+
