@@ -74,16 +74,16 @@ const DisplaySettings = ({ isOpen, onClose }) => {
 
   const loadAvailableDisplays = async () => {
     try {
-      // Mock display data for now - in a real implementation, you'd get this from Tauri
-      // This could be implemented with a Tauri command that queries the system displays
-      setAvailableDisplays([
-        { id: 'primary', name: 'Primary Display (Built-in Display)' },
-        { id: 'secondary', name: 'Secondary Display (External Monitor)' },
-        { id: 'hdmi1', name: 'HDMI 1' },
-        { id: 'hdmi2', name: 'HDMI 2' }
-      ]);
+      // Call Rust command to get actual display information
+      const displays = await TauriCore.invoke('get_available_displays');
+      setAvailableDisplays(displays);
     } catch (error) {
       console.error('Error loading available displays:', error);
+      // Fallback to basic display list if command fails
+      setAvailableDisplays([
+        { id: 'primary', name: 'Primary Display' },
+        { id: 'secondary', name: 'Secondary Display' }
+      ]);
     }
   };
 
