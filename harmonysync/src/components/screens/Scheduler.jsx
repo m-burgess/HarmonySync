@@ -4,6 +4,7 @@ import * as TauriCore from '@tauri-apps/api/core';
 import Button from '../ui/Button.jsx';
 import Input from '../ui/Input.jsx';
 import commonMacros from '../../data/common_macros.json';
+import '../../styles/DisplaySettings.css';
 
 const Scheduler = ({ isOpen, onClose }) => {
   const [scheduledEvents, setScheduledEvents] = useState([]);
@@ -115,144 +116,141 @@ const Scheduler = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
-      <div className="bg-gray-800 rounded-lg shadow-xl w-[800px] max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="display-settings-overlay">
+      <div className="display-settings-modal" style={{ maxWidth: '800px' }}>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-700">
-          <h2 className="text-xl font-semibold text-white">Scheduler</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
-          >
+        <div className="display-settings-header">
+          <h2>Scheduler</h2>
+          <button onClick={onClose} className="close-button">
             <XMarkIcon className="w-6 h-6" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="display-settings-content">
           {/* Add New Event Section */}
-          <div className="bg-gray-700 rounded-lg p-4">
-            <h3 className="text-lg font-medium text-white mb-4">Schedule New Event</h3>
+          <div className="settings-section">
+            <h3>Schedule New Event</h3>
             
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Select Macro
-                </label>
-                <select
-                  value={selectedMacro}
-                  onChange={(e) => setSelectedMacro(e.target.value)}
-                  className="w-full bg-gray-600 text-white border border-gray-500 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">-- Select a macro --</option>
-                  <optgroup label="Pre-service Music">
-                    {commonMacros
-                      .filter(m => m.action.includes('preservice'))
-                      .map(macro => (
-                        <option key={macro.id} value={macro.id}>
-                          {macro.name}
-                        </option>
-                      ))}
-                  </optgroup>
-                  <optgroup label="MIDI Notes">
-                    {commonMacros
-                      .filter(m => m.action === 'send_midi_note')
-                      .map(macro => (
-                        <option key={macro.id} value={macro.id}>
-                          {macro.name}
-                        </option>
-                      ))}
-                  </optgroup>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Day of Week
-                </label>
-                <select
-                  value={selectedDay}
-                  onChange={(e) => setSelectedDay(e.target.value)}
-                  className="w-full bg-gray-600 text-white border border-gray-500 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {daysOfWeek.map(day => (
-                    <option key={day} value={day}>
-                      {day}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Time
-                </label>
-                <input
-                  type="time"
-                  value={selectedTime}
-                  onChange={(e) => setSelectedTime(e.target.value)}
-                  className="w-full bg-gray-600 text-white border border-gray-500 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div className="flex items-end">
-                <label className="flex items-center space-x-2 text-gray-300 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isRecurring}
-                    onChange={(e) => setIsRecurring(e.target.checked)}
-                    className="w-4 h-4 text-blue-600 bg-gray-600 border-gray-500 rounded focus:ring-blue-500"
-                  />
-                  <span>Recurring weekly</span>
-                </label>
-              </div>
+            <div className="setting-row">
+              <label>Select Macro</label>
+              <select
+                value={selectedMacro}
+                onChange={(e) => setSelectedMacro(e.target.value)}
+              >
+                <option value="">-- Select a macro --</option>
+                <optgroup label="Pre-service Music">
+                  {commonMacros
+                    .filter(m => m.action.includes('preservice'))
+                    .map(macro => (
+                      <option key={macro.id} value={macro.id}>
+                        {macro.name}
+                      </option>
+                    ))}
+                </optgroup>
+                <optgroup label="MIDI Notes">
+                  {commonMacros
+                    .filter(m => m.action === 'send_midi_note')
+                    .map(macro => (
+                      <option key={macro.id} value={macro.id}>
+                        {macro.name}
+                      </option>
+                    ))}
+                </optgroup>
+              </select>
             </div>
 
-            <div className="mt-4">
+            <div className="setting-row">
+              <label>Day of Week</label>
+              <select
+                value={selectedDay}
+                onChange={(e) => setSelectedDay(e.target.value)}
+              >
+                {daysOfWeek.map(day => (
+                  <option key={day} value={day}>
+                    {day}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="setting-row">
+              <label>Time</label>
+              <input
+                type="time"
+                value={selectedTime}
+                onChange={(e) => setSelectedTime(e.target.value)}
+              />
+            </div>
+
+            <div className="setting-row">
+              <label style={{ flex: 'none', marginRight: '8px' }}>
+                <input
+                  type="checkbox"
+                  checked={isRecurring}
+                  onChange={(e) => setIsRecurring(e.target.checked)}
+                  style={{ marginRight: '8px' }}
+                />
+                Recurring weekly
+              </label>
+            </div>
+
+            <div style={{ marginTop: '16px' }}>
               <Button
                 onClick={addScheduledEvent}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded flex items-center space-x-2"
+                className="save-button"
               >
-                <PlusIcon className="w-5 h-5" />
-                <span>Add Scheduled Event</span>
+                <PlusIcon className="w-5 h-5" style={{ display: 'inline-block', marginRight: '4px' }} />
+                Add Scheduled Event
               </Button>
             </div>
           </div>
 
           {/* Scheduled Events List */}
-          <div className="bg-gray-700 rounded-lg p-4">
-            <h3 className="text-lg font-medium text-white mb-4">Scheduled Events</h3>
+          <div className="settings-section">
+            <h3>Scheduled Events</h3>
             
             {scheduledEvents.length === 0 ? (
-              <p className="text-gray-400 text-center py-8">
+              <p style={{ color: '#9ca3af', textAlign: 'center', padding: '32px 0' }}>
                 No scheduled events. Add one above to get started.
               </p>
             ) : (
-              <div className="space-y-2">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {scheduledEvents.map(event => (
                   <div
                     key={event.id}
-                    className={`flex items-center justify-between p-3 rounded ${
-                      event.enabled ? 'bg-gray-600' : 'bg-gray-700 opacity-50'
-                    }`}
+                    className="setting-row"
+                    style={{
+                      padding: '12px',
+                      backgroundColor: event.enabled ? '#374151' : '#4b5563',
+                      borderRadius: '6px',
+                      opacity: event.enabled ? 1 : 0.5,
+                      alignItems: 'center'
+                    }}
                   >
-                    <div className="flex items-center space-x-4">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
                       <input
                         type="checkbox"
                         checked={event.enabled}
                         onChange={() => toggleEventEnabled(event.id)}
-                        className="w-4 h-4 text-blue-600 bg-gray-600 border-gray-500 rounded focus:ring-blue-500"
+                        style={{ width: '16px', height: '16px' }}
                       />
                       <div>
-                        <div className="text-white font-medium">{event.macroName}</div>
-                        <div className="text-sm text-gray-400">
+                        <div style={{ color: 'white', fontWeight: '500' }}>{event.macroName}</div>
+                        <div style={{ fontSize: '0.875rem', color: '#9ca3af' }}>
                           {event.recurring ? 'Every' : ''} {event.day} at {event.time}
                         </div>
                       </div>
                     </div>
                     <button
                       onClick={() => deleteEvent(event.id)}
-                      className="text-red-400 hover:text-red-300 transition-colors"
+                      style={{
+                        color: '#f87171',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '4px'
+                      }}
                     >
                       <TrashIcon className="w-5 h-5" />
                     </button>
@@ -262,22 +260,31 @@ const Scheduler = ({ isOpen, onClose }) => {
             )}
           </div>
 
-          {/* Calendar View (Simplified) */}
-          <div className="bg-gray-700 rounded-lg p-4">
-            <h3 className="text-lg font-medium text-white mb-4">Weekly Overview</h3>
-            <div className="grid grid-cols-7 gap-2">
+          {/* Calendar View */}
+          <div className="settings-section">
+            <h3>Weekly Overview</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px' }}>
               {daysOfWeek.map(day => {
                 const dayEvents = scheduledEvents.filter(e => e.day === day && e.enabled);
                 return (
-                  <div key={day} className="bg-gray-600 rounded p-2">
-                    <div className="text-xs font-medium text-gray-300 text-center mb-2">
+                  <div key={day} style={{ backgroundColor: '#374151', borderRadius: '6px', padding: '8px' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: '500', color: '#d1d5db', textAlign: 'center', marginBottom: '8px' }}>
                       {day.substring(0, 3)}
                     </div>
-                    <div className="space-y-1">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       {dayEvents.map(event => (
                         <div
                           key={event.id}
-                          className="text-xs bg-blue-600 text-white rounded px-1 py-0.5 truncate"
+                          style={{
+                            fontSize: '0.75rem',
+                            backgroundColor: '#3b82f6',
+                            color: 'white',
+                            borderRadius: '4px',
+                            padding: '2px 4px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}
                           title={`${event.macroName} at ${event.time}`}
                         >
                           {event.time}
