@@ -1348,3 +1348,207 @@ pub async fn get_available_midi_outputs() -> Result<Vec<AudioDeviceInfo>, String
     Ok(vec![])
 }
 
+// DMX Commands
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct DmxFixture {
+    pub id: String,
+    pub name: String,
+    pub fixture_type: String,
+    pub dmx_address: i32,
+    pub universe: i32,
+    pub channel_count: i32,
+    pub channel_definitions: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct DmxScene {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub fade_time_ms: i32,
+    pub scene_data: String,
+}
+
+#[command]
+pub async fn get_dmx_fixtures() -> Result<Vec<DmxFixture>, String> {
+    info!("Getting all DMX fixtures");
+    use rusqlite::Connection;
+    
+    let conn = Connection::open("harmonylink.sqlite")
+        .map_err(|e| format!("Failed to open database: {}", e))?;
+    
+    let mut stmt = conn.prepare("SELECT id, name, fixture_type, dmx_address, universe, channel_count, channel_definitions FROM dmx_fixtures")
+        .map_err(|e| format!("Failed to prepare statement: {}", e))?;
+    
+    let fixtures = stmt.query_map([], |row| {
+        Ok(DmxFixture {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            fixture_type: row.get(2)?,
+            dmx_address: row.get(3)?,
+            universe: row.get(4)?,
+            channel_count: row.get(5)?,
+            channel_definitions: row.get(6)?,
+        })
+    })
+    .map_err(|e| format!("Failed to query fixtures: {}", e))?
+    .collect::<Result<Vec<_>, _>>()
+    .map_err(|e| format!("Failed to collect fixtures: {}", e))?;
+    
+    Ok(fixtures)
+}
+
+#[command]
+pub async fn add_dmx_fixture(fixture: DmxFixture) -> Result<DmxFixture, String> {
+    info!("Adding DMX fixture: {}", fixture.name);
+    use rusqlite::Connection;
+    
+    let conn = Connection::open("harmonylink.sqlite")
+        .map_err(|e| format!("Failed to open database: {}", e))?;
+    
+    conn.execute(
+        "INSERT INTO dmx_fixtures (id, name, fixture_type, dmx_address, universe, channel_count, channel_definitions) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        rusqlite::params![fixture.id, fixture.name, fixture.fixture_type, fixture.dmx_address, fixture.universe, fixture.channel_count, fixture.channel_definitions],
+    )
+    .map_err(|e| format!("Failed to insert fixture: {}", e))?;
+    
+    Ok(fixture)
+}
+
+#[command]
+pub async fn update_dmx_fixture(fixture: DmxFixture) -> Result<(), String> {
+    info!("Updating DMX fixture: {}", fixture.name);
+    use rusqlite::Connection;
+    
+    let conn = Connection::open("harmonylink.sqlite")
+        .map_err(|e| format!("Failed to open database: {}", e))?;
+    
+    conn.execute(
+        "UPDATE dmx_fixtures SET name = ?1, fixture_type = ?2, dmx_address = ?3, universe = ?4, channel_count = ?5, channel_definitions = ?6 WHERE id = ?7",
+        rusqlite::params![fixture.name, fixture.fixture_type, fixture.dmx_address, fixture.universe, fixture.channel_count, fixture.channel_definitions, fixture.id],
+    )
+    .map_err(|e| format!("Failed to update fixture: {}", e))?;
+    
+    Ok(())
+}
+
+#[command]
+pub async fn delete_dmx_fixture(id: String) -> Result<(), String> {
+    info!("Deleting DMX fixture: {}", id);
+    use rusqlite::Connection;
+    
+    let conn = Connection::open("harmonylink.sqlite")
+        .map_err(|e| format!("Failed to open database: {}", e))?;
+    
+    conn.execute("DELETE FROM dmx_fixtures WHERE id = ?1", rusqlite::params![id])
+        .map_err(|e| format!("Failed to delete fixture: {}", e))?;
+    
+    Ok(())
+}
+
+#[command]
+pub async fn get_dmx_scenes() -> Result<Vec<DmxScene>, String> {
+    info!("Getting all DMX scenes");
+    use rusqlite::Connection;
+    
+    let conn = Connection::open("harmonylink.sqlite")
+        .map_err(|e| format!("Failed to open database: {}", e))?;
+    
+    let mut stmt = conn.prepare("SELECT id, name, description, fade_time_ms, scene_data FROM dmx_scenes")
+        .map_err(|e| format!("Failed to prepare statement: {}", e))?;
+    
+    let scenes = stmt.query_map([], |row| {
+        Ok(DmxScene {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            description: row.get(2)?,
+            fade_time_ms: row.get(3)?,
+            scene_data: row.get(4)?,
+        })
+    })
+    .map_err(|e| format!("Failed to query scenes: {}", e))?
+    .collect::<Result<Vec<_>, _>>()
+    .map_err(|e| format!("Failed to collect scenes: {}", e))?;
+    
+    Ok(scenes)
+}
+
+#[command]
+pub async fn create_dmx_scene(scene: DmxScene) -> Result<DmxScene, String> {
+    info!("Creating DMX scene: {}", scene.name);
+    use rusqlite::Connection;
+    
+    let conn = Connection::open("harmonylink.sqlite")
+        .map_err(|e| format!("Failed to open database: {}", e))?;
+    
+    conn.execute(
+        "INSERT INTO dmx_scenes (id, name, description, fade_time_ms, scene_data) VALUES (?1, ?2, ?3, ?4, ?5)",
+        rusqlite::params![scene.id, scene.name, scene.description, scene.fade_time_ms, scene.scene_data],
+    )
+    .map_err(|e| format!("Failed to insert scene: {}", e))?;
+    
+    Ok(scene)
+}
+
+#[command]
+pub async fn update_dmx_scene(scene: DmxScene) -> Result<(), String> {
+    info!("Updating DMX scene: {}", scene.name);
+    use rusqlite::Connection;
+    
+    let conn = Connection::open("harmonylink.sqlite")
+        .map_err(|e| format!("Failed to open database: {}", e))?;
+    
+    conn.execute(
+        "UPDATE dmx_scenes SET name = ?1, description = ?2, fade_time_ms = ?3, scene_data = ?4 WHERE id = ?5",
+        rusqlite::params![scene.name, scene.description, scene.fade_time_ms, scene.scene_data, scene.id],
+    )
+    .map_err(|e| format!("Failed to update scene: {}", e))?;
+    
+    Ok(())
+}
+
+#[command]
+pub async fn delete_dmx_scene(id: String) -> Result<(), String> {
+    info!("Deleting DMX scene: {}", id);
+    use rusqlite::Connection;
+    
+    let conn = Connection::open("harmonylink.sqlite")
+        .map_err(|e| format!("Failed to open database: {}", e))?;
+    
+    conn.execute("DELETE FROM dmx_scenes WHERE id = ?1", rusqlite::params![id])
+        .map_err(|e| format!("Failed to delete scene: {}", e))?;
+    
+    Ok(())
+}
+
+#[command]
+pub async fn recall_dmx_scene(scene_id: String) -> Result<(), String> {
+    info!("Recalling DMX scene: {}", scene_id);
+    use rusqlite::Connection;
+    
+    let conn = Connection::open("harmonylink.sqlite")
+        .map_err(|e| format!("Failed to open database: {}", e))?;
+    
+    let scene: DmxScene = conn.query_row(
+        "SELECT id, name, description, fade_time_ms, scene_data FROM dmx_scenes WHERE id = ?1",
+        rusqlite::params![scene_id],
+        |row| {
+            Ok(DmxScene {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                description: row.get(2)?,
+                fade_time_ms: row.get(3)?,
+                scene_data: row.get(4)?,
+            })
+        }
+    )
+    .map_err(|e| format!("Failed to find scene: {}", e))?;
+    
+    // TODO: Implement actual DMX output here
+    // For now, just log that we're recalling the scene
+    info!("Would recall scene '{}' with fade time {}ms", scene.name, scene.fade_time_ms);
+    info!("Scene data: {}", scene.scene_data);
+    
+    Ok(())
+}
+
