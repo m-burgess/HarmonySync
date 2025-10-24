@@ -312,3 +312,91 @@ mod search_result_tests {
         assert_eq!(result.path, "/test/path");
     }
 }
+
+#[cfg(test)]
+mod dmx_tests {
+    use super::*;
+
+    #[test]
+    fn test_dmx_fixture_creation() {
+        let fixture = DmxFixture {
+            id: "fixture_1".to_string(),
+            name: "Stage Par 1".to_string(),
+            fixture_type: "RGB LED Par (6ch)".to_string(),
+            dmx_address: 1,
+            universe: 1,
+            channel_count: 6,
+            channel_definitions: r#"{"channels":[{"name":"Red","type":"color"}]}"#.to_string(),
+        };
+
+        assert_eq!(fixture.id, "fixture_1");
+        assert_eq!(fixture.name, "Stage Par 1");
+        assert_eq!(fixture.dmx_address, 1);
+        assert_eq!(fixture.universe, 1);
+        assert_eq!(fixture.channel_count, 6);
+    }
+
+    #[test]
+    fn test_dmx_scene_creation() {
+        let scene = DmxScene {
+            id: "scene_1".to_string(),
+            name: "Worship - Blue Purple".to_string(),
+            description: Some("Blue and purple stage lighting".to_string()),
+            fade_time_ms: 3000,
+            scene_data: r#"{"fixture_1":{"values":[128,0,255,200,0,0]}}"#.to_string(),
+        };
+
+        assert_eq!(scene.id, "scene_1");
+        assert_eq!(scene.name, "Worship - Blue Purple");
+        assert_eq!(scene.description, Some("Blue and purple stage lighting".to_string()));
+        assert_eq!(scene.fade_time_ms, 3000);
+    }
+
+    #[test]
+    fn test_dmx_scene_without_description() {
+        let scene = DmxScene {
+            id: "scene_2".to_string(),
+            name: "Blackout".to_string(),
+            description: None,
+            fade_time_ms: 1000,
+            scene_data: r#"{}"#.to_string(),
+        };
+
+        assert_eq!(scene.description, None);
+        assert_eq!(scene.fade_time_ms, 1000);
+    }
+
+    #[test]
+    fn test_dmx_fixture_clone() {
+        let fixture = DmxFixture {
+            id: "fixture_1".to_string(),
+            name: "Test Fixture".to_string(),
+            fixture_type: "RGB Par".to_string(),
+            dmx_address: 10,
+            universe: 1,
+            channel_count: 3,
+            channel_definitions: "{}".to_string(),
+        };
+
+        let cloned = fixture.clone();
+        assert_eq!(fixture.id, cloned.id);
+        assert_eq!(fixture.name, cloned.name);
+        assert_eq!(fixture.dmx_address, cloned.dmx_address);
+    }
+
+    #[test]
+    fn test_dmx_scene_clone() {
+        let scene = DmxScene {
+            id: "scene_1".to_string(),
+            name: "Test Scene".to_string(),
+            description: Some("Test".to_string()),
+            fade_time_ms: 2000,
+            scene_data: "{}".to_string(),
+        };
+
+        let cloned = scene.clone();
+        assert_eq!(scene.id, cloned.id);
+        assert_eq!(scene.name, cloned.name);
+        assert_eq!(scene.fade_time_ms, cloned.fade_time_ms);
+    }
+}
