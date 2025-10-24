@@ -1,4 +1,4 @@
-use super::entities::{Macro, ScheduleEvent, Setting, Slide, Song, Track, Presentation, YouTubeLink};
+use super::entities::{Macro, ScheduleEvent, Setting, Slide, Song, Track, Presentation, YouTubeLink, DmxFixture, DmxScene, DmxSceneMacro};
 use anyhow::Result;
 
 pub trait SongRepository: Send + Sync + 'static {
@@ -61,4 +61,23 @@ pub trait YouTubeLinkRepository: Send + Sync + 'static {
     fn insert(&self, link: &YouTubeLink) -> Result<YouTubeLink>;
     fn get_by_presentation_id(&self, presentation_id: i64) -> Result<Vec<YouTubeLink>>;
     fn delete_by_presentation_id(&self, presentation_id: i64) -> Result<()>;
+}
+
+pub trait DmxFixtureRepository: Send + Sync + 'static {
+    fn get_all(&self) -> Result<Vec<DmxFixture>>;
+    fn get_by_id(&self, id: &str) -> Result<Option<DmxFixture>>;
+    fn insert(&self, fixture: &DmxFixture) -> Result<DmxFixture>;
+    fn update(&self, fixture: &DmxFixture) -> Result<()>;
+    fn delete(&self, id: &str) -> Result<()>;
+}
+
+pub trait DmxSceneRepository: Send + Sync + 'static {
+    fn get_all(&self) -> Result<Vec<DmxScene>>;
+    fn get_by_id(&self, id: &str) -> Result<Option<DmxScene>>;
+    fn insert(&self, scene: &DmxScene) -> Result<DmxScene>;
+    fn update(&self, scene: &DmxScene) -> Result<()>;
+    fn delete(&self, id: &str) -> Result<()>;
+    fn add_to_macro(&self, scene_id: &str, macro_id: i64) -> Result<()>;
+    fn remove_from_macro(&self, scene_id: &str, macro_id: i64) -> Result<()>;
+    fn get_for_macro(&self, macro_id: i64) -> Result<Vec<DmxScene>>;
 }

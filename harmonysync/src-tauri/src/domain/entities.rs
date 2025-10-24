@@ -78,3 +78,30 @@ pub struct PresentationSearchResult {
     pub name: String,
     pub path: String,
 }
+
+// DMX Entities
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DmxFixture {
+    pub id: String,
+    pub name: String,
+    pub fixture_type: String,
+    pub dmx_address: i32,
+    pub universe: i32,
+    pub channel_count: i32,
+    pub channel_definitions: String, // JSON string for channel definitions
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DmxScene {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub fade_time_ms: i32,
+    pub scene_data: String, // JSON string for scene data (fixture values)
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DmxSceneMacro {
+    pub scene_id: String,
+    pub macro_id: i64,
+}

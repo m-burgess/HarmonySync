@@ -1,5 +1,5 @@
-use crate::domain::entities::{Macro, ScheduleEvent, Setting, Slide, Song, Track, Presentation, YouTubeLink};
-use crate::domain::repositories::{MacroRepository, ScheduleRepository, SettingRepository, SlideRepository, SongRepository, TrackRepository, PresentationRepository, YouTubeLinkRepository};
+use crate::domain::entities::{Macro, ScheduleEvent, Setting, Slide, Song, Track, Presentation, YouTubeLink, DmxFixture, DmxScene, DmxSceneMacro};
+use crate::domain::repositories::{MacroRepository, ScheduleRepository, SettingRepository, SlideRepository, SongRepository, TrackRepository, PresentationRepository, YouTubeLinkRepository, DmxFixtureRepository, DmxSceneRepository};
 use anyhow::Result;
 use rusqlite::{Connection, params, OptionalExtension};
 use std::sync::Mutex;
@@ -96,6 +96,41 @@ impl SqliteRepository {
                 presentation_id INTEGER NOT NULL,
                 url TEXT NOT NULL,
                 FOREIGN KEY (presentation_id) REFERENCES presentations (id) ON DELETE CASCADE
+            )",
+            [],
+        )?;
+
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS dmx_fixtures (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                fixture_type TEXT NOT NULL,
+                dmx_address INTEGER NOT NULL,
+                universe INTEGER DEFAULT 1,
+                channel_count INTEGER NOT NULL,
+                channel_definitions TEXT NOT NULL
+            )",
+            [],
+        )?;
+
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS dmx_scenes (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                description TEXT,
+                fade_time_ms INTEGER DEFAULT 1000,
+                scene_data TEXT NOT NULL
+            )",
+            [],
+        )?;
+
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS dmx_scene_macros (
+                scene_id TEXT NOT NULL,
+                macro_id INTEGER NOT NULL,
+                PRIMARY KEY (scene_id, macro_id),
+                FOREIGN KEY (scene_id) REFERENCES dmx_scenes(id),
+                FOREIGN KEY (macro_id) REFERENCES macros(id)
             )",
             [],
         )?;
@@ -523,5 +558,174 @@ impl SlideRepository for SqliteRepository {
             })
         }).optional()?;
         Ok(slide)
+    }
+}
+
+impl DmxFixtureRepository for SqliteRepository {
+    fn get_all(&self) -> Result<Vec<DmxFixture>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare("SELECT id, name, fixture_type, dmx_address, universe, channel_count, channel_definitions FROM dmx_fixtures")?;
+        let fixture_iter = stmt.query_map([], |row| {
+            Ok(DmxFixture {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                fixture_type: row.get(2)?,
+                dmx_address: row.get(3)?,
+                universe: row.get(4)?,
+                channel_count: row.get(5)?,
+                channel_definitions: row.get(6)?,
+            })
+        })?;
+
+        let mut fixtures = Vec::new();
+        for fixture in fixture_iter {
+            fixtures.push(fixture?);
+        }
+        Ok(fixtures)
+    }
+
+    fn get_by_id(&self, id: &str) -> Result<Option<DmxFixture>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare("SELECT id, name, fixture_type, dmx_address, universe, channel_count, channel_definitions FROM dmx_fixtures WHERE id = ?1")?;
+        let fixture = stmt.query_row(params![id], |row| {
+            Ok(DmxFixture {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                fixture_type: row.get(2)?,
+                dmx_address: row.get(3)?,
+                universe: row.get(4)?,
+                channel_count: row.get(5)?,
+                channel_definitions: row.get(6)?,
+            })
+        }).optional()?;
+        Ok(fixture)
+    }
+
+    fn insert(&self, fixture: &DmxFixture) -> Result<DmxFixture> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "INSERT INTO dmx_fixtures (id, name, fixture_type, dmx_address, universe, channel_count, channel_definitions) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![fixture.id, fixture.name, fixture.fixture_type, fixture.dmx_address, fixture.universe, fixture.channel_count, fixture.channel_definitions],
+        )?;
+        Ok(fixture.clone())
+    }
+
+    fn update(&self, fixture: &DmxFixture) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "UPDATE dmx_fixtures SET name = ?1, fixture_type = ?2, dmx_address = ?3, universe = ?4, channel_count = ?5, channel_definitions = ?6 WHERE id = ?7",
+            params![fixture.name, fixture.fixture_type, fixture.dmx_address, fixture.universe, fixture.channel_count, fixture.channel_definitions, fixture.id],
+        )?;
+        Ok(())
+    }
+
+    fn delete(&self, id: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("DELETE FROM dmx_fixtures WHERE id = ?1", params![id])?;
+        Ok(())
+    }
+}
+
+impl DmxSceneRepository for SqliteRepository {
+    fn get_all(&self) -> Result<Vec<DmxScene>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare("SELECT id, name, description, fade_time_ms, scene_data FROM dmx_scenes")?;
+        let scene_iter = stmt.query_map([], |row| {
+            Ok(DmxScene {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                description: row.get(2)?,
+                fade_time_ms: row.get(3)?,
+                scene_data: row.get(4)?,
+            })
+        })?;
+
+        let mut scenes = Vec::new();
+        for scene in scene_iter {
+            scenes.push(scene?);
+        }
+        Ok(scenes)
+    }
+
+    fn get_by_id(&self, id: &str) -> Result<Option<DmxScene>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare("SELECT id, name, description, fade_time_ms, scene_data FROM dmx_scenes WHERE id = ?1")?;
+        let scene = stmt.query_row(params![id], |row| {
+            Ok(DmxScene {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                description: row.get(2)?,
+                fade_time_ms: row.get(3)?,
+                scene_data: row.get(4)?,
+            })
+        }).optional()?;
+        Ok(scene)
+    }
+
+    fn insert(&self, scene: &DmxScene) -> Result<DmxScene> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "INSERT INTO dmx_scenes (id, name, description, fade_time_ms, scene_data) VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![scene.id, scene.name, scene.description, scene.fade_time_ms, scene.scene_data],
+        )?;
+        Ok(scene.clone())
+    }
+
+    fn update(&self, scene: &DmxScene) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "UPDATE dmx_scenes SET name = ?1, description = ?2, fade_time_ms = ?3, scene_data = ?4 WHERE id = ?5",
+            params![scene.name, scene.description, scene.fade_time_ms, scene.scene_data, scene.id],
+        )?;
+        Ok(())
+    }
+
+    fn delete(&self, id: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("DELETE FROM dmx_scenes WHERE id = ?1", params![id])?;
+        Ok(())
+    }
+
+    fn add_to_macro(&self, scene_id: &str, macro_id: i64) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "INSERT OR IGNORE INTO dmx_scene_macros (scene_id, macro_id) VALUES (?1, ?2)",
+            params![scene_id, macro_id],
+        )?;
+        Ok(())
+    }
+
+    fn remove_from_macro(&self, scene_id: &str, macro_id: i64) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "DELETE FROM dmx_scene_macros WHERE scene_id = ?1 AND macro_id = ?2",
+            params![scene_id, macro_id],
+        )?;
+        Ok(())
+    }
+
+    fn get_for_macro(&self, macro_id: i64) -> Result<Vec<DmxScene>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT s.id, s.name, s.description, s.fade_time_ms, s.scene_data 
+             FROM dmx_scenes s 
+             INNER JOIN dmx_scene_macros sm ON s.id = sm.scene_id 
+             WHERE sm.macro_id = ?1"
+        )?;
+        let scene_iter = stmt.query_map(params![macro_id], |row| {
+            Ok(DmxScene {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                description: row.get(2)?,
+                fade_time_ms: row.get(3)?,
+                scene_data: row.get(4)?,
+            })
+        })?;
+
+        let mut scenes = Vec::new();
+        for scene in scene_iter {
+            scenes.push(scene?);
+        }
+        Ok(scenes)
     }
 }
