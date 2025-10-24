@@ -24,6 +24,7 @@ export default defineConfig({
                 lowerthirds: 'lowerthirds.html',
                 'preservice-music': 'preservice-music.html',
                 scheduler: 'scheduler.html',
+                'plugin-manager': 'plugin-manager.html',
               },
     },
   },
