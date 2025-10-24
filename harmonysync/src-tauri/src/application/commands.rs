@@ -1310,3 +1310,41 @@ pub async fn get_available_displays() -> Result<Vec<DisplayInfo>, String> {
     ])
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AudioDeviceInfo {
+    id: String,
+    name: String,
+}
+
+#[command]
+pub async fn get_available_audio_devices() -> Result<Vec<AudioDeviceInfo>, String> {
+    info!("Getting available audio devices");
+    
+    // For now, return a simple list
+    // In production, you'd use cpal or similar crate to enumerate audio devices
+    Ok(vec![
+        AudioDeviceInfo {
+            id: "default".to_string(),
+            name: "Default Audio Device".to_string(),
+        },
+    ])
+}
+
+#[command]
+pub async fn get_available_midi_inputs() -> Result<Vec<AudioDeviceInfo>, String> {
+    info!("Getting available MIDI input devices");
+    
+    // For now, return empty list
+    // In production, you'd use midir crate to enumerate MIDI devices
+    Ok(vec![])
+}
+
+#[command]
+pub async fn get_available_midi_outputs() -> Result<Vec<AudioDeviceInfo>, String> {
+    info!("Getting available MIDI output devices");
+    
+    // For now, return empty list
+    // In production, you'd use midir crate to enumerate MIDI devices
+    Ok(vec![])
+}
+
