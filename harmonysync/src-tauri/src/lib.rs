@@ -121,6 +121,16 @@ pub fn run() {
             application::commands::get_available_audio_devices,
             application::commands::get_available_midi_inputs,
             application::commands::get_available_midi_outputs,
+            // DMX commands
+            application::commands::get_dmx_fixtures,
+            application::commands::add_dmx_fixture,
+            application::commands::update_dmx_fixture,
+            application::commands::delete_dmx_fixture,
+            application::commands::get_dmx_scenes,
+            application::commands::create_dmx_scene,
+            application::commands::update_dmx_scene,
+            application::commands::delete_dmx_scene,
+            application::commands::recall_dmx_scene,
             // Legacy audio decoder commands removed - now using Node.js service
         ])
         .run(tauri::generate_context!())

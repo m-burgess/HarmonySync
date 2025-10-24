@@ -8,7 +8,8 @@ import {
   BoltIcon,
   PlayIcon,
   CalendarIcon,
-  MusicalNoteIcon
+  MusicalNoteIcon,
+  LightBulbIcon
 } from '@heroicons/react/24/outline';
 
 import './styles/App.css';
@@ -22,6 +23,7 @@ import SlideManager from './components/slides/SlideManager.jsx';
 import MultitrackPlayer from './components/audio/MultitrackPlayer.jsx';
 import DisplaySettings from './components/screens/DisplaySettings.jsx';
 import AudioSettings from './components/screens/AudioSettings.jsx';
+import DmxControlPanel from './components/dmx/DmxControlPanel.jsx';
 
 
 
@@ -35,6 +37,7 @@ const App = () => {
   const [selectedSlide, setSelectedSlide] = useState(null);
   const [isDisplaySettingsOpen, setIsDisplaySettingsOpen] = useState(false);
   const [isAudioSettingsOpen, setIsAudioSettingsOpen] = useState(false);
+  const [isDmxPanelOpen, setIsDmxPanelOpen] = useState(false);
   const containerRef = useRef(null);
 
   // Resizable layout: Service Order sidebar and Multitrack panel
@@ -314,6 +317,12 @@ const App = () => {
         />
 
         <ActivityBarIcon 
+          icon={<LightBulbIcon className="w-8 h-8" />} 
+          label="DMX Lighting" 
+          onClick={() => setIsDmxPanelOpen(true)}
+        />
+
+        <ActivityBarIcon 
           icon={<CogIcon className="w-8 h-8" />} 
           label="Settings" 
           onClick={() => setIsDisplaySettingsOpen(true)}
@@ -381,6 +390,25 @@ const App = () => {
         isOpen={isAudioSettingsOpen}
         onClose={() => setIsAudioSettingsOpen(false)}
       />
+
+      {isDmxPanelOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 rounded-lg shadow-xl w-4/5 h-4/5 max-w-6xl max-h-screen overflow-hidden flex flex-col">
+            <div className="flex justify-between items-center p-4 border-b border-gray-700">
+              <h2 className="text-xl font-bold text-white">DMX Lighting Control</h2>
+              <button
+                onClick={() => setIsDmxPanelOpen(false)}
+                className="text-gray-400 hover:text-white text-2xl font-bold leading-none"
+              >
+                ×
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto">
+              <DmxControlPanel />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
