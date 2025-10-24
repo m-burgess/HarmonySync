@@ -83,7 +83,7 @@ const ConfidenceMonitor = () => {
 
     return () => {
       unlistenDisplay.then(f => f());
-      unlistenClearDisplay.then(f => f());
+      unlistenClear.then(f => f());
       unlistenVideoProgress.then(f => f());
     };
   }, []);

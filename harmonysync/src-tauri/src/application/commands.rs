@@ -1205,3 +1205,35 @@ pub async fn transpose_audio_files(
     Ok(output_dir.to_str().unwrap().to_string())
 }
 
+#[command]
+pub async fn open_lyrics_file(path: String) -> Result<(), String> {
+    info!("Opening lyrics file: {}", path);
+    
+    // Use the system's default text editor to open the file
+    #[cfg(target_os = "linux")]
+    {
+        Command::new("xdg-open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("Failed to open lyrics file: {}", e))?;
+    }
+    
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("Failed to open lyrics file: {}", e))?;
+    }
+    
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("cmd")
+            .args(&["/C", "start", "", &path])
+            .spawn()
+            .map_err(|e| format!("Failed to open lyrics file: {}", e))?;
+    }
+    
+    Ok(())
+}
+
