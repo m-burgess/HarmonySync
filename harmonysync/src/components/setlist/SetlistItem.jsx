@@ -1,6 +1,7 @@
 import React from 'react';
 import Button from '../ui/Button.jsx';
 import TransitionButton from '../audio/TransitionButton.jsx';
+import { PencilIcon } from '@heroicons/react/24/outline';
 import '../../styles/components/SetlistItem.css';
 
 const SetlistItem = ({
@@ -11,6 +12,7 @@ const SetlistItem = ({
   onRemove,
   onTransition,
   onPreload,
+  onEditLyrics,
   className = ''
 }) => {
   const handleItemClick = () => {
@@ -28,6 +30,11 @@ const SetlistItem = ({
 
   const handlePreload = () => {
     if (onPreload) onPreload(item, index);
+  };
+
+  const handleEditLyrics = (e) => {
+    e.stopPropagation();
+    if (onEditLyrics) onEditLyrics(item, index);
   };
 
   const itemClass = ['setlist-item', isLoaded && 'setlist-item-loaded', className]
@@ -63,6 +70,17 @@ const SetlistItem = ({
         <div className="setlist-item-transitions">
           <TransitionButton type="crossfade" onClick={() => handleTransition('crossfade')} />
           <TransitionButton type="preload" onClick={handlePreload} />
+          {item.lyrics && (
+            <Button
+              size="small"
+              variant="secondary"
+              onClick={handleEditLyrics}
+              title="Edit Lyrics"
+              className="edit-lyrics-button"
+            >
+              <PencilIcon className="w-4 h-4" />
+            </Button>
+          )}
         </div>
       )}
 
