@@ -7,7 +7,8 @@ import {
   ClipboardDocumentListIcon,
   BoltIcon,
   PlayIcon,
-  CalendarIcon
+  CalendarIcon,
+  MusicalNoteIcon
 } from '@heroicons/react/24/outline';
 
 import './styles/App.css';
@@ -20,6 +21,7 @@ import SetlistManager from './components/setlist/SetlistManager.jsx';
 import SlideManager from './components/slides/SlideManager.jsx';
 import MultitrackPlayer from './components/audio/MultitrackPlayer.jsx';
 import DisplaySettings from './components/screens/DisplaySettings.jsx';
+import AudioSettings from './components/screens/AudioSettings.jsx';
 
 
 
@@ -32,6 +34,7 @@ const App = () => {
   const [serviceOrder, setServiceOrder] = useState([]); // New state for service order
   const [selectedSlide, setSelectedSlide] = useState(null);
   const [isDisplaySettingsOpen, setIsDisplaySettingsOpen] = useState(false);
+  const [isAudioSettingsOpen, setIsAudioSettingsOpen] = useState(false);
   const containerRef = useRef(null);
 
   // Resizable layout: Service Order sidebar and Multitrack panel
@@ -305,6 +308,12 @@ const App = () => {
         />
 
         <ActivityBarIcon 
+          icon={<MusicalNoteIcon className="w-8 h-8" />} 
+          label="Audio/MIDI Settings" 
+          onClick={() => setIsAudioSettingsOpen(true)}
+        />
+
+        <ActivityBarIcon 
           icon={<CogIcon className="w-8 h-8" />} 
           label="Settings" 
           onClick={() => setIsDisplaySettingsOpen(true)}
@@ -366,6 +375,11 @@ const App = () => {
       <DisplaySettings
         isOpen={isDisplaySettingsOpen}
         onClose={() => setIsDisplaySettingsOpen(false)}
+      />
+
+      <AudioSettings
+        isOpen={isAudioSettingsOpen}
+        onClose={() => setIsAudioSettingsOpen(false)}
       />
     </div>
   );

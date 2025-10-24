@@ -4,7 +4,7 @@ import * as TauriPath from '@tauri-apps/api/path';
 import * as TauriFs from '@tauri-apps/plugin-fs';
 import * as TauriCore from '@tauri-apps/api/core';
 import * as TauriEvent from '@tauri-apps/api/event';
-import { ArrowDownTrayIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { ArrowDownTrayIcon, CheckCircleIcon, PencilIcon } from '@heroicons/react/24/outline';
 import { 
   addTracks, 
   setPan, 
@@ -148,6 +148,29 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
 
     setLoadingMessage(`Preloading ${item.name}...`);
     setLoadingProgress(0);
+
+  const handleEditLyrics = async (item) => {
+    if (!item || item.type !== 'song') {
+      console.warn('Edit lyrics called for non-song item:', item);
+      return;
+    }
+
+    const lyricsPath = `${item.path}/lyrics.txt`;
+    try {
+      // Check if lyrics file exists
+      const exists = await TauriFs.exists(lyricsPath);
+      if (!exists) {
+        await TauriDialog.message('No lyrics.txt file found in this song folder.', { title: 'Lyrics Not Found', type: 'info' });
+        return;
+      }
+
+      // Open the lyrics file with the default text editor
+      await TauriCore.invoke('open_lyrics_file', { path: lyricsPath });
+    } catch (error) {
+      console.error('Failed to open lyrics file:', error);
+      await TauriDialog.message(`Failed to open lyrics file: ${error}`, { title: 'Error', type: 'error' });
+    }
+  };
     
     try {
       const tracks = item.tracks || [];
@@ -240,6 +263,9 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
         console.log('🧹 Tracks cleared, proceeding with fresh load');
       }
       
+      // Stop any background video that might be playing
+      TauriEvent.emit('stop-background-video');
+      
       TauriEvent.emit('clear-lyric-display');
       TauriEvent.emit('clear-confidence-display');
 
@@ -249,12 +275,37 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
       // Slides: prefer lyrics.txt, else images/videos
       const lyricsFile = entries.find(e => e.name === 'lyrics.txt' && e.children === undefined);
       let loadedSlides = [];
+      let backgroundVideo = null;
+      
+      // Check if this is a song folder with wav/ogg files
+      const hasAudioFiles = entries.some(e => e.children === undefined && (e.name.endsWith('.wav') || e.name.endsWith('.ogg') || e.name.endsWith('.mp3')));
+      
+      // If it's a song folder, check for background video (mp4 file)
+      if (hasAudioFiles) {
+        const videoFile = entries.find(e => e.children === undefined && e.name.endsWith('.mp4'));
+        if (videoFile) {
+          backgroundVideo = `${itemPath}/${videoFile.name}`;
+          console.log('🎬 Found background video for song:', backgroundVideo);
+          
+          // Emit event to start looping the background video on audience screen
+          TauriEvent.emit('start-background-video', { path: backgroundVideo });
+        }
+      }
+      
       if (lyricsFile) {
         setLoadingMessage('Loading lyrics...');
         let lyricsContent = await TauriFs.readFile(`${itemPath}/${lyricsFile.name}`, { encoding: 'utf8' });
         if (lyricsContent instanceof Uint8Array) lyricsContent = new TextDecoder().decode(lyricsContent);
         if (typeof lyricsContent === 'string' && lyricsContent.length > 0) {
           loadedSlides = parseLyricsToSlides(lyricsContent);
+          
+          // If there's a background video, add it as metadata to the slides
+          if (backgroundVideo) {
+            loadedSlides = loadedSlides.map(slide => ({
+              ...slide,
+              backgroundVideo: backgroundVideo
+            }));
+          }
         }
       } else {
         const videoFiles = entries.filter(entry => entry.children === undefined && (entry.name.endsWith('.mp4') || entry.name.endsWith('.mov') || entry.name.endsWith('.mkv'))).sort((a,b)=>a.name.localeCompare(b.name));
@@ -527,35 +578,55 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
                   {isCurrentSong && '▶ '}{item.name}
                 </span>
                 {item.type === 'song' && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handlePreloadSong(item); }}
-                    title={isPreloaded ? "Song is preloaded and ready" : "Preload song"}
-                    style={{ 
-                      marginLeft: 8,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      padding: '4px 8px',
-                      backgroundColor: isPreloaded ? '#10b981' : 'transparent',
-                      color: isPreloaded ? 'white' : 'inherit',
-                      border: isPreloaded ? 'none' : '1px solid currentColor',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    {isPreloaded ? (
-                      <>
-                        <CheckCircleIcon className="w-4 h-4" />
-                        <span>Ready</span>
-                      </>
-                    ) : (
-                      <>
-                        <ArrowDownTrayIcon className="w-4 h-4" />
-                        <span>Preload</span>
-                      </>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    {item.lyrics && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleEditLyrics(item); }}
+                        title="Edit lyrics"
+                        style={{ 
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '4px 8px',
+                          backgroundColor: 'transparent',
+                          border: '1px solid currentColor',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <PencilIcon className="w-4 h-4" />
+                      </button>
                     )}
-                  </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handlePreloadSong(item); }}
+                      title={isPreloaded ? "Song is preloaded and ready" : "Preload song"}
+                      style={{ 
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '4px 8px',
+                        backgroundColor: isPreloaded ? '#10b981' : 'transparent',
+                        color: isPreloaded ? 'white' : 'inherit',
+                        border: isPreloaded ? 'none' : '1px solid currentColor',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      {isPreloaded ? (
+                        <>
+                          <CheckCircleIcon className="w-4 h-4" />
+                          <span>Ready</span>
+                        </>
+                      ) : (
+                        <>
+                          <ArrowDownTrayIcon className="w-4 h-4" />
+                          <span>Preload</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 )}
               </div>
             </li>

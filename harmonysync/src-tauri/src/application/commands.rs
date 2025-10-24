@@ -1205,3 +1205,146 @@ pub async fn transpose_audio_files(
     Ok(output_dir.to_str().unwrap().to_string())
 }
 
+#[command]
+pub async fn open_lyrics_file(path: String) -> Result<(), String> {
+    info!("Opening lyrics file: {}", path);
+    
+    // Use the system's default text editor to open the file
+    #[cfg(target_os = "linux")]
+    {
+        Command::new("xdg-open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("Failed to open lyrics file: {}", e))?;
+    }
+    
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("Failed to open lyrics file: {}", e))?;
+    }
+    
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("cmd")
+            .args(&["/C", "start", "", &path])
+            .spawn()
+            .map_err(|e| format!("Failed to open lyrics file: {}", e))?;
+    }
+    
+    Ok(())
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DisplayInfo {
+    id: String,
+    name: String,
+}
+
+#[command]
+pub async fn get_available_displays() -> Result<Vec<DisplayInfo>, String> {
+    info!("Getting available displays");
+    
+    // For now, we'll return a simple list based on the platform
+    // In a production app, you'd use platform-specific APIs to enumerate displays
+    // On Linux: xrandr or wayland protocols
+    // On macOS: CoreGraphics
+    // On Windows: EnumDisplayDevices
+    
+    #[cfg(target_os = "linux")]
+    {
+        // Try to get display info from xrandr
+        match tokio::process::Command::new("xrandr")
+            .arg("--query")
+            .output()
+            .await
+        {
+            Ok(output) => {
+                if output.status.success() {
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    let mut displays = Vec::new();
+                    
+                    // Parse xrandr output for connected displays
+                    for (i, line) in stdout.lines().enumerate() {
+                        if line.contains(" connected") {
+                            let parts: Vec<&str> = line.split_whitespace().collect();
+                            if !parts.is_empty() {
+                                let display_name = parts[0];
+                                displays.push(DisplayInfo {
+                                    id: format!("display_{}", i),
+                                    name: format!("{} (Connected)", display_name),
+                                });
+                            }
+                        }
+                    }
+                    
+                    if displays.is_empty() {
+                        // Fallback if no displays found
+                        displays.push(DisplayInfo {
+                            id: "primary".to_string(),
+                            name: "Primary Display".to_string(),
+                        });
+                    }
+                    
+                    return Ok(displays);
+                }
+            }
+            Err(_) => {
+                info!("xrandr not available, using fallback");
+            }
+        }
+    }
+    
+    // Fallback for all platforms
+    Ok(vec![
+        DisplayInfo {
+            id: "primary".to_string(),
+            name: "Primary Display".to_string(),
+        },
+        DisplayInfo {
+            id: "secondary".to_string(),
+            name: "Secondary Display".to_string(),
+        },
+    ])
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AudioDeviceInfo {
+    id: String,
+    name: String,
+}
+
+#[command]
+pub async fn get_available_audio_devices() -> Result<Vec<AudioDeviceInfo>, String> {
+    info!("Getting available audio devices");
+    
+    // For now, return a simple list
+    // In production, you'd use cpal or similar crate to enumerate audio devices
+    Ok(vec![
+        AudioDeviceInfo {
+            id: "default".to_string(),
+            name: "Default Audio Device".to_string(),
+        },
+    ])
+}
+
+#[command]
+pub async fn get_available_midi_inputs() -> Result<Vec<AudioDeviceInfo>, String> {
+    info!("Getting available MIDI input devices");
+    
+    // For now, return empty list
+    // In production, you'd use midir crate to enumerate MIDI devices
+    Ok(vec![])
+}
+
+#[command]
+pub async fn get_available_midi_outputs() -> Result<Vec<AudioDeviceInfo>, String> {
+    info!("Getting available MIDI output devices");
+    
+    // For now, return empty list
+    // In production, you'd use midir crate to enumerate MIDI devices
+    Ok(vec![])
+}
+
