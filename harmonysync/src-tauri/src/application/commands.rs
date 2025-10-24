@@ -1031,6 +1031,40 @@ pub async fn close_preservice_music_window(app_handle: AppHandle) -> Result<(), 
     Ok(())
 }
 
+#[command]
+pub async fn open_plugin_manager_window(app_handle: AppHandle) -> Result<(), String> {
+    use tauri::{WebviewWindowBuilder, WebviewUrl};
+    
+    info!("Opening Plugin Manager window");
+    
+    // Check if window already exists
+    if let Some(window) = app_handle.get_webview_window("plugin-manager") {
+        // If it exists, just focus it
+        window.set_focus().map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+    
+    // Get main window position to open near it
+    let main_window = app_handle.get_webview_window("main")
+        .ok_or("Main window not found")?;
+    let main_position = main_window.outer_position().map_err(|e| e.to_string())?;
+    
+    // Create new window
+    let window = WebviewWindowBuilder::new(
+        &app_handle,
+        "plugin-manager",
+        WebviewUrl::App("plugin-manager.html".into())
+    )
+    .title("Carla Plugin Manager")
+    .inner_size(1200.0, 800.0)
+    .resizable(true)
+    .position(main_position.x as f64 + 50.0, main_position.y as f64 + 50.0)
+    .build()
+    .map_err(|e| e.to_string())?;
+    
+    Ok(())
+}
+
 #[derive(Clone, serde::Serialize)]
 struct TransposeProgressPayload {
     current_file: String,
@@ -1346,5 +1380,191 @@ pub async fn get_available_midi_outputs() -> Result<Vec<AudioDeviceInfo>, String
     // For now, return empty list
     // In production, you'd use midir crate to enumerate MIDI devices
     Ok(vec![])
+}
+
+// ============================================================================
+// Carla Plugin Manager Commands
+// ============================================================================
+
+use super::carla_plugin_manager::{self, Plugin, MemoryStats};
+use super::midi_manager::{self, MidiDevice};
+use super::audio_router::{self, AudioDevice};
+
+/// Initialize the plugin manager (call on app startup)
+#[command]
+pub async fn initialize_carla_managers() -> Result<(), String> {
+    info!("Initializing Carla plugin managers");
+    
+    carla_plugin_manager::initialize_plugin_manager()
+        .await
+        .map_err(|e| format!("Failed to initialize plugin manager: {}", e))?;
+    
+    midi_manager::initialize_midi_manager()
+        .await
+        .map_err(|e| format!("Failed to initialize MIDI manager: {}", e))?;
+    
+    audio_router::initialize_audio_router()
+        .await
+        .map_err(|e| format!("Failed to initialize audio router: {}", e))?;
+    
+    info!("Carla managers initialized successfully");
+    Ok(())
+}
+
+/// Load a plugin from a file path
+#[command]
+pub async fn load_plugin(plugin_path: String, name: String) -> Result<String, String> {
+    info!("Loading plugin: {} from {}", name, plugin_path);
+    
+    let manager_guard = carla_plugin_manager::get_plugin_manager().await;
+    let manager_lock = manager_guard.lock().await;
+    
+    if let Some(manager) = manager_lock.as_ref() {
+        manager.load_plugin(plugin_path, name)
+            .await
+            .map_err(|e| format!("Failed to load plugin: {}", e))
+    } else {
+        Err("Plugin manager not initialized".to_string())
+    }
+}
+
+/// Unload a plugin
+#[command]
+pub async fn unload_plugin(plugin_id: String) -> Result<(), String> {
+    info!("Unloading plugin: {}", plugin_id);
+    
+    let manager_guard = carla_plugin_manager::get_plugin_manager().await;
+    let manager_lock = manager_guard.lock().await;
+    
+    if let Some(manager) = manager_lock.as_ref() {
+        manager.unload_plugin(plugin_id)
+            .await
+            .map_err(|e| format!("Failed to unload plugin: {}", e))
+    } else {
+        Err("Plugin manager not initialized".to_string())
+    }
+}
+
+/// Get all loaded plugins
+#[command]
+pub async fn get_loaded_plugins() -> Result<Vec<Plugin>, String> {
+    info!("Getting loaded plugins");
+    
+    let manager_guard = carla_plugin_manager::get_plugin_manager().await;
+    let manager_lock = manager_guard.lock().await;
+    
+    if let Some(manager) = manager_lock.as_ref() {
+        Ok(manager.get_loaded_plugins().await)
+    } else {
+        Err("Plugin manager not initialized".to_string())
+    }
+}
+
+/// Set MIDI routing for a plugin
+#[command]
+pub async fn set_plugin_midi_routing(
+    plugin_id: String,
+    device_id: String,
+    channel: u8,
+) -> Result<(), String> {
+    info!("Setting MIDI routing for plugin {}: device={}, channel={}", 
+          plugin_id, device_id, channel);
+    
+    let manager_guard = carla_plugin_manager::get_plugin_manager().await;
+    let manager_lock = manager_guard.lock().await;
+    
+    if let Some(manager) = manager_lock.as_ref() {
+        // Get device name from MIDI manager
+        let midi_guard = midi_manager::get_midi_manager().await;
+        let midi_lock = midi_guard.lock().await;
+        
+        let device_name = if let Some(midi_mgr) = midi_lock.as_ref() {
+            midi_mgr.get_input_devices()
+                .ok()
+                .and_then(|devices| {
+                    devices.iter()
+                        .find(|d| d.id == device_id)
+                        .map(|d| d.name.clone())
+                })
+                .unwrap_or_else(|| "Unknown Device".to_string())
+        } else {
+            "Unknown Device".to_string()
+        };
+        
+        manager.set_midi_routing(plugin_id, device_id, device_name, channel)
+            .await
+            .map_err(|e| format!("Failed to set MIDI routing: {}", e))
+    } else {
+        Err("Plugin manager not initialized".to_string())
+    }
+}
+
+/// Set audio routing for a plugin
+#[command]
+pub async fn set_plugin_audio_routing(
+    plugin_id: String,
+    output_channels: Vec<usize>,
+) -> Result<(), String> {
+    info!("Setting audio routing for plugin {}: channels={:?}", 
+          plugin_id, output_channels);
+    
+    let manager_guard = carla_plugin_manager::get_plugin_manager().await;
+    let manager_lock = manager_guard.lock().await;
+    
+    if let Some(manager) = manager_lock.as_ref() {
+        manager.set_audio_routing(plugin_id, output_channels)
+            .await
+            .map_err(|e| format!("Failed to set audio routing: {}", e))
+    } else {
+        Err("Plugin manager not initialized".to_string())
+    }
+}
+
+/// Get memory statistics
+#[command]
+pub async fn get_memory_stats() -> Result<MemoryStats, String> {
+    let manager_guard = carla_plugin_manager::get_plugin_manager().await;
+    let manager_lock = manager_guard.lock().await;
+    
+    if let Some(manager) = manager_lock.as_ref() {
+        manager.get_memory_stats()
+            .await
+            .map_err(|e| format!("Failed to get memory stats: {}", e))
+    } else {
+        Err("Plugin manager not initialized".to_string())
+    }
+}
+
+/// Get available MIDI input devices
+#[command]
+pub async fn get_available_midi_inputs() -> Result<Vec<MidiDevice>, String> {
+    info!("Getting available MIDI input devices");
+    
+    let midi_guard = midi_manager::get_midi_manager().await;
+    let midi_lock = midi_guard.lock().await;
+    
+    if let Some(manager) = midi_lock.as_ref() {
+        manager.get_input_devices()
+            .map_err(|e| format!("Failed to get MIDI inputs: {}", e))
+    } else {
+        Err("MIDI manager not initialized".to_string())
+    }
+}
+
+/// Get available audio devices
+#[command]
+pub async fn get_available_audio_devices() -> Result<Vec<AudioDevice>, String> {
+    info!("Getting available audio devices");
+    
+    let router_guard = audio_router::get_audio_router().await;
+    let router_lock = router_guard.lock().await;
+    
+    if let Some(router) = router_lock.as_ref() {
+        router.get_audio_devices()
+            .await
+            .map_err(|e| format!("Failed to get audio devices: {}", e))
+    } else {
+        Err("Audio router not initialized".to_string())
+    }
 }
 
