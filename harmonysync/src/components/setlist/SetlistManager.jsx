@@ -263,6 +263,9 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
         console.log('🧹 Tracks cleared, proceeding with fresh load');
       }
       
+      // Stop any background video that might be playing
+      TauriEvent.emit('stop-background-video');
+      
       TauriEvent.emit('clear-lyric-display');
       TauriEvent.emit('clear-confidence-display');
 
@@ -272,12 +275,37 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
       // Slides: prefer lyrics.txt, else images/videos
       const lyricsFile = entries.find(e => e.name === 'lyrics.txt' && e.children === undefined);
       let loadedSlides = [];
+      let backgroundVideo = null;
+      
+      // Check if this is a song folder with wav/ogg files
+      const hasAudioFiles = entries.some(e => e.children === undefined && (e.name.endsWith('.wav') || e.name.endsWith('.ogg') || e.name.endsWith('.mp3')));
+      
+      // If it's a song folder, check for background video (mp4 file)
+      if (hasAudioFiles) {
+        const videoFile = entries.find(e => e.children === undefined && e.name.endsWith('.mp4'));
+        if (videoFile) {
+          backgroundVideo = `${itemPath}/${videoFile.name}`;
+          console.log('🎬 Found background video for song:', backgroundVideo);
+          
+          // Emit event to start looping the background video on audience screen
+          TauriEvent.emit('start-background-video', { path: backgroundVideo });
+        }
+      }
+      
       if (lyricsFile) {
         setLoadingMessage('Loading lyrics...');
         let lyricsContent = await TauriFs.readFile(`${itemPath}/${lyricsFile.name}`, { encoding: 'utf8' });
         if (lyricsContent instanceof Uint8Array) lyricsContent = new TextDecoder().decode(lyricsContent);
         if (typeof lyricsContent === 'string' && lyricsContent.length > 0) {
           loadedSlides = parseLyricsToSlides(lyricsContent);
+          
+          // If there's a background video, add it as metadata to the slides
+          if (backgroundVideo) {
+            loadedSlides = loadedSlides.map(slide => ({
+              ...slide,
+              backgroundVideo: backgroundVideo
+            }));
+          }
         }
       } else {
         const videoFiles = entries.filter(entry => entry.children === undefined && (entry.name.endsWith('.mp4') || entry.name.endsWith('.mov') || entry.name.endsWith('.mkv'))).sort((a,b)=>a.name.localeCompare(b.name));
