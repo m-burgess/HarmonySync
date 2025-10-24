@@ -1566,6 +1566,8 @@ pub async fn get_available_audio_devices() -> Result<Vec<AudioDevice>, String> {
     } else {
         Err("Audio router not initialized".to_string())
     }
+}
+
 // DMX Commands
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DmxFixture {
