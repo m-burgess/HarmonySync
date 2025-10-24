@@ -5,8 +5,10 @@ import { lyricTransitionManager } from '../../utils/lyrics';
 
 const AudienceScreen = () => {
   const [content, setContent] = useState(null); // { type: 'lyrics', text: [] }, { type: 'image', path: '', name: '' }, { type: 'video', videoId: '' }
+  const [backgroundVideo, setBackgroundVideo] = useState(null); // Background video for lyrics
   const playerRef = useRef(null);
   const lyricDisplayRef = useRef(null);
+  const backgroundVideoRef = useRef(null);
 
   // Initialize lyric display when component mounts
   useEffect(() => {
@@ -75,6 +77,16 @@ const AudienceScreen = () => {
     const unlistenNavigate = TauriEvent.listen('navigate', (event) => {
       console.log('Audience: navigate event received:', event.payload);
       setContent({ type: 'video', videoId: event.payload.videoId });
+    });
+
+    const unlistenStartBackgroundVideo = TauriEvent.listen('start-background-video', (event) => {
+      console.log('Audience: start-background-video event received:', event.payload);
+      setBackgroundVideo(event.payload.path);
+    });
+
+    const unlistenStopBackgroundVideo = TauriEvent.listen('stop-background-video', () => {
+      console.log('Audience: stop-background-video event received');
+      setBackgroundVideo(null);
     });
 
     if (content && content.type === 'video') {
@@ -149,6 +161,8 @@ const AudienceScreen = () => {
       unlistenImage.then(f => f());
       unlistenClear.then(f => f());
       unlistenNavigate.then(f => f());
+      unlistenStartBackgroundVideo.then(f => f());
+      unlistenStopBackgroundVideo.then(f => f());
 
       if (playerRef.current) {
         if (playerRef.current.intervalId) {
@@ -211,6 +225,27 @@ const AudienceScreen = () => {
 
   return (
     <div id="audience-container">
+      {/* Background video layer (muted, looping, behind lyrics) */}
+      {backgroundVideo && (
+        <video
+          ref={backgroundVideoRef}
+          className="background-video"
+          src={TauriCore.convertFileSrc(backgroundVideo)}
+          autoPlay
+          loop
+          muted
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            zIndex: -1,
+            opacity: 0.6,
+          }}
+        />
+      )}
       {renderContent()}
     </div>
   );
