@@ -8,24 +8,18 @@ class AudioServiceChecker {
 
     async checkServiceStatus() {
         try {
-            const response = await fetch(`${this.serviceUrl}/api/health`, {
-                method: 'GET',
-                signal: AbortSignal.timeout(2000) // 2 second timeout
-            });
-            
-            if (response.ok) {
-                const health = await response.json();
-                return {
-                    isRunning: true,
-                    memoryUsage: health.memoryUsage,
-                    version: health.version
-                };
-            }
-            return { isRunning: false, error: `HTTP ${response.status}` };
+            // Use the typed API client (lazy import to avoid bundling issues)
+            const api = await import('../api');
+            const health = await api.health();
+            return {
+                isRunning: true,
+                memoryUsage: health.memoryUsage,
+                version: health.version
+            };
         } catch (error) {
             return { 
                 isRunning: false, 
-                error: error.name === 'TimeoutError' ? 'Service timeout' : 'Connection failed'
+                error: error?.name === 'TimeoutError' ? 'Service timeout' : (error?.message || 'Connection failed')
             };
         }
     }

@@ -11,7 +11,8 @@
     "tauri:dev": "tauri dev",
     "tauri:dev:release": "tauri dev --release",
     "tauri:build": "tauri build",
-    "launch:nosandbox": "./scripts/launch-harmonysync.sh"
+    "launch:nosandbox": "./scripts/launch-harmonysync.sh",
+    "generate:audio-api": "npx openapi-typescript ../harmonysync-audio-service/openapi.yml --output src/utils/api/audio-api.ts"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.14",
