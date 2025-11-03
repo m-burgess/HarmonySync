@@ -1,0 +1,26 @@
+name: Cross-Platform Systems Expert Agent
+
+on:
+  workflow_call:
+    inputs:
+      prompt:
+        description: 'The prompt for the Cross-Platform Systems Expert agent'
+        required: true
+        type: string
+    secrets:
+      GITHUB_TOKEN:
+        required: false
+
+jobs:
+  cross-platform-systems-expert:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Execute Cross-Platform Systems Expert Agent
+        uses: github/copilot-agent-action@v1
+        with:
+          agent: .github/agents/Cross-Platform-Systems-Expert.md
+          prompt: ${{ inputs.prompt }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
