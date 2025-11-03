@@ -18,6 +18,7 @@ use rand::Rng;
 // Import the new http_server module
 use super::http_server;
 use super::performance;
+use super::lyrics_fetcher;
 
 // Global variable to hold the server shutdown sender
 static HTTP_SERVER_SHUTDOWN_TX: Lazy<Arc<Mutex<Option<oneshot::Sender<()>>>>> = // Changed type
@@ -1561,4 +1562,67 @@ pub fn get_performance_metrics() -> performance::PerformanceMetrics {
     info!("Getting performance metrics");
     performance::get_system_metrics()
 }
+
+// Lyrics fetching commands
+#[command]
+pub async fn fetch_lyrics_from_genius(
+    song_title: String,
+    artist: Option<String>,
+) -> Result<lyrics_fetcher::LyricsResult, String> {
+    info!("Fetching lyrics for: {} by {:?}", song_title, artist);
+    
+    let client = lyrics_fetcher::GeniusClient::new(None);
+    
+    match client.get_lyrics(&song_title, artist.as_deref()).await {
+        Ok(result) => {
+            info!("Successfully fetched lyrics from {}", result.source);
+            Ok(result)
+        }
+        Err(e) => {
+            error!("Failed to fetch lyrics: {}", e);
+            Err(format!("Failed to fetch lyrics: {}", e))
+        }
+    }
+}
+
+#[command]
+pub async fn save_lyrics_to_file(
+    folder_path: String,
+    lyrics: String,
+) -> Result<String, String> {
+    info!("Saving lyrics to folder: {}", folder_path);
+    
+    let mut lyrics_path = PathBuf::from(&folder_path);
+    lyrics_path.push("lyrics.txt");
+    
+    match fs::write(&lyrics_path, lyrics) {
+        Ok(_) => {
+            info!("Successfully saved lyrics to: {}", lyrics_path.display());
+            Ok(lyrics_path.to_string_lossy().to_string())
+        }
+        Err(e) => {
+            error!("Failed to save lyrics: {}", e);
+            Err(format!("Failed to save lyrics: {}", e))
+        }
+    }
+}
+
+#[command]
+pub async fn fetch_and_save_lyrics(
+    song_title: String,
+    artist: Option<String>,
+    folder_path: String,
+) -> Result<String, String> {
+    info!("Fetching and saving lyrics for: {} to {}", song_title, folder_path);
+    
+    // Fetch lyrics
+    let lyrics_result = fetch_lyrics_from_genius(song_title, artist).await?;
+    
+    // Format lyrics with sections
+    let formatted_lyrics = lyrics_fetcher::format_lyrics_with_sections(&lyrics_result.lyrics);
+    
+    // Save to file
+    save_lyrics_to_file(folder_path, formatted_lyrics).await
+}
+
 
