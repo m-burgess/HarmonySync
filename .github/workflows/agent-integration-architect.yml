@@ -19,9 +19,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Execute Integration Architect Agent
-        uses: github/copilot-agent-action@v1
-        with:
-          agent: .github/agents/Integration-Architect.md
-          prompt: ${{ inputs.prompt }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Agent Placeholder
+        run: |
+          echo "Integration Architect agent definition available at .github/agents/Integration-Architect.md"
+          echo "This agent should be invoked through GitHub Copilot interface"
+          echo ""
+          echo "Agent specializes in:"
+          echo "- API design and cross-system communication"
+          echo "- Data flow between frontend, backend, and services"
+          echo "- Deployment pipelines and architecture coordination"
