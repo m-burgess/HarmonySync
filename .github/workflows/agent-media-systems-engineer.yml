@@ -19,9 +19,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Execute Media Systems Engineer Agent
-        uses: github/copilot-agent-action@v1
-        with:
-          agent: .github/agents/Media-Systems-Engineer.md
-          prompt: ${{ inputs.prompt }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Agent Placeholder
+        run: |
+          echo "Media Systems Engineer agent definition available at .github/agents/Media-Systems-Engineer.md"
+          echo "This agent should be invoked through GitHub Copilot interface"
+          echo ""
+          echo "Agent specializes in:"
+          echo "- Multitrack audio playback and FFmpeg processing"
+          echo "- DMX lighting control and media display systems"
+          echo "- Audio transposition and mixer configuration"
