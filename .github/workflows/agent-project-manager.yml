@@ -1,0 +1,31 @@
+name: Project Manager Agent
+
+on:
+  workflow_call:
+    inputs:
+      prompt:
+        description: 'The prompt for the Project Manager agent'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  project-manager:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Agent Placeholder
+        run: |
+          echo "Project Manager agent definition available at .github/agents/Project-Manager.md"
+          echo "This agent should be invoked through GitHub Copilot interface"
+          echo ""
+          echo "Agent specializes in:"
+          echo "- Coordinating multi-agent collaboration"
+          echo "- Synthesizing expert feedback into actionable plans"
+          echo "- Managing implementation priorities and dependencies"
+          echo "- Creating comprehensive PR summaries"

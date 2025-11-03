@@ -19,9 +19,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Execute QA Testing Expert Agent
-        uses: github/copilot-agent-action@v1
-        with:
-          agent: .github/agents/QA-Testing-Expert.md
-          prompt: ${{ inputs.prompt }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Agent Placeholder
+        run: |
+          echo "QA Testing Expert agent definition available at .github/agents/QA-Testing-Expert.md"
+          echo "This agent should be invoked through GitHub Copilot interface"
+          echo ""
+          echo "Agent specializes in:"
+          echo "- Unit testing and integration testing"
+          echo "- Test automation and quality assurance"
+          echo "- Test coverage and edge case identification"

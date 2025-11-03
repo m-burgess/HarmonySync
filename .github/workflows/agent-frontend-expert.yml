@@ -19,9 +19,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Execute Frontend Expert Agent
-        uses: github/copilot-agent-action@v1
-        with:
-          agent: .github/agents/Frontend-Expert.md
-          prompt: ${{ inputs.prompt }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Agent Placeholder
+        run: |
+          echo "Frontend Expert agent definition available at .github/agents/Frontend-Expert.md"
+          echo "This agent should be invoked through GitHub Copilot interface"
+          echo ""
+          echo "Agent specializes in:"
+          echo "- Frontend development using HTML, CSS, ReactJS, and TailwindCSS"
+          echo "- Component architecture and responsive design"
+          echo "- API integration and accessibility"

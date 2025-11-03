@@ -19,9 +19,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Execute UX Designer Agent
-        uses: github/copilot-agent-action@v1
-        with:
-          agent: .github/agents/UX-Designer.md
-          prompt: ${{ inputs.prompt }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Agent Placeholder
+        run: |
+          echo "UX Designer agent definition available at .github/agents/UX-Designer.md"
+          echo "This agent should be invoked through GitHub Copilot interface"
+          echo ""
+          echo "Agent specializes in:"
+          echo "- User experience and interface design"
+          echo "- Usability and accessibility standards"
+          echo "- Layout and interaction design"
