@@ -259,8 +259,9 @@ const Scheduler = ({ isOpen, onClose }) => {
           </div>
 
           <div className="setting-row">
-            <label className="checkbox-label">
+            <label htmlFor="recurring-checkbox" className="checkbox-label">
               <input
+                id="recurring-checkbox"
                 type="checkbox"
                 checked={isRecurring}
                 onChange={(e) => setIsRecurring(e.target.checked)}

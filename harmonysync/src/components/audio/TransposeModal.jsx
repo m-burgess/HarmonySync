@@ -59,7 +59,7 @@ const TransposeModal = ({ isOpen, currentFile, totalFiles, completedFiles, messa
             <div className="transpose-complete-icon">✓ Complete!</div>
             <Button
               onClick={onClose}
-              variant="primary"
+              variant="secondary"
             >
               Close
             </Button>

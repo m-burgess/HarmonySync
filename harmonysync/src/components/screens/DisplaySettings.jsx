@@ -36,6 +36,10 @@ const DisplaySettings = ({ isOpen, onClose }) => {
     'Avant Garde'
   ];
 
+  // Preview font size scaling
+  const PREVIEW_SCALE_FACTOR = 3;
+  const PREVIEW_MAX_SIZE = 48;
+
   useEffect(() => {
     if (isOpen) {
       loadSettings();
@@ -257,7 +261,7 @@ const DisplaySettings = ({ isOpen, onClose }) => {
               className="preview-text" 
               style={{ 
                 fontFamily: audienceFontFamily, 
-                fontSize: Math.min(parseInt(audienceFontSize) / 3, 48) + 'px',
+                fontSize: Math.min(parseInt(audienceFontSize) / PREVIEW_SCALE_FACTOR, PREVIEW_MAX_SIZE) + 'px',
                 color: 'white',
                 backgroundColor: '#000',
                 padding: '10px',
@@ -274,7 +278,7 @@ const DisplaySettings = ({ isOpen, onClose }) => {
               className="preview-text" 
               style={{ 
                 fontFamily: confidenceFontFamily, 
-                fontSize: Math.min(parseInt(confidenceFontSize) / 3, 48) + 'px',
+                fontSize: Math.min(parseInt(confidenceFontSize) / PREVIEW_SCALE_FACTOR, PREVIEW_MAX_SIZE) + 'px',
                 color: 'white',
                 backgroundColor: '#000',
                 padding: '10px',
