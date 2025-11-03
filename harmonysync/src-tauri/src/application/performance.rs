@@ -70,7 +70,6 @@ pub fn get_system_metrics() -> PerformanceMetrics {
 fn get_available_memory_mb() -> u64 {
     // This is a simple implementation
     // On Linux, could read from /proc/meminfo
-    // For now, return a default value
     if cfg!(target_os = "linux") {
         if let Ok(info) = std::fs::read_to_string("/proc/meminfo") {
             for line in info.lines() {
@@ -86,6 +85,7 @@ fn get_available_memory_mb() -> u64 {
     }
     
     // Fallback: return 0 if we can't determine
+    // Frontend should handle 0 as "unknown"
     0
 }
 
