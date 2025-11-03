@@ -167,9 +167,14 @@ impl OptimizedCommand {
         // Use multi-threaded encoding
         cmd.arg("-threads").arg("0"); // Use all cores
         
-        // Audio codec (libvorbis with fallback)
-        // Note: Most systems have libvorbis, but if not available,
-        // ffmpeg will error and the caller should handle it
+        // Audio codec (libvorbis with error handling by caller)
+        // Libvorbis is included in most FFmpeg builds, but if unavailable:
+        // - The command will fail with an error indicating unknown codec
+        // - Caller should catch the error and either retry with AAC or report to user
+        // 
+        // Alternative codecs if libvorbis is not available:
+        // - AAC: "-c:a", "aac", "-b:a", "128k"
+        // - MP3: "-c:a", "libmp3lame", "-q:a", "2"
         cmd.arg("-c:a").arg("libvorbis");
         cmd.arg("-q:a").arg("4"); // Quality 4 (good balance)
         
