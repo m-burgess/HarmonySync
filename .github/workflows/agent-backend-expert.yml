@@ -7,9 +7,6 @@ on:
         description: 'The prompt for the Backend Expert agent'
         required: true
         type: string
-    secrets:
-      GITHUB_TOKEN:
-        required: false
 
 permissions:
   contents: read
