@@ -17,6 +17,7 @@ use rand::Rng;
 
 // Import the new http_server module
 use super::http_server;
+use super::performance;
 
 // Global variable to hold the server shutdown sender
 static HTTP_SERVER_SHUTDOWN_TX: Lazy<Arc<Mutex<Option<oneshot::Sender<()>>>>> = // Changed type
@@ -1552,5 +1553,12 @@ pub async fn recall_dmx_scene(scene_id: String) -> Result<(), String> {
     info!("Scene data: {}", scene.scene_data);
     
     Ok(())
+}
+
+// Performance monitoring command
+#[command]
+pub fn get_performance_metrics() -> performance::PerformanceMetrics {
+    info!("Getting performance metrics");
+    performance::get_system_metrics()
 }
 
