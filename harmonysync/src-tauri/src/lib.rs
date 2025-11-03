@@ -131,6 +131,8 @@ pub fn run() {
             application::commands::update_dmx_scene,
             application::commands::delete_dmx_scene,
             application::commands::recall_dmx_scene,
+            // Performance monitoring
+            application::commands::get_performance_metrics,
             // Legacy audio decoder commands removed - now using Node.js service
         ])
         .run(tauri::generate_context!())

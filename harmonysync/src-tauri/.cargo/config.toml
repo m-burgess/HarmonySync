@@ -1,0 +1,26 @@
+# Cargo build configuration for optimal performance
+
+[build]
+# Use all available CPU cores for compilation
+jobs = 0  # 0 = use all cores
+
+[target.x86_64-unknown-linux-gnu]
+# Use mold linker for faster linking (if available), fallback to lld
+# Uncomment the line below if you have mold installed
+# linker = "clang"
+# rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+
+# Alternatively use lld for faster linking
+rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+
+[target.x86_64-pc-windows-msvc]
+# Use lld-link on Windows for faster builds
+rustflags = ["-C", "link-arg=-fuse-ld=lld-link"]
+
+[target.x86_64-apple-darwin]
+# macOS optimization flags
+rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+
+# Profile-guided optimization can be enabled for even better performance
+# Requires running the app to generate profile data first
+# See: https://doc.rust-lang.org/rustc/profile-guided-optimization.html

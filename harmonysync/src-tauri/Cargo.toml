@@ -37,7 +37,30 @@ rusqlite = { version = "0.37.0", features = ["bundled"] }
 reqwest = { version = "0.11", features = ["json"] }
 ffmpeg-next = { version = "7.0.0", features = ["codec", "device", "filter", "format", "software-scaling", "image", "build"] }
 dashmap = "6.0"
+num_cpus = "1.16"
 
 [dev-dependencies]
 mockall = "0.13"
 tempfile = "3.15"
+
+# Performance optimization profiles
+[profile.release]
+# Enable Link Time Optimization for better performance
+lto = true
+# Reduce number of codegen units to improve optimization (slower compile, faster runtime)
+codegen-units = 1
+# Optimize for size and speed
+opt-level = 3
+# Abort on panic rather than unwinding (smaller binary, faster)
+panic = 'abort'
+# Strip debug symbols from release builds
+strip = true
+
+[profile.dev]
+# Faster linking in development
+# split-debuginfo = "unpacked"  # Uncomment on macOS for faster builds
+
+[profile.release-with-debug]
+inherits = "release"
+strip = false
+debug = true
