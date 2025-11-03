@@ -11,6 +11,10 @@ on:
       GITHUB_TOKEN:
         required: false
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   integration-architect:
     runs-on: ubuntu-latest
