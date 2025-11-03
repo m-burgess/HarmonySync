@@ -1,0 +1,159 @@
+name: Issue Agent Collaboration
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  # Phase 1: Initial Analysis - Backend and Integration experts review the issue first
+  backend-expert:
+    uses: ./.github/workflows/agent-backend-expert.yml
+    with:
+      prompt: |
+        A new issue has been created. As the Backend Expert, please provide your initial analysis:
+        
+        Issue Title: ${{ github.event.issue.title }}
+        Issue Body: ${{ github.event.issue.body }}
+        Issue URL: ${{ github.event.issue.html_url }}
+        
+        Analyze the backend aspects and post your findings as a comment on the issue. Consider:
+        - Backend architecture implications
+        - API design considerations
+        - Database and data flow concerns
+        - Performance and scalability
+        
+        Tag other experts (e.g., @Integration-Architect, @Media-Systems-Engineer) if their input is needed.
+    secrets: inherit
+
+  integration-architect:
+    needs: backend-expert
+    uses: ./.github/workflows/agent-integration-architect.yml
+    with:
+      prompt: |
+        Review the issue and the Backend Expert's analysis:
+        
+        Issue Title: ${{ github.event.issue.title }}
+        Issue Body: ${{ github.event.issue.body }}
+        Issue URL: ${{ github.event.issue.html_url }}
+        
+        Read the existing comments on the issue to see what the Backend Expert suggested.
+        Provide your integration architecture perspective, considering:
+        - How different components should work together
+        - Cross-system communication patterns
+        - API contracts and data flow between services
+        
+        Tag other experts if their input is needed (e.g., @Frontend-Expert, @Media-Systems-Engineer).
+    secrets: inherit
+
+  # Phase 2: Frontend and UX review based on backend/architecture decisions
+  frontend-expert:
+    needs: integration-architect
+    uses: ./.github/workflows/agent-frontend-expert.yml
+    with:
+      prompt: |
+        Review the issue and previous expert comments from Backend Expert and Integration Architect:
+        
+        Issue Title: ${{ github.event.issue.title }}
+        Issue Body: ${{ github.event.issue.body }}
+        Issue URL: ${{ github.event.issue.html_url }}
+        
+        Read all existing comments on the issue to understand the backend and integration decisions.
+        Provide your frontend perspective, considering:
+        - Frontend implementation approach
+        - Component architecture and state management
+        - API integration requirements
+        - Build on or complement the previous experts' suggestions
+        
+        Tag other experts if needed (e.g., @UX-Designer, @QA-Testing-Expert).
+    secrets: inherit
+
+  ux-designer:
+    needs: frontend-expert
+    uses: ./.github/workflows/agent-ux-designer.yml
+    with:
+      prompt: |
+        Review the issue and all previous expert analyses:
+        
+        Issue Title: ${{ github.event.issue.title }}
+        Issue Body: ${{ github.event.issue.body }}
+        Issue URL: ${{ github.event.issue.html_url }}
+        
+        Read all existing comments to understand the technical approach from Backend, Integration, and Frontend experts.
+        Provide your UX design perspective, considering:
+        - User experience implications
+        - Interface design recommendations
+        - Usability and accessibility
+        - How the technical solution affects the user
+        
+        Tag other experts if their input is needed (e.g., @Frontend-Expert for UI implementation).
+    secrets: inherit
+
+  # Phase 3: Specialized systems review
+  media-systems-engineer:
+    needs: ux-designer
+    uses: ./.github/workflows/agent-media-systems-engineer.yml
+    with:
+      prompt: |
+        Review the issue and all previous expert analyses:
+        
+        Issue Title: ${{ github.event.issue.title }}
+        Issue Body: ${{ github.event.issue.body }}
+        Issue URL: ${{ github.event.issue.html_url }}
+        
+        Read all existing comments to understand the full context and proposed solutions.
+        Provide your media systems engineering perspective, considering:
+        - Audio/video processing requirements
+        - FFmpeg and media pipeline implications
+        - DMX lighting control aspects
+        - Performance considerations for media handling
+        
+        Reference previous experts' suggestions and note any concerns or enhancements needed.
+    secrets: inherit
+
+  cross-platform-systems-expert:
+    needs: media-systems-engineer
+    uses: ./.github/workflows/agent-cross-platform-systems-expert.yml
+    with:
+      prompt: |
+        Review the issue and all previous expert analyses:
+        
+        Issue Title: ${{ github.event.issue.title }}
+        Issue Body: ${{ github.event.issue.body }}
+        Issue URL: ${{ github.event.issue.html_url }}
+        
+        Read all existing comments to understand the complete technical approach.
+        Provide your cross-platform systems perspective, considering:
+        - Platform-specific considerations (Windows, Linux, macOS)
+        - System dependencies and compatibility
+        - Deployment and distribution concerns
+        - Build any previous experts' suggestions
+        
+        Highlight any cross-platform challenges with the proposed solutions.
+    secrets: inherit
+
+  # Phase 4: Final QA review after all other experts have weighed in
+  qa-testing-expert:
+    needs: cross-platform-systems-expert
+    uses: ./.github/workflows/agent-qa-testing-expert.yml
+    with:
+      prompt: |
+        Review the issue and synthesize all expert recommendations:
+        
+        Issue Title: ${{ github.event.issue.title }}
+        Issue Body: ${{ github.event.issue.body }}
+        Issue URL: ${{ github.event.issue.html_url }}
+        
+        Read all existing comments from all expert agents (Backend, Integration, Frontend, UX, Media Systems, Cross-Platform).
+        As the QA Testing Expert, provide your final perspective:
+        - Testing strategy for the proposed solution
+        - Quality assurance considerations
+        - Potential risks or edge cases identified from all expert inputs
+        - Test coverage recommendations
+        
+        Summarize key points from all experts and propose a unified testing approach.
+        Tag specific experts if you need clarification on their suggestions.
+    secrets: inherit
