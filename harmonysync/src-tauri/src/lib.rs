@@ -1,4 +1,6 @@
 mod application;
+mod domain;
+mod infrastructure;
 
 use tauri::menu::{Menu, Submenu, MenuItem, PredefinedMenuItem};
 use tauri::{Manager, Emitter};
@@ -133,6 +135,12 @@ pub fn run() {
             application::commands::recall_dmx_scene,
             // Performance monitoring
             application::commands::get_performance_metrics,
+            // Song import commands
+            application::commands::fetch_planning_center_songs,
+            application::commands::fetch_song_lyrics,
+            application::commands::save_song_lyrics,
+            application::commands::import_songs_from_planning_center,
+            application::commands::spell_check_lyrics,
             // Legacy audio decoder commands removed - now using Node.js service
         ])
         .run(tauri::generate_context!())

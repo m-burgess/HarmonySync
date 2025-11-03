@@ -5,3 +5,4 @@ pub mod midi_manager;
 pub mod audio_router;
 pub mod ffmpeg_optimizer;
 pub mod performance;
+pub mod song_import_service;

@@ -1562,3 +1562,136 @@ pub fn get_performance_metrics() -> performance::PerformanceMetrics {
     performance::get_system_metrics()
 }
 
+// Song import commands
+use crate::application::song_import_service::SongImportService;
+use crate::domain::entities::{PlanningCenterSong, SongLyricsRequest, ImportedSong};
+
+#[command]
+pub async fn fetch_planning_center_songs(
+    app_id: String,
+    secret: String,
+    service_type_id: Option<String>,
+) -> Result<Vec<PlanningCenterSong>, String> {
+    info!("Fetching Planning Center songs");
+    
+    let service = SongImportService::new();
+    service
+        .fetch_planning_center_songs(&app_id, &secret, service_type_id.as_deref())
+        .await
+        .map_err(|e| {
+            error!("Failed to fetch Planning Center songs: {}", e);
+            format!("Failed to fetch songs: {}", e)
+        })
+}
+
+#[command]
+pub async fn fetch_song_lyrics(
+    title: String,
+    artist: Option<String>,
+    ccli: Option<String>,
+) -> Result<String, String> {
+    info!("Fetching lyrics for: {}", title);
+    
+    let service = SongImportService::new();
+    let request = SongLyricsRequest { title, artist, ccli };
+    
+    service
+        .fetch_lyrics(&request)
+        .await
+        .map(|result| result.lyrics)
+        .map_err(|e| {
+            error!("Failed to fetch lyrics: {}", e);
+            format!("Failed to fetch lyrics: {}", e)
+        })
+}
+
+#[command]
+pub async fn save_song_lyrics(
+    song_title: String,
+    lyrics: String,
+    downloads_dir: String,
+) -> Result<ImportedSong, String> {
+    info!("Saving lyrics for: {}", song_title);
+    
+    let service = SongImportService::new();
+    let dir_path = PathBuf::from(downloads_dir);
+    
+    service
+        .save_lyrics_to_file(&song_title, &lyrics, &dir_path)
+        .map_err(|e| {
+            error!("Failed to save lyrics: {}", e);
+            format!("Failed to save lyrics: {}", e)
+        })
+}
+
+#[command]
+pub async fn import_songs_from_planning_center(
+    app_id: String,
+    secret: String,
+    downloads_dir: String,
+    service_type_id: Option<String>,
+) -> Result<Vec<ImportedSong>, String> {
+    info!("Starting batch import from Planning Center");
+    
+    let service = SongImportService::new();
+    let dir_path = PathBuf::from(downloads_dir);
+    
+    // Fetch songs from Planning Center
+    let songs = service
+        .fetch_planning_center_songs(&app_id, &secret, service_type_id.as_deref())
+        .await
+        .map_err(|e| format!("Failed to fetch songs: {}", e))?;
+    
+    let mut imported_songs = Vec::new();
+    
+    // For each song, fetch lyrics and save
+    for song in songs {
+        info!("Processing song: {}", song.title);
+        
+        let request = SongLyricsRequest {
+            title: song.title.clone(),
+            artist: song.author.clone(),
+            ccli: song.ccli_number.clone(),
+        };
+        
+        // Try to fetch lyrics
+        match service.fetch_lyrics(&request).await {
+            Ok(lyrics_result) => {
+                // Save to file
+                match service.save_lyrics_to_file(&song.title, &lyrics_result.lyrics, &dir_path) {
+                    Ok(imported) => {
+                        info!("Successfully imported: {}", song.title);
+                        imported_songs.push(imported);
+                    }
+                    Err(e) => {
+                        warn!("Failed to save lyrics for {}: {}", song.title, e);
+                    }
+                }
+            }
+            Err(e) => {
+                warn!("Failed to fetch lyrics for {}: {}", song.title, e);
+                // Create a placeholder file anyway
+                let placeholder_lyrics = format!("[{}]\n\nPlease add lyrics manually.", song.title);
+                match service.save_lyrics_to_file(&song.title, &placeholder_lyrics, &dir_path) {
+                    Ok(imported) => {
+                        imported_songs.push(imported);
+                    }
+                    Err(_) => {
+                        // Skip this song if we can't even create a placeholder
+                    }
+                }
+            }
+        }
+    }
+    
+    info!("Batch import completed. Imported {} songs", imported_songs.len());
+    Ok(imported_songs)
+}
+
+#[command]
+pub fn spell_check_lyrics(lyrics: String) -> Result<Vec<String>, String> {
+    let service = SongImportService::new();
+    Ok(service.spell_check_lyrics(&lyrics))
+}
+
+

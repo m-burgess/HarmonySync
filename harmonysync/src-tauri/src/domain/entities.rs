@@ -105,3 +105,33 @@ pub struct DmxSceneMacro {
     pub scene_id: String,
     pub macro_id: i64,
 }
+
+// Song Import Entities
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PlanningCenterSong {
+    pub id: String,
+    pub title: String,
+    pub author: Option<String>,
+    pub ccli_number: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SongLyricsRequest {
+    pub title: String,
+    pub artist: Option<String>,
+    pub ccli: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SongLyricsResult {
+    pub title: String,
+    pub lyrics: String,
+    pub source: String, // "songselect", "musixmatch", "genius", etc.
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ImportedSong {
+    pub title: String,
+    pub lyrics: String,
+    pub file_path: String,
+}
