@@ -1,0 +1,77 @@
+.transpose-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.transpose-progress-bar-container {
+  width: 100%;
+  height: 8px;
+  background-color: #3a3a3a;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.transpose-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.transpose-progress-text {
+  text-align: center;
+  font-size: 14px;
+  color: #d4d4d4;
+}
+
+.transpose-current-file {
+  text-align: center;
+  font-size: 12px;
+  color: #999;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transpose-message {
+  text-align: center;
+  font-size: 14px;
+  color: #d4d4d4;
+  font-weight: 500;
+}
+
+.transpose-spinner-container {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.transpose-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #3a3a3a;
+  border-top-color: #007bff;
+  border-radius: 50%;
+  animation: transposeSpinner 0.8s linear infinite;
+}
+
+@keyframes transposeSpinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.transpose-complete {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 0;
+}
+
+.transpose-complete-icon {
+  color: #28a745;
+  font-size: 18px;
+  font-weight: 600;
+}
