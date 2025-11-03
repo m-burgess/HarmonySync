@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import * as TauriCore from '@tauri-apps/api/core';
 import * as TauriFs from '@tauri-apps/plugin-fs';
 import * as TauriPath from '@tauri-apps/api/path';
-import { XMarkIcon } from '@heroicons/react/24/solid';
-import '../../styles/DisplaySettings.css';
+import Modal from '../ui/Modal.jsx';
+import Button from '../ui/Button.jsx';
+import '../../styles/components/SettingsModal.css';
 
 const DisplaySettings = ({ isOpen, onClose }) => {
   const [audienceDisplay, setAudienceDisplay] = useState('');
@@ -34,6 +35,10 @@ const DisplaySettings = ({ isOpen, onClose }) => {
     'Bookman',
     'Avant Garde'
   ];
+
+  // Preview font size scaling
+  const PREVIEW_SCALE_FACTOR = 3;
+  const PREVIEW_MAX_SIZE = 48;
 
   useEffect(() => {
     if (isOpen) {
@@ -124,168 +129,169 @@ const DisplaySettings = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
+  const footer = (
+    <>
+      <Button onClick={onClose} variant="secondary">
+        Cancel
+      </Button>
+      <Button onClick={saveSettings} disabled={isLoading} variant="primary">
+        {isLoading ? 'Saving...' : 'Save'}
+      </Button>
+    </>
+  );
+
   return (
-    <div className="display-settings-overlay">
-      <div className="display-settings-modal">
-        <div className="display-settings-header">
-          <h2>Display Settings</h2>
-          <button onClick={onClose} className="close-button">
-            <XMarkIcon className="w-6 h-6" />
-          </button>
-        </div>
-        
-        <div className="display-settings-content">
-          {isLoading ? (
-            <div className="loading-spinner">Loading...</div>
-          ) : (
-            <>
-              <div className="settings-section">
-                <h3>Display Assignment</h3>
-                <div className="setting-row">
-                  <label htmlFor="audience-display">Audience Screen:</label>
-                  <select 
-                    id="audience-display"
-                    value={audienceDisplay} 
-                    onChange={(e) => setAudienceDisplay(e.target.value)}
-                  >
-                    <option value="">Auto (Default)</option>
-                    {availableDisplays.map(display => (
-                      <option key={display.id} value={display.id}>{display.name}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div className="setting-row">
-                  <label htmlFor="confidence-display">Confidence Monitor:</label>
-                  <select 
-                    id="confidence-display"
-                    value={confidenceDisplay} 
-                    onChange={(e) => setConfidenceDisplay(e.target.value)}
-                  >
-                    <option value="">Auto (Default)</option>
-                    {availableDisplays.map(display => (
-                      <option key={display.id} value={display.id}>{display.name}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div className="setting-row">
-                  <label htmlFor="lower-thirds-display">Lower Thirds:</label>
-                  <select 
-                    id="lower-thirds-display"
-                    value={lowerThirdsDisplay} 
-                    onChange={(e) => setLowerThirdsDisplay(e.target.value)}
-                  >
-                    <option value="">Auto (Default)</option>
-                    {availableDisplays.map(display => (
-                      <option key={display.id} value={display.id}>{display.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Display Settings"
+      size="medium"
+      footer={footer}
+      closeOnOverlayClick={true}
+      closeOnEscape={true}
+    >
+      {isLoading ? (
+        <div className="settings-loading">Loading...</div>
+      ) : (
+        <div className="settings-sections">
+          <div className="settings-section">
+            <h3>Display Assignment</h3>
+            <div className="setting-row">
+              <label htmlFor="audience-display">Audience Screen:</label>
+              <select 
+                id="audience-display"
+                value={audienceDisplay} 
+                onChange={(e) => setAudienceDisplay(e.target.value)}
+              >
+                <option value="">Auto (Default)</option>
+                {availableDisplays.map(display => (
+                  <option key={display.id} value={display.id}>{display.name}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="setting-row">
+              <label htmlFor="confidence-display">Confidence Monitor:</label>
+              <select 
+                id="confidence-display"
+                value={confidenceDisplay} 
+                onChange={(e) => setConfidenceDisplay(e.target.value)}
+              >
+                <option value="">Auto (Default)</option>
+                {availableDisplays.map(display => (
+                  <option key={display.id} value={display.id}>{display.name}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="setting-row">
+              <label htmlFor="lower-thirds-display">Lower Thirds:</label>
+              <select 
+                id="lower-thirds-display"
+                value={lowerThirdsDisplay} 
+                onChange={(e) => setLowerThirdsDisplay(e.target.value)}
+              >
+                <option value="">Auto (Default)</option>
+                {availableDisplays.map(display => (
+                  <option key={display.id} value={display.id}>{display.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-              <div className="settings-section">
-                <h3>Audience Screen Font</h3>
-                <div className="setting-row">
-                  <label htmlFor="audience-font-family">Font Family:</label>
-                  <select 
-                    id="audience-font-family"
-                    value={audienceFontFamily} 
-                    onChange={(e) => setAudienceFontFamily(e.target.value)}
-                  >
-                    {fontOptions.map(font => (
-                      <option key={font} value={font}>{font}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div className="setting-row">
-                  <label htmlFor="audience-font-size">Font Size (px):</label>
-                  <input 
-                    type="number" 
-                    id="audience-font-size"
-                    min="24" 
-                    max="200" 
-                    value={audienceFontSize}
-                    onChange={(e) => setAudienceFontSize(e.target.value)}
-                  />
-                </div>
-              </div>
+          <div className="settings-section">
+            <h3>Audience Screen Font</h3>
+            <div className="setting-row">
+              <label htmlFor="audience-font-family">Font Family:</label>
+              <select 
+                id="audience-font-family"
+                value={audienceFontFamily} 
+                onChange={(e) => setAudienceFontFamily(e.target.value)}
+              >
+                {fontOptions.map(font => (
+                  <option key={font} value={font}>{font}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="setting-row">
+              <label htmlFor="audience-font-size">Font Size (px):</label>
+              <input 
+                type="number" 
+                id="audience-font-size"
+                min="24" 
+                max="200" 
+                value={audienceFontSize}
+                onChange={(e) => setAudienceFontSize(e.target.value)}
+              />
+            </div>
+          </div>
 
-              <div className="settings-section">
-                <h3>Confidence Monitor Font</h3>
-                <div className="setting-row">
-                  <label htmlFor="confidence-font-family">Font Family:</label>
-                  <select 
-                    id="confidence-font-family"
-                    value={confidenceFontFamily} 
-                    onChange={(e) => setConfidenceFontFamily(e.target.value)}
-                  >
-                    {fontOptions.map(font => (
-                      <option key={font} value={font}>{font}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div className="setting-row">
-                  <label htmlFor="confidence-font-size">Font Size (px):</label>
-                  <input 
-                    type="number" 
-                    id="confidence-font-size"
-                    min="24" 
-                    max="200" 
-                    value={confidenceFontSize}
-                    onChange={(e) => setConfidenceFontSize(e.target.value)}
-                  />
-                </div>
-              </div>
+          <div className="settings-section">
+            <h3>Confidence Monitor Font</h3>
+            <div className="setting-row">
+              <label htmlFor="confidence-font-family">Font Family:</label>
+              <select 
+                id="confidence-font-family"
+                value={confidenceFontFamily} 
+                onChange={(e) => setConfidenceFontFamily(e.target.value)}
+              >
+                {fontOptions.map(font => (
+                  <option key={font} value={font}>{font}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="setting-row">
+              <label htmlFor="confidence-font-size">Font Size (px):</label>
+              <input 
+                type="number" 
+                id="confidence-font-size"
+                min="24" 
+                max="200" 
+                value={confidenceFontSize}
+                onChange={(e) => setConfidenceFontSize(e.target.value)}
+              />
+            </div>
+          </div>
 
-              <div className="font-preview">
-                <h4>Audience Screen Preview:</h4>
-                <div 
-                  className="preview-text" 
-                  style={{ 
-                    fontFamily: audienceFontFamily, 
-                    fontSize: Math.min(parseInt(audienceFontSize) / 3, 48) + 'px',
-                    color: 'white',
-                    backgroundColor: '#000',
-                    padding: '10px',
-                    textAlign: 'center',
-                    borderRadius: '4px',
-                    marginBottom: '10px'
-                  }}
-                >
-                  SAMPLE LYRIC TEXT
-                </div>
-                
-                <h4>Confidence Monitor Preview:</h4>
-                <div 
-                  className="preview-text" 
-                  style={{ 
-                    fontFamily: confidenceFontFamily, 
-                    fontSize: Math.min(parseInt(confidenceFontSize) / 3, 48) + 'px',
-                    color: 'white',
-                    backgroundColor: '#000',
-                    padding: '10px',
-                    textAlign: 'center',
-                    borderRadius: '4px'
-                  }}
-                >
-                  CURRENT | NEXT
-                </div>
-              </div>
-            </>
-          )}
+          <div className="font-preview">
+            <h4>Audience Screen Preview:</h4>
+            <div 
+              className="preview-text" 
+              style={{ 
+                fontFamily: audienceFontFamily, 
+                fontSize: Math.min(parseInt(audienceFontSize) / PREVIEW_SCALE_FACTOR, PREVIEW_MAX_SIZE) + 'px',
+                color: 'white',
+                backgroundColor: '#000',
+                padding: '10px',
+                textAlign: 'center',
+                borderRadius: '4px',
+                marginBottom: '10px'
+              }}
+            >
+              SAMPLE LYRIC TEXT
+            </div>
+            
+            <h4>Confidence Monitor Preview:</h4>
+            <div 
+              className="preview-text" 
+              style={{ 
+                fontFamily: confidenceFontFamily, 
+                fontSize: Math.min(parseInt(confidenceFontSize) / PREVIEW_SCALE_FACTOR, PREVIEW_MAX_SIZE) + 'px',
+                color: 'white',
+                backgroundColor: '#000',
+                padding: '10px',
+                textAlign: 'center',
+                borderRadius: '4px'
+              }}
+            >
+              CURRENT | NEXT
+            </div>
+          </div>
         </div>
-        
-        <div className="display-settings-footer">
-          <button onClick={onClose} className="cancel-button">Cancel</button>
-          <button onClick={saveSettings} disabled={isLoading} className="save-button">
-            {isLoading ? 'Saving...' : 'Save'}
-          </button>
-        </div>
-      </div>
-    </div>
+      )}
+    </Modal>
   );
 };
 

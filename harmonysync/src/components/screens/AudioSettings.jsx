@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import * as TauriCore from '@tauri-apps/api/core';
 import * as TauriFs from '@tauri-apps/plugin-fs';
 import * as TauriPath from '@tauri-apps/api/path';
-import { XMarkIcon } from '@heroicons/react/24/solid';
-import '../../styles/DisplaySettings.css';
+import Modal from '../ui/Modal.jsx';
+import Button from '../ui/Button.jsx';
+import '../../styles/components/SettingsModal.css';
 
 const AudioSettings = ({ isOpen, onClose }) => {
   const [audioOutputDevice, setAudioOutputDevice] = useState('');
@@ -108,102 +109,94 @@ const AudioSettings = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
+  const footer = (
+    <>
+      <Button onClick={onClose} variant="secondary">
+        Cancel
+      </Button>
+      <Button onClick={saveSettings} disabled={isLoading} variant="primary">
+        {isLoading ? 'Saving...' : 'Save Settings'}
+      </Button>
+    </>
+  );
+
   return (
-    <div className="display-settings-overlay">
-      <div className="display-settings-modal">
-        {/* Header */}
-        <div className="display-settings-header">
-          <h2>Audio/MIDI Settings</h2>
-          <button onClick={onClose} className="close-button">
-            <XMarkIcon className="w-6 h-6" />
-          </button>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Audio/MIDI Settings"
+      size="medium"
+      footer={footer}
+      closeOnOverlayClick={true}
+      closeOnEscape={true}
+    >
+      {isLoading ? (
+        <div className="settings-loading">Loading...</div>
+      ) : (
+        <div className="settings-sections">
+          <div className="settings-section">
+            <h3>Audio Output</h3>
+            <div className="setting-row">
+              <label htmlFor="audio-output-device">Output Device:</label>
+              <select 
+                id="audio-output-device"
+                value={audioOutputDevice} 
+                onChange={(e) => setAudioOutputDevice(e.target.value)}
+              >
+                <option value="">System Default</option>
+                {availableAudioDevices.map(device => (
+                  <option key={device.id} value={device.id}>{device.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="settings-section">
+            <h3>MIDI Input</h3>
+            <div className="setting-row">
+              <label htmlFor="midi-input-device">Input Device:</label>
+              <select 
+                id="midi-input-device"
+                value={midiInputDevice} 
+                onChange={(e) => setMidiInputDevice(e.target.value)}
+              >
+                <option value="">None</option>
+                {availableMidiInputDevices.map(device => (
+                  <option key={device.id} value={device.id}>{device.name}</option>
+                ))}
+              </select>
+            </div>
+            {availableMidiInputDevices.length === 0 && (
+              <p className="settings-info-text">
+                No MIDI input devices detected
+              </p>
+            )}
+          </div>
+
+          <div className="settings-section">
+            <h3>MIDI Output</h3>
+            <div className="setting-row">
+              <label htmlFor="midi-output-device">Output Device:</label>
+              <select 
+                id="midi-output-device"
+                value={midiOutputDevice} 
+                onChange={(e) => setMidiOutputDevice(e.target.value)}
+              >
+                <option value="">None</option>
+                {availableMidiOutputDevices.map(device => (
+                  <option key={device.id} value={device.id}>{device.name}</option>
+                ))}
+              </select>
+            </div>
+            {availableMidiOutputDevices.length === 0 && (
+              <p className="settings-info-text">
+                No MIDI output devices detected
+              </p>
+            )}
+          </div>
         </div>
-
-        {/* Content */}
-        <div className="display-settings-content">
-          {isLoading ? (
-            <div className="loading-spinner">Loading...</div>
-          ) : (
-            <>
-              <div className="settings-section">
-                <h3>Audio Output</h3>
-                <div className="setting-row">
-                  <label htmlFor="audio-output-device">Output Device:</label>
-                  <select 
-                    id="audio-output-device"
-                    value={audioOutputDevice} 
-                    onChange={(e) => setAudioOutputDevice(e.target.value)}
-                  >
-                    <option value="">System Default</option>
-                    {availableAudioDevices.map(device => (
-                      <option key={device.id} value={device.id}>{device.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="settings-section">
-                <h3>MIDI Input</h3>
-                <div className="setting-row">
-                  <label htmlFor="midi-input-device">Input Device:</label>
-                  <select 
-                    id="midi-input-device"
-                    value={midiInputDevice} 
-                    onChange={(e) => setMidiInputDevice(e.target.value)}
-                  >
-                    <option value="">None</option>
-                    {availableMidiInputDevices.map(device => (
-                      <option key={device.id} value={device.id}>{device.name}</option>
-                    ))}
-                  </select>
-                </div>
-                {availableMidiInputDevices.length === 0 && (
-                  <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginTop: '8px' }}>
-                    No MIDI input devices detected
-                  </p>
-                )}
-              </div>
-
-              <div className="settings-section">
-                <h3>MIDI Output</h3>
-                <div className="setting-row">
-                  <label htmlFor="midi-output-device">Output Device:</label>
-                  <select 
-                    id="midi-output-device"
-                    value={midiOutputDevice} 
-                    onChange={(e) => setMidiOutputDevice(e.target.value)}
-                  >
-                    <option value="">None</option>
-                    {availableMidiOutputDevices.map(device => (
-                      <option key={device.id} value={device.id}>{device.name}</option>
-                    ))}
-                  </select>
-                </div>
-                {availableMidiOutputDevices.length === 0 && (
-                  <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginTop: '8px' }}>
-                    No MIDI output devices detected
-                  </p>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="display-settings-footer">
-          <button onClick={onClose} className="cancel-button">
-            Cancel
-          </button>
-          <button 
-            onClick={saveSettings} 
-            className="save-button"
-            disabled={isLoading}
-          >
-            {isLoading ? 'Saving...' : 'Save Settings'}
-          </button>
-        </div>
-      </div>
-    </div>
+      )}
+    </Modal>
   );
 };
 
