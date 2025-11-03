@@ -13,6 +13,10 @@ on:
       GITHUB_TOKEN:
         required: false
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   trigger-collaboration:
     if: github.event_name == 'issues'
