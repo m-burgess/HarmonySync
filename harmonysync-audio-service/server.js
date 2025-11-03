@@ -9,6 +9,10 @@ const { parseFile } = require('music-metadata');
 const wav = require('node-wav');
 const { spawn } = require('child_process');
 
+// Configurable host and shutdown token
+const HOST = process.env.HOST || '127.0.0.1';
+const SHUTDOWN_TOKEN = process.env.SHUTDOWN_TOKEN || null;
+
 class AudioTrack {
     constructor(id, name, filePath, duration, channels, sampleRate) {
         this.id = id;
@@ -845,13 +849,24 @@ app.get('/api/health', (req, res) => {
 
 app.post('/api/shutdown', (req, res) => {
     console.log('🛑 Shutdown request received');
-    
+
+    // If a shutdown token is configured, require it in the request
+    if (SHUTDOWN_TOKEN) {
+        const headerToken = req.headers['x-shutdown-token'] || (req.headers['authorization'] ? (req.headers['authorization'].split(' ')[1] || null) : null);
+        if (!headerToken || headerToken !== SHUTDOWN_TOKEN) {
+            console.warn('⚠️ Unauthorized shutdown attempt');
+            return res.status(401).json({ status: 'unauthorized', message: 'Invalid or missing shutdown token' });
+        }
+    } else {
+        console.warn('⚠️ No SHUTDOWN_TOKEN configured; shutdown endpoint is unprotected');
+    }
+
     // Send response before shutting down
     res.json({ 
         status: 'shutting_down', 
         message: 'Audio service is shutting down gracefully'
     });
-    
+
     // Graceful shutdown
     setTimeout(() => {
         console.log('🛑 Stopping all audio tracks...');
@@ -1146,11 +1161,12 @@ process.on('unhandledRejection', (reason, promise) => {
 // Start server
 const PORT = process.env.PORT || 3001;
 
-server.listen(PORT, () => {
-    console.log(`🎵 HarmonySync Audio Service running on port ${PORT}`);
-    console.log(`🔗 REST API: http://localhost:${PORT}/api`);
-    console.log(`🔌 WebSocket: ws://localhost:${PORT}`);
-    console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+// Bind explicitly to localhost to avoid exposing the service on external interfaces
+server.listen(PORT, HOST, () => {
+    console.log(`🎵 HarmonySync Audio Service running on http://${HOST}:${PORT}`);
+    console.log(`🔗 REST API: http://${HOST}:${PORT}/api`);
+    console.log(`🔌 WebSocket: ws://${HOST}:${PORT}`);
+    console.log(`📊 Health check: http://${HOST}:${PORT}/api/health`);
 });
 
 server.on('error', (error) => {

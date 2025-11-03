@@ -24,6 +24,20 @@ use super::lyrics_fetcher;
 static HTTP_SERVER_SHUTDOWN_TX: Lazy<Arc<Mutex<Option<oneshot::Sender<()>>>>> = // Changed type
     Lazy::new(|| Arc::new(Mutex::new(None)));
 
+// Track audio service PID so we can gracefully stop it without leaving orphans
+static AUDIO_SERVICE_PID: Lazy<Arc<Mutex<Option<u32>>>> =
+    Lazy::new(|| Arc::new(Mutex::new(None)));
+
+// Track audio service shutdown token and host/port used when we spawned it
+static AUDIO_SERVICE_TOKEN: Lazy<Arc<Mutex<Option<String>>>> =
+    Lazy::new(|| Arc::new(Mutex::new(None)));
+
+static AUDIO_SERVICE_HOST: Lazy<Arc<Mutex<Option<String>>>> =
+    Lazy::new(|| Arc::new(Mutex::new(None)));
+
+static AUDIO_SERVICE_PORT_VAR: Lazy<Arc<Mutex<Option<String>>>> =
+    Lazy::new(|| Arc::new(Mutex::new(None)));
+
 // CSS Generator functions
 fn generate_and_write_css(path: &str) {
     let mut file_path = PathBuf::from(path);
@@ -799,10 +813,32 @@ pub async fn start_audio_service() -> Result<String, String> {
         return Err(format!("server.js not found at: {:?}", server_js_path));
     }
     
-    // Start the audio service
+    // Prepare runtime env for the audio service
+    let host = std::env::var("AUDIO_SERVICE_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+    let port = std::env::var("AUDIO_SERVICE_PORT").unwrap_or_else(|_| "3001".to_string());
+    let shutdown_token = uuid::Uuid::new_v4().to_string();
+
+    // Store host/port/token for later use by status/stop functions
+    {
+        let mut h = AUDIO_SERVICE_HOST.lock().await;
+        *h = Some(host.clone());
+    }
+    {
+        let mut p = AUDIO_SERVICE_PORT_VAR.lock().await;
+        *p = Some(port.clone());
+    }
+    {
+        let mut t = AUDIO_SERVICE_TOKEN.lock().await;
+        *t = Some(shutdown_token.clone());
+    }
+
+    // Start the audio service with env populated (HOST, PORT, SHUTDOWN_TOKEN)
     let mut child = Command::new("node")
         .arg("server.js")
         .current_dir(&audio_service_dir)
+        .env("HOST", &host)
+        .env("PORT", &port)
+        .env("SHUTDOWN_TOKEN", &shutdown_token)
         .spawn()
         .map_err(|e| format!("Failed to start audio service: {}", e))?;
     
@@ -827,10 +863,13 @@ pub async fn start_audio_service() -> Result<String, String> {
                     info!("Cleaned up potential conflicting processes, retrying...");
                     tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
                     
-                    // Retry starting the service
+                    // Retry starting the service (use same env)
                     let mut retry_child = Command::new("node")
                         .arg("server.js")
                         .current_dir(&audio_service_dir)
+                        .env("HOST", &host)
+                        .env("PORT", &port)
+                        .env("SHUTDOWN_TOKEN", &shutdown_token)
                         .spawn()
                         .map_err(|e| format!("Failed to restart audio service: {}", e))?;
                     
@@ -841,7 +880,13 @@ pub async fn start_audio_service() -> Result<String, String> {
                             Err(format!("Audio service failed to start after cleanup. Status: {:?}", retry_status))
                         }
                         Ok(None) => {
-                            info!("Audio service started successfully after cleanup (PID: {})", retry_child.id().unwrap_or(0));
+                            let pid = retry_child.id().unwrap_or(0) as u32;
+                            info!("Audio service started successfully after cleanup (PID: {})", pid);
+                            // Store PID for supervised shutdown
+                            {
+                                let mut guard = AUDIO_SERVICE_PID.lock().await;
+                                *guard = Some(pid);
+                            }
                             std::mem::forget(retry_child);
                             Ok("Audio service started successfully after cleanup".to_string())
                         }
@@ -859,10 +904,17 @@ pub async fn start_audio_service() -> Result<String, String> {
                 Err(format!("Audio service exited immediately with status: {:?}", status))
             }
         }
-        Ok(None) => {
-            // Process is still running, detach it
-            info!("Audio service started successfully (PID: {})", child.id().unwrap_or(0));
-            std::mem::forget(child); // Detach the process
+                    Ok(None) => {
+            // Process is still running, track PID and detach
+            let pid = child.id().unwrap_or(0) as u32;
+            info!("Audio service started successfully (PID: {})", pid);
+            // Store PID for supervised shutdown
+            {
+                let mut guard = AUDIO_SERVICE_PID.lock().await;
+                *guard = Some(pid);
+            }
+            // Detach the child so it doesn't get killed by Drop
+            std::mem::forget(child);
             Ok("Audio service started successfully".to_string())
         }
         Err(e) => {
@@ -875,9 +927,29 @@ pub async fn start_audio_service() -> Result<String, String> {
 pub async fn check_audio_service_status() -> Result<bool, String> {
     // Try to connect to the audio service health endpoint
     let client = reqwest::Client::new();
-    
+    // Determine host/port to check (use tracked values if available, otherwise env or defaults)
+    let host = {
+        let guard = AUDIO_SERVICE_HOST.lock().await;
+        if let Some(ref h) = *guard {
+            h.clone()
+        } else {
+            std::env::var("AUDIO_SERVICE_HOST").unwrap_or_else(|_| "127.0.0.1".to_string())
+        }
+    };
+
+    let port = {
+        let guard = AUDIO_SERVICE_PORT_VAR.lock().await;
+        if let Some(ref p) = *guard {
+            p.clone()
+        } else {
+            std::env::var("AUDIO_SERVICE_PORT").unwrap_or_else(|_| "3001".to_string())
+        }
+    };
+
+    let url = format!("http://{}:{}/api/health", host, port);
+
     match client
-        .get("http://localhost:3001/api/health")
+        .get(&url)
         .timeout(std::time::Duration::from_secs(3))
         .send()
         .await
@@ -891,15 +963,37 @@ pub async fn check_audio_service_status() -> Result<bool, String> {
 pub async fn stop_audio_service() -> Result<String, String> {
     info!("Stopping Node.js audio service...");
     
-    // Try to gracefully shutdown the service via API first
+    // Try to gracefully shutdown the service via API first (use tracked host/port and token)
     let client = reqwest::Client::new();
-    
-    match client
-        .post("http://localhost:3001/api/shutdown")
-        .timeout(std::time::Duration::from_secs(5))
-        .send()
-        .await
-    {
+
+    // Determine host/port and token
+    let host = {
+        let guard = AUDIO_SERVICE_HOST.lock().await;
+        if let Some(ref h) = *guard {
+            h.clone()
+        } else {
+            std::env::var("AUDIO_SERVICE_HOST").unwrap_or_else(|_| "127.0.0.1".to_string())
+        }
+    };
+
+    let port = {
+        let guard = AUDIO_SERVICE_PORT_VAR.lock().await;
+        if let Some(ref p) = *guard {
+            p.clone()
+        } else {
+            std::env::var("AUDIO_SERVICE_PORT").unwrap_or_else(|_| "3001".to_string())
+        }
+    };
+
+    let shutdown_url = format!("http://{}:{}/api/shutdown", host, port);
+
+    let mut req_builder = client.post(&shutdown_url).timeout(std::time::Duration::from_secs(5));
+
+    if let Some(token) = AUDIO_SERVICE_TOKEN.lock().await.clone() {
+        req_builder = req_builder.header("x-shutdown-token", token.clone());
+    }
+
+    match req_builder.send().await {
         Ok(response) => {
             if response.status().is_success() {
                 info!("Audio service shutdown gracefully");
@@ -911,22 +1005,69 @@ pub async fn stop_audio_service() -> Result<String, String> {
         }
     }
     
-    // If graceful shutdown failed, try to kill the process
-    info!("Attempting to kill audio service process...");
-    
+    // If graceful shutdown failed, try PID-based kill first (if we tracked it), then fallback to previous methods
+    info!("Attempting PID-based cleanup of audio service process...");
+
+    // Try PID-based kill
+    {
+        let mut guard = AUDIO_SERVICE_PID.lock().await;
+        if let Some(pid) = *guard {
+            info!("Found tracked audio service PID: {}. Attempting to kill.", pid);
+
+            #[cfg(unix)]
+            {
+                match Command::new("kill").arg("-TERM").arg(pid.to_string()).output().await {
+                    Ok(output) => {
+                        if output.status.success() {
+                            info!("Successfully sent TERM to PID {}", pid);
+                            *guard = None;
+                            return Ok("Audio service stopped by PID".to_string());
+                        } else {
+                            info!("Failed to kill PID {} via kill command", pid);
+                            // fallthrough to pkill fallback
+                        }
+                    }
+                    Err(e) => {
+                        error!("Error attempting to kill PID {}: {}", pid, e);
+                    }
+                }
+            }
+
+            #[cfg(windows)]
+            {
+                match Command::new("taskkill").args(&["/PID", &pid.to_string(), "/F"]).output().await {
+                    Ok(output) => {
+                        if output.status.success() {
+                            info!("Successfully taskkilled PID {}", pid);
+                            *guard = None;
+                            return Ok("Audio service stopped by PID".to_string());
+                        } else {
+                            info!("Failed to kill PID {} via taskkill", pid);
+                        }
+                    }
+                    Err(e) => {
+                        error!("Error attempting to taskkill PID {}: {}", pid, e);
+                    }
+                }
+            }
+        }
+    }
+
+    info!("PID-based cleanup did not succeed or no PID tracked; falling back to process name cleanup...");
+
     #[cfg(unix)]
     {
         match Command::new("pkill")
-            .args(&["-f", "harmonysync-audio-service"])
+            .args(&["-f", "harmonysync-audio-service"]) 
             .output()
             .await
         {
             Ok(output) => {
                 if output.status.success() {
-                    info!("Audio service process killed successfully");
+                    info!("Audio service process killed successfully via pkill");
                     Ok("Audio service stopped forcefully".to_string())
                 } else {
-                    info!("No audio service process found to kill");
+                    info!("No audio service process found to kill via pkill");
                     Ok("Audio service was not running".to_string())
                 }
             }
@@ -936,7 +1077,7 @@ pub async fn stop_audio_service() -> Result<String, String> {
             }
         }
     }
-    
+
     #[cfg(windows)]
     {
         match Command::new("taskkill")
