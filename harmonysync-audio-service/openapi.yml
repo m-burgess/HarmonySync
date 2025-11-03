@@ -1,0 +1,336 @@
+openapi: 3.0.3
+info:
+  title: HarmonySync Audio Service API
+  version: 1.0.0
+  description: "OpenAPI specification for the HarmonySync Node audio service (REST surface). Socket.IO events are described informally in the `x-websocket-events` extension."
+servers:
+  - url: http://localhost:3001
+    description: Local development server (override in production)
+
+components:
+  securitySchemes:
+    shutdownToken:
+      type: apiKey
+      in: header
+      name: x-shutdown-token
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: healthy
+        service:
+          type: string
+          example: harmonysync-audio-service
+        version:
+          type: string
+          example: "1.0.0"
+        memoryUsage:
+          type: object
+          additionalProperties:
+            type: integer
+    TrackLoadRequest:
+      type: object
+      required: [filePath]
+      properties:
+        filePath:
+          type: string
+          description: Absolute or repo-relative path to the audio file
+        name:
+          type: string
+          description: Optional display name for the track
+    TrackIdParam:
+      name: trackId
+      in: path
+      required: true
+      schema:
+        type: string
+    VolumeRequest:
+      type: object
+      properties:
+        volume:
+          type: number
+          format: float
+          description: Volume multiplier (0.0-2.0 typical)
+    PanRequest:
+      type: object
+      properties:
+        pan:
+          type: number
+          format: float
+          description: -1.0 (left) .. 1.0 (right)
+    MuteRequest:
+      type: object
+      properties:
+        muted:
+          type: boolean
+    MixerState:
+      type: object
+      properties:
+        masterVolume:
+          type: number
+        tracks:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              duration:
+                type: number
+              isPlaying:
+                type: boolean
+              isMuted:
+                type: boolean
+        memoryUsage:
+          type: object
+          additionalProperties:
+            type: integer
+    CrossfadeRequest:
+      type: object
+      required: [fromTrackId, toTrackId]
+      properties:
+        fromTrackId:
+          type: string
+        toTrackId:
+          type: string
+        duration:
+          type: integer
+          description: Duration in milliseconds
+
+paths:
+  /api/health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: Service health data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /api/shutdown:
+    post:
+      summary: Request graceful shutdown of the audio service
+      description: |
+        The endpoint will attempt graceful shutdown and exit the process. If `x-shutdown-token` is configured on the server, it must be provided.
+      security:
+        - shutdownToken: []
+      responses:
+        '200':
+          description: Accepted shutdown request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: shutting_down
+
+  /api/tracks/load:
+    post:
+      summary: Load a track into the mixer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrackLoadRequest'
+      responses:
+        '200':
+          description: Track loaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trackId:
+                    type: string
+                  success:
+                    type: boolean
+
+  /api/tracks/clear:
+    post:
+      summary: Clear all tracks from the mixer
+      responses:
+        '200':
+          description: Cleared
+
+  /api/tracks/{trackId}/play:
+    post:
+      summary: Start playing a track
+      parameters:
+        - $ref: '#/components/schemas/TrackIdParam'
+      responses:
+        '200':
+          description: Started
+
+  /api/tracks/{trackId}/stop:
+    post:
+      summary: Stop a track
+      parameters:
+        - $ref: '#/components/schemas/TrackIdParam'
+      responses:
+        '200':
+          description: Stopped
+
+  /api/tracks/{trackId}/volume:
+    post:
+      summary: Set track volume
+      parameters:
+        - $ref: '#/components/schemas/TrackIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VolumeRequest'
+      responses:
+        '200':
+          description: Volume updated
+
+  /api/tracks/{trackId}/pan:
+    post:
+      summary: Set track pan
+      parameters:
+        - $ref: '#/components/schemas/TrackIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PanRequest'
+      responses:
+        '200':
+          description: Pan updated
+
+  /api/tracks/{trackId}/mute:
+    post:
+      summary: Mute or unmute a track
+      parameters:
+        - $ref: '#/components/schemas/TrackIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MuteRequest'
+      responses:
+        '200':
+          description: Mute state updated
+
+  /api/tracks/{trackId}:
+    delete:
+      summary: Remove a track
+      parameters:
+        - $ref: '#/components/schemas/TrackIdParam'
+      responses:
+        '200':
+          description: Track removed
+
+  /api/mixer/play-all:
+    post:
+      summary: Play all loaded tracks (synchronized)
+      responses:
+        '200':
+          description: Playback started
+
+  /api/mixer/stop-all:
+    post:
+      summary: Stop all tracks
+      responses:
+        '200':
+          description: Stopped all tracks
+
+  /api/mixer/master-volume:
+    post:
+      summary: Set master volume
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VolumeRequest'
+      responses:
+        '200':
+          description: Master volume updated
+
+  /api/mixer/apply-default-panning:
+    post:
+      summary: Apply default panning across tracks
+      responses:
+        '200':
+          description: Applied default panning
+
+  /api/mixer/state:
+    get:
+      summary: Get current mixer state
+      responses:
+        '200':
+          description: Mixer state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MixerState'
+
+  /api/mixer/clear:
+    delete:
+      summary: Clear mixer (remove all tracks)
+      responses:
+        '200':
+          description: Cleared mixer
+
+  /api/mixer/crossfade:
+    post:
+      summary: Crossfade between two tracks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrossfadeRequest'
+      responses:
+        '200':
+          description: Crossfade initiated
+
+  /api/mixer/crossfade-duration:
+    post:
+      summary: Set default crossfade duration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                duration:
+                  type: integer
+                  description: milliseconds
+      responses:
+        '200':
+          description: Duration set
+
+  /api/mixer/crossfade-status:
+    get:
+      summary: Get current crossfade status
+      responses:
+        '200':
+          description: Crossfade status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  active:
+                    type: boolean
+                  remaining_ms:
+                    type: integer
+
+x-websocket-events:
+  description: |
+    The service emits `mixer_state_changed` with the full mixer state and accepts socket messages for real-time control. Use Socket.IO client to receive updates.
