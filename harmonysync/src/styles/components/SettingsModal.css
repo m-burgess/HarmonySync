@@ -1,0 +1,248 @@
+/* Unified styles for all settings modals */
+
+.settings-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settings-section h3 {
+  color: #d4d4d4;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #3a3a3a;
+}
+
+.settings-section h4 {
+  color: #d4d4d4;
+  font-size: 14px;
+  font-weight: 500;
+  margin: 16px 0 8px 0;
+}
+
+.setting-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.setting-row label {
+  color: #d4d4d4;
+  font-weight: 500;
+  flex: 1;
+  font-size: 14px;
+}
+
+.setting-row label.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.setting-row select,
+.setting-row input[type="text"],
+.setting-row input[type="number"],
+.setting-row input[type="time"] {
+  flex: 1;
+  padding: 8px 12px;
+  background-color: #2d2d2d;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  color: #d4d4d4;
+  font-size: 14px;
+  min-width: 0;
+}
+
+.setting-row select:focus,
+.setting-row input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.setting-row input[type="number"] {
+  max-width: 100px;
+}
+
+.setting-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.settings-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 0;
+  color: #999;
+  font-size: 14px;
+}
+
+.settings-info-text {
+  color: #999;
+  font-size: 14px;
+  margin: 8px 0 0 0;
+}
+
+.font-preview {
+  margin-top: 16px;
+  padding: 16px;
+  background-color: #2d2d2d;
+  border-radius: 6px;
+  border: 1px solid #3a3a3a;
+}
+
+.preview-text {
+  border: 1px solid #3a3a3a;
+}
+
+/* Scheduler-specific styles */
+.scheduler-add-button {
+  margin-top: 8px;
+}
+
+.scheduler-events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scheduler-event-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  background-color: #2d2d2d;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.scheduler-event-item.enabled {
+  background-color: #2d2d2d;
+  opacity: 1;
+}
+
+.scheduler-event-item.disabled {
+  background-color: #252525;
+  opacity: 0.5;
+}
+
+.scheduler-event-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.scheduler-event-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.scheduler-event-name {
+  color: #d4d4d4;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.scheduler-event-details {
+  font-size: 12px;
+  color: #999;
+  margin-top: 2px;
+}
+
+.scheduler-event-delete {
+  color: #f87171;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.scheduler-event-delete:hover {
+  background-color: rgba(248, 113, 113, 0.1);
+}
+
+.scheduler-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+.scheduler-calendar-day {
+  background-color: #2d2d2d;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  padding: 8px;
+  min-height: 80px;
+}
+
+.scheduler-calendar-day-header {
+  font-size: 12px;
+  font-weight: 500;
+  color: #d4d4d4;
+  text-align: center;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #3a3a3a;
+}
+
+.scheduler-calendar-day-events {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.scheduler-calendar-event {
+  font-size: 11px;
+  background-color: #007bff;
+  color: white;
+  border-radius: 4px;
+  padding: 3px 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .setting-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .setting-row label {
+    flex: none;
+  }
+  
+  .setting-row input[type="number"] {
+    max-width: none;
+  }
+
+  .scheduler-calendar {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .scheduler-calendar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
