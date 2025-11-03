@@ -3,6 +3,7 @@
 
 import io from 'socket.io-client';
 import { invoke } from '@tauri-apps/api/core';
+import * as audioApi from '../api'
 
 class NodeJSAudioClient {
     constructor() {
@@ -138,139 +139,76 @@ class NodeJSAudioClient {
         }
     }
 
-    // REST API methods
-    async makeRequest(endpoint, options = {}) {
-        try {
-            const url = `${this.audioServiceUrl}/api${endpoint}`;
-            console.log(`🌐 [makeRequest] Making request to: ${url}`, options);
-            
-            const response = await fetch(url, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...options.headers
-                },
-                ...options
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error(`❌ [makeRequest] HTTP ${response.status}: ${errorText}`);
-                throw new Error(`HTTP ${response.status}: ${errorText}`);
-            }
-
-            const result = await response.json();
-            console.log(`✅ [makeRequest] Success response:`, result);
-            return result;
-        } catch (error) {
-            console.error(`❌ [makeRequest] Failed:`, error);
-            throw error;
-        }
-    }
-
-    // Audio service methods
+    // Audio service methods (delegated to typed API client where possible)
     async checkHealth() {
-        return this.makeRequest('/health');
+        return audioApi.health()
     }
 
     async loadTrack(filePath, name = null) {
-        const response = await this.makeRequest('/tracks/load', {
-            method: 'POST',
-            body: JSON.stringify({ filePath, name })
-        });
-        return response.trackId;
+        const response = await audioApi.loadTrack({ filePath, name })
+        return response.trackId
     }
 
     async playTrack(trackId) {
-        return this.makeRequest(`/tracks/${trackId}/play`, {
-            method: 'POST'
-        });
+        return audioApi.playTrack(trackId)
     }
 
     async stopTrack(trackId) {
-        return this.makeRequest(`/tracks/${trackId}/stop`, {
-            method: 'POST'
-        });
+        return audioApi.stopTrack(trackId)
     }
 
     async setTrackVolume(trackId, volume) {
-        return this.makeRequest(`/tracks/${trackId}/volume`, {
-            method: 'POST',
-            body: JSON.stringify({ volume })
-        });
+        return audioApi.setTrackVolume(trackId, { volume })
     }
 
     async setTrackPan(trackId, pan) {
-        return this.makeRequest(`/tracks/${trackId}/pan`, {
-            method: 'POST',
-            body: JSON.stringify({ pan })
-        });
+        return audioApi.setTrackPan(trackId, { pan })
     }
 
     async setTrackMute(trackId, muted) {
-        return this.makeRequest(`/tracks/${trackId}/mute`, {
-            method: 'POST',
-            body: JSON.stringify({ muted })
-        });
+        return audioApi.muteTrack(trackId, { muted })
     }
 
     async playAllTracks() {
-        return this.makeRequest('/mixer/play-all', {
-            method: 'POST'
-        });
+        return audioApi.playAll()
     }
 
     async stopAllTracks() {
-        return this.makeRequest('/mixer/stop-all', {
-            method: 'POST'
-        });
+        return audioApi.stopAll()
     }
 
     async setMasterVolume(volume) {
-        return this.makeRequest('/mixer/master-volume', {
-            method: 'POST',
-            body: JSON.stringify({ volume })
-        });
+        return audioApi.setMasterVolume({ volume })
     }
 
     async applyDefaultPanning() {
-        return this.makeRequest('/mixer/apply-default-panning', {
-            method: 'POST'
-        });
+        return audioApi.applyDefaultPanning()
     }
 
     async getMixerState() {
-        return this.makeRequest('/mixer/state');
+        return audioApi.getMixerState()
     }
 
     async removeTrack(trackId) {
-        return this.makeRequest(`/tracks/${trackId}`, {
-            method: 'DELETE'
-        });
+        return audioApi.removeTrack(trackId)
     }
 
     async clearAllTracks() {
-        return this.makeRequest('/mixer/clear', {
-            method: 'DELETE'
-        });
+        return audioApi.clearMixer()
     }
 
-    // Crossfade methods
+    // Crossfade methods — keep as direct POST since the frontend currently passes trackPaths
     async crossfadeToTracks(trackPaths, duration = null) {
-        return this.makeRequest('/mixer/crossfade', {
-            method: 'POST',
-            body: JSON.stringify({ trackPaths, duration })
-        });
+        const body = { trackPaths, duration }
+        return fetch(`${this.audioServiceUrl}/api/mixer/crossfade`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)})
     }
 
     async setCrossfadeDuration(duration) {
-        return this.makeRequest('/mixer/crossfade-duration', {
-            method: 'POST',
-            body: JSON.stringify({ duration })
-        });
+        return fetch(`${this.audioServiceUrl}/api/mixer/crossfade-duration`, {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ duration })})
     }
 
     async getCrossfadeStatus() {
-        return this.makeRequest('/mixer/crossfade-status');
+        return audioApi.getCrossfadeStatus()
     }
 
     // WebSocket methods (real-time)
