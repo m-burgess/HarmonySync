@@ -5,6 +5,7 @@ import * as TauriFs from '@tauri-apps/plugin-fs';
 import * as TauriCore from '@tauri-apps/api/core';
 import * as TauriEvent from '@tauri-apps/api/event';
 import { ArrowDownTrayIcon, CheckCircleIcon, PencilIcon } from '@heroicons/react/24/outline';
+import LyricsFetcher from './LyricsFetcher';
 import { 
   addTracks, 
   setPan, 
@@ -36,6 +37,7 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
   const [currentLoadedFolder, setCurrentLoadedFolder] = useState(null); // Track currently loaded folder
   const [currentSongIndex, setCurrentSongIndex] = useState(-1); // Track current song in setlist
   const [autoplayEnabled, setAutoplayEnabled] = useState(false); // Enable/disable autoplay
+  const [selectedSongForLyrics, setSelectedSongForLyrics] = useState(null); // Track selected song for lyrics fetching
   
   // Ref to prevent duplicate loading calls (React.StrictMode protection)
   const loadingInProgressRef = useRef(false);
@@ -138,6 +140,40 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
     } catch (error) {
       console.error('Error selecting folder:', error);
     }
+  };
+
+  const handleLyricsFetched = async (item) => {
+    // If item is null, just close the modal
+    if (!item) {
+      setSelectedSongForLyrics(null);
+      return;
+    }
+    
+    // Refresh the setlist item to show that lyrics are now available
+    console.log('Lyrics fetched successfully for:', item.name);
+    
+    // Reload the folder to update lyrics in the item
+    try {
+      const entries = await TauriFs.readDir(item.path, { recursive: false });
+      const lyricsFile = entries.find(entry => entry.name === 'lyrics.txt' && entry.children === undefined);
+      
+      if (lyricsFile) {
+        let lyricsContent = await TauriFs.readFile(`${item.path}/${lyricsFile.name}`, { encoding: 'utf8' });
+        if (lyricsContent instanceof Uint8Array) lyricsContent = new TextDecoder().decode(lyricsContent);
+        const lyrics = typeof lyricsContent === 'string' ? lyricsContent : '';
+        
+        // Update the item in the setlist
+        setSetlist(prevSetlist => 
+          prevSetlist.map(si => 
+            si.id === item.id ? { ...si, lyrics } : si
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Failed to reload lyrics:', error);
+    }
+    
+    setSelectedSongForLyrics(null);
   };
 
   const handlePreloadSong = async (item) => {
@@ -579,6 +615,29 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
                 </span>
                 {item.type === 'song' && (
                   <div style={{ display: 'flex', gap: '4px' }}>
+                    {!item.lyrics && (
+                      <button
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          setSelectedSongForLyrics(item);
+                        }}
+                        title="Fetch lyrics from Genius"
+                        style={{ 
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '4px 8px',
+                          backgroundColor: 'transparent',
+                          border: '1px solid #3b82f6',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          color: '#3b82f6'
+                        }}
+                      >
+                        <ArrowDownTrayIcon className="w-4 h-4" />
+                      </button>
+                    )}
                     {item.lyrics && (
                       <button
                         onClick={(e) => { e.stopPropagation(); handleEditLyrics(item); }}
@@ -633,6 +692,14 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
           );
         })}
       </ul>
+      
+      {/* Lyrics Fetcher Modal */}
+      {selectedSongForLyrics && (
+        <LyricsFetcher 
+          songItem={selectedSongForLyrics}
+          onLyricsFetched={handleLyricsFetched}
+        />
+      )}
     </div>
   );
 };
