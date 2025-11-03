@@ -1,0 +1,26 @@
+name: Integration Architect Agent
+
+on:
+  workflow_call:
+    inputs:
+      prompt:
+        description: 'The prompt for the Integration Architect agent'
+        required: true
+        type: string
+    secrets:
+      GITHUB_TOKEN:
+        required: false
+
+jobs:
+  integration-architect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Execute Integration Architect Agent
+        uses: github/copilot-agent-action@v1
+        with:
+          agent: .github/agents/Integration-Architect.md
+          prompt: ${{ inputs.prompt }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
