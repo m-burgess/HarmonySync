@@ -1,0 +1,104 @@
+name: Issue Agent Collaboration
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  backend-expert:
+    uses: ./.github/workflows/agent-backend-expert.yml
+    with:
+      prompt: |
+        A new issue has been created. Please analyze this issue from a backend perspective:
+        
+        Issue Title: ${{ github.event.issue.title }}
+        Issue Body: ${{ github.event.issue.body }}
+        Issue URL: ${{ github.event.issue.html_url }}
+        
+        Provide your expert analysis and recommendations for the backend aspects of this issue.
+    secrets:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  frontend-expert:
+    uses: ./.github/workflows/agent-frontend-expert.yml
+    with:
+      prompt: |
+        A new issue has been created. Please analyze this issue from a frontend perspective:
+        
+        Issue Title: ${{ github.event.issue.title }}
+        Issue Body: ${{ github.event.issue.body }}
+        Issue URL: ${{ github.event.issue.html_url }}
+        
+        Provide your expert analysis and recommendations for the frontend aspects of this issue.
+    secrets:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  ux-designer:
+    uses: ./.github/workflows/agent-ux-designer.yml
+    with:
+      prompt: |
+        A new issue has been created. Please analyze this issue from a UX design perspective:
+        
+        Issue Title: ${{ github.event.issue.title }}
+        Issue Body: ${{ github.event.issue.body }}
+        Issue URL: ${{ github.event.issue.html_url }}
+        
+        Provide your expert analysis and recommendations for the UX aspects of this issue.
+    secrets:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  integration-architect:
+    uses: ./.github/workflows/agent-integration-architect.yml
+    with:
+      prompt: |
+        A new issue has been created. Please analyze this issue from an integration architecture perspective:
+        
+        Issue Title: ${{ github.event.issue.title }}
+        Issue Body: ${{ github.event.issue.body }}
+        Issue URL: ${{ github.event.issue.html_url }}
+        
+        Provide your expert analysis and recommendations for the integration aspects of this issue.
+    secrets:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  media-systems-engineer:
+    uses: ./.github/workflows/agent-media-systems-engineer.yml
+    with:
+      prompt: |
+        A new issue has been created. Please analyze this issue from a media systems engineering perspective:
+        
+        Issue Title: ${{ github.event.issue.title }}
+        Issue Body: ${{ github.event.issue.body }}
+        Issue URL: ${{ github.event.issue.html_url }}
+        
+        Provide your expert analysis and recommendations for the media systems aspects of this issue.
+    secrets:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  qa-testing-expert:
+    uses: ./.github/workflows/agent-qa-testing-expert.yml
+    with:
+      prompt: |
+        A new issue has been created. Please analyze this issue from a QA and testing perspective:
+        
+        Issue Title: ${{ github.event.issue.title }}
+        Issue Body: ${{ github.event.issue.body }}
+        Issue URL: ${{ github.event.issue.html_url }}
+        
+        Provide your expert analysis and recommendations for the QA and testing aspects of this issue.
+    secrets:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  cross-platform-systems-expert:
+    uses: ./.github/workflows/agent-cross-platform-systems-expert.yml
+    with:
+      prompt: |
+        A new issue has been created. Please analyze this issue from a cross-platform systems perspective:
+        
+        Issue Title: ${{ github.event.issue.title }}
+        Issue Body: ${{ github.event.issue.body }}
+        Issue URL: ${{ github.event.issue.html_url }}
+        
+        Provide your expert analysis and recommendations for the cross-platform aspects of this issue.
+    secrets:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
