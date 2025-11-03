@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod lyrics_fetcher_tests {
-    use super::super::*;
+    use crate::application::lyrics_fetcher::{is_section_header, format_lyrics_with_sections, GeniusClient};
 
     #[test]
     fn test_section_header_detection() {

@@ -269,7 +269,7 @@ fn is_section_header(line: &str) -> bool {
     }
     
     // Check if line is all caps and not too long (likely a section name)
-    if line.len() < 30 && line.chars().all(|c| !c.is_lowercase() || !c.is_alphabetic()) {
+    if line.len() < 30 {
         let alpha_chars: Vec<char> = line.chars().filter(|c| c.is_alphabetic()).collect();
         if !alpha_chars.is_empty() && alpha_chars.iter().all(|c| c.is_uppercase()) {
             return true;
