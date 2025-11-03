@@ -88,6 +88,18 @@ export async function crossfade(req: CrossfadeRequest): Promise<void> {
   await request('/api/mixer/crossfade', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(req)})
 }
 
+export async function applyDefaultPanning(): Promise<void> {
+  await request('/api/mixer/apply-default-panning', {method: 'POST'})
+}
+
+export async function getCrossfadeStatus(): Promise<{active: boolean, remaining_ms?: number}> {
+  return request('/api/mixer/crossfade-status')
+}
+
+export async function clearMixer(): Promise<void> {
+  await request('/api/mixer/clear', {method: 'DELETE'})
+}
+
 export default {
   health,
   shutdown,
@@ -104,4 +116,7 @@ export default {
   setMasterVolume,
   getMixerState,
   crossfade,
+  applyDefaultPanning,
+  getCrossfadeStatus,
+  clearMixer,
 }
