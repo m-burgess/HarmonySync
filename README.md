@@ -28,7 +28,18 @@ A comprehensive presentation software built with a Tauri (Rust) backend and a Re
 
 ## 🚀 New Features Highlight
 
-### Scheduler (Latest)
+### Automatic Lyrics Fetching (Latest)
+Streamline your worship service preparation with automatic lyrics fetching:
+- **Genius Integration**: Fetch lyrics directly from Genius API with one click
+- **Smart Formatting**: Automatically detects and formats song sections (Verse, Chorus, Bridge, etc.)
+- **One-Click Download**: Simple download button (📥) for songs without lyrics
+- **Auto-Save**: Lyrics are saved directly to `lyrics.txt` in song folders
+- **Review & Edit**: Edit button (✏️) appears after fetching for quick corrections
+- **No Manual Typing**: Save time preparing song folders for volunteers
+
+See [LYRICS_FETCHING_GUIDE.md](LYRICS_FETCHING_GUIDE.md) for detailed documentation.
+
+### Scheduler
 Automate your worship service with the new Scheduler feature:
 - **Calendar Icon**: Quick access from the activity bar to schedule recurring macros.
 - **Pre-Service Music Automation**: Schedule YouTube playlist music to start/stop automatically.
