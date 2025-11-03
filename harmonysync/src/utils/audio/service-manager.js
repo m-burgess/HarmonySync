@@ -10,11 +10,9 @@ class AudioServiceManager {
 
     async checkServiceHealth() {
         try {
-            const response = await fetch(`${this.serviceUrl}/api/health`, {
-                method: 'GET',
-                timeout: 2000
-            });
-            return response.ok;
+            const api = await import('../api');
+            await api.health();
+            return true;
         } catch (error) {
             return false;
         }
