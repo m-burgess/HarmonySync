@@ -1,8 +1,6 @@
 name: UX Designer Agent
 
 on:
-  issues:
-    types: [opened]
   workflow_call:
     inputs:
       prompt:
@@ -18,13 +16,7 @@ permissions:
   issues: write
 
 jobs:
-  trigger-collaboration:
-    if: github.event_name == 'issues'
-    uses: ./.github/workflows/issue-agent-collaboration.yml
-    secrets: inherit
-
   ux-designer:
-    if: github.event_name == 'workflow_call'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
