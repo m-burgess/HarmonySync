@@ -1,0 +1,63 @@
+name: Audio Service Smoke Test
+
+on:
+  workflow_dispatch: {}
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install audio-service dependencies
+        run: |
+          cd harmonysync-audio-service
+          npm ci
+
+      - name: Start audio service in background and expose env
+        run: |
+          cd harmonysync-audio-service
+          # generate a shutdown token and export it for subsequent steps
+          SHUTDOWN_TOKEN=$(uuidgen)
+          # persist for later steps
+          echo "SHUTDOWN_TOKEN=$SHUTDOWN_TOKEN" >> $GITHUB_ENV
+          echo "HOST=127.0.0.1" >> $GITHUB_ENV
+          echo "PORT=3001" >> $GITHUB_ENV
+          # export for this step so the started process inherits them
+          export SHUTDOWN_TOKEN HOST PORT
+          nohup npm start > service.log 2>&1 &
+          sleep 2
+
+      - name: Run smoke test
+        working-directory: harmonysync-audio-service
+        run: |
+          npm run smoke-test
+
+      - name: Setup Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      - name: Run Rust integration test (audio service)
+        working-directory: harmonysync/src-tauri
+        env:
+          RUN_AUDIO_INTEGRATION_TEST: '1'
+        run: |
+          cargo test -p app --lib --test-threads=1 -- --nocapture
+
+      - name: Upload service log (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: service-log
+          path: harmonysync-audio-service/service.log
