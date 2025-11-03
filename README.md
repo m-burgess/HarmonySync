@@ -59,6 +59,25 @@ To enhance readability and visual appeal:
 - All text displayed on the **Audience Screen** is now perfectly centered both horizontally and vertically.
 - All text displayed on the **Confidence Monitor** is also perfectly centered horizontally and vertically.
 
+## ⚡ Performance & System Requirements
+
+### Recommended System Requirements
+- **CPU**: Quad-core processor (Intel Core i5/i7 or AMD Ryzen 5/7)
+- **RAM**: 8-16 GB
+- **GPU**: Dedicated GPU (NVIDIA GTX 1050 or better, AMD Radeon RX 560 or better) - Recommended for hardware-accelerated video processing
+- **Storage**: SSD with at least 500 MB free for app + media files
+- **OS**: Windows 10/11 (64-bit), Linux, or macOS
+
+### Performance Optimizations
+HarmonySync is optimized for efficient resource usage:
+- ✅ **Hardware-accelerated video encoding** (NVENC, QuickSync, VAAPI, VideoToolbox)
+- ✅ **Multi-threaded processing** using Tokio for parallel operations
+- ✅ **Link-Time Optimization (LTO)** for faster runtime performance
+- ✅ **Efficient memory management** with Rust's zero-cost abstractions
+- ✅ **Optimized caching** using DashMap for thread-safe concurrent access
+
+See [PERFORMANCE_OPTIMIZATIONS.md](PERFORMANCE_OPTIMIZATIONS.md) for detailed information.
+
 ## 🛠️ Getting Started
 
 ### Prerequisites
