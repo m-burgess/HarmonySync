@@ -11,6 +11,10 @@ on:
       GITHUB_TOKEN:
         required: false
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   ux-designer:
     runs-on: ubuntu-latest
