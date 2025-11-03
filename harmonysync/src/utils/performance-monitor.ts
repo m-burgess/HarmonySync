@@ -1,6 +1,7 @@
 // Performance Monitoring Example for HarmonySync Frontend
 // This file shows how to use the performance metrics API
 
+import React from 'react';
 import { invoke } from '@tauri-apps/api/core';
 
 /**
@@ -124,7 +125,3 @@ export async function initializePerformanceMonitoring(): Promise<void> {
     console.error('Failed to initialize performance monitoring:', error);
   }
 }
-
-// Note: This file requires React to be imported for the usePerformanceMonitor hook
-// Add this import at the top of the file when using in a React project:
-// import React from 'react';

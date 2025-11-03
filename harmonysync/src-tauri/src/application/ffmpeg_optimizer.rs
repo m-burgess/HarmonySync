@@ -167,7 +167,9 @@ impl OptimizedCommand {
         // Use multi-threaded encoding
         cmd.arg("-threads").arg("0"); // Use all cores
         
-        // Audio codec
+        // Audio codec (libvorbis with fallback)
+        // Note: Most systems have libvorbis, but if not available,
+        // ffmpeg will error and the caller should handle it
         cmd.arg("-c:a").arg("libvorbis");
         cmd.arg("-q:a").arg("4"); // Quality 4 (good balance)
         
