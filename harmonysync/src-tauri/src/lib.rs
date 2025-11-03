@@ -133,6 +133,10 @@ pub fn run() {
             application::commands::recall_dmx_scene,
             // Performance monitoring
             application::commands::get_performance_metrics,
+            // Lyrics fetching commands
+            application::commands::fetch_lyrics_from_genius,
+            application::commands::save_lyrics_to_file,
+            application::commands::fetch_and_save_lyrics,
             // Legacy audio decoder commands removed - now using Node.js service
         ])
         .run(tauri::generate_context!())
