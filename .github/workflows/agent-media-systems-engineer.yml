@@ -7,9 +7,6 @@ on:
         description: 'The prompt for the Media Systems Engineer agent'
         required: true
         type: string
-    secrets:
-      GITHUB_TOKEN:
-        required: false
 
 permissions:
   contents: read
