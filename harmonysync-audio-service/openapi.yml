@@ -90,16 +90,39 @@ components:
           additionalProperties:
             type: integer
     CrossfadeRequest:
-      type: object
-      required: [fromTrackId, toTrackId]
-      properties:
-        fromTrackId:
-          type: string
-        toTrackId:
-          type: string
-        duration:
-          type: integer
-          description: Duration in milliseconds
+        type: object
+        description: |
+          Crossfade operation. The request may specify either `fromTrackId`/`toTrackId` to crossfade between two existing tracks,
+          or `trackPaths` to load-and-crossfade an ordered list of files. `duration` is in milliseconds.
+        properties:
+          fromTrackId:
+            type: string
+            description: Source track id (optional when using trackPaths)
+          toTrackId:
+            type: string
+            description: Destination track id (optional when using trackPaths)
+          trackPaths:
+            type: array
+            items:
+              type: string
+            description: Array of file paths to load and crossfade in sequence (optional)
+          duration:
+            type: integer
+            description: Duration in milliseconds
+        examples:
+          crossfadeBetweenTracks:
+            summary: Crossfade between two loaded tracks
+            value:
+              fromTrackId: "track-123"
+              toTrackId: "track-456"
+              duration: 5000
+          crossfadeFromFiles:
+            summary: Crossfade among local files (load then crossfade)
+            value:
+              trackPaths:
+                - "/media/songA.mp3"
+                - "/media/songB.mp3"
+              duration: 8000
 
 paths:
   /api/health:

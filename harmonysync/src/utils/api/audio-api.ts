@@ -767,9 +767,17 @@ export interface components {
                 [key: string]: number;
             };
         };
+        /**
+         * @description Crossfade operation. The request may specify either `fromTrackId`/`toTrackId` to crossfade between two existing tracks,
+         *     or `trackPaths` to load-and-crossfade an ordered list of files. `duration` is in milliseconds.
+         */
         CrossfadeRequest: {
-            fromTrackId: string;
-            toTrackId: string;
+            /** @description Source track id (optional when using trackPaths) */
+            fromTrackId?: string;
+            /** @description Destination track id (optional when using trackPaths) */
+            toTrackId?: string;
+            /** @description Array of file paths to load and crossfade in sequence (optional) */
+            trackPaths?: string[];
             /** @description Duration in milliseconds */
             duration?: number;
         };
