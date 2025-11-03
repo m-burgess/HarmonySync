@@ -100,6 +100,10 @@ export async function clearMixer(): Promise<void> {
   await request('/api/mixer/clear', {method: 'DELETE'})
 }
 
+export async function setCrossfadeDuration(duration: number): Promise<void> {
+  await request('/api/mixer/crossfade-duration', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ duration })})
+}
+
 export default {
   health,
   shutdown,

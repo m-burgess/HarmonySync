@@ -205,7 +205,7 @@ class NodeJSAudioClient {
     }
 
     async setCrossfadeDuration(duration) {
-        return fetch(`${this.audioServiceUrl}/api/mixer/crossfade-duration`, {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ duration })})
+        return audioApi.setCrossfadeDuration(duration)
     }
 
     async getCrossfadeStatus() {
