@@ -4,6 +4,10 @@ on:
   issues:
     types: [opened]
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   backend-expert:
     uses: ./.github/workflows/agent-backend-expert.yml
