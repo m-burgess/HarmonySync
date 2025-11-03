@@ -197,10 +197,11 @@ class NodeJSAudioClient {
         return audioApi.clearMixer()
     }
 
-    // Crossfade methods — keep as direct POST since the frontend currently passes trackPaths
+
+    // Crossfade methods — use typed client for crossfade that supports trackPaths
     async crossfadeToTracks(trackPaths, duration = null) {
         const body = { trackPaths, duration }
-        return fetch(`${this.audioServiceUrl}/api/mixer/crossfade`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)})
+        return audioApi.crossfade(body)
     }
 
     async setCrossfadeDuration(duration) {
