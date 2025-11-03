@@ -19,9 +19,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Execute Cross-Platform Systems Expert Agent
-        uses: github/copilot-agent-action@v1
-        with:
-          agent: .github/agents/Cross-Platform-Systems-Expert.md
-          prompt: ${{ inputs.prompt }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Agent Placeholder
+        run: |
+          echo "Cross-Platform Systems Expert agent definition available at .github/agents/Cross-Platform-Systems-Expert.md"
+          echo "This agent should be invoked through GitHub Copilot interface"
+          echo ""
+          echo "Agent specializes in:"
+          echo "- System-level setup for Windows, Linux, and macOS"
+          echo "- FFmpeg configuration and MIDI routing"
+          echo "- Tauri dependencies and OS-specific automation"

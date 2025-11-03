@@ -19,9 +19,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Execute Backend Expert Agent
-        uses: github/copilot-agent-action@v1
-        with:
-          agent: .github/agents/Backend-Expert.md
-          prompt: ${{ inputs.prompt }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Agent Placeholder
+        run: |
+          echo "Backend Expert agent definition available at .github/agents/Backend-Expert.md"
+          echo "This agent should be invoked through GitHub Copilot interface"
+          echo ""
+          echo "Agent specializes in:"
+          echo "- Backend development using Node.js, Rust, and Tauri"
+          echo "- API design and database integration"
+          echo "- Authentication and performance optimization"
