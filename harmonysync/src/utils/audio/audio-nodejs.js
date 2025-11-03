@@ -1,6 +1,7 @@
 // Updated audio.js that uses Node.js audio service instead of FFmpeg/Symphonia
 import NodeJSAudioClient from './nodejs-audio-client.js';
 import AudioServiceChecker from './service-checker.js';
+import * as audioApi from '../api'
 
 // Global audio client instance
 let audioClient = null;
@@ -561,21 +562,10 @@ export async function clearAllTracks() {
     const client = await ensureAudioService();
     
     try {
-        const response = await fetch('http://localhost:3001/api/tracks/clear', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const result = await response.json();
+        await audioApi.clearMixer();
         console.log('🧹 All tracks cleared successfully');
         tracks = [];
-        return result;
+        return { success: true };
     } catch (error) {
         console.error('❌ Failed to clear tracks:', error);
         throw error;
