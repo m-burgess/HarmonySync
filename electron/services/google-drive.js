@@ -140,18 +140,31 @@ async function syncFolder(folderId, localPath) {
         const subfolderPath = path.join(localPath, file.name);
         await syncFolder(file.id, subfolderPath);
       } else {
-        // Download file if it doesn't exist or is newer
+        // Download file if it doesn't exist or is newer on Drive
         const localFilePath = path.join(localPath, file.name);
         const shouldDownload = !await fs.pathExists(localFilePath);
         
-        // TODO: Check modification time to determine if update is needed
+        // Check if file needs updating based on modification time
+        let needsUpdate = false;
+        if (!shouldDownload && file.modifiedTime) {
+          try {
+            const localStats = await fs.stat(localFilePath);
+            const localModified = localStats.mtime;
+            const driveModified = new Date(file.modifiedTime);
+            needsUpdate = driveModified > localModified;
+          } catch (err) {
+            // If we can't stat the file, download it
+            needsUpdate = true;
+          }
+        }
         
-        if (shouldDownload) {
+        if (shouldDownload || needsUpdate) {
           await downloadFile(file.id, localFilePath);
           syncedFiles.push({
             name: file.name,
             path: localFilePath,
-            size: file.size
+            size: file.size,
+            action: shouldDownload ? 'downloaded' : 'updated'
           });
         }
       }

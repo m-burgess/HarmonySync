@@ -13,6 +13,28 @@ function getCacheDir() {
   return cacheDir;
 }
 
+// Helper function to parse FFmpeg timemark to seconds
+function parseTimemark(timemark) {
+  if (typeof timemark === 'number') return timemark;
+  if (typeof timemark !== 'string') return 0;
+  
+  // Format: HH:MM:SS.MS or MM:SS.MS
+  const parts = timemark.split(':');
+  let seconds = 0;
+  
+  if (parts.length === 3) {
+    // HH:MM:SS.MS
+    seconds = parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    // MM:SS.MS
+    seconds = parseInt(parts[0]) * 60 + parseFloat(parts[1]);
+  } else {
+    seconds = parseFloat(timemark);
+  }
+  
+  return seconds;
+}
+
 // Convert audio file to Ogg format
 async function convertToOgg(inputPath, outputDir, progressCallback) {
   return new Promise((resolve, reject) => {
@@ -36,7 +58,8 @@ async function convertToOgg(inputPath, outputDir, progressCallback) {
         .audioQuality(4)
         .on('progress', (progress) => {
           if (progressCallback && totalDuration > 0) {
-            const percent = Math.round((progress.timemark / totalDuration) * 100);
+            const currentTime = parseTimemark(progress.timemark);
+            const percent = Math.min(100, Math.round((currentTime / totalDuration) * 100));
             progressCallback({
               file_name: fileName,
               progress: percent,
@@ -180,7 +203,8 @@ async function transcodeVideo(inputPath, progressCallback) {
         ])
         .on('progress', (progress) => {
           if (progressCallback && totalDuration > 0) {
-            const percent = Math.round((progress.timemark / totalDuration) * 100);
+            const currentTime = parseTimemark(progress.timemark);
+            const percent = Math.min(100, Math.round((currentTime / totalDuration) * 100));
             progressCallback({
               file_name: fileName,
               progress: percent,
