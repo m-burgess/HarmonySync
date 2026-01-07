@@ -3,10 +3,14 @@ project_summary.md
 
 # Build outputs
 harmonysync/dist/
+harmonysync/dist-electron/
+harmonysync/out/
 harmonysync/target/
 
 # Dependencies
 harmonysync/node_modules/
+harmonysync-audio-service/node_modules/
+node_modules/
 
 # IDE
 .idea/
@@ -18,3 +22,19 @@ harmonysync/node_modules/
 # OS
 .DS_Store
 Thumbs.db
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# Environment files
+.env
+.env.local
+
+# Google Drive credentials
+google-drive-credentials.json
+google-drive-token.json
+
+# Logs
+*.log
