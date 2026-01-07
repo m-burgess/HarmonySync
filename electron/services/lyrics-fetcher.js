@@ -42,16 +42,18 @@ async function fetch(songId) {
     
     const song = response.data.response.song;
     
-    // Note: Genius API doesn't provide lyrics directly
-    // We need to scrape from the URL or use an alternative method
-    // For now, return the song info
+    // Note: Genius API doesn't provide lyrics directly due to licensing
+    // Lyrics must be obtained through their web interface or third-party scraping
+    // This returns song metadata for now
     return {
       id: song.id,
       title: song.title,
       artist: song.primary_artist.name,
       url: song.url,
-      // Lyrics would need to be scraped from the web page
-      lyrics: 'Lyrics fetching requires web scraping. Please visit the URL to get lyrics.',
+      // User should visit the URL to copy lyrics manually
+      // Or implement web scraping (check Genius ToS first)
+      lyrics: null,
+      message: 'Visit the URL to view and copy lyrics from Genius.com',
       sections: []
     };
   } catch (error) {

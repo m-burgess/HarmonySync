@@ -1,11 +1,12 @@
 const { dialog } = require('electron');
 
 module.exports = function setupIpcHandlers(ipcMain, services) {
+  // Services contains getter functions for windows, not window instances
   const {
-    mainWindow,
-    audienceWindow,
-    confidenceWindow,
-    lowerThirdsWindow,
+    mainWindow, // getter function
+    audienceWindow, // getter function
+    confidenceWindow, // getter function
+    lowerThirdsWindow, // getter function
     database,
     ffmpegService,
     httpServer,
@@ -76,13 +77,15 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
   // FFmpeg handlers
   ipcMain.handle('ffmpeg:convertToOgg', async (event, inputPath, outputDir) => {
     return await ffmpegService.convertToOgg(inputPath, outputDir, (progress) => {
-      mainWindow().webContents.send('ogg-conversion-progress', progress);
+      const win = mainWindow();
+      if (win) win.webContents.send('ogg-conversion-progress', progress);
     });
   });
 
   ipcMain.handle('ffmpeg:transposeAudio', async (event, songPath, semitones) => {
     return await ffmpegService.transposeAudio(songPath, semitones, (tracks) => {
-      mainWindow().webContents.send('tracks-updated', tracks);
+      const win = mainWindow();
+      if (win) win.webContents.send('tracks-updated', tracks);
     });
   });
 
@@ -92,7 +95,8 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
 
   ipcMain.handle('ffmpeg:transcodeVideo', async (event, inputPath) => {
     return await ffmpegService.transcodeVideo(inputPath, (progress) => {
-      mainWindow().webContents.send('video-transcode-progress', progress);
+      const win = mainWindow();
+      if (win) win.webContents.send('video-transcode-progress', progress);
     });
   });
 
@@ -102,68 +106,68 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
 
   // Window handlers
   ipcMain.handle('window:showAudience', async () => {
-    const window = audienceWindow();
-    if (window) window.show();
+    const win = audienceWindow();
+    if (win) win.show();
   });
 
   ipcMain.handle('window:hideAudience', async () => {
-    const window = audienceWindow();
-    if (window) window.hide();
+    const win = audienceWindow();
+    if (win) win.hide();
   });
 
   ipcMain.handle('window:showConfidence', async () => {
-    const window = confidenceWindow();
-    if (window) window.show();
+    const win = confidenceWindow();
+    if (win) win.show();
   });
 
   ipcMain.handle('window:hideConfidence', async () => {
-    const window = confidenceWindow();
-    if (window) window.hide();
+    const win = confidenceWindow();
+    if (win) win.hide();
   });
 
   ipcMain.handle('window:showLowerThirds', async () => {
-    const window = lowerThirdsWindow();
-    if (window) window.show();
+    const win = lowerThirdsWindow();
+    if (win) win.show();
   });
 
   ipcMain.handle('window:hideLowerThirds', async () => {
-    const window = lowerThirdsWindow();
-    if (window) window.hide();
+    const win = lowerThirdsWindow();
+    if (win) win.hide();
   });
 
   // Display handlers
   ipcMain.handle('display:videoSlide', async (event, path, duration) => {
-    const audWindow = audienceWindow();
-    const confWindow = confidenceWindow();
+    const audWin = audienceWindow();
+    const confWin = confidenceWindow();
     
-    if (audWindow) {
-      audWindow.webContents.send('display-video-slide', path);
+    if (audWin) {
+      audWin.webContents.send('display-video-slide', path);
     }
-    if (confWindow) {
-      confWindow.webContents.send('start-video-countdown', duration);
+    if (confWin) {
+      confWin.webContents.send('start-video-countdown', duration);
     }
   });
 
   ipcMain.handle('display:slide', async (event, content) => {
-    const audWindow = audienceWindow();
-    const confWindow = confidenceWindow();
-    const lowerWindow = lowerThirdsWindow();
+    const audWin = audienceWindow();
+    const confWin = confidenceWindow();
+    const lowerWin = lowerThirdsWindow();
     
-    if (audWindow) {
-      audWindow.webContents.send('display-slide', content);
+    if (audWin) {
+      audWin.webContents.send('display-slide', content);
     }
-    if (confWindow) {
-      confWindow.webContents.send('display-slide', content);
+    if (confWin) {
+      confWin.webContents.send('display-slide', content);
     }
-    if (lowerWindow && content.lowerThirds) {
-      lowerWindow.webContents.send('update-lower-thirds', content.lowerThirds);
+    if (lowerWin && content.lowerThirds) {
+      lowerWin.webContents.send('update-lower-thirds', content.lowerThirds);
     }
   });
 
   ipcMain.handle('display:blackScreen', async () => {
-    const audWindow = audienceWindow();
-    if (audWindow) {
-      audWindow.webContents.send('display-black-screen');
+    const audWin = audienceWindow();
+    if (audWin) {
+      audWin.webContents.send('display-black-screen');
     }
   });
 
@@ -214,23 +218,23 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
 
   // Send to specific windows
   ipcMain.handle('send:audience', async (event, channel, data) => {
-    const window = audienceWindow();
-    if (window) {
-      window.webContents.send(channel, data);
+    const win = audienceWindow();
+    if (win) {
+      win.webContents.send(channel, data);
     }
   });
 
   ipcMain.handle('send:confidence', async (event, channel, data) => {
-    const window = confidenceWindow();
-    if (window) {
-      window.webContents.send(channel, data);
+    const win = confidenceWindow();
+    if (win) {
+      win.webContents.send(channel, data);
     }
   });
 
   ipcMain.handle('send:lowerThirds', async (event, channel, data) => {
-    const window = lowerThirdsWindow();
-    if (window) {
-      window.webContents.send(channel, data);
+    const win = lowerThirdsWindow();
+    if (win) {
+      win.webContents.send(channel, data);
     }
   });
 };
