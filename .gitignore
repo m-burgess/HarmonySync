@@ -4,9 +4,17 @@ project_summary.md
 # Build outputs
 harmonysync/dist/
 harmonysync/target/
+harmonysync/src-tauri/target/
+dist-electron/
 
 # Dependencies
+node_modules/
 harmonysync/node_modules/
+harmonysync-audio-service/node_modules/
+
+# Electron
+*.log
+harmonysync-audio-service.log
 
 # IDE
 .idea/
@@ -18,3 +26,11 @@ harmonysync/node_modules/
 # OS
 .DS_Store
 Thumbs.db
+
+# Google Drive credentials (keep secure)
+gdrive-credentials.json
+gdrive-token.json
+
+# Database
+*.db
+*.db-journal
