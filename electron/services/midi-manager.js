@@ -1,9 +1,20 @@
-const midi = require('midi');
+let midi;
+try {
+  midi = require('midi');
+} catch (e) {
+  console.warn('MIDI support not available:', e.message);
+  midi = null;
+}
 
 let midiOutput = null;
 let devices = [];
 
 async function initialize() {
+  if (!midi) {
+    console.warn('MIDI library not available, MIDI features disabled');
+    return [];
+  }
+  
   try {
     midiOutput = new midi.Output();
     
@@ -27,6 +38,9 @@ async function initialize() {
 }
 
 async function getDevices() {
+  if (!midi) {
+    return [];
+  }
   if (!midiOutput) {
     await initialize();
   }
@@ -34,6 +48,10 @@ async function getDevices() {
 }
 
 async function sendNote(deviceId, note, velocity, duration) {
+  if (!midi) {
+    throw new Error('MIDI support not available');
+  }
+  
   try {
     if (!midiOutput) {
       throw new Error('MIDI not initialized');
