@@ -1,6 +1,6 @@
 # HarmonySync Presenter - Modern Worship & Media Software
 
-A comprehensive presentation software built with a Tauri (Rust) backend and a React (JavaScript) frontend, designed for worship services and live events. HarmonySync offers robust multitrack audio playback, dynamic media display, and flexible presentation capabilities.
+A comprehensive presentation software built with an Electron (Node.js) backend and a React (JavaScript) frontend, designed for worship services and live events. HarmonySync offers robust multitrack audio playback, dynamic media display, and flexible presentation capabilities.
 
 ## ✨ Key Features
 
@@ -18,6 +18,16 @@ A comprehensive presentation software built with a Tauri (Rust) backend and a Re
 - **Visual Feedback**: LCR pan buttons highlight yellow when active; mute button highlights red when engaged.
 - **Default Volume**: All track faders initialize at 100% volume on load.
 - **Config Persistence**: Save/load mixer configurations per song.
+- **Synchronized Playback**: All tracks are synchronized before playback starts to ensure perfect timing.
+
+### ☁️ Google Drive Integration (NEW)
+- **Cloud Storage**: Fetch audio files directly from Google Drive
+- **Auto-Sync**: Automatically sync worship music libraries
+- **Selective Download**: Only download new or modified files
+- **Pre-playback Verification**: Audio files are verified and ready before playback
+- **OAuth2 Authentication**: Secure authentication with Google Drive API
+
+See [GOOGLE_DRIVE_SETUP.md](GOOGLE_DRIVE_SETUP.md) for setup instructions.
 
 ### 🎥 Media & Display
 - **Video Backgrounds**: Support for various video formats with smooth looping, streamed efficiently via a local HTTP server.
@@ -92,10 +102,9 @@ See [PERFORMANCE_OPTIMIZATIONS.md](PERFORMANCE_OPTIMIZATIONS.md) for detailed in
 ## 🛠️ Getting Started
 
 ### Prerequisites
-- [Rust](https://www.rust-lang.org/tools/install) (latest stable version)
-- [Node.js](https://nodejs.org/en/download/) (LTS version) and npm
-- Tauri prerequisites for your operating system (see [Tauri documentation](https://tauri.app/v1/guides/getting-started/prerequisites))
-- [FFmpeg](https://ffmpeg.org/download.html) - Required for audio processing and transposition. Ensure `ffmpeg` is in your system PATH.
+- [Node.js](https://nodejs.org/en/download/) (LTS version 16.x or higher) and npm
+- [FFmpeg](https://ffmpeg.org/download.html) - Required for audio/video processing and transposition. Ensure `ffmpeg` is in your system PATH.
+- (Optional) [Google Drive API credentials](GOOGLE_DRIVE_SETUP.md) for cloud audio sync
 
 ### Installation
 ```bash
@@ -106,8 +115,12 @@ npm install
 
 ### Running the Application
 ```bash
-# In the harmonysync directory
-npm run tauri dev
+# Development mode
+npm run dev
+
+# Production build
+npm run build
+npm run electron
 ```
 
 ## 📁 Project Structure
@@ -117,33 +130,27 @@ harmonysync/
 ├── public/                  # Static assets
 ├── src/                     # React frontend source code
 │   ├── App.jsx
-│   ├── MultitrackPlayer.jsx # Multitrack player component
-│   ├── ScreenButtons.jsx    # Controls for opening display windows
-│   ├── SlideManager.jsx     # Manages presentation slides
-│   ├── TrackControl.jsx     # Individual track control component
-│   ├── audience-main.jsx    # Entry point for Audience Screen
-│   ├── AudienceScreen.jsx   # Audience display component
-│   ├── confidence-main.jsx  # Entry point for Confidence Monitor
-│   ├── ConfidenceMonitor.jsx# Confidence Monitor component
-│   ├── lowerthirds-main.jsx # Entry point for Lower Thirds Window
-│   ├── LowerThirdsScreen.jsx# Lower Thirds display component
-│   ├── styles/              # CSS stylesheets
-│   │   ├── App.css
-│   │   ├── audience.css
-│   │   ├── confidence.css
-│   │   ├── lowerthirds.css
+│   ├── components/          # React components
+│   │   ├── audio/           # Audio player components
+│   │   ├── screens/         # Display windows
+│   │   ├── slides/          # Slide management
 │   │   └── ...
+│   ├── styles/              # CSS stylesheets
 │   └── utils/               # Utility functions
-│       ├── audio.js         # Web Audio API utilities
-│       ├── lyrics.js        # Lyric parsing and formatting
-│       ├── video.js         # Video utilities
-│       └── ui.js            # UI helper functions
-├── src-tauri/               # Rust backend (Tauri) source code
-│   ├── src/                 # Rust application logic
-│   │   ├── main.rs
-│   │   └── application/     # Backend commands and services
-│   ├── tauri.conf.json      # Tauri configuration
-│   └── capabilities/        # Tauri capability definitions
+│       ├── api-bridge.js    # Unified API bridge
+│       └── ...
+├── electron/                # Electron backend (Node.js)
+│   ├── main.cjs             # Main process
+│   ├── preload.cjs          # Preload script
+│   └── modules/             # Backend modules
+│       ├── audioServiceManager.cjs
+│       ├── audioTransposer.cjs
+│       ├── databaseManager.cjs
+│       ├── googleDriveManager.cjs
+│       ├── videoProcessor.cjs
+│       └── ...
+├── harmonysync-audio-service/  # Separate audio service
+│   └── server.js            # Audio streaming server
 ├── index.html               # Main application HTML
 ├── audience.html            # Audience Screen HTML
 ├── confidence.html          # Confidence Monitor HTML
@@ -156,9 +163,11 @@ MIT License - see LICENSE file for details.
 
 ## 🙏 Acknowledgments
 
-- Built with [Tauri](https://tauri.app/) and [React](https://react.dev/)
-- Audio processing via [Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)
+- Built with [Electron](https://www.electronjs.org/) and [React](https://react.dev/)
+- Audio processing via integrated [Node.js Audio Service](harmonysync-audio-service/)
 - Video and audio conversion powered by [FFmpeg](https://ffmpeg.org/)
+- Cloud storage integration with [Google Drive API](https://developers.google.com/drive)
+- Database powered by [better-sqlite3](https://github.com/WiseLibs/better-sqlite3)
 
 ---
 
