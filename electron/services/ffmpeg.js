@@ -24,10 +24,10 @@ function parseTimemark(timemark) {
   
   if (parts.length === 3) {
     // HH:MM:SS.MS
-    seconds = parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseFloat(parts[2]);
+    seconds = parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60 + parseFloat(parts[2]);
   } else if (parts.length === 2) {
     // MM:SS.MS
-    seconds = parseInt(parts[0]) * 60 + parseFloat(parts[1]);
+    seconds = parseInt(parts[0], 10) * 60 + parseFloat(parts[1]);
   } else {
     seconds = parseFloat(timemark);
   }
