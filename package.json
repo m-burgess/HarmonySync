@@ -1,0 +1,79 @@
+{
+  "name": "harmonysync-electron",
+  "version": "1.0.0",
+  "description": "HarmonySync Presenter - Electron/Node.js version",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
+    "dev:vite": "cd harmonysync && npm run dev",
+    "dev:electron": "wait-on http://localhost:5174 && cross-env NODE_ENV=development electron .",
+    "build": "cd harmonysync && npm run build && electron-builder",
+    "build:win": "npm run build -- --win",
+    "build:mac": "npm run build -- --mac",
+    "build:linux": "npm run build -- --linux",
+    "audio-service": "cd harmonysync-audio-service && npm start"
+  },
+  "keywords": [
+    "worship",
+    "presenter",
+    "media",
+    "audio",
+    "multitrack"
+  ],
+  "author": "HarmonySync Team",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.12.2",
+    "better-sqlite3": "^9.2.2",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "fluent-ffmpeg": "^2.1.2",
+    "fs-extra": "^11.1.1",
+    "googleapis": "^128.0.0",
+    "socket.io": "^4.7.2",
+    "socket.io-client": "^4.8.1",
+    "uuid": "^9.0.1"
+  },
+  "optionalDependencies": {
+    "midi": "^2.0.0"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "^28.1.0",
+    "electron-builder": "^24.9.1",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.harmonysync.app",
+    "productName": "HarmonySync",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "electron/**/*",
+      "harmonysync/dist/**/*",
+      "harmonysync-audio-service/**/*",
+      "!harmonysync-audio-service/node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "harmonysync-audio-service",
+        "to": "audio-service",
+        "filter": ["**/*", "!node_modules"]
+      }
+    ],
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "AudioVideo"
+    },
+    "win": {
+      "target": ["nsis"]
+    },
+    "mac": {
+      "target": ["dmg"],
+      "category": "public.app-category.music"
+    }
+  }
+}
