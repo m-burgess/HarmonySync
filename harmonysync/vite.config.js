@@ -11,7 +11,7 @@ export default defineConfig({
       ignored: ['**/src-tauri/**', '**/electron/**', '**/node_modules/**']
     },
   },
-  envPrefix: ['VITE_', 'TAURI_ENV_*'],
+  envPrefix: ['VITE_'],
   build: {
     target: 'es2022',
     minify: process.env.NODE_ENV === 'production' ? 'esbuild' : false,

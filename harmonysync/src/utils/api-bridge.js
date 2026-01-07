@@ -62,19 +62,30 @@ if (isElectron) {
     }
   };
 } else if (isTauri) {
-  // Use actual Tauri API
-  const TauriAPI = await import('@tauri-apps/api');
-  const TauriDialog = await import('@tauri-apps/plugin-dialog');
-  
-  api = {
-    invoke: TauriAPI.invoke,
-    event: TauriAPI.event,
-    dialog: TauriDialog
-  };
+  // Dynamically import Tauri API only if in Tauri environment
+  (async () => {
+    try {
+      const TauriAPI = await import('@tauri-apps/api');
+      const TauriDialog = await import('@tauri-apps/plugin-dialog');
+      
+      api = {
+        invoke: TauriAPI.invoke,
+        event: TauriAPI.event,
+        dialog: TauriDialog
+      };
+    } catch (error) {
+      console.error('Failed to load Tauri API:', error);
+      api = createFallbackAPI();
+    }
+  })();
 } else {
   // Fallback for development
   console.warn('Running in browser mode - API calls will be mocked');
-  api = {
+  api = createFallbackAPI();
+}
+
+function createFallbackAPI() {
+  return {
     invoke: async () => { throw new Error('Not in desktop environment'); },
     event: {
       listen: async () => () => {},
@@ -86,6 +97,11 @@ if (isElectron) {
       message: async () => {}
     }
   };
+}
+
+// Ensure API is always available
+if (!api) {
+  api = createFallbackAPI();
 }
 
 export const invoke = api.invoke;

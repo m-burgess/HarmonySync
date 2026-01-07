@@ -129,18 +129,26 @@ export const window = {
   })
 };
 
-// Path utilities
+// Path utilities - simplified cross-platform implementation
 export const path = {
   join: (...paths) => {
-    return paths.join('/').replace(/\/+/g, '/');
+    // Normalize separators and remove empty parts
+    const normalized = paths
+      .map(p => p.replace(/[\\\/]+/g, '/'))
+      .join('/')
+      .replace(/\/+/g, '/');
+    return normalized;
   },
 
   dirname: (filePath) => {
-    return filePath.substring(0, filePath.lastIndexOf('/'));
+    const normalized = filePath.replace(/[\\\/]+/g, '/');
+    const lastSlash = normalized.lastIndexOf('/');
+    return lastSlash === -1 ? '.' : normalized.substring(0, lastSlash);
   },
 
   basename: (filePath, ext) => {
-    let base = filePath.substring(filePath.lastIndexOf('/') + 1);
+    const normalized = filePath.replace(/[\\\/]+/g, '/');
+    let base = normalized.substring(normalized.lastIndexOf('/') + 1);
     if (ext && base.endsWith(ext)) {
       base = base.substring(0, base.length - ext.length);
     }
