@@ -2,7 +2,7 @@
 // Lyric Transition Manager for smooth 0.2s fade transitions
 // Handles fade-in/fade-out effects for lyrics display
 
-import { core } from '../electron-adapter';
+import { core } from '../../electron-adapter';
 
 class LyricTransitionManager {
 	constructor() {

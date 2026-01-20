@@ -2,7 +2,7 @@
 // Client interface for communicating with the Node.js audio service
 
 import io from 'socket.io-client';
-import { core } from '../electron-adapter';
+import { core } from '../../electron-adapter';
 import * as audioApi from '../api'
 
 class NodeJSAudioClient {

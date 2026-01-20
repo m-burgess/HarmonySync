@@ -3,7 +3,7 @@
  * Replaces the FFmpeg-based system to reduce memory usage from 12GB+ to <100MB
  */
 
-import { core } from '../electron-adapter';
+import { core } from '../../electron-adapter';
 
 // Track management state
 let audioTracks = new Map();

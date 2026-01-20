@@ -3,7 +3,7 @@
  * Provides better performance and memory management than Web Audio API decoding
  */
 
-import { core } from '../electron-adapter';
+import { core } from '../../electron-adapter';
 
 /**
  * Decode an audio file using Rust's Symphonia decoder

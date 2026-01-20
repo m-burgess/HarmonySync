@@ -3,7 +3,7 @@
  * Provides easy access to cache management from frontend
  */
 
-import { core } from '../electron-adapter';
+import { core } from '../../electron-adapter';
 
 /**
  * Get current cache statistics
