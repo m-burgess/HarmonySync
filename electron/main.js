@@ -7,11 +7,24 @@ const os = require('os');
 // Import backend services
 const database = require('./services/database');
 const ffmpegService = require('./services/ffmpeg');
+const audioService = require('./services/audio-service');
+const videoService = require('./services/video-service');
+const youtubeService = require('./services/youtube-service');
+const imageService = require('./services/image-service');
+const textService = require('./services/text-service');
+const displayService = require('./services/display-service');
+const windowService = require('./services/window-service');
+const macroService = require('./services/macro-service');
+const schedulerService = require('./services/scheduler-service');
 const httpServer = require('./services/http-server');
 const midiManager = require('./services/midi-manager');
 const lyricsFetcher = require('./services/lyrics-fetcher');
 const fileManager = require('./services/file-manager');
 const googleDriveService = require('./services/google-drive');
+const dropboxService = require('./services/dropbox-service');
+const scriptService = require('./services/script-service');
+const scriptingAPI = require('./services/scripting-api');
+const eventTriggerService = require('./services/event-trigger-service');
 
 const isDev = process.env.NODE_ENV === 'development';
 const VITE_DEV_SERVER_URL = 'http://localhost:5174';
@@ -247,17 +260,39 @@ app.on('activate', () => {
 
 // IPC Handlers
 require('./ipc-handlers')(ipcMain, {
-  mainWindow,
-  audienceWindow,
-  confidenceWindow,
-  lowerThirdsWindow,
+  mainWindow: () => mainWindow,
+  audienceWindow: () => audienceWindow,
+  confidenceWindow: () => confidenceWindow,
+  lowerThirdsWindow: () => lowerThirdsWindow,
   database,
   ffmpegService,
+  audioService,
+  videoService,
+  youtubeService,
+  imageService,
+  textService,
+  displayService,
+  windowService,
+  macroService,
+  schedulerService,
   httpServer,
   midiManager,
   lyricsFetcher,
   fileManager,
-  googleDriveService
+  googleDriveService,
+  dropboxService,
+  scriptService,
+  scriptingAPI
+});
+
+// Initialize script storage
+scriptService.initializeScriptStorage().catch(err => {
+  console.error('Failed to initialize script storage:', err);
+});
+
+// Initialize event trigger service
+eventTriggerService.initializeEventTriggers().catch(err => {
+  console.error('Failed to initialize event triggers:', err);
 });
 
 // Export for other modules
