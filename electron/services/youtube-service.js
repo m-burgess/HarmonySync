@@ -182,20 +182,23 @@ async function validateForYouTube(videoPath) {
 async function addYouTubeLink(db, presentationId, url) {
   return new Promise((resolve, reject) => {
     const stmt = db.prepare('INSERT INTO youtube_links (presentation_id, url) VALUES (?, ?)');
-    stmt.run(presentationId, url, function(err) {
-      // Ensure finalization happens in both success and error cases
+    
+    try {
+      stmt.run(presentationId, url, function(err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(this.lastID);
+        }
+      });
+    } finally {
+      // Ensure finalization always happens
       try {
         stmt.finalize();
       } catch (finalizeErr) {
         console.error('Error finalizing statement:', finalizeErr);
       }
-      
-      if (err) {
-        reject(err);
-      } else {
-        resolve(this.lastID);
-      }
-    });
+    }
   });
 }
 

@@ -109,12 +109,6 @@ async function generateAndSaveCSS(dirPath, options = {}) {
 function formatLyrics(lyrics) {
   if (!lyrics) return '';
   
-  // Common section markers
-  const sectionPatterns = [
-    /^\[([^\]]+)\]/gm,  // [Verse 1], [Chorus], etc.
-    /^(Verse|Chorus|Bridge|Intro|Outro|Pre-Chorus|Hook)(\s+\d+)?:?/gmi
-  ];
-  
   let formatted = lyrics.trim();
   
   // Ensure section markers are on their own lines
