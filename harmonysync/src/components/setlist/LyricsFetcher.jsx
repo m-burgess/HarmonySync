@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import * as TauriCore from '@tauri-apps/api/core';
-import * as TauriDialog from '@tauri-apps/plugin-dialog';
+import { core, dialog } from '../../electron-adapter';
 import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 
 /**
@@ -38,12 +37,12 @@ const LyricsFetcher = ({ songItem, onLyricsFetched }) => {
 
   const handleFetchLyrics = async () => {
     if (!songTitle.trim()) {
-      await TauriDialog.message('Please enter a song title.', { title: 'Missing Information', type: 'info' });
+      alert('Please enter a song title.');
       return;
     }
 
     if (!songItem?.path) {
-      await TauriDialog.message('No song folder selected.', { title: 'Error', type: 'error' });
+      alert('No song folder selected.');
       return;
     }
 
@@ -53,16 +52,13 @@ const LyricsFetcher = ({ songItem, onLyricsFetched }) => {
       console.log(`Fetching lyrics for "${songTitle}" by "${artistName || 'Unknown'}"...`);
       
       // Call the Tauri command to fetch and save lyrics
-      const savedPath = await TauriCore.invoke('fetch_and_save_lyrics', {
+      const savedPath = await core.invoke('fetch_and_save_lyrics', {
         songTitle: songTitle.trim(),
         artist: artistName.trim() || null,
         folderPath: songItem.path
       });
 
-      await TauriDialog.message(
-        `Lyrics successfully fetched and saved to:\n${savedPath}`,
-        { title: 'Success', type: 'info' }
-      );
+      alert(`Lyrics successfully fetched and saved to:\n${savedPath}`);
 
       // Notify parent component that lyrics were fetched
       if (onLyricsFetched) {
@@ -76,10 +72,7 @@ const LyricsFetcher = ({ songItem, onLyricsFetched }) => {
 
     } catch (error) {
       console.error('Failed to fetch lyrics:', error);
-      await TauriDialog.message(
-        `Failed to fetch lyrics: ${error}`,
-        { title: 'Error', type: 'error' }
-      );
+      alert(`Failed to fetch lyrics: ${error}`);
     } finally {
       setIsFetching(false);
     }

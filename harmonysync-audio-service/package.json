@@ -34,7 +34,7 @@
     "streaming",
     "mixer",
     "multitrack",
-    "tauri",
+    "electron",
     "harmonysync"
   ],
   "author": "HarmonySync Team",

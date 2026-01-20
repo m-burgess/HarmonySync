@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowTopRightOnSquareIcon, PlayIcon, PhotoIcon, FilmIcon, GlobeAltIcon, DocumentTextIcon } from '@heroicons/react/24/solid';
-import * as TauriEvent from '@tauri-apps/api/event';
-import * as TauriCore from '@tauri-apps/api/core';
+import { event, core } from '../../electron-adapter';
 import { Card, Button } from '../ui';
 import '../../styles/components/Slide.css';
 
@@ -66,18 +65,18 @@ const Slide = ({
     try {
       if (slide.type === 'image') {
         console.log('Emitting display-image-slide with payload:', { path: slide.path, name: slide.name });
-        await TauriEvent.emit('display-image-slide', { path: slide.path, name: slide.name });
+        await event.emit('display-image-slide', { path: slide.path, name: slide.name });
       } else if (slide.type === 'video') {
         await handleVideoClick();
       } else if (slide.type === 'youtube') {
-        await TauriEvent.emit('navigate', { videoId: slide.videoId });
+        await event.emit('navigate', { videoId: slide.videoId });
       } else { // Lyrics slide
         console.log('Emitting display-lyric-slide with payload:', { text: slide.text, section: slide.section });
-        await TauriEvent.emit('display-lyric-slide', { text: slide.text, section: slide.section });
+        await event.emit('display-lyric-slide', { text: slide.text, section: slide.section });
 
         const line1 = slide.text && slide.text.length > 0 ? slide.text[0] : '';
         const line2 = slide.text && slide.text.length > 1 ? slide.text[1] : '';
-        await TauriEvent.emit('set-lower-thirds-text', { line1, line2 });
+        await event.emit('set-lower-thirds-text', { line1, line2 });
       }
     } catch (error) {
       console.error('Error handling slide click:', error);
@@ -89,17 +88,17 @@ const Slide = ({
 
     if (isAlreadyTranscoded) {
       console.log('Playing already transcoded video:', slide.path);
-      await TauriCore.invoke('display_video_slide', { path: slide.path, duration: slide.duration });
+      await core.invoke('display_video_slide', { path: slide.path, duration: slide.duration });
     } else {
       console.log('Transcoding video:', slide.path);
       setIsLoading(true);
       try {
-        const transcodedPath = await TauriCore.invoke('transcode_video', { inputPath: slide.path });
+        const transcodedPath = await core.invoke('transcode_video', { inputPath: slide.path });
         console.log('Transcoded video path:', transcodedPath);
         if (onVideoTranscoded) {
           onVideoTranscoded(index, transcodedPath);
         }
-        await TauriCore.invoke('display_video_slide', { path: transcodedPath, duration: slide.duration });
+        await core.invoke('display_video_slide', { path: transcodedPath, duration: slide.duration });
       } catch (error) {
         console.error('Error transcoding video:', error);
       } finally {
@@ -191,9 +190,9 @@ const Slide = ({
 
   const getPreviewImageSrc = () => {
     if (slide.type === 'image') {
-      return TauriCore.convertFileSrc(slide.path);
+      return core.convertFileSrc ? core.convertFileSrc(slide.path) : slide.path;
     } else if (slide.type === 'video' && slide.thumbnail_path) {
-      return TauriCore.convertFileSrc(slide.thumbnail_path);
+      return core.convertFileSrc ? core.convertFileSrc(slide.thumbnail_path) : slide.thumbnail_path;
     } else if (slide.type === 'youtube') {
       return `https://img.youtube.com/vi/${slide.videoId}/maxresdefault.jpg`;
     }
@@ -206,7 +205,7 @@ const Slide = ({
         return (
           <div className="slide-image-container">
             <img 
-              src={TauriCore.convertFileSrc(slide.path)} 
+              src={core.convertFileSrc ? core.convertFileSrc(slide.path) : slide.path} 
               alt={slide.name} 
               className="slide-image"
               loading="lazy"
@@ -227,7 +226,7 @@ const Slide = ({
           <div className="slide-video-container">
             {slide.thumbnail_path ? (
               <img 
-                src={TauriCore.convertFileSrc(slide.thumbnail_path)} 
+                src={core.convertFileSrc ? core.convertFileSrc(slide.thumbnail_path) : slide.thumbnail_path} 
                 alt={`Thumbnail for ${slide.name}`} 
                 className="slide-image"
                 loading="lazy"

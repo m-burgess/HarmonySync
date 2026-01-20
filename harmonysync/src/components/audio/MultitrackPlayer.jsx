@@ -18,9 +18,7 @@ import {
 import TrackControl from './TrackControl.jsx';
 import TransposeModal from './TransposeModal.jsx';
 import { PlayIcon, PauseIcon, BackwardIcon, RocketLaunchIcon, ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/solid';
-import * as TauriCore from '@tauri-apps/api/core';
-import * as TauriEvent from '@tauri-apps/api/event';
-import * as TauriFs from '@tauri-apps/plugin-fs';
+import { core, event, fs } from '../../electron-adapter';
 
 const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
   const [globalVolume, setGlobalVolumeState] = useState(1);
@@ -106,13 +104,13 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
     let unlisten;
     
     const setupListener = async () => {
-      unlisten = await TauriEvent.listen('transpose-progress', (event) => {
-        console.log('Transpose progress:', event.payload);
+      unlisten = await event.listen('transpose-progress', (e) => {
+        console.log('Transpose progress:', e.payload);
         setTransposeProgress({
-          currentFile: event.payload.current_file || '',
-          totalFiles: event.payload.total_files || 0,
-          completedFiles: event.payload.completed_files || 0,
-          message: event.payload.message || '',
+          currentFile: e.payload.current_file || '',
+          totalFiles: e.payload.total_files || 0,
+          completedFiles: e.payload.completed_files || 0,
+          message: e.payload.message || '',
         });
       });
     };
@@ -218,7 +216,7 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
 
     try {
       // Call the Rust command to transpose files
-      const outputDir = await TauriCore.invoke('transpose_audio_files', {
+      const outputDir = await core.invoke('transpose_audio_files', {
         directory: currentDirectory,
         semitones: semitones,
       });
@@ -233,7 +231,7 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
       console.log('🔄 Loading transposed tracks from:', outputDir);
       
       // Read the new directory to get track paths
-      const entries = await TauriFs.readDir(outputDir, { recursive: false });
+      const entries = await fs.readDir(outputDir, { recursive: false });
       const audioFiles = entries
         .filter(e => e.children === undefined && (
           e.name.endsWith('.mp3') || 
@@ -267,7 +265,7 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
       
       // Emit event to update tracks in parent component
       // Since we can't directly call setAllTracks from parent, we'll emit an event
-      TauriEvent.emit('tracks-updated', loadedTracks);
+      event.emit('tracks-updated', loadedTracks);
       
       // Update current directory
       setCurrentDirectory(outputDir);

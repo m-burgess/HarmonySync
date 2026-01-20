@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import * as Tauri from '@tauri-apps/api';
+import { core } from '../../electron-adapter';
 import { PlusIcon } from '@heroicons/react/24/solid';
 import '../../styles/PresentationLibrary.css';
 
@@ -9,7 +9,7 @@ const PresentationLibrary = ({ onAddPresentationToSetlist, presentationImportedT
 
   // Load presentations once; searching is handled externally by file explorer
   useEffect(() => {
-    Tauri.core.invoke('search_presentations', { searchTerm: '' })
+    core.invoke('search_presentations', { searchTerm: '' })
       .then(setResults)
       .catch(err => {
         console.error(err);

@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import * as TauriCore from '@tauri-apps/api/core';
-import * as TauriFs from '@tauri-apps/plugin-fs';
-import * as TauriPath from '@tauri-apps/api/path';
+import { core, fs } from '../../electron-adapter';
 import { XMarkIcon } from '@heroicons/react/24/solid';
 import Button from '../ui/Button.jsx';
 import Input from '../ui/Input.jsx';

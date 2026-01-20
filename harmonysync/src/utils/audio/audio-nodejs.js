@@ -538,8 +538,8 @@ export async function checkAudioServiceStatusFromApp() {
 // Stop audio service via Tauri command
 export async function stopAudioServiceFromApp() {
     try {
-        const { invoke } = await import('@tauri-apps/api/core');
-        const result = await invoke('stop_audio_service');
+        const { core } = await import('../electron-adapter');
+        const result = await core.invoke('stop_audio_service');
         console.log('✅ Audio service stopped:', result);
         
         // Reset client state
