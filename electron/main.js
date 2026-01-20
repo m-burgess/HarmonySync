@@ -7,10 +7,16 @@ const os = require('os');
 // Import backend services
 const database = require('./services/database');
 const ffmpegService = require('./services/ffmpeg');
+const audioService = require('./services/audio-service');
 const videoService = require('./services/video-service');
 const youtubeService = require('./services/youtube-service');
 const imageService = require('./services/image-service');
 const textService = require('./services/text-service');
+const displayService = require('./services/display-service');
+const windowService = require('./services/window-service');
+const dmxService = require('./services/dmx-service');
+const macroService = require('./services/macro-service');
+const schedulerService = require('./services/scheduler-service');
 const httpServer = require('./services/http-server');
 const midiManager = require('./services/midi-manager');
 const lyricsFetcher = require('./services/lyrics-fetcher');
@@ -257,10 +263,16 @@ require('./ipc-handlers')(ipcMain, {
   lowerThirdsWindow: () => lowerThirdsWindow,
   database,
   ffmpegService,
+  audioService,
   videoService,
   youtubeService,
   imageService,
   textService,
+  displayService,
+  windowService,
+  dmxService,
+  macroService,
+  schedulerService,
   httpServer,
   midiManager,
   lyricsFetcher,
