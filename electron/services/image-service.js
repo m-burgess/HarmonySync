@@ -320,15 +320,25 @@ async function clearCache(olderThanDays = 7) {
  */
 async function getDominantColor(imagePath) {
   try {
-    const { dominant } = await sharp(imagePath)
-      .resize(1, 1)
+    const { data, info } = await sharp(imagePath)
+      .resize(100, 100, { fit: 'cover' })
       .raw()
       .toBuffer({ resolveWithObject: true });
     
+    // Calculate average color
+    let r = 0, g = 0, b = 0;
+    const pixelCount = info.width * info.height;
+    
+    for (let i = 0; i < data.length; i += info.channels) {
+      r += data[i];
+      g += data[i + 1];
+      b += data[i + 2];
+    }
+    
     return {
-      r: dominant.data[0],
-      g: dominant.data[1],
-      b: dominant.data[2]
+      r: Math.round(r / pixelCount),
+      g: Math.round(g / pixelCount),
+      b: Math.round(b / pixelCount)
     };
   } catch (err) {
     throw new Error(`Failed to get dominant color: ${err.message}`);
