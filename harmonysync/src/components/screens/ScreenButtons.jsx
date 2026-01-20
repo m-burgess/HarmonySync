@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Window } from '@tauri-apps/api/window';
-import { emit } from '@tauri-apps/api/event';
+import { event } from '../../electron-adapter';
 import { ComputerDesktopIcon, TvIcon, WindowIcon } from '@heroicons/react/24/solid';
 import Button from '../ui/Button.jsx';
 
@@ -10,75 +9,40 @@ const ScreenButtons = () => {
   const [lowerThirdsWindow, setLowerThirdsWindow] = useState(null);
 
   const openAudienceScreen = async () => {
-    let currentAudienceWindow = audienceWindow;
-    if (!currentAudienceWindow) {
-      currentAudienceWindow = new Window('audience', {
-        url: 'audience.html',
-        title: 'Audience Screen',
-        decorations: false,
-        resizable: true,
-        maximizable: false,
-        minimizable: false,
-        closable: true,
-        skipTaskbar: false,
-        devtools: false,
-      });
-      setAudienceWindow(currentAudienceWindow);
-    }
-
-    if (await currentAudienceWindow.isVisible()) {
-      currentAudienceWindow.hide();
-    } else {
-      currentAudienceWindow.show();
-      // Re-emit background if it exists and window is shown
-      // This logic needs to be handled by a global state or context in React
-      // For now, we'll assume currentBackgroundCssContent is managed elsewhere or re-emitted on load
-      // emit('set-background', currentBackgroundCssContent); // Placeholder
+    // TODO: Implement window management for Electron
+    // In Electron, windows are managed differently through BrowserWindow in main process
+    console.warn('Window management needs to be implemented for Electron');
+    
+    // For now, use IPC to request window creation
+    try {
+      await event.emit('open-window', { name: 'audience' });
+    } catch (error) {
+      console.error('Failed to open audience window:', error);
     }
   };
 
   const openConfidenceMonitor = async () => {
-    let currentConfidenceWindow = confidenceWindow;
-    if (!currentConfidenceWindow) {
-      currentConfidenceWindow = new Window('confidence', {
-        url: 'confidence.html',
-        title: 'Confidence Monitor',
-        decorations: false,
-        resizable: true,
-        devtools: true,
-      });
-      setConfidenceWindow(currentConfidenceWindow);
-    }
-
-    if (await currentConfidenceWindow.isVisible()) {
-      currentConfidenceWindow.hide();
-    } else {
-      currentConfidenceWindow.show();
+    // TODO: Implement window management for Electron
+    console.warn('Window management needs to be implemented for Electron');
+    
+    try {
+      await event.emit('open-window', { name: 'confidence' });
       // Emit a default empty slide to show the clock initially
-      emit('display-confidence-slide', { current: null, next: null });
+      event.emit('display-confidence-slide', { current: null, next: null });
+    } catch (error) {
+      console.error('Failed to open confidence window:', error);
     }
   };
 
   const openLowerThirds = async () => {
-    let currentLowerThirdsWindow = lowerThirdsWindow;
-    if (!currentLowerThirdsWindow) {
-      currentLowerThirdsWindow = new Window('lowerthirds', {
-        url: 'lowerthirds.html',
-        title: 'Lower Thirds',
-        width: 1920,
-        height: 1080,
-        resizable: false,
-        fullscreen: false,
-        decorations: false,
-        transparent: true,
-        alwaysOnTop: true,
-        skipTaskbar: true,
-        devtools: true,
-      });
-      setLowerThirdsWindow(currentLowerThirdsWindow);
+    // TODO: Implement window management for Electron
+    console.warn('Window management needs to be implemented for Electron');
+    
+    try {
+      await event.emit('open-window', { name: 'lowerthirds' });
+    } catch (error) {
+      console.error('Failed to open lower thirds window:', error);
     }
-
-    if (await currentLowerThirdsWindow.isVisible()) {
       currentLowerThirdsWindow.hide();
     } else {
       currentLowerThirdsWindow.show();

@@ -2,7 +2,7 @@
 // Client interface for communicating with the Node.js audio service
 
 import io from 'socket.io-client';
-import { invoke } from '@tauri-apps/api/core';
+import { core } from '../electron-adapter';
 import * as audioApi from '../api'
 
 class NodeJSAudioClient {
@@ -336,7 +336,7 @@ class NodeJSAudioClient {
     async startAudioService() {
         try {
             console.log('🎵 Starting audio service via Tauri...');
-            const result = await invoke('start_audio_service');
+            const result = await core.invoke('start_audio_service');
             console.log('✅ Audio service start result:', result);
             return result;
         } catch (error) {
@@ -348,7 +348,7 @@ class NodeJSAudioClient {
     // Tauri command to check audio service status
     async checkAudioServiceStatus() {
         try {
-            const isRunning = await invoke('check_audio_service_status');
+            const isRunning = await core.invoke('check_audio_service_status');
             return isRunning;
         } catch (error) {
             console.error('❌ Failed to check audio service status:', error);

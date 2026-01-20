@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { listen } from '@tauri-apps/api/event';
+import { event } from '../../electron-adapter';
 import '../../styles/lowerthirds.css';
 
 const LowerThirdsScreen = () => {
@@ -7,8 +7,8 @@ const LowerThirdsScreen = () => {
   const [line2, setLine2] = useState('Line 2');
 
   useEffect(() => {
-    const unlisten = listen('set-lower-thirds-text', (event) => {
-      const { line1, line2 } = event.payload;
+    const unlisten = event.listen('set-lower-thirds-text', (e) => {
+      const { line1, line2 } = e.payload;
       setLine1(line1);
       setLine2(line2);
     });

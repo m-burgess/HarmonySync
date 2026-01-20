@@ -3,7 +3,7 @@
  * Provides better performance and memory management than Web Audio API decoding
  */
 
-import * as TauriCore from '@tauri-apps/api/core';
+import { core } from '../electron-adapter';
 
 /**
  * Decode an audio file using Rust's Symphonia decoder
@@ -15,7 +15,7 @@ export async function decodeAudioFileRust(path) {
     const startTime = performance.now();
     
     try {
-        const decoded = await TauriCore.invoke('decode_audio_file', { path });
+        const decoded = await core.invoke('decode_audio_file', { path });
         const duration = performance.now() - startTime;
         
         console.log(`[Rust Audio] Decoded ${path} in ${duration.toFixed(2)}ms`);
@@ -41,7 +41,7 @@ export async function getOrDecodeAudioRust(path) {
     const startTime = performance.now();
     
     try {
-        const decoded = await TauriCore.invoke('get_or_decode_audio', { path });
+        const decoded = await core.invoke('get_or_decode_audio', { path });
         const duration = performance.now() - startTime;
         
         console.log(`[Rust Audio] Retrieved ${path} in ${duration.toFixed(2)}ms`);
@@ -93,7 +93,7 @@ export async function loadAudioFileRust(path, audioContext) {
  */
 export async function clearAudioCacheRust() {
     console.log('[Rust Audio] Clearing cache');
-    await TauriCore.invoke('clear_audio_cache');
+    await core.invoke('clear_audio_cache');
 }
 
 /**
@@ -102,7 +102,7 @@ export async function clearAudioCacheRust() {
  */
 export async function removeFromAudioCacheRust(path) {
     console.log('[Rust Audio] Removing from cache:', path);
-    await TauriCore.invoke('remove_from_audio_cache', { path });
+    await core.invoke('remove_from_audio_cache', { path });
 }
 
 /**
@@ -110,7 +110,7 @@ export async function removeFromAudioCacheRust(path) {
  * @returns {Promise<AudioCacheStats>} Cache statistics
  */
 export async function getAudioCacheStatsRust() {
-    const stats = await TauriCore.invoke('get_audio_cache_stats');
+    const stats = await core.invoke('get_audio_cache_stats');
     console.log('[Rust Audio] Cache stats:', stats);
     return stats;
 }

@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import * as TauriCore from '@tauri-apps/api/core';
-import * as TauriFs from '@tauri-apps/plugin-fs';
-import * as TauriPath from '@tauri-apps/api/path';
+import { core, fs } from '../../electron-adapter';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import '../../styles/components/SettingsModal.css';

@@ -14,7 +14,7 @@ export async function loadTrackForStreaming(trackPath, trackName) {
 
   try {
     const audioContext = getAudioContext();
-    const assetUrl = TauriCore.convertFileSrc(trackPath);
+    const assetUrl = core.convertFileSrc(trackPath);
     console.log(`Loading streaming track "${trackName}" from:`, assetUrl);
     
     const response = await fetch(assetUrl);
@@ -112,4 +112,4 @@ export function getStreamingCacheSize() {
 
 // Import required functions from existing audio.js
 import { getAudioContext } from './audio.js';
-import * as TauriCore from '@tauri-apps/api/core';
+import { core } from './electron-adapter';

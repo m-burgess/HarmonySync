@@ -2,7 +2,7 @@
 // Lyric Transition Manager for smooth 0.2s fade transitions
 // Handles fade-in/fade-out effects for lyrics display
 
-import * as TauriCore from '@tauri-apps/api/core';
+import { core } from '../electron-adapter';
 
 class LyricTransitionManager {
 	constructor() {
@@ -114,7 +114,7 @@ class LyricTransitionManager {
 			if (content.type === 'lyrics') {
 				element.innerHTML = content.text.map(line => `<div>${line}</div>`).join('');
 			} else if (content.type === 'image') {
-				const assetUrl = TauriCore.convertFileSrc(content.path);
+				const assetUrl = core.convertFileSrc ? core.convertFileSrc(content.path) : content.path;
 				element.innerHTML = `<img src="${assetUrl}" alt="${content.name}" style="max-width: 100%; max-height: 100%; object-fit: contain;" />`;
 			} else {
 				element.innerHTML = '';
@@ -148,7 +148,7 @@ class LyricTransitionManager {
 		if (content.type === 'lyrics') {
 			element.innerHTML = content.text.map(line => `<div>${line}</div>`).join('');
 		} else if (content.type === 'image') {
-			const assetUrl = TauriCore.convertFileSrc(content.path);
+			const assetUrl = core.convertFileSrc ? core.convertFileSrc(content.path) : content.path;
 			element.innerHTML = `<img src="${assetUrl}" alt="${content.name}" style="max-width: 100%; max-height: 100%; object-fit: contain;" />`;
 		} else {
 			element.innerHTML = '';

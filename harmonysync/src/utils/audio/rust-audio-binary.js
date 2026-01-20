@@ -3,7 +3,7 @@
  * 2.5x faster than JSON transfer for large audio files
  */
 
-import * as TauriCore from '@tauri-apps/api/core';
+import { core } from '../electron-adapter';
 
 /**
  * Load audio file using BINARY transfer (FAST!)
@@ -20,7 +20,7 @@ export async function loadAudioFileBinary(path, audioContext) {
     try {
         // Step 1: Get metadata (small, fast JSON transfer)
         const metadataStart = performance.now();
-        const metadata = await TauriCore.invoke('get_audio_metadata', { path });
+        const metadata = await core.invoke('get_audio_metadata', { path });
         const metadataTime = performance.now() - metadataStart;
         
         console.log(`[Rust Binary Audio] Metadata received in ${metadataTime.toFixed(2)}ms`);
@@ -31,7 +31,7 @@ export async function loadAudioFileBinary(path, audioContext) {
         
         // Step 2: Get samples as binary (FAST binary transfer!)
         const samplesStart = performance.now();
-        const bytes = await TauriCore.invoke('get_audio_samples_binary', { path });
+        const bytes = await core.invoke('get_audio_samples_binary', { path });
         const samplesTime = performance.now() - samplesStart;
         
         console.log(`[Rust Binary Audio] Binary data received in ${samplesTime.toFixed(2)}ms (${bytes.length.toLocaleString()} bytes)`);
@@ -83,7 +83,7 @@ export async function loadAudioFileBinary(path, audioContext) {
  */
 export async function getAudioMetadataBinary(path) {
     console.log('[Rust Binary Audio] Getting metadata:', path);
-    const metadata = await TauriCore.invoke('get_audio_metadata', { path });
+    const metadata = await core.invoke('get_audio_metadata', { path });
     return metadata;
 }
 
@@ -92,7 +92,7 @@ export async function getAudioMetadataBinary(path) {
  */
 export async function clearAudioCacheBinary() {
     console.log('[Rust Binary Audio] Clearing cache');
-    await TauriCore.invoke('clear_audio_cache');
+    await core.invoke('clear_audio_cache');
 }
 
 /**
@@ -101,7 +101,7 @@ export async function clearAudioCacheBinary() {
  */
 export async function removeFromAudioCacheBinary(path) {
     console.log('[Rust Binary Audio] Removing from cache:', path);
-    await TauriCore.invoke('remove_from_audio_cache', { path });
+    await core.invoke('remove_from_audio_cache', { path });
 }
 
 /**
@@ -109,7 +109,7 @@ export async function removeFromAudioCacheBinary(path) {
  * @returns {Promise<AudioCacheStats>} Cache statistics
  */
 export async function getAudioCacheStatsBinary() {
-    const stats = await TauriCore.invoke('get_audio_cache_stats');
+    const stats = await core.invoke('get_audio_cache_stats');
     console.log('[Rust Binary Audio] Cache stats:', stats);
     return stats;
 }

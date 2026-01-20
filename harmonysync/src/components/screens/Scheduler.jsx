@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PlusIcon, TrashIcon } from '@heroicons/react/24/solid';
-import * as TauriCore from '@tauri-apps/api/core';
+import { core } from '../../electron-adapter';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import Input from '../ui/Input.jsx';
@@ -38,7 +38,7 @@ const Scheduler = ({ isOpen, onClose }) => {
   useEffect(() => {
     const loadDmxScenes = async () => {
       try {
-        const scenes = await TauriCore.invoke('get_dmx_scenes');
+        const scenes = await core.invoke('get_dmx_scenes');
         setDmxScenes(scenes);
       } catch (error) {
         console.error('Failed to load DMX scenes:', error);
@@ -140,7 +140,7 @@ const Scheduler = ({ isOpen, onClose }) => {
     console.log(`Executing scheduled DMX scene: ${sceneId}`);
     
     try {
-      await TauriCore.invoke('recall_dmx_scene', { sceneId });
+      await core.invoke('recall_dmx_scene', { sceneId });
       console.log(`Successfully recalled DMX scene: ${sceneId}`);
     } catch (error) {
       console.error(`Failed to recall DMX scene ${sceneId}:`, error);
@@ -155,7 +155,7 @@ const Scheduler = ({ isOpen, onClose }) => {
     
     try {
       // Call backend command to execute macro
-      await TauriCore.invoke('execute_macro', {
+      await core.invoke('execute_macro', {
         macroId: macro.id,
         macroAction: macro.action,
         midiNote: macro.midiNote

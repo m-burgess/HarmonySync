@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import * as TauriEvent from '@tauri-apps/api/event';
-import * as TauriCore from '@tauri-apps/api/core';
+import { event, core } from '../../electron-adapter';
 import { lyricTransitionManager } from '../../utils/lyrics';
 
 const ConfidenceMonitor = () => {
@@ -35,9 +34,9 @@ const ConfidenceMonitor = () => {
 
   // Tauri event listeners
   useEffect(() => {
-    const unlistenDisplay = TauriEvent.listen('display-confidence-slide', async (event) => {
-      console.log('Confidence: display-confidence-slide event received:', event.payload);
-      const { current, next } = event.payload;
+    const unlistenDisplay = event.listen('display-confidence-slide', async (e) => {
+      console.log('Confidence: display-confidence-slide event received:', e.payload);
+      const { current, next } = e.payload;
       
       // Handle smooth transition for current slide if it's lyrics or image
       if (current && (current.type === 'lyrics' || current.type === 'image') && confidenceDisplayRef.current) {
@@ -55,7 +54,7 @@ const ConfidenceMonitor = () => {
       }
     });
 
-    const unlistenClear = TauriEvent.listen('clear-confidence-display', async () => {
+    const unlistenClear = event.listen('clear-confidence-display', async () => {
       console.log('Confidence: clear-confidence-display event received');
       
       // Smooth transition to clear confidence display
@@ -69,10 +68,10 @@ const ConfidenceMonitor = () => {
       setVideoCountdown(null);
     });
 
-    const unlistenVideoProgress = TauriEvent.listen('video-progress', (event) => {
-      console.log('Confidence: video-progress event received:', event.payload);
+    const unlistenVideoProgress = event.listen('video-progress', (e) => {
+      console.log('Confidence: video-progress event received:', e.payload);
       console.log('Current slide:', currentSlideRef.current);
-      const { currentTime, duration } = event.payload;
+      const { currentTime, duration } = e.payload;
       if (duration) {
         const remainingTime = duration - currentTime;
         const minutes = Math.floor(remainingTime / 60);

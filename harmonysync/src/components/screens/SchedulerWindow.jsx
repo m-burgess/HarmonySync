@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/solid';
-import * as TauriCore from '@tauri-apps/api/core';
-import { getCurrentWindow } from '@tauri-apps/api/window';
+import { core } from '../../electron-adapter';
 import Button from '../ui/Button.jsx';
 import Input from '../ui/Input.jsx';
 import commonMacros from '../../data/common_macros.json';
@@ -112,8 +111,10 @@ const SchedulerWindow = () => {
   };
 
   const handleClose = async () => {
-    const window = getCurrentWindow();
-    await window.close();
+    // TODO: Implement window closing for Electron
+    // In Electron, window.close() is handled differently
+    console.warn('Window close needs to be implemented for Electron');
+    window.close(); // Use browser window.close() for now
   };
 
   return (

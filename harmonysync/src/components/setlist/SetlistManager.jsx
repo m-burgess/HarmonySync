@@ -1,9 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import * as TauriDialog from '@tauri-apps/plugin-dialog';
-import * as TauriPath from '@tauri-apps/api/path';
-import * as TauriFs from '@tauri-apps/plugin-fs';
-import * as TauriCore from '@tauri-apps/api/core';
-import * as TauriEvent from '@tauri-apps/api/event';
+import { dialog, fs, core, event } from '../../electron-adapter';
 import { ArrowDownTrayIcon, CheckCircleIcon, PencilIcon } from '@heroicons/react/24/outline';
 import LyricsFetcher from './LyricsFetcher';
 import { 
@@ -80,7 +76,7 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
 
   const handleAddFolder = async () => {
     try {
-      const selectedPaths = await TauriDialog.open({
+      const selectedPaths = await dialog.open({
         directory: true,
         multiple: true,
         title: 'Select folders for the presentation',
@@ -89,7 +85,7 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
       if (selectedPaths) {
         // selectedPaths will be an array if multiple is true
         for (const path of selectedPaths) {
-          const folderName = await TauriPath.basename(path);
+          const folderName = path.split('/').pop() || path.split('\\').pop();
 
           // Check if this path is already in the setlist
           const existingItem = setlist.find(item => item.path === path);
@@ -99,8 +95,8 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
           }
 
           // Detect an 'ogg' subfolder. If present, treat this as a song and record its tracks and optional lyrics.
-          const oggDir = await TauriPath.join(path, 'ogg');
-          const oggExists = await TauriFs.exists(oggDir);
+          const oggDir = `${path}/ogg`;
+          const oggExists = await fs.exists(oggDir);
 
           // Generate a unique ID for this setlist item
           const itemId = `setlist-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -112,7 +108,7 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
 
           if (oggExists) {
             try {
-              const oggEntries = await TauriFs.readDir(oggDir, { recursive: false });
+              const oggEntries = await fs.readDir(oggDir, { recursive: false });
               const tracks = oggEntries
                 .filter(e => e.children === undefined && e.name.endsWith('.ogg'))
                 .sort((a, b) => a.name.localeCompare(b.name))
@@ -120,10 +116,10 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
 
               // attempt to read lyrics.txt from the root folder
               let lyrics = '';
-              const entries = await TauriFs.readDir(path, { recursive: false });
+              const entries = await fs.readDir(path, { recursive: false });
               const lyricsFile = entries.find(entry => entry.name === 'lyrics.txt' && entry.children === undefined);
               if (lyricsFile) {
-                let lyricsContent = await TauriFs.readFile(`${path}/${lyricsFile.name}`, { encoding: 'utf8' });
+                let lyricsContent = await fs.readTextFile(`${path}/${lyricsFile.name}`);
                 if (lyricsContent instanceof Uint8Array) lyricsContent = new TextDecoder().decode(lyricsContent);
                 lyrics = typeof lyricsContent === 'string' ? lyricsContent : '';
               }
@@ -154,11 +150,11 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
     
     // Reload the folder to update lyrics in the item
     try {
-      const entries = await TauriFs.readDir(item.path, { recursive: false });
+      const entries = await fs.readDir(item.path, { recursive: false });
       const lyricsFile = entries.find(entry => entry.name === 'lyrics.txt' && entry.children === undefined);
       
       if (lyricsFile) {
-        let lyricsContent = await TauriFs.readFile(`${item.path}/${lyricsFile.name}`, { encoding: 'utf8' });
+        let lyricsContent = await fs.readTextFile(`${item.path}/${lyricsFile.name}`);
         if (lyricsContent instanceof Uint8Array) lyricsContent = new TextDecoder().decode(lyricsContent);
         const lyrics = typeof lyricsContent === 'string' ? lyricsContent : '';
         
@@ -194,17 +190,17 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
     const lyricsPath = `${item.path}/lyrics.txt`;
     try {
       // Check if lyrics file exists
-      const exists = await TauriFs.exists(lyricsPath);
+      const exists = await fs.exists(lyricsPath);
       if (!exists) {
-        await TauriDialog.message('No lyrics.txt file found in this song folder.', { title: 'Lyrics Not Found', type: 'info' });
+        alert('No lyrics.txt file found in this song folder.');
         return;
       }
 
       // Open the lyrics file with the default text editor
-      await TauriCore.invoke('open_lyrics_file', { path: lyricsPath });
+      await core.invoke('open_lyrics_file', { path: lyricsPath });
     } catch (error) {
       console.error('Failed to open lyrics file:', error);
-      await TauriDialog.message(`Failed to open lyrics file: ${error}`, { title: 'Error', type: 'error' });
+      alert(`Failed to open lyrics file: ${error}`);
     }
   };
     
@@ -223,7 +219,7 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
         const track = tracks[i];
         try {
           // Convert file path to Tauri asset URL
-          const assetUrl = TauriCore.convertFileSrc(track.file_path);
+          const assetUrl = core.convertFileSrc ? core.convertFileSrc(track.file_path) : track.file_path;
           console.log(`[handlePreloadSong] Preloading track ${i + 1}/${tracks.length}: ${track.track_name}`);
           
           // Use streaming mode (decode: false) for low memory footprint
@@ -300,13 +296,13 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
       }
       
       // Stop any background video that might be playing
-      TauriEvent.emit('stop-background-video');
+      event.emit('stop-background-video');
       
-      TauriEvent.emit('clear-lyric-display');
-      TauriEvent.emit('clear-confidence-display');
+      event.emit('clear-lyric-display');
+      event.emit('clear-confidence-display');
 
       // Read folder entries
-      const entries = await TauriFs.readDir(itemPath, { recursive: false });
+      const entries = await fs.readDir(itemPath, { recursive: false });
 
       // Slides: prefer lyrics.txt, else images/videos
       const lyricsFile = entries.find(e => e.name === 'lyrics.txt' && e.children === undefined);
@@ -324,13 +320,13 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
           console.log('🎬 Found background video for song:', backgroundVideo);
           
           // Emit event to start looping the background video on audience screen
-          TauriEvent.emit('start-background-video', { path: backgroundVideo });
+          event.emit('start-background-video', { path: backgroundVideo });
         }
       }
       
       if (lyricsFile) {
         setLoadingMessage('Loading lyrics...');
-        let lyricsContent = await TauriFs.readFile(`${itemPath}/${lyricsFile.name}`, { encoding: 'utf8' });
+        let lyricsContent = await fs.readTextFile(`${itemPath}/${lyricsFile.name}`);
         if (lyricsContent instanceof Uint8Array) lyricsContent = new TextDecoder().decode(lyricsContent);
         if (typeof lyricsContent === 'string' && lyricsContent.length > 0) {
           loadedSlides = parseLyricsToSlides(lyricsContent);
@@ -352,7 +348,7 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
         const videoSlidesPromises = videoFiles.map(async (file) => {
           const filePath = `${itemPath}/${file.name}`;
           try {
-            const metadata = await TauriCore.invoke('get_video_metadata', { path: filePath });
+            const metadata = await core.invoke('get_video_metadata', { path: filePath });
             return {
               type: 'video',
               path: filePath,
@@ -374,7 +370,7 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
         if (youtubeFile) {
           setLoadingMessage('Loading YouTube links...');
           const youtubePath = `${itemPath}/${youtubeFile.name}`;
-          let youtubeContent = await TauriFs.readFile(youtubePath, { encoding: 'utf8' });
+          let youtubeContent = await fs.readTextFile(youtubePath);
           if (youtubeContent instanceof Uint8Array) youtubeContent = new TextDecoder().decode(youtubeContent);
           if (typeof youtubeContent === 'string' && youtubeContent.length > 0) {
             const youtubeSlides = youtubeContent.split('\n').map(line => {
@@ -404,9 +400,9 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
 
       // Emit background CSS
       try {
-        const backgroundCssContent = await TauriCore.invoke('generate_background_css', { path: itemPath });
+        const backgroundCssContent = await core.invoke('generate_background_css', { path: itemPath });
         setCurrentBackgroundCssContent(backgroundCssContent);
-        TauriEvent.emit('set-background', backgroundCssContent);
+        event.emit('set-background', backgroundCssContent);
       } catch (e) {
         // non-fatal
       }

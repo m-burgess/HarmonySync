@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import * as TauriDialog from '@tauri-apps/plugin-dialog';
+import { dialog } from '../../electron-adapter';
 import { 
     decodeAudioFileRust, 
     getOrDecodeAudioRust,
@@ -28,7 +28,7 @@ const RustAudioDebug = () => {
             setLoading(true);
             setError(null);
 
-            const selectedPath = await TauriDialog.open({
+            const selectedPath = await dialog.open({
                 filters: [{
                     name: 'Audio Files',
                     extensions: ['mp3', 'ogg', 'wav', 'flac', 'aac', 'm4a']

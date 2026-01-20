@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import * as TauriEvent from '@tauri-apps/api/event';
-import * as TauriCore from '@tauri-apps/api/core';
+import { event, core } from '../../electron-adapter';
 import { lyricTransitionManager } from '../../utils/lyrics';
 
 const AudienceScreen = () => {
