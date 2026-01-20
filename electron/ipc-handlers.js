@@ -9,10 +9,16 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
     lowerThirdsWindow, // getter function
     database,
     ffmpegService,
+    audioService,
     videoService,
     youtubeService,
     imageService,
     textService,
+    displayService,
+    windowService,
+    dmxService,
+    macroService,
+    schedulerService,
     httpServer,
     midiManager,
     lyricsFetcher,
@@ -390,5 +396,216 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
     if (win) {
       win.webContents.send(channel, data);
     }
+  });
+
+  // Audio Service handlers
+  ipcMain.handle('audio:convertToOgg', async (event, inputPath, outputDir) => {
+    return await audioService.convertToOgg(inputPath, outputDir, (progress) => {
+      const win = mainWindow();
+      if (win) win.webContents.send('ogg-conversion-progress', progress);
+    });
+  });
+
+  ipcMain.handle('audio:transposeAudio', async (event, songPath, semitones) => {
+    return await audioService.transposeAudio(songPath, semitones, (tracks) => {
+      const win = mainWindow();
+      if (win) win.webContents.send('tracks-updated', tracks);
+    });
+  });
+
+  ipcMain.handle('audio:ensureSync', async (event, audioFiles) => {
+    return await audioService.ensureAudioSync(audioFiles);
+  });
+
+  ipcMain.handle('audio:getMetadata', async (event, audioPath) => {
+    return await audioService.getAudioMetadata(audioPath);
+  });
+
+  ipcMain.handle('audio:normalize', async (event, inputPath, targetLevel) => {
+    return await audioService.normalizeAudio(inputPath, targetLevel);
+  });
+
+  // Display Service handlers
+  ipcMain.handle('display:videoSlide', async (event, path, duration) => {
+    return await displayService.displayVideoSlide(audienceWindow, confidenceWindow, path, duration);
+  });
+
+  ipcMain.handle('display:slide', async (event, content) => {
+    return await displayService.displaySlide(audienceWindow, confidenceWindow, lowerThirdsWindow, content);
+  });
+
+  ipcMain.handle('display:blackScreen', async () => {
+    return await displayService.displayBlackScreen(audienceWindow);
+  });
+
+  ipcMain.handle('display:clearAll', async () => {
+    return await displayService.clearAllDisplays(audienceWindow, confidenceWindow, lowerThirdsWindow);
+  });
+
+  ipcMain.handle('display:updateLowerThirds', async (event, textData) => {
+    return await displayService.updateLowerThirds(lowerThirdsWindow, textData);
+  });
+
+  ipcMain.handle('display:broadcast', async (event, channel, data) => {
+    return await displayService.broadcastToAllDisplays(audienceWindow, confidenceWindow, lowerThirdsWindow, channel, data);
+  });
+
+  // Window Service handlers
+  ipcMain.handle('window:showAudience', async () => {
+    return await windowService.showAudienceWindow(audienceWindow);
+  });
+
+  ipcMain.handle('window:hideAudience', async () => {
+    return await windowService.hideAudienceWindow(audienceWindow);
+  });
+
+  ipcMain.handle('window:showConfidence', async () => {
+    return await windowService.showConfidenceWindow(confidenceWindow);
+  });
+
+  ipcMain.handle('window:hideConfidence', async () => {
+    return await windowService.hideConfidenceWindow(confidenceWindow);
+  });
+
+  ipcMain.handle('window:showLowerThirds', async () => {
+    return await windowService.showLowerThirdsWindow(lowerThirdsWindow);
+  });
+
+  ipcMain.handle('window:hideLowerThirds', async () => {
+    return await windowService.hideLowerThirdsWindow(lowerThirdsWindow);
+  });
+
+  ipcMain.handle('window:toggle', async (event, windowName) => {
+    const getWindow = windowName === 'audience' ? audienceWindow : 
+                      windowName === 'confidence' ? confidenceWindow :
+                      lowerThirdsWindow;
+    return await windowService.toggleWindow(getWindow);
+  });
+
+  ipcMain.handle('window:setAlwaysOnTop', async (event, windowName, alwaysOnTop) => {
+    const getWindow = windowName === 'audience' ? audienceWindow : 
+                      windowName === 'confidence' ? confidenceWindow :
+                      lowerThirdsWindow;
+    return await windowService.setAlwaysOnTop(getWindow, alwaysOnTop);
+  });
+
+  ipcMain.handle('window:getAllStatus', async () => {
+    return await windowService.getAllWindowsStatus(audienceWindow, confidenceWindow, lowerThirdsWindow);
+  });
+
+  // DMX Service handlers
+  ipcMain.handle('dmx:getAllFixtures', async () => {
+    return await dmxService.getAllFixtures(database.getConnection());
+  });
+
+  ipcMain.handle('dmx:addFixture', async (event, fixture) => {
+    return await dmxService.addFixture(database.getConnection(), fixture);
+  });
+
+  ipcMain.handle('dmx:updateFixture', async (event, fixture) => {
+    return await dmxService.updateFixture(database.getConnection(), fixture);
+  });
+
+  ipcMain.handle('dmx:deleteFixture', async (event, fixtureId) => {
+    return await dmxService.deleteFixture(database.getConnection(), fixtureId);
+  });
+
+  ipcMain.handle('dmx:getAllScenes', async () => {
+    return await dmxService.getAllScenes(database.getConnection());
+  });
+
+  ipcMain.handle('dmx:createScene', async (event, scene) => {
+    return await dmxService.createScene(database.getConnection(), scene);
+  });
+
+  ipcMain.handle('dmx:updateScene', async (event, scene) => {
+    return await dmxService.updateScene(database.getConnection(), scene);
+  });
+
+  ipcMain.handle('dmx:deleteScene', async (event, sceneId) => {
+    return await dmxService.deleteScene(database.getConnection(), sceneId);
+  });
+
+  ipcMain.handle('dmx:recallScene', async (event, sceneId) => {
+    return await dmxService.recallScene(database.getConnection(), sceneId);
+  });
+
+  ipcMain.handle('dmx:validateFixture', async (event, fixture) => {
+    return dmxService.validateFixture(fixture);
+  });
+
+  // Macro Service handlers
+  ipcMain.handle('macro:execute', async (event, macroId, macroAction, options) => {
+    const appHandle = require('electron').app;
+    return await macroService.executeMacro(appHandle, macroId, macroAction, options);
+  });
+
+  ipcMain.handle('macro:getAll', async () => {
+    return await macroService.getAllMacros(database.getConnection());
+  });
+
+  ipcMain.handle('macro:getById', async (event, macroId) => {
+    return await macroService.getMacroById(database.getConnection(), macroId);
+  });
+
+  ipcMain.handle('macro:create', async (event, macro) => {
+    return await macroService.createMacro(database.getConnection(), macro);
+  });
+
+  ipcMain.handle('macro:update', async (event, macro) => {
+    return await macroService.updateMacro(database.getConnection(), macro);
+  });
+
+  ipcMain.handle('macro:delete', async (event, macroId) => {
+    return await macroService.deleteMacro(database.getConnection(), macroId);
+  });
+
+  ipcMain.handle('macro:getForSlide', async (event, slideId) => {
+    return await macroService.getMacrosForSlide(database.getConnection(), slideId);
+  });
+
+  ipcMain.handle('macro:addToSlide', async (event, slideId, macroId) => {
+    return await macroService.addMacroToSlide(database.getConnection(), slideId, macroId);
+  });
+
+  ipcMain.handle('macro:removeFromSlide', async (event, slideId, macroId) => {
+    return await macroService.removeMacroFromSlide(database.getConnection(), slideId, macroId);
+  });
+
+  ipcMain.handle('macro:validate', async (event, macro) => {
+    return macroService.validateMacro(macro);
+  });
+
+  // Scheduler Service handlers
+  ipcMain.handle('scheduler:getAllEvents', async () => {
+    return await schedulerService.getAllScheduledEvents(database.getConnection());
+  });
+
+  ipcMain.handle('scheduler:getById', async (event, eventId) => {
+    return await schedulerService.getScheduledEventById(database.getConnection(), eventId);
+  });
+
+  ipcMain.handle('scheduler:create', async (event, event) => {
+    return await schedulerService.createScheduledEvent(database.getConnection(), event);
+  });
+
+  ipcMain.handle('scheduler:update', async (event, event) => {
+    return await schedulerService.updateScheduledEvent(database.getConnection(), event);
+  });
+
+  ipcMain.handle('scheduler:delete', async (event, eventId) => {
+    return await schedulerService.deleteScheduledEvent(database.getConnection(), eventId);
+  });
+
+  ipcMain.handle('scheduler:getTodayEvents', async () => {
+    return await schedulerService.getTodayEvents(database.getConnection());
+  });
+
+  ipcMain.handle('scheduler:getUpcoming', async (event, hours) => {
+    return await schedulerService.getUpcomingEvents(database.getConnection(), hours);
+  });
+
+  ipcMain.handle('scheduler:validate', async (event, event) => {
+    return schedulerService.validateScheduledEvent(event);
   });
 };
