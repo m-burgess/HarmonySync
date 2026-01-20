@@ -433,6 +433,53 @@ function createHarmonySyncAPI(services) {
         const d = new Date(date);
         return d.toISOString();
       }
+    },
+    
+    /**
+     * Debug API - Debugging tools for script development
+     */
+    debug: {
+      /**
+       * Log a debug message
+       * @param {...any} args - Arguments to log
+       */
+      log(...args) {
+        console.log('[DEBUG]', ...args);
+      },
+      
+      /**
+       * Inspect a variable
+       * @param {any} variable - Variable to inspect
+       * @param {string} label - Optional label
+       */
+      inspect(variable, label = 'Variable') {
+        console.log(`[DEBUG] ${label}:`, JSON.stringify(variable, null, 2));
+        return variable;
+      },
+      
+      /**
+       * Start timing an operation
+       * @param {string} label - Timer label
+       */
+      time(label) {
+        console.time(`[DEBUG] ${label}`);
+      },
+      
+      /**
+       * End timing an operation
+       * @param {string} label - Timer label
+       */
+      timeEnd(label) {
+        console.timeEnd(`[DEBUG] ${label}`);
+      },
+      
+      /**
+       * Breakpoint marker (logs current location)
+       */
+      breakpoint() {
+        const stack = new Error().stack;
+        console.log('[DEBUG] Breakpoint reached:', stack);
+      }
     }
   };
 }
