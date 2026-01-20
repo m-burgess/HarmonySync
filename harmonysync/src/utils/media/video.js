@@ -1,5 +1,5 @@
 
-import { core } from '../electron-adapter';
+import { core } from '../../electron-adapter';
 
 export async function getVideoMetadata(videoPath) {
 	console.log(`Getting metadata for video: ${videoPath}`);

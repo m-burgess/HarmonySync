@@ -206,5 +206,5 @@ export function clearPreloadCaches() {
 
 // Import required functions from existing audio.js
 import { getAudioContext } from './audio-nodejs.js';
-import { core } from '../electron-adapter';
+import { core } from '../../electron-adapter';
 

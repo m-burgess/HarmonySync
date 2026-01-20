@@ -1,11 +1,8 @@
 // Electron adapter to replace Tauri APIs
 // This module provides a compatible interface for React components
+// Simplified for Electron-only usage (Tauri support removed)
 
-// Helper functions to detect runtime environment
-function isTauriRuntime() {
-  return typeof window !== 'undefined' && window.__TAURI__;
-}
-
+// Helper function to detect runtime environment
 function isElectronRuntime() {
   return typeof window !== 'undefined' && window.electronAPI;
 }
@@ -13,9 +10,7 @@ function isElectronRuntime() {
 // Event system
 export const event = {
   listen: (eventName, callback) => {
-    if (isTauriRuntime()) {
-      return window.__TAURI__.event.listen(eventName, callback);
-    } else if (isElectronRuntime()) {
+    if (isElectronRuntime()) {
       const handler = (data) => callback({ payload: data });
       window.electronAPI.receive(eventName, handler);
       return () => {}; // Return cleanup function
@@ -24,9 +19,7 @@ export const event = {
   },
   
   emit: (eventName, payload) => {
-    if (isTauriRuntime()) {
-      return window.__TAURI__.event.emit(eventName, payload);
-    } else if (isElectronRuntime()) {
+    if (isElectronRuntime()) {
       // Electron events are handled through IPC
       console.log('Emit event:', eventName, payload);
     }
@@ -36,10 +29,7 @@ export const event = {
 // Dialog
 export const dialog = {
   open: async (options) => {
-    if (isTauriRuntime()) {
-      const { open } = await import('@tauri-apps/plugin-dialog');
-      return await open(options);
-    } else if (isElectronRuntime()) {
+    if (isElectronRuntime()) {
       if (options.directory) {
         return await window.electronAPI.openDirectory();
       } else {
@@ -53,60 +43,42 @@ export const dialog = {
 // File system
 export const fs = {
   readTextFile: async (path) => {
-    if (isTauriRuntime()) {
-      const { readTextFile } = await import('@tauri-apps/plugin-fs');
-      return await readTextFile(path);
-    } else if (isElectronRuntime()) {
+    if (isElectronRuntime()) {
       return await window.electronAPI.readFile(path);
     }
     throw new Error('No file system API available');
   },
   
   writeTextFile: async (path, content) => {
-    if (isTauriRuntime()) {
-      const { writeTextFile } = await import('@tauri-apps/plugin-fs');
-      return await writeTextFile(path, content);
-    } else if (isElectronRuntime()) {
+    if (isElectronRuntime()) {
       return await window.electronAPI.writeFile(path, content);
     }
     throw new Error('No file system API available');
   },
   
   readDir: async (path) => {
-    if (isTauriRuntime()) {
-      const { readDir } = await import('@tauri-apps/plugin-fs');
-      return await readDir(path);
-    } else if (isElectronRuntime()) {
+    if (isElectronRuntime()) {
       return await window.electronAPI.readDir(path);
     }
     throw new Error('No file system API available');
   },
   
   exists: async (path) => {
-    if (isTauriRuntime()) {
-      const { exists } = await import('@tauri-apps/plugin-fs');
-      return await exists(path);
-    } else if (isElectronRuntime()) {
+    if (isElectronRuntime()) {
       return await window.electronAPI.exists(path);
     }
     throw new Error('No file system API available');
   },
   
   mkdir: async (path) => {
-    if (isTauriRuntime()) {
-      const { mkdir } = await import('@tauri-apps/plugin-fs');
-      return await mkdir(path);
-    } else if (isElectronRuntime()) {
+    if (isElectronRuntime()) {
       return await window.electronAPI.mkdir(path);
     }
     throw new Error('No file system API available');
   },
   
   copyFile: async (source, destination) => {
-    if (isTauriRuntime()) {
-      const { copyFile } = await import('@tauri-apps/plugin-fs');
-      return await copyFile(source, destination);
-    } else if (isElectronRuntime()) {
+    if (isElectronRuntime()) {
       return await window.electronAPI.copyFile(source, destination);
     }
     throw new Error('No file system API available');
@@ -116,10 +88,7 @@ export const fs = {
 // Core - invoke commands
 export const core = {
   invoke: async (command, args = {}) => {
-    if (isTauriRuntime()) {
-      const { invoke } = await import('@tauri-apps/api/core');
-      return await invoke(command, args);
-    } else if (isElectronRuntime()) {
+    if (isElectronRuntime()) {
       // Map Tauri commands to Electron IPC handlers
       return await invokeElectronCommand(command, args);
     }
@@ -215,9 +184,6 @@ async function invokeElectronCommand(command, args) {
 // Window
 export const window = {
   getCurrent: () => {
-    if (isTauriRuntime()) {
-      return window.__TAURI__.window.getCurrent();
-    }
     // For Electron, we don't need window management in renderer
     return {
       label: 'main',
@@ -235,6 +201,5 @@ export default {
   fs,
   core,
   window,
-  isTauri: isTauriRuntime(),
   isElectron: isElectronRuntime()
 };

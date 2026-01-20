@@ -2,7 +2,7 @@
 // This file shows how to use the performance metrics API
 
 import React from 'react';
-import { core } from '../electron-adapter';
+import { core } from '../../electron-adapter';
 
 /**
  * Performance metrics returned from the backend

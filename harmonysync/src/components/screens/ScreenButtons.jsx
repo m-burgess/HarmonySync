@@ -43,10 +43,6 @@ const ScreenButtons = () => {
     } catch (error) {
       console.error('Failed to open lower thirds window:', error);
     }
-      currentLowerThirdsWindow.hide();
-    } else {
-      currentLowerThirdsWindow.show();
-    }
   };
 
   return (

@@ -17,14 +17,14 @@ export default defineConfig({
     minify: 'esbuild',
     sourcemap: false,
     rollupOptions: {
-              input: {
-                main: 'index.html',
-                audience: 'audience.html',
-                confidence: 'confidence.html',
-                lowerthirds: 'lowerthirds.html',
-                'preservice-music': 'preservice-music.html',
-                scheduler: 'scheduler.html',
-              },
+      input: {
+        main: 'index.html',
+        audience: 'audience.html',
+        confidence: 'confidence.html',
+        lowerthirds: 'lowerthirds.html',
+        'preservice-music': 'preservice-music.html',
+        scheduler: 'scheduler.html',
+      },
     },
   },
   optimizeDeps: {

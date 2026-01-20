@@ -3,7 +3,7 @@
  * 2.5x faster than JSON transfer for large audio files
  */
 
-import { core } from '../electron-adapter';
+import { core } from '../../electron-adapter';
 
 /**
  * Load audio file using BINARY transfer (FAST!)
