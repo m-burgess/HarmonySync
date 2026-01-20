@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import * as Tauri from '@tauri-apps/api';
+import { core, event } from './electron-adapter';
 import { 
   PresentationChartBarIcon, 
   CogIcon,
@@ -255,18 +255,18 @@ const App = () => {
 
   // Listen for preservice music events from scheduler
   useEffect(() => {
-    const unlistenStart = Tauri.event.listen('start-preservice-music', async () => {
+    const unlistenStart = event.listen('start-preservice-music', async () => {
       try {
-        await TauriCore.invoke('open_preservice_music_window');
+        await core.invoke('open_preservice_music_window');
       } catch (error) {
         console.error('Failed to open pre-service music window:', error);
       }
     });
 
-    const unlistenStop = Tauri.event.listen('stop-preservice-music', async () => {
+    const unlistenStop = event.listen('stop-preservice-music', async () => {
       // Close the preservice music window if it's open
       try {
-        await TauriCore.invoke('close_preservice_music_window');
+        await core.invoke('close_preservice_music_window');
       } catch (error) {
         console.error('Failed to close pre-service music window:', error);
       }
@@ -292,7 +292,7 @@ const App = () => {
           label="Scheduler" 
           onClick={async () => {
             try {
-              await TauriCore.invoke('open_scheduler_window');
+              await core.invoke('open_scheduler_window');
             } catch (error) {
               console.error('Failed to open scheduler window:', error);
             }
@@ -303,7 +303,7 @@ const App = () => {
           label="Pre-Service Music" 
           onClick={async () => {
             try {
-              await TauriCore.invoke('open_preservice_music_window');
+              await core.invoke('open_preservice_music_window');
             } catch (error) {
               console.error('Failed to open pre-service music window:', error);
             }

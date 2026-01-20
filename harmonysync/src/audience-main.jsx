@@ -3,9 +3,7 @@ import ReactDOM from 'react-dom/client';
 import AudienceScreen from './components/screens/AudienceScreen.jsx';
 import './styles/audience.css'; // Import audience.css
 import './styles/lyric-transitions.css'; // Import transition effects
-import * as TauriCore from '@tauri-apps/api/core';
-import * as TauriEvent from '@tauri-apps/api/event';
-import * as TauriPath from '@tauri-apps/api/path'; // Add this import
+import { core, event } from './electron-adapter';
 
 const AudienceApp = () => {
   const [dynamicBackgroundCss, setDynamicBackgroundCss] = useState('');
@@ -18,13 +16,13 @@ const AudienceApp = () => {
         if (videoRef.current) {
           videoRef.current.style.display = 'none'; // Hide the video
           videoRef.current.classList.remove('fade-out'); // Remove fade-out class
-          TauriEvent.emit('video-ended', 'Audience video finished');
+          event.emit('video-ended', 'Audience video finished');
         }
       };
           const handleVideoTimeUpdate = () => {
             if (videoRef.current) {
               const { currentTime, duration } = videoRef.current;
-              TauriEvent.emit('video-progress', { currentTime, duration });
+              event.emit('video-progress', { currentTime, duration });
       
               if (duration - currentTime <= 3) {
                 videoRef.current.classList.add('fade-out');
