@@ -212,6 +212,14 @@ async function addTextOverlay(imagePath, text, options = {}) {
     const fileName = path.basename(imagePath, path.extname(imagePath));
     const outputPath = path.join(cacheDir, `${fileName}_text_overlay.png`);
     
+    // XML-escape text to prevent injection
+    const escapedText = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+    
     // Create SVG with text
     const textSvg = `
       <svg width="1920" height="200">
@@ -225,7 +233,7 @@ async function addTextOverlay(imagePath, text, options = {}) {
           stroke="${options.stroke || 'black'}"
           stroke-width="${options.strokeWidth || 2}"
         >
-          ${text}
+          ${escapedText}
         </text>
       </svg>
     `;
