@@ -183,13 +183,13 @@ async function addYouTubeLink(db, presentationId, url) {
   return new Promise((resolve, reject) => {
     const stmt = db.prepare('INSERT INTO youtube_links (presentation_id, url) VALUES (?, ?)');
     stmt.run(presentationId, url, function(err) {
+      stmt.finalize(); // Finalize after run completes
       if (err) {
         reject(err);
       } else {
         resolve(this.lastID);
       }
     });
-    stmt.finalize();
   });
 }
 
