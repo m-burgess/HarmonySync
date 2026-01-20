@@ -27,6 +27,7 @@
   "author": "HarmonySync Team",
   "license": "MIT",
   "dependencies": {
+    "@monaco-editor/react": "^4.6.0",
     "axios": "^1.12.2",
     "better-sqlite3": "^9.2.2",
     "cors": "^2.8.5",
@@ -38,7 +39,8 @@
     "sharp": "^0.33.0",
     "socket.io": "^4.7.2",
     "socket.io-client": "^4.8.1",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "vm2": "^3.9.19"
   },
   "optionalDependencies": {
     "midi": "^2.0.0"

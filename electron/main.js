@@ -22,6 +22,8 @@ const lyricsFetcher = require('./services/lyrics-fetcher');
 const fileManager = require('./services/file-manager');
 const googleDriveService = require('./services/google-drive');
 const dropboxService = require('./services/dropbox-service');
+const scriptService = require('./services/script-service');
+const scriptingAPI = require('./services/scripting-api');
 
 const isDev = process.env.NODE_ENV === 'development';
 const VITE_DEV_SERVER_URL = 'http://localhost:5174';
@@ -277,7 +279,14 @@ require('./ipc-handlers')(ipcMain, {
   lyricsFetcher,
   fileManager,
   googleDriveService,
-  dropboxService
+  dropboxService,
+  scriptService,
+  scriptingAPI
+});
+
+// Initialize script storage
+scriptService.initializeScriptStorage().catch(err => {
+  console.error('Failed to initialize script storage:', err);
 });
 
 // Export for other modules
