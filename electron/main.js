@@ -14,7 +14,6 @@ const imageService = require('./services/image-service');
 const textService = require('./services/text-service');
 const displayService = require('./services/display-service');
 const windowService = require('./services/window-service');
-const dmxService = require('./services/dmx-service');
 const macroService = require('./services/macro-service');
 const schedulerService = require('./services/scheduler-service');
 const httpServer = require('./services/http-server');
@@ -22,6 +21,7 @@ const midiManager = require('./services/midi-manager');
 const lyricsFetcher = require('./services/lyrics-fetcher');
 const fileManager = require('./services/file-manager');
 const googleDriveService = require('./services/google-drive');
+const dropboxService = require('./services/dropbox-service');
 
 const isDev = process.env.NODE_ENV === 'development';
 const VITE_DEV_SERVER_URL = 'http://localhost:5174';
@@ -270,14 +270,14 @@ require('./ipc-handlers')(ipcMain, {
   textService,
   displayService,
   windowService,
-  dmxService,
   macroService,
   schedulerService,
   httpServer,
   midiManager,
   lyricsFetcher,
   fileManager,
-  googleDriveService
+  googleDriveService,
+  dropboxService
 });
 
 // Export for other modules
