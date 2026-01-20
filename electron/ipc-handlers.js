@@ -23,7 +23,9 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
     lyricsFetcher,
     fileManager,
     googleDriveService,
-    dropboxService
+    dropboxService,
+    scriptService,
+    scriptingAPI
   } = services;
 
   // Dialog handlers
@@ -381,6 +383,44 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
 
   ipcMain.handle('dropbox:syncFolder', async (event, dropboxPath, localPath) => {
     return await dropboxService.syncFolder(dropboxPath, localPath);
+  });
+
+  // Script handlers
+  ipcMain.handle('script:getAll', async () => {
+    return await scriptService.getAllScripts();
+  });
+
+  ipcMain.handle('script:get', async (event, scriptId) => {
+    return await scriptService.getScript(scriptId);
+  });
+
+  ipcMain.handle('script:create', async (event, scriptData) => {
+    return await scriptService.createScript(scriptData);
+  });
+
+  ipcMain.handle('script:update', async (event, scriptId, updates) => {
+    return await scriptService.updateScript(scriptId, updates);
+  });
+
+  ipcMain.handle('script:delete', async (event, scriptId) => {
+    return await scriptService.deleteScript(scriptId);
+  });
+
+  ipcMain.handle('script:validate', async (event, code) => {
+    return scriptService.validateScript(code);
+  });
+
+  ipcMain.handle('script:execute', async (event, scriptId, options) => {
+    const harmonyAPI = scriptingAPI.createHarmonySyncAPI(services);
+    return await scriptService.executeScript(scriptId, harmonyAPI, options);
+  });
+
+  ipcMain.handle('script:export', async (event, scriptId, exportPath) => {
+    return await scriptService.exportScript(scriptId, exportPath);
+  });
+
+  ipcMain.handle('script:import', async (event, importPath) => {
+    return await scriptService.importScript(importPath);
   });
 
   // HTTP Server handlers
