@@ -24,6 +24,7 @@ const googleDriveService = require('./services/google-drive');
 const dropboxService = require('./services/dropbox-service');
 const scriptService = require('./services/script-service');
 const scriptingAPI = require('./services/scripting-api');
+const eventTriggerService = require('./services/event-trigger-service');
 
 const isDev = process.env.NODE_ENV === 'development';
 const VITE_DEV_SERVER_URL = 'http://localhost:5174';
@@ -287,6 +288,11 @@ require('./ipc-handlers')(ipcMain, {
 // Initialize script storage
 scriptService.initializeScriptStorage().catch(err => {
   console.error('Failed to initialize script storage:', err);
+});
+
+// Initialize event trigger service
+eventTriggerService.initializeEventTriggers().catch(err => {
+  console.error('Failed to initialize event triggers:', err);
 });
 
 // Export for other modules

@@ -423,6 +423,101 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
     return await scriptService.importScript(importPath);
   });
 
+  // Event Trigger handlers
+  const eventTriggerService = require('./services/event-trigger-service');
+
+  ipcMain.handle('trigger:register', async (event, eventType, scriptId, options) => {
+    return await eventTriggerService.registerTrigger(eventType, scriptId, options);
+  });
+
+  ipcMain.handle('trigger:unregister', async (event, triggerId) => {
+    return await eventTriggerService.unregisterTrigger(triggerId);
+  });
+
+  ipcMain.handle('trigger:getAll', async () => {
+    return await eventTriggerService.getAllTriggers();
+  });
+
+  ipcMain.handle('trigger:enable', async (event, triggerId) => {
+    return await eventTriggerService.enableTrigger(triggerId);
+  });
+
+  ipcMain.handle('trigger:disable', async (event, triggerId) => {
+    return await eventTriggerService.disableTrigger(triggerId);
+  });
+
+  ipcMain.handle('trigger:test', async (event, triggerId, testData) => {
+    return await eventTriggerService.testTrigger(triggerId, testData);
+  });
+
+  ipcMain.handle('event:list', async () => {
+    return eventTriggerService.getEventTypes();
+  });
+
+  ipcMain.handle('event:emit', async (event, eventType, eventData) => {
+    return await eventTriggerService.emitEvent(eventType, eventData);
+  });
+
+  // Script Template handlers
+  const fs = require('fs-extra');
+  const path = require('path');
+
+  ipcMain.handle('template:getAll', async () => {
+    const templatesDir = path.join(__dirname, '../harmonysync/script-templates');
+    try {
+      const files = await fs.readdir(templatesDir);
+      const templates = files.filter(f => f.endsWith('.js'));
+      
+      const templateList = [];
+      for (const file of templates) {
+        const filePath = path.join(templatesDir, file);
+        const content = await fs.readFile(filePath, 'utf8');
+        
+        // Extract metadata
+        const nameMatch = content.match(/@name\s+(.+)/);
+        const descMatch = content.match(/@description\s+(.+)/);
+        
+        templateList.push({
+          id: path.basename(file, '.js'),
+          name: nameMatch ? nameMatch[1] : file,
+          description: descMatch ? descMatch[1] : '',
+          filename: file
+        });
+      }
+      
+      return templateList;
+    } catch (error) {
+      console.error('Failed to load templates:', error);
+      return [];
+    }
+  });
+
+  ipcMain.handle('template:get', async (event, templateId) => {
+    const templatesDir = path.join(__dirname, '../harmonysync/script-templates');
+    const templatePath = path.join(templatesDir, `${templateId}.js`);
+    
+    if (await fs.pathExists(templatePath)) {
+      return await fs.readFile(templatePath, 'utf8');
+    } else {
+      throw new Error(`Template not found: ${templateId}`);
+    }
+  });
+
+  ipcMain.handle('template:load', async (event, templateId) => {
+    const templatesDir = path.join(__dirname, '../harmonysync/script-templates');
+    const templatePath = path.join(templatesDir, `${templateId}.js`);
+    
+    if (await fs.pathExists(templatePath)) {
+      const content = await fs.readFile(templatePath, 'utf8');
+      return {
+        id: templateId,
+        code: content
+      };
+    } else {
+      throw new Error(`Template not found: ${templateId}`);
+    }
+  });
+
   // HTTP Server handlers
   ipcMain.handle('http:getServerUrl', async () => {
     return httpServer.getUrl();

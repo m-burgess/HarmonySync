@@ -215,6 +215,7 @@ function validateScript(code) {
  */
 async function executeScript(scriptId, harmonyAPI, options = {}) {
   const timeout = options.timeout || 10000; // 10 seconds default
+  const debugMode = options.debug || false;
   
   let code;
   if (scriptId.includes('\n') || scriptId.includes('{')) {
@@ -237,35 +238,66 @@ async function executeScript(scriptId, harmonyAPI, options = {}) {
     throw new Error(`Script validation failed: ${validation.errors[0].message}`);
   }
   
+  // Console output capture for debug mode
+  const consoleOutput = [];
+  
   // Create sandboxed VM
   const vm = new VM({
     timeout: timeout,
     sandbox: {
       harmony: harmonyAPI,
       console: {
-        log: (...args) => console.log('[Script]', ...args),
-        error: (...args) => console.error('[Script]', ...args),
-        warn: (...args) => console.warn('[Script]', ...args)
+        log: (...args) => {
+          const message = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+          console.log('[Script]', ...args);
+          if (debugMode) {
+            consoleOutput.push({ type: 'log', message, timestamp: Date.now() });
+          }
+        },
+        error: (...args) => {
+          const message = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+          console.error('[Script]', ...args);
+          if (debugMode) {
+            consoleOutput.push({ type: 'error', message, timestamp: Date.now() });
+          }
+        },
+        warn: (...args) => {
+          const message = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+          console.warn('[Script]', ...args);
+          if (debugMode) {
+            consoleOutput.push({ type: 'warn', message, timestamp: Date.now() });
+          }
+        }
       }
     }
   });
   
+  const startTime = Date.now();
+  
   try {
     const result = await vm.run(code);
+    const executionTime = Date.now() - startTime;
+    
     return {
       success: true,
       result: result,
-      error: null
+      error: null,
+      executionTime: executionTime,
+      consoleOutput: debugMode ? consoleOutput : undefined
     };
   } catch (error) {
     console.error('Script execution error:', error);
+    const executionTime = Date.now() - startTime;
+    
     return {
       success: false,
       result: null,
       error: {
         message: error.message,
         stack: error.stack
-      }
+      },
+      executionTime: executionTime,
+      consoleOutput: debugMode ? consoleOutput : undefined
     };
   }
 }
