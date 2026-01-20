@@ -16,14 +16,14 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
     textService,
     displayService,
     windowService,
-    dmxService,
     macroService,
     schedulerService,
     httpServer,
     midiManager,
     lyricsFetcher,
     fileManager,
-    googleDriveService
+    googleDriveService,
+    dropboxService
   } = services;
 
   // Dialog handlers
@@ -366,6 +366,23 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
     return await googleDriveService.syncFolder(folderId, localPath);
   });
 
+  // Dropbox handlers
+  ipcMain.handle('dropbox:auth', async () => {
+    return await dropboxService.authenticate();
+  });
+
+  ipcMain.handle('dropbox:listFiles', async (event, path) => {
+    return await dropboxService.listFiles(path);
+  });
+
+  ipcMain.handle('dropbox:downloadFile', async (event, path, destination) => {
+    return await dropboxService.downloadFile(path, destination);
+  });
+
+  ipcMain.handle('dropbox:syncFolder', async (event, dropboxPath, localPath) => {
+    return await dropboxService.syncFolder(dropboxPath, localPath);
+  });
+
   // HTTP Server handlers
   ipcMain.handle('http:getServerUrl', async () => {
     return httpServer.getUrl();
@@ -491,47 +508,6 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
 
   ipcMain.handle('window:getAllStatus', async () => {
     return await windowService.getAllWindowsStatus(audienceWindow, confidenceWindow, lowerThirdsWindow);
-  });
-
-  // DMX Service handlers
-  ipcMain.handle('dmx:getAllFixtures', async () => {
-    return await dmxService.getAllFixtures(database.getConnection());
-  });
-
-  ipcMain.handle('dmx:addFixture', async (event, fixture) => {
-    return await dmxService.addFixture(database.getConnection(), fixture);
-  });
-
-  ipcMain.handle('dmx:updateFixture', async (event, fixture) => {
-    return await dmxService.updateFixture(database.getConnection(), fixture);
-  });
-
-  ipcMain.handle('dmx:deleteFixture', async (event, fixtureId) => {
-    return await dmxService.deleteFixture(database.getConnection(), fixtureId);
-  });
-
-  ipcMain.handle('dmx:getAllScenes', async () => {
-    return await dmxService.getAllScenes(database.getConnection());
-  });
-
-  ipcMain.handle('dmx:createScene', async (event, scene) => {
-    return await dmxService.createScene(database.getConnection(), scene);
-  });
-
-  ipcMain.handle('dmx:updateScene', async (event, scene) => {
-    return await dmxService.updateScene(database.getConnection(), scene);
-  });
-
-  ipcMain.handle('dmx:deleteScene', async (event, sceneId) => {
-    return await dmxService.deleteScene(database.getConnection(), sceneId);
-  });
-
-  ipcMain.handle('dmx:recallScene', async (event, sceneId) => {
-    return await dmxService.recallScene(database.getConnection(), sceneId);
-  });
-
-  ipcMain.handle('dmx:validateFixture', async (event, fixture) => {
-    return dmxService.validateFixture(fixture);
   });
 
   // Macro Service handlers
