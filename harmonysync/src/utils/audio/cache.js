@@ -3,7 +3,7 @@
  * Provides easy access to cache management from frontend
  */
 
-import * as TauriCore from '@tauri-apps/api/core';
+import { core } from '../../electron-adapter';
 
 /**
  * Get current cache statistics
@@ -11,7 +11,7 @@ import * as TauriCore from '@tauri-apps/api/core';
  */
 export async function getCacheStats() {
     try {
-        const stats = await TauriCore.invoke('get_cache_stats_command');
+        const stats = await core.invoke('get_cache_stats_command');
         return stats;
     } catch (error) {
         console.error('[Cache] Failed to get stats:', error);
@@ -31,7 +31,7 @@ export async function getCacheStats() {
  */
 export async function clearCache() {
     try {
-        await TauriCore.invoke('clear_audio_cache_command');
+        await core.invoke('clear_audio_cache_command');
         console.log('[Cache] Cleared successfully');
     } catch (error) {
         console.error('[Cache] Failed to clear:', error);
@@ -44,7 +44,7 @@ export async function clearCache() {
  */
 export async function removeFromCache(path) {
     try {
-        await TauriCore.invoke('remove_from_cache_command', { path });
+        await core.invoke('remove_from_cache_command', { path });
         console.log('[Cache] Removed:', path);
     } catch (error) {
         console.error('[Cache] Failed to remove:', error);

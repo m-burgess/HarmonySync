@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import * as Tauri from '@tauri-apps/api';
+import { core } from '../../electron-adapter';
 import LibraryItem from './LibraryItem.jsx';
 import '../../styles/SongLibrary.css';
 
@@ -9,7 +9,7 @@ const SongLibrary = ({ onAddSong, songImportedTrigger }) => {
 
   // Load library once; searching is handled by the file explorer externally
   useEffect(() => {
-    Tauri.core.invoke('search_songs', { searchTerm: '' })
+    core.invoke('search_songs', { searchTerm: '' })
       .then(setResults)
       .catch(err => {
         console.error(err);

@@ -3,7 +3,7 @@
  * Replaces the FFmpeg-based system to reduce memory usage from 12GB+ to <100MB
  */
 
-import * as TauriCore from '@tauri-apps/api/core';
+import { core } from '../../electron-adapter';
 
 // Track management state
 let audioTracks = new Map();
@@ -16,7 +16,7 @@ export async function initRodioAudio() {
     if (isInitialized) return;
     
     try {
-        await TauriCore.invoke('init_rodio_audio');
+        await core.invoke('init_rodio_audio');
         isInitialized = true;
         console.log('[Rodio Audio] Initialized successfully');
     } catch (error) {
@@ -37,7 +37,7 @@ export async function loadAudioTrack(path, name = null) {
     }
     
     try {
-        const trackId = await TauriCore.invoke('load_audio_track', { path, name });
+        const trackId = await core.invoke('load_audio_track', { path, name });
         console.log(`[Rodio Audio] Loaded track: ${name || path} (ID: ${trackId})`);
         return trackId;
     } catch (error) {
@@ -52,7 +52,7 @@ export async function loadAudioTrack(path, name = null) {
  */
 export async function playTrack(trackId) {
     try {
-        await TauriCore.invoke('play_audio_track', { trackId });
+        await core.invoke('play_audio_track', { trackId });
         console.log(`[Rodio Audio] Playing track: ${trackId}`);
     } catch (error) {
         console.error('[Rodio Audio] Failed to play track:', error);
@@ -66,7 +66,7 @@ export async function playTrack(trackId) {
  */
 export async function stopTrack(trackId) {
     try {
-        await TauriCore.invoke('stop_audio_track', { trackId });
+        await core.invoke('stop_audio_track', { trackId });
         console.log(`[Rodio Audio] Stopped track: ${trackId}`);
     } catch (error) {
         console.error('[Rodio Audio] Failed to stop track:', error);
@@ -79,7 +79,7 @@ export async function stopTrack(trackId) {
  */
 export async function stopAllTracks() {
     try {
-        await TauriCore.invoke('stop_all_audio_tracks');
+        await core.invoke('stop_all_audio_tracks');
         console.log('[Rodio Audio] Stopped all tracks');
     } catch (error) {
         console.error('[Rodio Audio] Failed to stop all tracks:', error);
@@ -94,7 +94,7 @@ export async function stopAllTracks() {
  */
 export async function setTrackVolume(trackId, volume) {
     try {
-        await TauriCore.invoke('set_track_volume', { trackId, volume });
+        await core.invoke('set_track_volume', { trackId, volume });
         console.log(`[Rodio Audio] Set volume for ${trackId}: ${volume}`);
     } catch (error) {
         console.error('[Rodio Audio] Failed to set track volume:', error);
@@ -109,7 +109,7 @@ export async function setTrackVolume(trackId, volume) {
  */
 export async function setTrackPan(trackId, pan) {
     try {
-        await TauriCore.invoke('set_track_pan', { trackId, pan });
+        await core.invoke('set_track_pan', { trackId, pan });
         console.log(`[Rodio Audio] Set pan for ${trackId}: ${pan}`);
     } catch (error) {
         console.error('[Rodio Audio] Failed to set track pan:', error);
@@ -124,7 +124,7 @@ export async function setTrackPan(trackId, pan) {
  */
 export async function setTrackMute(trackId, muted) {
     try {
-        await TauriCore.invoke('set_track_mute', { trackId, muted });
+        await core.invoke('set_track_mute', { trackId, muted });
         console.log(`[Rodio Audio] ${muted ? 'Muted' : 'Unmuted'} track: ${trackId}`);
     } catch (error) {
         console.error('[Rodio Audio] Failed to set track mute:', error);
@@ -138,7 +138,7 @@ export async function setTrackMute(trackId, muted) {
  */
 export async function setMasterVolume(volume) {
     try {
-        await TauriCore.invoke('set_master_volume', { volume });
+        await core.invoke('set_master_volume', { volume });
         console.log(`[Rodio Audio] Set master volume: ${volume}`);
     } catch (error) {
         console.error('[Rodio Audio] Failed to set master volume:', error);
@@ -152,7 +152,7 @@ export async function setMasterVolume(volume) {
  */
 export async function getMixerState() {
     try {
-        const state = await TauriCore.invoke('get_mixer_state');
+        const state = await core.invoke('get_mixer_state');
         console.log('[Rodio Audio] Got mixer state:', state);
         return state;
     } catch (error) {
@@ -167,7 +167,7 @@ export async function getMixerState() {
  */
 export async function removeTrack(trackId) {
     try {
-        await TauriCore.invoke('remove_audio_track', { trackId });
+        await core.invoke('remove_audio_track', { trackId });
         console.log(`[Rodio Audio] Removed track: ${trackId}`);
     } catch (error) {
         console.error('[Rodio Audio] Failed to remove track:', error);
@@ -180,7 +180,7 @@ export async function removeTrack(trackId) {
  */
 export async function clearAllTracks() {
     try {
-        await TauriCore.invoke('clear_all_audio_tracks');
+        await core.invoke('clear_all_audio_tracks');
         console.log('[Rodio Audio] Cleared all tracks');
     } catch (error) {
         console.error('[Rodio Audio] Failed to clear all tracks:', error);
@@ -194,7 +194,7 @@ export async function clearAllTracks() {
  */
 export async function getMemoryUsage() {
     try {
-        const usage = await TauriCore.invoke('get_audio_memory_usage');
+        const usage = await core.invoke('get_audio_memory_usage');
         console.log(`[Rodio Audio] Memory usage: ${(usage / 1024 / 1024).toFixed(2)} MB`);
         return usage;
     } catch (error) {

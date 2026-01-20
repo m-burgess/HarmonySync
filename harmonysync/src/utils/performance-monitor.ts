@@ -2,7 +2,7 @@
 // This file shows how to use the performance metrics API
 
 import React from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import { core } from '../../electron-adapter';
 
 /**
  * Performance metrics returned from the backend
@@ -23,7 +23,7 @@ interface PerformanceMetrics {
  */
 export async function getPerformanceMetrics(): Promise<PerformanceMetrics> {
   try {
-    const metrics = await invoke<PerformanceMetrics>('get_performance_metrics');
+    const metrics = await core.invoke<PerformanceMetrics>('get_performance_metrics');
     return metrics;
   } catch (error) {
     console.error('Failed to get performance metrics:', error);

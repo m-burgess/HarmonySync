@@ -7,16 +7,10 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "tauri": "tauri",
-    "tauri:dev": "tauri dev",
-    "tauri:dev:release": "tauri dev --release",
-    "tauri:build": "tauri build",
-    "launch:nosandbox": "./scripts/launch-harmonysync.sh",
     "generate:audio-api": "npx openapi-typescript ../harmonysync-audio-service/openapi.yml --output src/utils/api/audio-api.ts"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.14",
-    "@tauri-apps/cli": "^2.8.4",
     "autoprefixer": "^10.4.14",
     "postcss": "^8.4.27",
     "tailwindcss": "^4.1.14",
@@ -24,9 +18,6 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.0.18",
-    "@tauri-apps/api": "^2.8.0",
-    "@tauri-apps/plugin-dialog": "^2.4.0",
-    "@tauri-apps/plugin-fs": "^2.4.2",
     "@vitejs/plugin-react": "^5.0.4",
     "desktop-audio-proxy": "^1.1.3",
     "react": "^19.2.0",

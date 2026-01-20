@@ -1,5 +1,5 @@
 // Auto-start Node.js audio service from the frontend
-import { Command } from '@tauri-apps/plugin-shell';
+// Note: Command functionality will need to be adapted for Electron
 
 class AudioServiceManager {
     constructor() {
@@ -22,31 +22,16 @@ class AudioServiceManager {
         try {
             console.log('🚀 Starting Node.js audio service...');
             
-            // Use Tauri shell plugin to run the start script
-            const command = Command.create('start-audio-service', [
-                'bash', 
-                `${this.servicePath}/start-service.sh`, 
-                'start'
-            ]);
+            // TODO: Adapt for Electron - use child_process or IPC instead of Command
+            console.warn('Command functionality needs to be adapted for Electron');
             
-            const output = await command.execute();
-            
-            if (output.code === 0) {
-                console.log('✅ Audio service started successfully');
-                
-                // Wait a moment for service to fully start
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                
-                // Verify it's actually running
-                const isHealthy = await this.checkServiceHealth();
-                if (isHealthy) {
-                    this.isServiceRunning = true;
-                    return true;
-                } else {
-                    throw new Error('Service started but health check failed');
-                }
+            // For now, just try to connect and assume service is started externally
+            const isHealthy = await this.checkServiceHealth();
+            if (isHealthy) {
+                this.isServiceRunning = true;
+                return true;
             } else {
-                throw new Error(`Service start failed with code ${output.code}: ${output.stderr}`);
+                throw new Error('Service not running - start it manually');
             }
         } catch (error) {
             console.error('❌ Failed to start audio service:', error);
@@ -78,13 +63,9 @@ class AudioServiceManager {
 
     async stopService() {
         try {
-            const command = Command.create('stop-audio-service', [
-                'bash', 
-                `${this.servicePath}/start-service.sh`, 
-                'stop'
-            ]);
+            // TODO: Adapt for Electron - use child_process or IPC instead of Command
+            console.warn('Command functionality needs to be adapted for Electron');
             
-            await command.execute();
             this.isServiceRunning = false;
             console.log('🛑 Audio service stopped');
         } catch (error) {
