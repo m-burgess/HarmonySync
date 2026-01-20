@@ -322,17 +322,19 @@ async function getDominantColor(imagePath) {
   try {
     const { data, info } = await sharp(imagePath)
       .resize(100, 100, { fit: 'cover' })
+      .ensureAlpha() // Ensure consistent channel count
       .raw()
       .toBuffer({ resolveWithObject: true });
     
-    // Calculate average color
+    // Calculate average color, handling different channel counts
     let r = 0, g = 0, b = 0;
     const pixelCount = info.width * info.height;
+    const channels = info.channels;
     
-    for (let i = 0; i < data.length; i += info.channels) {
-      r += data[i];
-      g += data[i + 1];
-      b += data[i + 2];
+    for (let i = 0; i < data.length; i += channels) {
+      r += data[i] || 0;
+      g += data[i + 1] || 0;
+      b += data[i + 2] || 0;
     }
     
     return {
