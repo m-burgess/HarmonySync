@@ -7,6 +7,10 @@ const os = require('os');
 // Import backend services
 const database = require('./services/database');
 const ffmpegService = require('./services/ffmpeg');
+const videoService = require('./services/video-service');
+const youtubeService = require('./services/youtube-service');
+const imageService = require('./services/image-service');
+const textService = require('./services/text-service');
 const httpServer = require('./services/http-server');
 const midiManager = require('./services/midi-manager');
 const lyricsFetcher = require('./services/lyrics-fetcher');
@@ -247,12 +251,16 @@ app.on('activate', () => {
 
 // IPC Handlers
 require('./ipc-handlers')(ipcMain, {
-  mainWindow,
-  audienceWindow,
-  confidenceWindow,
-  lowerThirdsWindow,
+  mainWindow: () => mainWindow,
+  audienceWindow: () => audienceWindow,
+  confidenceWindow: () => confidenceWindow,
+  lowerThirdsWindow: () => lowerThirdsWindow,
   database,
   ffmpegService,
+  videoService,
+  youtubeService,
+  imageService,
+  textService,
   httpServer,
   midiManager,
   lyricsFetcher,

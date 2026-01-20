@@ -9,6 +9,10 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
     lowerThirdsWindow, // getter function
     database,
     ffmpegService,
+    videoService,
+    youtubeService,
+    imageService,
+    textService,
     httpServer,
     midiManager,
     lyricsFetcher,
@@ -90,18 +94,168 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
   });
 
   ipcMain.handle('ffmpeg:getVideoMetadata', async (event, path) => {
-    return await ffmpegService.getVideoMetadata(path);
+    return await videoService.getVideoMetadata(path);
   });
 
   ipcMain.handle('ffmpeg:transcodeVideo', async (event, inputPath) => {
-    return await ffmpegService.transcodeVideo(inputPath, (progress) => {
+    return await videoService.transcodeVideo(inputPath, (progress) => {
       const win = mainWindow();
       if (win) win.webContents.send('video-transcode-progress', progress);
     });
   });
 
   ipcMain.handle('ffmpeg:generateThumbnail', async (event, videoPath) => {
-    return await ffmpegService.generateThumbnail(videoPath);
+    return await videoService.generateThumbnail(videoPath);
+  });
+
+  // Video Service handlers
+  ipcMain.handle('video:getMetadata', async (event, path) => {
+    return await videoService.getVideoMetadata(path);
+  });
+
+  ipcMain.handle('video:transcode', async (event, inputPath) => {
+    return await videoService.transcodeVideo(inputPath, (progress) => {
+      const win = mainWindow();
+      if (win) win.webContents.send('video-transcode-progress', progress);
+    });
+  });
+
+  ipcMain.handle('video:generateThumbnail', async (event, videoPath, timestamp, size) => {
+    return await videoService.generateThumbnail(videoPath, timestamp, size);
+  });
+
+  ipcMain.handle('video:getDuration', async (event, videoPath) => {
+    return await videoService.getVideoDuration(videoPath);
+  });
+
+  ipcMain.handle('video:needsTranscoding', async (event, videoPath) => {
+    return await videoService.needsTranscoding(videoPath);
+  });
+
+  ipcMain.handle('video:optimizeForStreaming', async (event, inputPath) => {
+    return await videoService.optimizeForStreaming(inputPath);
+  });
+
+  ipcMain.handle('video:extractFrames', async (event, videoPath, intervalSeconds) => {
+    return await videoService.extractFrames(videoPath, intervalSeconds);
+  });
+
+  // YouTube Service handlers
+  ipcMain.handle('youtube:transcodeForUpload', async (event, inputPath) => {
+    return await youtubeService.transcodeForYouTube(inputPath, (progress) => {
+      const win = mainWindow();
+      if (win) win.webContents.send('youtube-transcode-progress', progress);
+    });
+  });
+
+  ipcMain.handle('youtube:validate', async (event, videoPath) => {
+    return await youtubeService.validateForYouTube(videoPath);
+  });
+
+  ipcMain.handle('youtube:addLink', async (event, presentationId, url) => {
+    return await youtubeService.addYouTubeLink(database.getConnection(), presentationId, url);
+  });
+
+  ipcMain.handle('youtube:getLinks', async (event, presentationId) => {
+    return await youtubeService.getYouTubeLinks(database.getConnection(), presentationId);
+  });
+
+  ipcMain.handle('youtube:deleteLink', async (event, linkId) => {
+    return await youtubeService.deleteYouTubeLink(database.getConnection(), linkId);
+  });
+
+  ipcMain.handle('youtube:extractId', async (event, url) => {
+    return youtubeService.extractYouTubeId(url);
+  });
+
+  ipcMain.handle('youtube:getThumbnailUrl', async (event, videoIdOrUrl, quality) => {
+    return youtubeService.getYouTubeThumbnailUrl(videoIdOrUrl, quality);
+  });
+
+  ipcMain.handle('youtube:isValidUrl', async (event, url) => {
+    return youtubeService.isValidYouTubeUrl(url);
+  });
+
+  ipcMain.handle('youtube:generateEmbedUrl', async (event, videoIdOrUrl, options) => {
+    return youtubeService.generateEmbedUrl(videoIdOrUrl, options);
+  });
+
+  // Image Service handlers
+  ipcMain.handle('image:getMetadata', async (event, imagePath) => {
+    return await imageService.getImageMetadata(imagePath);
+  });
+
+  ipcMain.handle('image:generateThumbnail', async (event, imagePath, width, height) => {
+    return await imageService.generateThumbnail(imagePath, width, height);
+  });
+
+  ipcMain.handle('image:convertFormat', async (event, inputPath, format, options) => {
+    return await imageService.convertFormat(inputPath, format, options);
+  });
+
+  ipcMain.handle('image:resize', async (event, imagePath, width, height, options) => {
+    return await imageService.resizeImage(imagePath, width, height, options);
+  });
+
+  ipcMain.handle('image:optimizeForWeb', async (event, imagePath) => {
+    return await imageService.optimizeForWeb(imagePath);
+  });
+
+  ipcMain.handle('image:addTextOverlay', async (event, imagePath, text, options) => {
+    return await imageService.addTextOverlay(imagePath, text, options);
+  });
+
+  ipcMain.handle('image:loadAndCache', async (event, imagePath) => {
+    return await imageService.loadAndCache(imagePath);
+  });
+
+  ipcMain.handle('image:clearCache', async (event, olderThanDays) => {
+    return await imageService.clearCache(olderThanDays);
+  });
+
+  ipcMain.handle('image:getDominantColor', async (event, imagePath) => {
+    return await imageService.getDominantColor(imagePath);
+  });
+
+  ipcMain.handle('image:isSupportedFormat', async (event, filePath) => {
+    return imageService.isSupportedImage(filePath);
+  });
+
+  // Text Service handlers
+  ipcMain.handle('text:generateBackgroundCSS', async (event, options) => {
+    return textService.generateBackgroundCSS(options);
+  });
+
+  ipcMain.handle('text:generateAndSaveCSS', async (event, dirPath, options) => {
+    return await textService.generateAndSaveCSS(dirPath, options);
+  });
+
+  ipcMain.handle('text:formatLyrics', async (event, lyrics) => {
+    return textService.formatLyrics(lyrics);
+  });
+
+  ipcMain.handle('text:splitLyricsIntoSlides', async (event, lyrics, linesPerSlide) => {
+    return textService.splitLyricsIntoSlides(lyrics, linesPerSlide);
+  });
+
+  ipcMain.handle('text:generateSlideHTML', async (event, text, style) => {
+    return textService.generateSlideHTML(text, style);
+  });
+
+  ipcMain.handle('text:extractTextFromFile', async (event, filePath) => {
+    return await textService.extractTextFromFile(filePath);
+  });
+
+  ipcMain.handle('text:wordWrap', async (event, text, maxWidth) => {
+    return textService.wordWrap(text, maxWidth);
+  });
+
+  ipcMain.handle('text:generateTextCSS', async (event, style) => {
+    return textService.generateTextCSS(style);
+  });
+
+  ipcMain.handle('text:getTextStats', async (event, text) => {
+    return textService.getTextStats(text);
   });
 
   // Window handlers
@@ -211,9 +365,9 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
     return httpServer.getUrl();
   });
 
-  // CSS generation
+  // CSS generation (legacy support)
   ipcMain.handle('css:generateBackground', async (event, path) => {
-    return await fileManager.generateBackgroundCss(path);
+    return await textService.generateAndSaveCSS(path);
   });
 
   // Send to specific windows

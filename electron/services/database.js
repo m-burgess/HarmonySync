@@ -93,6 +93,16 @@ async function initialize() {
     )
   `);
   
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS youtube_links (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      presentation_id INTEGER NOT NULL,
+      url TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (presentation_id) REFERENCES presentations(id) ON DELETE CASCADE
+    )
+  `);
+  
   console.log('Database initialized successfully');
   return db;
 }
@@ -128,11 +138,17 @@ function close() {
   }
 }
 
+function getConnection() {
+  if (!db) throw new Error('Database not initialized');
+  return db;
+}
+
 module.exports = {
   initialize,
   query,
   run,
   get,
   all,
-  close
+  close,
+  getConnection
 };
