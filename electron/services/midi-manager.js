@@ -2,7 +2,7 @@ let midi;
 try {
   midi = require('midi');
 } catch (e) {
-  console.warn('MIDI support not available:', e.message);
+  // MIDI module is optional and may not be available
   midi = null;
 }
 

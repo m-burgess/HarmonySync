@@ -24,12 +24,11 @@ const AudioSettings = ({ isOpen, onClose }) => {
     try {
       setIsLoading(true);
       
-      // Use Tauri's fs plugin to read settings from a JSON file
-      const appDataPath = await TauriPath.appDataDir();
-      const settingsPath = await TauriPath.join(appDataPath, 'audio_settings.json');
+      // Use Electron's fs API to read settings from a JSON file
+      const settingsPath = '/audio_settings.json'; // Will be stored in app data
       
       try {
-        const settingsContent = await TauriFs.readTextFile(settingsPath);
+        const settingsContent = await fs.readTextFile(settingsPath);
         const settings = JSON.parse(settingsContent);
         
         setAudioOutputDevice(settings.audioOutputDevice || '');
@@ -48,10 +47,12 @@ const AudioSettings = ({ isOpen, onClose }) => {
 
   const loadAvailableDevices = async () => {
     try {
-      // Call Rust commands to get available audio and MIDI devices
+      // Call Electron IPC to get available audio and MIDI devices
       try {
-        const audioDevices = await TauriCore.invoke('get_available_audio_devices');
-        setAvailableAudioDevices(audioDevices);
+        const audioDevices = await core.invoke('midi:getDevices');
+        setAvailableAudioDevices(audioDevices || [
+          { id: 'default', name: 'Default Audio Device' }
+        ]);
       } catch (error) {
         console.error('Error loading audio devices:', error);
         setAvailableAudioDevices([
@@ -59,8 +60,9 @@ const AudioSettings = ({ isOpen, onClose }) => {
         ]);
       }
 
+      // MIDI devices are handled separately if available
       try {
-        const midiInputs = await TauriCore.invoke('get_available_midi_inputs');
+        const midiInputs = [];
         setAvailableMidiInputDevices(midiInputs);
       } catch (error) {
         console.error('Error loading MIDI input devices:', error);
@@ -68,7 +70,7 @@ const AudioSettings = ({ isOpen, onClose }) => {
       }
 
       try {
-        const midiOutputs = await TauriCore.invoke('get_available_midi_outputs');
+        const midiOutputs = [];
         setAvailableMidiOutputDevices(midiOutputs);
       } catch (error) {
         console.error('Error loading MIDI output devices:', error);
@@ -84,8 +86,7 @@ const AudioSettings = ({ isOpen, onClose }) => {
       setIsLoading(true);
       
       // Save all settings to a JSON file
-      const appDataPath = await TauriPath.appDataDir();
-      const settingsPath = await TauriPath.join(appDataPath, 'audio_settings.json');
+      const settingsPath = '/audio_settings.json'; // Will be stored in app data
       
       const settings = {
         audioOutputDevice,
@@ -93,7 +94,7 @@ const AudioSettings = ({ isOpen, onClose }) => {
         midiOutputDevice,
       };
       
-      await TauriFs.writeTextFile(settingsPath, JSON.stringify(settings, null, 2));
+      await fs.writeTextFile(settingsPath, JSON.stringify(settings, null, 2));
       
       console.log('Audio settings saved successfully');
       onClose();

@@ -7,7 +7,7 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
     audienceWindow, // getter function
     confidenceWindow, // getter function
     lowerThirdsWindow, // getter function
-    database,
+    jsonStorage,
     ffmpegService,
     audioService,
     videoService,
@@ -29,11 +29,15 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
   } = services;
 
   // Dialog handlers
-  ipcMain.handle('dialog:openDirectory', async () => {
-    const result = await dialog.showOpenDialog({
-      properties: ['openDirectory']
-    });
-    return result.filePaths[0];
+  ipcMain.handle('dialog:openDirectory', async (event, options = {}) => {
+    const properties = ['openDirectory'];
+    if (options.multiple) properties.push('multiSelections');
+    console.log('[ipc-handlers] dialog:openDirectory called with properties', properties);
+
+    const win = typeof mainWindow === 'function' ? mainWindow() : null;
+    const result = await dialog.showOpenDialog(win || undefined, { properties });
+    console.log('[ipc-handlers] dialog:openDirectory result', result.filePaths);
+    return result.filePaths || [];
   });
 
   ipcMain.handle('dialog:openFile', async (event, filters) => {
@@ -69,21 +73,21 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
     return await fileManager.copyFile(src, dest);
   });
 
-  // Database handlers
+  // JSON Storage handlers (compatibility layer)
   ipcMain.handle('db:query', async (event, query, params) => {
-    return await database.query(query, params);
+    return await jsonStorage.query(query, params);
   });
 
   ipcMain.handle('db:run', async (event, query, params) => {
-    return await database.run(query, params);
+    return await jsonStorage.run(query, params);
   });
 
   ipcMain.handle('db:get', async (event, query, params) => {
-    return await database.get(query, params);
+    return await jsonStorage.get(query, params);
   });
 
   ipcMain.handle('db:all', async (event, query, params) => {
-    return await database.all(query, params);
+    return await jsonStorage.all(query, params);
   });
 
   // FFmpeg handlers
@@ -161,15 +165,15 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
   });
 
   ipcMain.handle('youtube:addLink', async (event, presentationId, url) => {
-    return await youtubeService.addYouTubeLink(database.getConnection(), presentationId, url);
+    return await youtubeService.addYouTubeLink(jsonStorage.getConnection(), presentationId, url);
   });
 
   ipcMain.handle('youtube:getLinks', async (event, presentationId) => {
-    return await youtubeService.getYouTubeLinks(database.getConnection(), presentationId);
+    return await youtubeService.getYouTubeLinks(jsonStorage.getConnection(), presentationId);
   });
 
   ipcMain.handle('youtube:deleteLink', async (event, linkId) => {
-    return await youtubeService.deleteYouTubeLink(database.getConnection(), linkId);
+    return await youtubeService.deleteYouTubeLink(jsonStorage.getConnection(), linkId);
   });
 
   ipcMain.handle('youtube:extractId', async (event, url) => {
@@ -266,79 +270,21 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
     return textService.getTextStats(text);
   });
 
-  // Window handlers
-  ipcMain.handle('window:showAudience', async () => {
-    const win = audienceWindow();
-    if (win) win.show();
-  });
-
-  ipcMain.handle('window:hideAudience', async () => {
-    const win = audienceWindow();
-    if (win) win.hide();
-  });
-
-  ipcMain.handle('window:showConfidence', async () => {
-    const win = confidenceWindow();
-    if (win) win.show();
-  });
-
-  ipcMain.handle('window:hideConfidence', async () => {
-    const win = confidenceWindow();
-    if (win) win.hide();
-  });
-
-  ipcMain.handle('window:showLowerThirds', async () => {
-    const win = lowerThirdsWindow();
-    if (win) win.show();
-  });
-
-  ipcMain.handle('window:hideLowerThirds', async () => {
-    const win = lowerThirdsWindow();
-    if (win) win.hide();
-  });
-
-  // Display handlers
-  ipcMain.handle('display:videoSlide', async (event, path, duration) => {
-    const audWin = audienceWindow();
-    const confWin = confidenceWindow();
-    
-    if (audWin) {
-      audWin.webContents.send('display-video-slide', path);
-    }
-    if (confWin) {
-      confWin.webContents.send('start-video-countdown', duration);
-    }
-  });
-
-  ipcMain.handle('display:slide', async (event, content) => {
-    const audWin = audienceWindow();
-    const confWin = confidenceWindow();
-    const lowerWin = lowerThirdsWindow();
-    
-    if (audWin) {
-      audWin.webContents.send('display-slide', content);
-    }
-    if (confWin) {
-      confWin.webContents.send('display-slide', content);
-    }
-    if (lowerWin && content.lowerThirds) {
-      lowerWin.webContents.send('update-lower-thirds', content.lowerThirds);
-    }
-  });
-
-  ipcMain.handle('display:blackScreen', async () => {
-    const audWin = audienceWindow();
-    if (audWin) {
-      audWin.webContents.send('display-black-screen');
-    }
-  });
+  // Window handlers - moved to line ~610 with windowService
+  // Display handlers - moved to line ~587 with displayService
 
   // MIDI handlers
   ipcMain.handle('midi:getDevices', async () => {
+    if (!midiManager) {
+      return [];
+    }
     return await midiManager.getDevices();
   });
 
   ipcMain.handle('midi:sendNote', async (event, device, note, velocity, duration) => {
+    if (!midiManager) {
+      return false;
+    }
     return await midiManager.sendNote(device, note, velocity, duration);
   });
 
@@ -578,9 +524,7 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
   });
 
   // Display Service handlers
-  ipcMain.handle('display:videoSlide', async (event, path, duration) => {
-    return await displayService.displayVideoSlide(audienceWindow, confidenceWindow, path, duration);
-  });
+  // Removed duplicate: ipcMain.handle('display:videoSlide') - already defined at line 301
 
   ipcMain.handle('display:slide', async (event, content) => {
     return await displayService.displaySlide(audienceWindow, confidenceWindow, lowerThirdsWindow, content);
@@ -652,35 +596,35 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
   });
 
   ipcMain.handle('macro:getAll', async () => {
-    return await macroService.getAllMacros(database.getConnection());
+    return await macroService.getAllMacros(jsonStorage.getConnection());
   });
 
   ipcMain.handle('macro:getById', async (event, macroId) => {
-    return await macroService.getMacroById(database.getConnection(), macroId);
+    return await macroService.getMacroById(jsonStorage.getConnection(), macroId);
   });
 
   ipcMain.handle('macro:create', async (event, macro) => {
-    return await macroService.createMacro(database.getConnection(), macro);
+    return await macroService.createMacro(jsonStorage.getConnection(), macro);
   });
 
   ipcMain.handle('macro:update', async (event, macro) => {
-    return await macroService.updateMacro(database.getConnection(), macro);
+    return await macroService.updateMacro(jsonStorage.getConnection(), macro);
   });
 
   ipcMain.handle('macro:delete', async (event, macroId) => {
-    return await macroService.deleteMacro(database.getConnection(), macroId);
+    return await macroService.deleteMacro(jsonStorage.getConnection(), macroId);
   });
 
   ipcMain.handle('macro:getForSlide', async (event, slideId) => {
-    return await macroService.getMacrosForSlide(database.getConnection(), slideId);
+    return await macroService.getMacrosForSlide(jsonStorage.getConnection(), slideId);
   });
 
   ipcMain.handle('macro:addToSlide', async (event, slideId, macroId) => {
-    return await macroService.addMacroToSlide(database.getConnection(), slideId, macroId);
+    return await macroService.addMacroToSlide(jsonStorage.getConnection(), slideId, macroId);
   });
 
   ipcMain.handle('macro:removeFromSlide', async (event, slideId, macroId) => {
-    return await macroService.removeMacroFromSlide(database.getConnection(), slideId, macroId);
+    return await macroService.removeMacroFromSlide(jsonStorage.getConnection(), slideId, macroId);
   });
 
   ipcMain.handle('macro:validate', async (event, macro) => {
@@ -689,34 +633,34 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
 
   // Scheduler Service handlers
   ipcMain.handle('scheduler:getAllEvents', async () => {
-    return await schedulerService.getAllScheduledEvents(database.getConnection());
+    return await schedulerService.getAllScheduledEvents(jsonStorage.getConnection());
   });
 
   ipcMain.handle('scheduler:getById', async (event, eventId) => {
-    return await schedulerService.getScheduledEventById(database.getConnection(), eventId);
+    return await schedulerService.getScheduledEventById(jsonStorage.getConnection(), eventId);
   });
 
-  ipcMain.handle('scheduler:create', async (event, event) => {
-    return await schedulerService.createScheduledEvent(database.getConnection(), event);
+  ipcMain.handle('scheduler:create', async (event, scheduledEvent) => {
+    return await schedulerService.createScheduledEvent(jsonStorage.getConnection(), scheduledEvent);
   });
 
-  ipcMain.handle('scheduler:update', async (event, event) => {
-    return await schedulerService.updateScheduledEvent(database.getConnection(), event);
+  ipcMain.handle('scheduler:update', async (event, scheduledEvent) => {
+    return await schedulerService.updateScheduledEvent(jsonStorage.getConnection(), scheduledEvent);
   });
 
   ipcMain.handle('scheduler:delete', async (event, eventId) => {
-    return await schedulerService.deleteScheduledEvent(database.getConnection(), eventId);
+    return await schedulerService.deleteScheduledEvent(jsonStorage.getConnection(), eventId);
   });
 
   ipcMain.handle('scheduler:getTodayEvents', async () => {
-    return await schedulerService.getTodayEvents(database.getConnection());
+    return await schedulerService.getTodayEvents(jsonStorage.getConnection());
   });
 
   ipcMain.handle('scheduler:getUpcoming', async (event, hours) => {
-    return await schedulerService.getUpcomingEvents(database.getConnection(), hours);
+    return await schedulerService.getUpcomingEvents(jsonStorage.getConnection(), hours);
   });
 
-  ipcMain.handle('scheduler:validate', async (event, event) => {
-    return schedulerService.validateScheduledEvent(event);
+  ipcMain.handle('scheduler:validate', async (event, scheduledEvent) => {
+    return schedulerService.validateScheduledEvent(scheduledEvent);
   });
 };

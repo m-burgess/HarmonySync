@@ -155,13 +155,13 @@ const AudienceScreen = () => {
     }
 
     return () => {
-      unlistenBackground.then(f => f());
-      unlistenLyric.then(f => f());
-      unlistenImage.then(f => f());
-      unlistenClear.then(f => f());
-      unlistenNavigate.then(f => f());
-      unlistenStartBackgroundVideo.then(f => f());
-      unlistenStopBackgroundVideo.then(f => f());
+      unlistenBackground();
+      unlistenLyric();
+      unlistenImage();
+      unlistenClear();
+      unlistenNavigate();
+      unlistenStartBackgroundVideo();
+      unlistenStopBackgroundVideo();
 
       if (playerRef.current) {
         if (playerRef.current.intervalId) {
@@ -229,7 +229,7 @@ const AudienceScreen = () => {
         <video
           ref={backgroundVideoRef}
           className="background-video"
-          src={TauriCore.convertFileSrc(backgroundVideo)}
+          src={backgroundVideo}
           autoPlay
           loop
           muted

@@ -85,7 +85,7 @@ const AudienceApp = () => {
     });
 
     return () => {
-      unlisten.then(f => f()); // Clean up the event listener
+      unlisten(); // Clean up the event listener
       if (videoRef.current) {
         videoRef.current.removeEventListener('ended', handleVideoEnded);
         videoRef.current.removeEventListener('timeupdate', handleVideoTimeUpdate);

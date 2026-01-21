@@ -1,154 +1,40 @@
-const Database = require('better-sqlite3');
-const path = require('path');
-const fs = require('fs-extra');
-const { app } = require('electron');
+// ⚠️  DEPRECATED MODULE - DO NOT USE
+// 
+// This file previously contained SQLite database operations using better-sqlite3.
+// All database functionality has been migrated to json-storage.js which uses JSON files
+// for data persistence without requiring native module compilation.
+//
+// If you encounter code importing from this file, update it to use:
+//   const jsonStorage = require('./json-storage');
+//
+// The jsonStorage module provides a compatible API:
+//   - initialize() - Creates necessary JSON files
+//   - query(sql) - Returns query results
+//   - run(sql) - Executes update/insert/delete
+//   - get(sql) - Returns single row
+//   - all(sql) - Returns all rows
+//   - getConnection() - Returns compatibility object
 
-let db = null;
+console.warn('⚠️  WARNING: database.js is DEPRECATED');
+console.warn('    This SQLite database module is no longer maintained');
+console.warn('    Use electron/services/json-storage.js instead');
 
 async function initialize() {
-  const appDataPath = app.getPath('userData');
-  const dbPath = path.join(appDataPath, 'harmonysync.db');
-  
-  // Ensure directory exists
-  await fs.ensureDir(path.dirname(dbPath));
-  
-  // Open database
-  db = new Database(dbPath);
-  
-  // Create tables
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS songs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT NOT NULL,
-      artist TEXT,
-      folder_path TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-  
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS presentations (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      folder_path TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-  
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS slides (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      song_id INTEGER,
-      presentation_id INTEGER,
-      content TEXT NOT NULL,
-      slide_order INTEGER NOT NULL,
-      slide_type TEXT DEFAULT 'lyric',
-      FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE CASCADE,
-      FOREIGN KEY (presentation_id) REFERENCES presentations(id) ON DELETE CASCADE
-    )
-  `);
-  
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS audio_tracks (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      song_id INTEGER NOT NULL,
-      name TEXT NOT NULL,
-      file_path TEXT NOT NULL,
-      track_order INTEGER,
-      FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE CASCADE
-    )
-  `);
-  
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS mixer_configs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      song_id INTEGER NOT NULL,
-      config_data TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE CASCADE
-    )
-  `);
-  
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS scheduled_events (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      event_type TEXT NOT NULL,
-      event_data TEXT NOT NULL,
-      day_of_week INTEGER NOT NULL,
-      time TEXT NOT NULL,
-      enabled INTEGER DEFAULT 1,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-  
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS gdrive_sync (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      folder_id TEXT NOT NULL,
-      local_path TEXT NOT NULL,
-      last_sync DATETIME,
-      enabled INTEGER DEFAULT 1
-    )
-  `);
-  
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS youtube_links (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      presentation_id INTEGER NOT NULL,
-      url TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (presentation_id) REFERENCES presentations(id) ON DELETE CASCADE
-    )
-  `);
-  
-  console.log('Database initialized successfully');
-  return db;
-}
-
-function query(sql, params = []) {
-  if (!db) throw new Error('Database not initialized');
-  const stmt = db.prepare(sql);
-  return stmt.all(params);
-}
-
-function run(sql, params = []) {
-  if (!db) throw new Error('Database not initialized');
-  const stmt = db.prepare(sql);
-  return stmt.run(params);
-}
-
-function get(sql, params = []) {
-  if (!db) throw new Error('Database not initialized');
-  const stmt = db.prepare(sql);
-  return stmt.get(params);
-}
-
-function all(sql, params = []) {
-  if (!db) throw new Error('Database not initialized');
-  const stmt = db.prepare(sql);
-  return stmt.all(params);
-}
-
-function close() {
-  if (db) {
-    db.close();
-    db = null;
-  }
+  console.error('ERROR: database.js is deprecated. Use json-storage.js instead');
+  throw new Error('database.js is deprecated. Use json-storage.js for all database operations');
 }
 
 function getConnection() {
-  if (!db) throw new Error('Database not initialized');
-  return db;
+  console.error('ERROR: database.js is deprecated. Use json-storage.js instead');
+  throw new Error('database.js is deprecated. Use json-storage.js for all database operations');
 }
 
 module.exports = {
   initialize,
-  query,
-  run,
-  get,
-  all,
-  close,
-  getConnection
+  getConnection,
+  query: () => { throw new Error('database.js is deprecated'); },
+  run: () => { throw new Error('database.js is deprecated'); },
+  get: () => { throw new Error('database.js is deprecated'); },
+  all: () => { throw new Error('database.js is deprecated'); },
+  close: () => { throw new Error('database.js is deprecated'); }
 };
