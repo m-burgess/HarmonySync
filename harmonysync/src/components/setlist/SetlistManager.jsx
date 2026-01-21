@@ -75,6 +75,7 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
   };
 
   const handleAddFolder = async () => {
+    console.log('[SetlistManager] Add to Service Order clicked');
     try {
       const selectedPaths = await dialog.open({
         directory: true,
@@ -83,8 +84,9 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
       });
 
       if (selectedPaths) {
-        // selectedPaths will be an array if multiple is true
-        for (const path of selectedPaths) {
+        const pathsArray = Array.isArray(selectedPaths) ? selectedPaths : [selectedPaths];
+        console.log('[SetlistManager] Selected paths:', pathsArray);
+        for (const path of pathsArray) {
           const folderName = path.split('/').pop() || path.split('\\').pop();
 
           // Check if this path is already in the setlist

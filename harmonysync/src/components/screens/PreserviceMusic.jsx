@@ -127,8 +127,7 @@ const PreserviceMusic = ({ isOpen, onClose }) => {
   };
 
   const getConfigPath = async () => {
-    const appDataDir = await TauriPath.appDataDir();
-    return await TauriPath.join(appDataDir, 'preservice-config.json');
+    return '/preservice-config.json'; // Will be stored in app data
   };
 
   const handleSaveUrl = async () => {
@@ -140,21 +139,13 @@ const PreserviceMusic = ({ isOpen, onClose }) => {
     try {
       setIsLoading(true);
       const configPath = await getConfigPath();
-      
-      // Ensure the directory exists
-      const appDataDir = await TauriPath.appDataDir();
-      try {
-        await TauriFs.mkdir(appDataDir, { recursive: true });
-      } catch (err) {
-        // Directory might already exist
-      }
 
       const config = {
         preservicePlaylistUrl: playlistUrl.trim(),
         savedAt: new Date().toISOString()
       };
 
-      await TauriFs.writeTextFile(configPath, JSON.stringify(config, null, 2));
+      await fs.writeTextFile(configPath, JSON.stringify(config, null, 2));
       
       setSavedUrl(playlistUrl.trim());
       setHasUrl(true);

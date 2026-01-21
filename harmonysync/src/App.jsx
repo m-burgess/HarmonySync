@@ -82,19 +82,17 @@ const App = () => {
   
   // Listen for tracks-updated events (from transpose)
   useEffect(() => {
-    const unlisten = Tauri.event.listen('tracks-updated', (event) => {
-      console.log('[App] Tracks updated event received:', event.payload);
-      setAllTracks(event.payload);
+    const unlisten = event.listen('tracks-updated', (evt) => {
+      console.log('[App] Tracks updated event received:', evt.payload);
+      setAllTracks(evt.payload);
     });
 
-    return () => {
-      unlisten.then(f => f());
-    };
+    return unlisten;
   }, []);
   
   // Listen for video-ended events (separate effect)
   useEffect(() => {
-    const unlisten = Tauri.event.listen('video-ended', () => {
+    const unlisten = event.listen('video-ended', () => {
       console.log('Video ended event received. Advancing to next slide.');
       // Simulate ArrowDown key press
       document.dispatchEvent(new KeyboardEvent('keydown', {
@@ -106,9 +104,7 @@ const App = () => {
       }));
     });
 
-    return () => {
-      unlisten.then(f => f());
-    };
+    return unlisten;
   }, []);
 
   useEffect(() => {
@@ -227,30 +223,13 @@ const App = () => {
     localStorage.removeItem('rp_multitrackHeight');
   };
 
-
-
   // Listen for display settings menu event
   useEffect(() => {
-    const unlisten = Tauri.event.listen('display-settings-clicked', () => {
+    const unlisten = event.listen('display-settings-clicked', () => {
       setIsDisplaySettingsOpen(true);
     });
 
-    return () => {
-      unlisten.then(f => f());
-    };
-  }, []);
-
-
-
-  // Listen for display settings menu event
-  useEffect(() => {
-    const unlisten = Tauri.event.listen('display-settings-clicked', () => {
-      setIsDisplaySettingsOpen(true);
-    });
-
-    return () => {
-      unlisten.then(f => f());
-    };
+    return unlisten;
   }, []);
 
   // Listen for preservice music events from scheduler
@@ -273,8 +252,8 @@ const App = () => {
     });
 
     return () => {
-      unlistenStart.then(f => f());
-      unlistenStop.then(f => f());
+      unlistenStart();
+      unlistenStop();
     };
   }, []);
 

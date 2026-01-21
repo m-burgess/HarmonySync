@@ -5,7 +5,7 @@ const { spawn, exec } = require('child_process');
 const os = require('os');
 
 // Import backend services
-const database = require('./services/database');
+const jsonStorage = require('./services/json-storage');
 const ffmpegService = require('./services/ffmpeg');
 const audioService = require('./services/audio-service');
 const videoService = require('./services/video-service');
@@ -17,7 +17,13 @@ const windowService = require('./services/window-service');
 const macroService = require('./services/macro-service');
 const schedulerService = require('./services/scheduler-service');
 const httpServer = require('./services/http-server');
-const midiManager = require('./services/midi-manager');
+let midiManager;
+try {
+  midiManager = require('./services/midi-manager');
+} catch (e) {
+  console.warn('MIDI manager failed to load:', e.message);
+  midiManager = null;
+}
 const lyricsFetcher = require('./services/lyrics-fetcher');
 const fileManager = require('./services/file-manager');
 const googleDriveService = require('./services/google-drive');
@@ -34,16 +40,21 @@ let audienceWindow = null;
 let confidenceWindow = null;
 let lowerThirdsWindow = null;
 let audioServiceProcess = null;
+let videoServiceProcess = null;
+let imageServiceProcess = null;
 
 // Create main window
 function createMainWindow() {
+  const preloadPath = path.join(__dirname, 'preload.js');
+  console.log('[MainWindow] Loading with preload:', preloadPath);
+  
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js')
+      preload: preloadPath
     },
     icon: path.join(__dirname, '../harmonysync/icons/icon.png')
   });
@@ -218,11 +229,108 @@ async function stopAudioService() {
   }
 }
 
+// Start video service
+async function startVideoService() {
+  return new Promise((resolve, reject) => {
+    const servicePath = path.join(__dirname, '../harmonysync-video-service/server.js');
+    
+    videoServiceProcess = spawn('node', [servicePath], {
+      env: {
+        ...process.env,
+        PORT: '3002',
+        HOST: '127.0.0.1'
+      },
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+
+    videoServiceProcess.stdout.on('data', (data) => {
+      console.log(`Video Service: ${data}`);
+      if (data.toString().includes('listening')) {
+        resolve();
+      }
+    });
+
+    videoServiceProcess.stderr.on('data', (data) => {
+      console.error(`Video Service Error: ${data}`);
+    });
+
+    videoServiceProcess.on('error', (error) => {
+      console.error('Failed to start video service:', error);
+      reject(error);
+    });
+
+    videoServiceProcess.on('exit', (code) => {
+      console.log(`Video service exited with code ${code}`);
+      videoServiceProcess = null;
+    });
+
+    // Timeout after 10 seconds
+    setTimeout(() => resolve(), 10000);
+  });
+}
+
+// Stop video service
+async function stopVideoService() {
+  if (videoServiceProcess) {
+    videoServiceProcess.kill('SIGTERM');
+    videoServiceProcess = null;
+  }
+}
+
+// Start image service
+async function startImageService() {
+  return new Promise((resolve, reject) => {
+    const servicePath = path.join(__dirname, '../harmonysync-image-service/server.js');
+    
+    imageServiceProcess = spawn('node', [servicePath], {
+      env: {
+        ...process.env,
+        PORT: '3003',
+        HOST: '127.0.0.1',
+        MAX_CONCURRENT_JOBS: '3'
+      },
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+
+    imageServiceProcess.stdout.on('data', (data) => {
+      console.log(`Image Service: ${data}`);
+      if (data.toString().includes('listening')) {
+        resolve();
+      }
+    });
+
+    imageServiceProcess.stderr.on('data', (data) => {
+      console.error(`Image Service Error: ${data}`);
+    });
+
+    imageServiceProcess.on('error', (error) => {
+      console.error('Failed to start image service:', error);
+      reject(error);
+    });
+
+    imageServiceProcess.on('exit', (code) => {
+      console.log(`Image service exited with code ${code}`);
+      imageServiceProcess = null;
+    });
+
+    // Timeout after 10 seconds
+    setTimeout(() => resolve(), 10000);
+  });
+}
+
+// Stop image service
+async function stopImageService() {
+  if (imageServiceProcess) {
+    imageServiceProcess.kill('SIGTERM');
+    imageServiceProcess = null;
+  }
+}
+
 // App initialization
 app.whenReady().then(async () => {
   try {
-    // Initialize database
-    await database.initialize();
+    // Initialize JSON storage
+    await jsonStorage.initialize();
     
     // Start HTTP server for video streaming
     await httpServer.start();
@@ -230,8 +338,16 @@ app.whenReady().then(async () => {
     // Start audio service
     await startAudioService();
     
+    // Start video service
+    await startVideoService();
+    
+    // Start image service
+    await startImageService();
+    
     // Initialize MIDI
-    await midiManager.initialize();
+    if (midiManager) {
+      await midiManager.initialize();
+    }
     
     // Create windows
     createMainWindow();
@@ -252,6 +368,14 @@ app.on('window-all-closed', () => {
   }
 });
 
+app.on('before-quit', async () => {
+  console.log('Shutting down services...');
+  await stopAudioService();
+  await stopVideoService();
+  await stopImageService();
+  await httpServer.stop();
+});
+
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createMainWindow();
@@ -264,7 +388,7 @@ require('./ipc-handlers')(ipcMain, {
   audienceWindow: () => audienceWindow,
   confidenceWindow: () => confidenceWindow,
   lowerThirdsWindow: () => lowerThirdsWindow,
-  database,
+  jsonStorage,
   ffmpegService,
   audioService,
   videoService,

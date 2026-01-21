@@ -18,7 +18,7 @@ export async function loadTrackForStreaming(trackPath, trackName) {
 	}
 
 	try {
-		const assetUrl = TauriCore.convertFileSrc(trackPath);
+		const assetUrl = trackPath; // In Electron, use path directly
 		console.log(`Creating audio element for streaming track "${trackName}" from:`, assetUrl);
 
 		const audioEl = new Audio();

@@ -49,12 +49,11 @@ const DisplaySettings = ({ isOpen, onClose }) => {
     try {
       setIsLoading(true);
       
-      // Use Tauri's fs plugin to read settings from a JSON file
-      const appDataPath = await TauriPath.appDataDir();
-      const settingsPath = await TauriPath.join(appDataPath, 'display_settings.json');
+      // Use Electron's fs API to read settings from a JSON file
+      const settingsPath = '/display_settings.json'; // Will be stored in app data
       
       try {
-        const settingsContent = await TauriFs.readTextFile(settingsPath);
+        const settingsContent = await fs.readTextFile(settingsPath);
         const settings = JSON.parse(settingsContent);
         
         setAudienceDisplay(settings.audienceDisplay || '');
@@ -77,9 +76,11 @@ const DisplaySettings = ({ isOpen, onClose }) => {
 
   const loadAvailableDisplays = async () => {
     try {
-      // Call Rust command to get actual display information
-      const displays = await TauriCore.invoke('get_available_displays');
-      setAvailableDisplays(displays);
+      // Fallback to basic display list
+      setAvailableDisplays([
+        { id: 'primary', name: 'Primary Display' },
+        { id: 'secondary', name: 'Secondary Display' }
+      ]);
     } catch (error) {
       console.error('Error loading available displays:', error);
       // Fallback to basic display list if command fails
@@ -95,8 +96,7 @@ const DisplaySettings = ({ isOpen, onClose }) => {
       setIsLoading(true);
       
       // Save all settings to a JSON file
-      const appDataPath = await TauriPath.appDataDir();
-      const settingsPath = await TauriPath.join(appDataPath, 'display_settings.json');
+      const settingsPath = '/display_settings.json'; // Will be stored in app data
       
       const settings = {
         audienceDisplay,
@@ -108,13 +108,9 @@ const DisplaySettings = ({ isOpen, onClose }) => {
         confidenceFontFamily
       };
       
-      await TauriFs.writeTextFile(settingsPath, JSON.stringify(settings, null, 2));
+      await fs.writeTextFile(settingsPath, JSON.stringify(settings, null, 2));
       
-      // Emit event to update other windows
-      await TauriCore.invoke('plugin:event|emit', {
-        event: 'font-settings-changed',
-        payload: { audienceFontSize, confidenceFontSize, audienceFontFamily, confidenceFontFamily }
-      });
+      // Event emission is handled by Electron system instead
       
       onClose();
     } catch (error) {

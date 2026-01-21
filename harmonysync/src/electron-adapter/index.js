@@ -2,9 +2,36 @@
 // This module provides a compatible interface for React components
 // Simplified for Electron-only usage (Tauri support removed)
 
+// Module-level cache that persists across HMR
+let cachedElectronAPI = null;
+let apiCheckInitiated = false;
+let apiAvailablePromise = null;
+
+// Helper to get electronAPI quickly (no polling needed since preload confirmed)
+async function getElectronAPI() {
+  if (cachedElectronAPI) {
+    return cachedElectronAPI;
+  }
+  if (typeof window !== 'undefined') {
+    if (window.__electronAPICached) {
+      cachedElectronAPI = window.__electronAPICached;
+      return cachedElectronAPI;
+    }
+    if (window.electronAPI) {
+      cachedElectronAPI = window.electronAPI;
+      return cachedElectronAPI;
+    }
+  }
+  throw new Error('electronAPI not available - unexpected renderer context');
+}
+
 // Helper function to detect runtime environment
 function isElectronRuntime() {
-  return typeof window !== 'undefined' && window.electronAPI;
+  // Check for either exposed reference
+  return (
+    typeof window !== 'undefined' &&
+    (typeof window.electronAPI !== 'undefined' || typeof window.__electronAPICached !== 'undefined')
+  );
 }
 
 // Event system
@@ -12,8 +39,8 @@ export const event = {
   listen: (eventName, callback) => {
     if (isElectronRuntime()) {
       const handler = (data) => callback({ payload: data });
-      window.electronAPI.receive(eventName, handler);
-      return () => {}; // Return cleanup function
+      const cleanup = window.electronAPI.receive(eventName, handler);
+      return cleanup || (() => {}); // Return the cleanup function from preload or empty function
     }
     return () => {};
   },
@@ -29,76 +56,106 @@ export const event = {
 // Dialog
 export const dialog = {
   open: async (options) => {
-    if (isElectronRuntime()) {
+    try {
+      const api = await getElectronAPI();
+      console.log('[electron-adapter] dialog.open invoked with options:', options);
       if (options.directory) {
-        return await window.electronAPI.openDirectory();
-      } else {
-        return await window.electronAPI.openFile(options.filters);
+        const res = await api.openDirectory(options);
+        console.log('[electron-adapter] dialog.open directory result:', res);
+        return res;
       }
+      const res = await api.openFile(options.filters);
+      console.log('[electron-adapter] dialog.open file result:', res);
+      return res;
+    } catch (error) {
+      console.error('[electron-adapter] dialog.open failed:', error);
+      return null;
     }
-    return null;
   }
 };
 
 // File system
 export const fs = {
   readTextFile: async (path) => {
-    if (isElectronRuntime()) {
-      return await window.electronAPI.readFile(path);
+    try {
+      const api = await getElectronAPI();
+      return await api.readFile(path);
+    } catch (error) {
+      console.error('[electron-adapter] Failed to read file:', path, error);
+      throw error;
     }
-    throw new Error('No file system API available');
   },
   
   writeTextFile: async (path, content) => {
-    if (isElectronRuntime()) {
-      return await window.electronAPI.writeFile(path, content);
+    try {
+      const api = await getElectronAPI();
+      return await api.writeFile(path, content);
+    } catch (error) {
+      console.error('[electron-adapter] Failed to write file:', path, error);
+      throw error;
     }
-    throw new Error('No file system API available');
   },
   
   readDir: async (path) => {
-    if (isElectronRuntime()) {
-      return await window.electronAPI.readDir(path);
+    try {
+      const api = await getElectronAPI();
+      return await api.readDir(path);
+    } catch (error) {
+      console.error('[electron-adapter] Failed to read directory:', path, error);
+      throw error;
     }
-    throw new Error('No file system API available');
   },
   
   exists: async (path) => {
-    if (isElectronRuntime()) {
-      return await window.electronAPI.exists(path);
+    try {
+      const api = await getElectronAPI();
+      return await api.exists(path);
+    } catch (error) {
+      console.error('[electron-adapter] Failed to check if exists:', path, error);
+      throw error;
     }
-    throw new Error('No file system API available');
   },
   
   mkdir: async (path) => {
-    if (isElectronRuntime()) {
-      return await window.electronAPI.mkdir(path);
+    try {
+      const api = await getElectronAPI();
+      return await api.mkdir(path);
+    } catch (error) {
+      console.error('[electron-adapter] Failed to create directory:', path, error);
+      throw error;
     }
-    throw new Error('No file system API available');
   },
   
   copyFile: async (source, destination) => {
-    if (isElectronRuntime()) {
-      return await window.electronAPI.copyFile(source, destination);
+    try {
+      const api = await getElectronAPI();
+      return await api.copyFile(source, destination);
+    } catch (error) {
+      console.error('[electron-adapter] Failed to copy file:', source, '->', destination, error);
+      throw error;
     }
-    throw new Error('No file system API available');
   }
 };
 
 // Core - invoke commands
 export const core = {
   invoke: async (command, args = {}) => {
-    if (isElectronRuntime()) {
+    try {
+      const api = await getElectronAPI();
       // Map Tauri commands to Electron IPC handlers
-      return await invokeElectronCommand(command, args);
+      return await invokeElectronCommand(command, args, api);
+    } catch (error) {
+      console.error('[electron-adapter] Failed to invoke command:', command, error);
+      throw error;
     }
-    throw new Error('No invoke API available');
   }
 };
 
 // Map Tauri commands to Electron IPC calls
-async function invokeElectronCommand(command, args) {
-  const api = window.electronAPI;
+async function invokeElectronCommand(command, args, api) {
+  if (!api) {
+    api = await getElectronAPI();
+  }
   
   switch (command) {
     // Database operations

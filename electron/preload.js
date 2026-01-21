@@ -1,10 +1,14 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
-// Expose protected methods that allow the renderer process to use
-// the ipcRenderer without exposing the entire object
-contextBridge.exposeInMainWorld('electronAPI', {
+console.log('[Preload] Starting preload script...');
+
+// Build the API object once so we can expose it under multiple names
+const api = {
   // File operations
-  openDirectory: () => ipcRenderer.invoke('dialog:openDirectory'),
+  openDirectory: (options) => {
+    console.log('[Preload] openDirectory invoked with options:', options);
+    return ipcRenderer.invoke('dialog:openDirectory', options);
+  },
   openFile: (filters) => ipcRenderer.invoke('dialog:openFile', filters),
   readFile: (path) => ipcRenderer.invoke('fs:readFile', path),
   writeFile: (path, content) => ipcRenderer.invoke('fs:writeFile', path, content),
@@ -92,19 +96,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Receive from main process
   receive: (channel, callback) => {
-    const validChannels = [
-      'display-video-slide',
-      'display-slide',
-      'display-black-screen',
-      'start-video-countdown',
-      'update-lower-thirds'
-    ];
-    if (validChannels.includes(channel)) {
-      ipcRenderer.on(channel, (event, ...args) => callback(...args));
-      return () => ipcRenderer.removeAllListeners(channel);
-    }
+    // Accept all channels - remove whitelist restriction
+    ipcRenderer.on(channel, (event, ...args) => callback(...args));
+    return () => ipcRenderer.removeAllListeners(channel);
   }
-});
+};
+
+// Expose protected methods that allow the renderer process to use
+// the ipcRenderer without exposing the entire object
+contextBridge.exposeInMainWorld('electronAPI', api);
+// Also expose a cached reference so renderer HMR reloads can find it immediately
+contextBridge.exposeInMainWorld('__electronAPICached', api);
 
 // Platform information
 contextBridge.exposeInMainWorld('platform', {
@@ -112,3 +114,5 @@ contextBridge.exposeInMainWorld('platform', {
   arch: process.arch,
   version: process.version
 });
+
+console.log('[Preload] Preload script completed. electronAPI exposed.');

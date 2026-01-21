@@ -13,9 +13,7 @@ const LowerThirdsScreen = () => {
       setLine2(line2);
     });
 
-    return () => {
-      unlisten.then(f => f());
-    };
+    return unlisten;
   }, []);
 
   return (

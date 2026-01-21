@@ -119,7 +119,7 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
     
     return () => {
       if (unlisten) {
-        unlisten.then(fn => fn());
+        unlisten();
       }
     };
   }, []);

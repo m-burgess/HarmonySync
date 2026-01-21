@@ -29,7 +29,6 @@
   "dependencies": {
     "@monaco-editor/react": "^4.6.0",
     "axios": "^1.12.2",
-    "better-sqlite3": "^9.2.2",
     "cors": "^2.8.5",
     "dropbox": "^10.34.0",
     "express": "^4.18.2",
@@ -56,7 +55,9 @@
   },
   "jest": {
     "testEnvironment": "node",
-    "testMatch": ["**/__tests__/**/*.test.js"],
+    "testMatch": [
+      "**/__tests__/**/*.test.js"
+    ],
     "collectCoverageFrom": [
       "electron/services/**/*.js",
       "!electron/services/__tests__/**"
@@ -78,18 +79,28 @@
       {
         "from": "harmonysync-audio-service",
         "to": "audio-service",
-        "filter": ["**/*", "!node_modules"]
+        "filter": [
+          "**/*",
+          "!node_modules"
+        ]
       }
     ],
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "category": "AudioVideo"
     },
     "win": {
-      "target": ["nsis"]
+      "target": [
+        "nsis"
+      ]
     },
     "mac": {
-      "target": ["dmg"],
+      "target": [
+        "dmg"
+      ],
       "category": "public.app-category.music"
     }
   }
