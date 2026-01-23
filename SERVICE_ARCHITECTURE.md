@@ -88,11 +88,13 @@ Updated `electron/main.js` to:
 2. Pass services to IPC handlers
 3. Maintain backward compatibility with existing `ffmpeg:*` endpoints
 
-### Database Updates
+### JSON Storage Updates
 
-Extended `electron/services/database.js`:
-- Added `getConnection()` method for service access
-- Added `youtube_links` table for storing YouTube video links
+Extended `electron/services/json-storage.js`:
+- Uses JSON files for all data persistence (portable, no native modules required)
+- Provides methods for managing scheduled events, macros, settings
+- Stores YouTube links per-presentation in local text files
+- Maintains compatibility layer for legacy database-style queries
 
 ## Dependencies Added
 

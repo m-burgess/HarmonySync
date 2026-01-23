@@ -15,10 +15,11 @@ Created complete Electron application structure:
 ### ✅ Phase 2: Backend Services (Node.js)
 Converted all Rust backend functionality to Node.js services:
 
-1. **Database Service** (`database.js`)
-   - SQLite operations using better-sqlite3
-   - Tables: songs, presentations, slides, audio_tracks, mixer_configs, scheduled_events, gdrive_sync
-   - Full CRUD operations
+1. **JSON Storage Service** (`json-storage.js`)
+   - JSON-based data persistence (portable, no native modules)
+   - Stores: scheduled_events, macros, settings, gdrive_sync
+   - Per-presentation data: YouTube links, song metadata
+   - Full CRUD operations with automatic file saving
 
 2. **FFmpeg Service** (`ffmpeg.js`) - CRITICAL FEATURES
    - Audio to Ogg conversion with progress tracking
@@ -119,7 +120,7 @@ Root
 │   ├── preload.js             # IPC bridge
 │   ├── ipc-handlers.js        # Request routing
 │   └── services/              # Backend services
-│       ├── database.js        # SQLite
+│       ├── json-storage.js    # JSON-based data storage
 │       ├── ffmpeg.js          # Audio/video processing
 │       ├── http-server.js     # Video streaming
 │       ├── file-manager.js    # File operations
@@ -142,7 +143,7 @@ Root
 ### Dependencies Installed
 Core:
 - electron (v28)
-- better-sqlite3 (SQLite)
+- fs-extra (JSON file operations)
 - fluent-ffmpeg (audio/video processing)
 - googleapis (Google Drive)
 - express (HTTP server)
@@ -201,7 +202,7 @@ Optional:
 ```bash
 # Test individual services
 cd electron/services
-node -e "require('./database.js').initialize()"
+node -e "require('./json-storage.js').initialize()"
 node -e "require('./ffmpeg.js').ensureAudioSync(['test.mp3'])"
 ```
 
@@ -285,7 +286,7 @@ Successfully created a complete Node.js/Electron implementation of HarmonySync w
 /electron/main.js
 /electron/preload.js
 /electron/ipc-handlers.js
-/electron/services/database.js
+/electron/services/json-storage.js
 /electron/services/ffmpeg.js
 /electron/services/http-server.js
 /electron/services/file-manager.js
