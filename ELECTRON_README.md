@@ -7,7 +7,7 @@ This project has been converted from Rust/Tauri to Node.js/Electron while mainta
 ### Backend (Node.js/Electron)
 - **Main Process**: `/electron/main.js` - Application entry point
 - **Services**: `/electron/services/` - Backend functionality
-  - `database.js` - SQLite operations
+  - `json-storage.js` - JSON-based data persistence (replaces SQLite for portability)
   - `ffmpeg.js` - Audio/video processing and transposition
   - `http-server.js` - Video streaming server
   - `file-manager.js` - File system operations

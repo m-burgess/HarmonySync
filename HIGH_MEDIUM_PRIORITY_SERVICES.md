@@ -284,8 +284,7 @@ Potential improvements for future development:
 ### Existing Dependencies Used
 
 - `fluent-ffmpeg` - Audio processing in Audio Service
-- `better-sqlite3` - Database operations in DMX, Macro, Scheduler services
-- `fs-extra` - File operations across services
+- `fs-extra` - JSON file operations and file management across services
 - `electron` - Window management in Window and Display services
 
 ## Code Quality

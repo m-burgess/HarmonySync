@@ -73,7 +73,7 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
     return await fileManager.copyFile(src, dest);
   });
 
-  // JSON Storage handlers (compatibility layer)
+  // JSON Storage handlers (legacy compatibility - these methods log warnings and should be refactored)
   ipcMain.handle('db:query', async (event, query, params) => {
     return await jsonStorage.query(query, params);
   });
