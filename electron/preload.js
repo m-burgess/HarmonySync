@@ -51,6 +51,14 @@ const api = {
   searchLyrics: (title, artist) => ipcRenderer.invoke('lyrics:search', title, artist),
   fetchLyrics: (songId) => ipcRenderer.invoke('lyrics:fetch', songId),
   
+  // Slides service
+  importPdfSlides: (pdfPath, options) => ipcRenderer.invoke('slides:importPdf', pdfPath, options),
+  importPowerpointSlides: (pptxPath, options) => ipcRenderer.invoke('slides:importPowerpoint', pptxPath, options),
+  createTextSlide: (text, style, backgroundImage) => ipcRenderer.invoke('slides:createTextSlide', text, style, backgroundImage),
+  importSlidesFromFolder: (folderPath, options) => ipcRenderer.invoke('slides:importFromFolder', folderPath, options),
+  validateSlideFile: (filePath) => ipcRenderer.invoke('slides:validateFile', filePath),
+  getSlideMetadata: (filePath) => ipcRenderer.invoke('slides:getMetadata', filePath),
+  
   // Google Drive integration
   googleDriveAuth: () => ipcRenderer.invoke('gdrive:auth'),
   googleDriveListFiles: (folderId) => ipcRenderer.invoke('gdrive:listFiles', folderId),
@@ -87,6 +95,11 @@ const api = {
   onVideoEnded: (callback) => {
     ipcRenderer.on('video-ended', callback);
     return () => ipcRenderer.removeAllListeners('video-ended');
+  },
+  
+  onSlidesImportProgress: (callback) => {
+    ipcRenderer.on('slides-import-progress', (event, data) => callback(data));
+    return () => ipcRenderer.removeAllListeners('slides-import-progress');
   },
   
   // Send to specific window
