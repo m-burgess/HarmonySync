@@ -129,6 +129,8 @@ async function start() {
   app.use(express.urlencoded({ extended: true }));
   
   // Apply rate limiting to API routes
+  // Note: This middleware applies to ALL routes starting with /api
+  // CodeQL may flag individual routes as missing rate limiting, but this is a false positive
   app.use('/api', rateLimiter);
 
   // Serve static files from public directory
