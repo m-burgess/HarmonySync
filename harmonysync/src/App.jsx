@@ -20,6 +20,7 @@ import {
 } from './components/VSCodeUI.jsx';
 import SetlistManager from './components/setlist/SetlistManager.jsx';
 import SlideManager from './components/slides/SlideManager.jsx';
+import LyricsColumn from './components/lyrics/LyricsColumn.jsx';
 import MultitrackPlayer from './components/audio/MultitrackPlayer.jsx';
 import DisplaySettings from './components/screens/DisplaySettings.jsx';
 import AudioSettings from './components/screens/AudioSettings.jsx';
@@ -35,6 +36,7 @@ const App = () => {
   const [isLoadingTracks, setIsLoadingTracks] = useState(false);
   const [serviceOrder, setServiceOrder] = useState([]); // New state for service order
   const [selectedSlide, setSelectedSlide] = useState(null);
+  const [currentLyrics, setCurrentLyrics] = useState(null); // Current song lyrics for scrollable column
   const [isDisplaySettingsOpen, setIsDisplaySettingsOpen] = useState(false);
   const [isAudioSettingsOpen, setIsAudioSettingsOpen] = useState(false);
   const [isDmxPanelOpen, setIsDmxPanelOpen] = useState(false);
@@ -319,6 +321,7 @@ const App = () => {
             setAllSlides={setAllSlides} 
             setAllTracks={setAllTracks} 
             setIsLoadingTracks={setIsLoadingTracks}
+            setCurrentLyrics={setCurrentLyrics}
             serviceOrder={serviceOrder} 
             setServiceOrder={setServiceOrder} 
           />
@@ -333,14 +336,18 @@ const App = () => {
 
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col bg-gray-900">
-          {/* Slide Editor */}
+          {/* Slide Editor or Lyrics Column */}
           <div className="flex-1 overflow-hidden">
-            <SlideManager 
-              allSlides={allSlides} 
-              setAllSlides={setAllSlides} 
-              selectedSlide={selectedSlide} 
-              setSelectedSlide={setSelectedSlide} 
-            />
+            {currentLyrics ? (
+              <LyricsColumn lyrics={currentLyrics} />
+            ) : (
+              <SlideManager 
+                allSlides={allSlides} 
+                setAllSlides={setAllSlides} 
+                selectedSlide={selectedSlide} 
+                setSelectedSlide={setSelectedSlide} 
+              />
+            )}
           </div>
 
           {/* VS Code Resize Handle for Multitrack */}
