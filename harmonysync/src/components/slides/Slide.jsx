@@ -4,6 +4,16 @@ import { event, core } from '../../electron-adapter';
 import { Card, Button } from '../ui';
 import '../../styles/components/Slide.css';
 
+// Constants for lyrics display
+// LYRICS_FONT_SIZE_THRESHOLD: Sections with more than 6 lines use smaller font to fit more content
+// 6 is chosen as the typical verse/chorus length, allowing readability without shrinking unnecessarily
+const LYRICS_FONT_SIZE_THRESHOLD = 6;
+const LYRICS_FONT_SIZE_NORMAL = '0.8rem';
+const LYRICS_FONT_SIZE_SMALL = '0.7rem';
+// LYRICS_MAX_LINES: Limit to 12 lines for thumbnail readability and consistent slide appearance
+// Sections longer than 12 lines are truncated with an indicator; full lyrics still display on audience screen
+const LYRICS_MAX_LINES = 12;
+
 const Slide = ({
   slide,
   index,
@@ -74,9 +84,10 @@ const Slide = ({
         console.log('Emitting display-lyric-slide with payload:', { text: slide.text, section: slide.section });
         await event.emit('display-lyric-slide', { text: slide.text, section: slide.section });
 
-        const line1 = slide.text && slide.text.length > 0 ? slide.text[0] : '';
-        const line2 = slide.text && slide.text.length > 1 ? slide.text[1] : '';
-        await event.emit('set-lower-thirds-text', { line1, line2 });
+        // For lower thirds, show section name and first line of the section
+        const sectionLabel = slide.section ? `[${slide.section}]` : '';
+        const firstLine = slide.text && slide.text.length > 0 ? slide.text[0] : '';
+        await event.emit('set-lower-thirds-text', { line1: sectionLabel, line2: firstLine });
       }
     } catch (error) {
       console.error('Error handling slide click:', error);
@@ -260,15 +271,32 @@ const Slide = ({
         );
 
       default: // Lyrics slide
+        const lineCount = slide.text ? slide.text.length : 0;
+        const fontSize = lineCount > LYRICS_FONT_SIZE_THRESHOLD ? LYRICS_FONT_SIZE_SMALL : LYRICS_FONT_SIZE_NORMAL;
+        // Limit lines to maintain readability; sections with many lines will be scrollable
+        const displayLines = slide.text ? slide.text.slice(0, LYRICS_MAX_LINES) : [];
+        const hasMoreLines = lineCount > LYRICS_MAX_LINES;
+        
         return (
           <div className="slide-lyrics-container">
             {slide.section && (
               <div className="slide-lyrics-section">[{slide.section}]</div>
             )}
-            <div className="slide-lyrics-text">
-              {slide.text && Array.isArray(slide.text) && slide.text.slice(0, 4).map((line, i) => (
+            <div 
+              className="slide-lyrics-text" 
+              data-line-count={lineCount}
+              style={{ '--lyrics-font-size': fontSize }}
+              role="region"
+              aria-label={`Lyrics for ${slide.section || 'section'}`}
+            >
+              {displayLines.map((line, i) => (
                 <p key={i} className="slide-lyrics-line">{line}</p>
               ))}
+              {hasMoreLines && (
+                <p className="slide-lyrics-line slide-lyrics-truncation">
+                  ...{lineCount - LYRICS_MAX_LINES} more lines
+                </p>
+              )}
             </div>
           </div>
         );

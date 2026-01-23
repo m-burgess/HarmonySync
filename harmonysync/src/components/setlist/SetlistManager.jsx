@@ -22,7 +22,7 @@ import { songTransitionManager } from '../../utils/audio';
 
 import { parseLyricsToSlides } from '../../utils/lyrics';
 
-const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
+const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks, setCurrentLyrics }) => {
   const [setlist, setSetlist] = useState([]);
   const [currentBackgroundCssContent, setCurrentBackgroundCssContent] = useState('');
   const [loadingProgress, setLoadingProgress] = useState(0);
@@ -322,6 +322,11 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
       
       event.emit('clear-lyric-display');
       event.emit('clear-confidence-display');
+      
+      // Clear current lyrics (will be set again if lyrics file exists)
+      if (setCurrentLyrics) {
+        setCurrentLyrics(null);
+      }
 
       // Read folder entries
       const entries = await fs.readDir(itemPath, { recursive: false });
@@ -351,6 +356,11 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
         let lyricsContent = await fs.readTextFile(`${itemPath}/${lyricsFile.name}`);
         if (lyricsContent instanceof Uint8Array) lyricsContent = new TextDecoder().decode(lyricsContent);
         if (typeof lyricsContent === 'string' && lyricsContent.length > 0) {
+          // Set lyrics for the scrollable column view
+          if (setCurrentLyrics) {
+            setCurrentLyrics(lyricsContent);
+          }
+          
           loadedSlides = parseLyricsToSlides(lyricsContent);
           
           // If there's a background video, add it as metadata to the slides
