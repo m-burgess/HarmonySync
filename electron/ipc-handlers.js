@@ -697,4 +697,11 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
   ipcMain.handle('slides:getMetadata', async (event, filePath) => {
     return await services.slidesService.getSlideMetadata(filePath);
   });
+
+  ipcMain.handle('slides:importFromZip', async (event, zipPath, options) => {
+    return await services.slidesService.importFromZip(zipPath, options, (progress) => {
+      const win = mainWindow();
+      if (win) win.webContents.send('slides-import-progress', { ...progress, type: 'zip' });
+    });
+  });
 };

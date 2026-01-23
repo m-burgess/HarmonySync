@@ -16,6 +16,13 @@ HarmonySync now supports importing slides from various sources, making it easy t
 - **Requires LibreOffice** to be installed on your system
 - Automatically converts PowerPoint slides to images
 
+### Zip Files (NEW!)
+- **Automatic extraction and import** of zipped folders
+- Perfect for Dropbox downloads
+- **Drag-and-drop support** for quick imports
+- Automatically processes all compatible files inside the zip
+- Option to delete zip file after extraction
+
 ### Batch Import
 - Import multiple files from a folder at once
 - Supports both PDF and PowerPoint files
@@ -31,14 +38,21 @@ HarmonySync now supports importing slides from various sources, making it easy t
 
 ### 2. Choose Import Source
 
-Select one of three import types:
+Select one of four import types:
 
 - **PDF**: Import from a PDF document
 - **PowerPoint**: Import from a PowerPoint presentation
+- **Zip File**: Import from a zipped folder (automatic extraction)
 - **Folder**: Batch import from a folder
 
 ### 3. Select File or Folder
 
+#### For Zip Files (Drag & Drop):
+1. Simply **drag and drop** a .zip file onto the drop zone
+2. The file will be automatically detected and selected
+3. Click **Import Slides** to start
+
+#### For Other Files:
 1. Click the **Browse** button
 2. Navigate to your file or folder
 3. Select the file/folder you want to import
@@ -81,6 +95,25 @@ Choose the output format:
 - Works with both .pptx (modern) and .ppt (legacy) formats
 - Complex animations are converted to static images
 - Embedded videos are not preserved
+
+### For Zip Import (NEW!)
+
+- **Perfect for Dropbox downloads**: Download your presentation folder as a zip from Dropbox
+- **Drag and drop**: Simply drag the zip file onto the import dialog
+- **Automatic extraction**: The zip is automatically extracted to a folder
+- **Smart import**: All compatible files (PDF, PowerPoint) inside are automatically imported
+- **Clean up**: Option to automatically delete the zip file after extraction
+- **Use case**: Great for sharing presentations between team members or downloading from cloud storage
+
+#### Zip Import Workflow Example:
+
+1. Download presentation folder from Dropbox as a .zip file
+2. Open HarmonySync and click the Slides import button
+3. Select "Zip File" as import type
+4. Drag and drop the .zip file onto the drop zone (or click Browse)
+5. The zip will be extracted and all slides will be imported automatically
+6. The extracted folder is kept for future reference
+7. The original zip can be deleted (optional)
 
 ### For Folder Import
 

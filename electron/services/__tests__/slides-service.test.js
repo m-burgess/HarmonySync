@@ -188,4 +188,32 @@ describe('Slides Service', () => {
       }
     });
   });
+
+  describe('importFromZip', () => {
+    it('should reject non-existent zip files', async () => {
+      await expect(
+        slidesService.importFromZip('/nonexistent/file.zip')
+      ).rejects.toThrow('Zip file not found');
+    });
+
+    it('should reject non-zip files', async () => {
+      const testFile = path.join(tempDir, 'test.txt');
+      await fs.writeFile(testFile, 'test');
+      
+      await expect(
+        slidesService.importFromZip(testFile)
+      ).rejects.toThrow('must have .zip extension');
+    });
+
+    it('should handle empty zip files', async () => {
+      const AdmZip = require('adm-zip');
+      const zipPath = path.join(tempDir, 'empty.zip');
+      const zip = new AdmZip();
+      zip.writeZip(zipPath);
+      
+      await expect(
+        slidesService.importFromZip(zipPath)
+      ).rejects.toThrow();
+    });
+  });
 });

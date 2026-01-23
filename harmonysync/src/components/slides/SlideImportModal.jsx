@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   XMarkIcon, 
   DocumentIcon, 
   DocumentTextIcon, 
   FolderIcon,
+  ArchiveBoxIcon,
   ArrowUpTrayIcon 
 } from '@heroicons/react/24/outline';
 
@@ -14,17 +15,21 @@ import {
  * - PDF files
  * - PowerPoint files (.pptx, .ppt)
  * - Folder import (batch)
+ * - Zip files (automatic extraction and import)
  */
 const SlideImportModal = ({ isOpen, onClose, onSlidesImported }) => {
-  const [importType, setImportType] = useState('pdf'); // 'pdf', 'powerpoint', 'folder'
+  const [importType, setImportType] = useState('pdf'); // 'pdf', 'powerpoint', 'folder', 'zip'
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedFolder, setSelectedFolder] = useState(null);
   const [isImporting, setIsImporting] = useState(false);
   const [progress, setProgress] = useState(null);
   const [error, setError] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const dropZoneRef = useRef(null);
   const [importOptions, setImportOptions] = useState({
     dpi: 150,
-    format: 'png'
+    format: 'png',
+    deleteZip: true // Auto-delete zip after extraction
   });
 
   // Reset state when modal closes
@@ -54,11 +59,66 @@ const SlideImportModal = ({ isOpen, onClose, onSlidesImported }) => {
     };
   }, []);
 
+  // Drag and drop handlers
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.target === dropZoneRef.current) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length === 0) return;
+
+    const file = files[0];
+    const filePath = file.path;
+    const ext = filePath.toLowerCase().split('.').pop();
+
+    // Auto-detect file type and set import mode
+    if (ext === 'zip') {
+      setImportType('zip');
+      setSelectedFile(filePath);
+      setError(null);
+    } else if (ext === 'pdf') {
+      setImportType('pdf');
+      setSelectedFile(filePath);
+      setError(null);
+    } else if (ext === 'pptx' || ext === 'ppt') {
+      setImportType('powerpoint');
+      setSelectedFile(filePath);
+      setError(null);
+    } else {
+      setError(`Unsupported file type: .${ext}. Please drop a .zip, .pdf, .pptx, or .ppt file.`);
+    }
+  };
+
   const handleSelectFile = async () => {
     try {
-      const filters = importType === 'pdf' 
-        ? [{ name: 'PDF Files', extensions: ['pdf'] }]
-        : [{ name: 'PowerPoint Files', extensions: ['pptx', 'ppt'] }];
+      let filters;
+      if (importType === 'pdf') {
+        filters = [{ name: 'PDF Files', extensions: ['pdf'] }];
+      } else if (importType === 'zip') {
+        filters = [{ name: 'Zip Files', extensions: ['zip'] }];
+      } else {
+        filters = [{ name: 'PowerPoint Files', extensions: ['pptx', 'ppt'] }];
+      }
 
       const filePath = await window.electronAPI.openFile(filters);
       
@@ -66,11 +126,13 @@ const SlideImportModal = ({ isOpen, onClose, onSlidesImported }) => {
         setSelectedFile(filePath);
         setError(null);
         
-        // Validate the file
-        const validation = await window.electronAPI.validateSlideFile(filePath);
-        if (!validation.valid) {
-          setError(validation.message);
-          setSelectedFile(null);
+        // Validate the file (skip for zip files)
+        if (importType !== 'zip') {
+          const validation = await window.electronAPI.validateSlideFile(filePath);
+          if (!validation.valid) {
+            setError(validation.message);
+            setSelectedFile(null);
+          }
         }
       }
     } catch (err) {
@@ -104,6 +166,7 @@ const SlideImportModal = ({ isOpen, onClose, onSlidesImported }) => {
 
     try {
       let slides = [];
+      let result;
 
       if (importType === 'folder' && selectedFolder) {
         slides = await window.electronAPI.importSlidesFromFolder(selectedFolder, importOptions);
@@ -111,6 +174,9 @@ const SlideImportModal = ({ isOpen, onClose, onSlidesImported }) => {
         slides = await window.electronAPI.importPdfSlides(selectedFile, importOptions);
       } else if (importType === 'powerpoint' && selectedFile) {
         slides = await window.electronAPI.importPowerpointSlides(selectedFile, importOptions);
+      } else if (importType === 'zip' && selectedFile) {
+        result = await window.electronAPI.importSlidesFromZip(selectedFile, importOptions);
+        slides = result.slides || [];
       } else {
         throw new Error('No file or folder selected');
       }
@@ -153,7 +219,7 @@ const SlideImportModal = ({ isOpen, onClose, onSlidesImported }) => {
             <label className="block text-sm font-medium text-primary mb-3">
               Import Source
             </label>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-4 gap-3">
               <button
                 onClick={() => {
                   setImportType('pdf');
@@ -192,6 +258,24 @@ const SlideImportModal = ({ isOpen, onClose, onSlidesImported }) => {
 
               <button
                 onClick={() => {
+                  setImportType('zip');
+                  setSelectedFile(null);
+                  setSelectedFolder(null);
+                  setError(null);
+                }}
+                className={`p-4 rounded-lg border-2 transition-all ${
+                  importType === 'zip'
+                    ? 'border-accent bg-accent bg-opacity-10'
+                    : 'border-border hover:border-accent'
+                }`}
+                disabled={isImporting}
+              >
+                <ArchiveBoxIcon className="w-8 h-8 mx-auto mb-2 text-accent" />
+                <div className="text-sm font-medium text-primary">Zip File</div>
+              </button>
+
+              <button
+                onClick={() => {
                   setImportType('folder');
                   setSelectedFile(null);
                   setSelectedFolder(null);
@@ -209,6 +293,30 @@ const SlideImportModal = ({ isOpen, onClose, onSlidesImported }) => {
               </button>
             </div>
           </div>
+
+          {/* Drag and Drop Zone for Zip Files */}
+          {importType === 'zip' && (
+            <div
+              ref={dropZoneRef}
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              className={`border-2 border-dashed rounded-lg p-8 text-center transition-all ${
+                isDragging
+                  ? 'border-accent bg-accent bg-opacity-10'
+                  : 'border-border hover:border-accent'
+              }`}
+            >
+              <ArchiveBoxIcon className="w-16 h-16 mx-auto mb-4 text-muted" />
+              <p className="text-sm text-primary mb-2">
+                {isDragging ? 'Drop zip file here' : 'Drag and drop a zip file here'}
+              </p>
+              <p className="text-xs text-muted">
+                or click Browse button below
+              </p>
+            </div>
+          )}
 
           {/* File/Folder Selection */}
           <div>
@@ -304,6 +412,15 @@ const SlideImportModal = ({ isOpen, onClose, onSlidesImported }) => {
             <div className="bg-blue-500 bg-opacity-10 border border-blue-500 rounded-lg p-4">
               <p className="text-sm text-blue-400">
                 <strong>Note:</strong> PowerPoint import requires LibreOffice to be installed on your system.
+              </p>
+            </div>
+          )}
+
+          {/* Zip Import Note */}
+          {importType === 'zip' && (
+            <div className="bg-green-500 bg-opacity-10 border border-green-500 rounded-lg p-4">
+              <p className="text-sm text-green-400">
+                <strong>Automatic Setup:</strong> The zip file will be automatically extracted and all compatible slides (PDF, PowerPoint) will be imported. The zip file can be deleted after extraction.
               </p>
             </div>
           )}
