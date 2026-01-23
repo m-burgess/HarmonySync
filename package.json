@@ -28,6 +28,7 @@
   "license": "MIT",
   "dependencies": {
     "@monaco-editor/react": "^4.6.0",
+    "adm-zip": "^0.5.16",
     "axios": "^1.12.2",
     "cors": "^2.8.5",
     "dropbox": "^10.34.0",

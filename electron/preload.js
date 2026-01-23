@@ -56,6 +56,7 @@ const api = {
   importPowerpointSlides: (pptxPath, options) => ipcRenderer.invoke('slides:importPowerpoint', pptxPath, options),
   createTextSlide: (text, style, backgroundImage) => ipcRenderer.invoke('slides:createTextSlide', text, style, backgroundImage),
   importSlidesFromFolder: (folderPath, options) => ipcRenderer.invoke('slides:importFromFolder', folderPath, options),
+  importSlidesFromZip: (zipPath, options) => ipcRenderer.invoke('slides:importFromZip', zipPath, options),
   validateSlideFile: (filePath) => ipcRenderer.invoke('slides:validateFile', filePath),
   getSlideMetadata: (filePath) => ipcRenderer.invoke('slides:getMetadata', filePath),
   

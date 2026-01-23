@@ -3,6 +3,7 @@ const path = require('path');
 const { PDFDocument } = require('pdf-lib');
 const { fromPath } = require('pdf2pic');
 const sharp = require('sharp');
+const AdmZip = require('adm-zip');
 
 /**
  * Slides Service
@@ -509,11 +510,214 @@ async function getSlideMetadata(filePath) {
   }
 }
 
+/**
+ * Import slides from a zipped folder
+ * 
+ * Automatically extracts the zip file and imports all compatible slides.
+ * This is particularly useful for Dropbox downloads.
+ * 
+ * @param {string} zipPath - Path to the zip file
+ * @param {Object} options - Import options
+ * @param {number} options.dpi - Resolution for image conversion (default: 150)
+ * @param {string} options.format - Output format: 'png' or 'jpeg' (default: 'png')
+ * @param {boolean} options.deleteZip - Delete zip after extraction (default: false)
+ * @param {string} options.extractDir - Directory to extract to (default: same as zip location)
+ * @param {Function} progressCallback - Callback for progress updates
+ * @returns {Promise<Object>} Object with extracted folder path and imported slides
+ */
+async function importFromZip(zipPath, options = {}, progressCallback = null) {
+  const {
+    dpi = 150,
+    format = 'png',
+    deleteZip = false,
+    extractDir = null
+  } = options;
+
+  try {
+    // Validate zip file exists
+    if (!await fs.pathExists(zipPath)) {
+      throw new Error(`Zip file not found: ${zipPath}`);
+    }
+
+    // Validate file extension
+    const ext = path.extname(zipPath).toLowerCase();
+    if (ext !== '.zip') {
+      throw new Error('File must have .zip extension');
+    }
+
+    if (progressCallback) {
+      progressCallback({ 
+        current: 0, 
+        total: 100, 
+        message: 'Extracting zip file...' 
+      });
+    }
+
+    // Determine extraction directory
+    const baseDir = extractDir || path.dirname(zipPath);
+    const zipBaseName = path.basename(zipPath, '.zip');
+    const extractPath = path.join(baseDir, zipBaseName);
+
+    // Check if extraction directory already exists
+    if (await fs.pathExists(extractPath)) {
+      // Add timestamp to avoid conflicts
+      const timestamp = Date.now();
+      const uniqueExtractPath = path.join(baseDir, `${zipBaseName}_${timestamp}`);
+      
+      if (progressCallback) {
+        progressCallback({ 
+          current: 10, 
+          total: 100, 
+          message: `Folder exists, using ${path.basename(uniqueExtractPath)}...` 
+        });
+      }
+      
+      await extractZipFile(zipPath, uniqueExtractPath);
+      
+      if (progressCallback) {
+        progressCallback({ 
+          current: 30, 
+          total: 100, 
+          message: 'Zip extracted, importing slides...' 
+        });
+      }
+
+      // Import slides from extracted folder
+      const slides = await importFromFolder(uniqueExtractPath, {
+        dpi,
+        format,
+        recursive: true
+      }, (progress) => {
+        if (progressCallback) {
+          // Map folder import progress (0-100) to overall progress (30-90)
+          const overallProgress = 30 + Math.floor((progress.current / progress.total) * 60);
+          progressCallback({
+            current: overallProgress,
+            total: 100,
+            message: progress.message
+          });
+        }
+      });
+
+      // Clean up zip file if requested
+      if (deleteZip) {
+        if (progressCallback) {
+          progressCallback({ 
+            current: 95, 
+            total: 100, 
+            message: 'Cleaning up...' 
+          });
+        }
+        await fs.remove(zipPath);
+      }
+
+      if (progressCallback) {
+        progressCallback({ 
+          current: 100, 
+          total: 100, 
+          message: 'Import complete!' 
+        });
+      }
+
+      return {
+        extractedPath: uniqueExtractPath,
+        slides: slides,
+        slideCount: slides.length,
+        zipDeleted: deleteZip
+      };
+    } else {
+      // Extract to new directory
+      await extractZipFile(zipPath, extractPath);
+
+      if (progressCallback) {
+        progressCallback({ 
+          current: 30, 
+          total: 100, 
+          message: 'Zip extracted, importing slides...' 
+        });
+      }
+
+      // Import slides from extracted folder
+      const slides = await importFromFolder(extractPath, {
+        dpi,
+        format,
+        recursive: true
+      }, (progress) => {
+        if (progressCallback) {
+          // Map folder import progress (0-100) to overall progress (30-90)
+          const overallProgress = 30 + Math.floor((progress.current / progress.total) * 60);
+          progressCallback({
+            current: overallProgress,
+            total: 100,
+            message: progress.message
+          });
+        }
+      });
+
+      // Clean up zip file if requested
+      if (deleteZip) {
+        if (progressCallback) {
+          progressCallback({ 
+            current: 95, 
+            total: 100, 
+            message: 'Cleaning up...' 
+          });
+        }
+        await fs.remove(zipPath);
+      }
+
+      if (progressCallback) {
+        progressCallback({ 
+          current: 100, 
+          total: 100, 
+          message: 'Import complete!' 
+        });
+      }
+
+      return {
+        extractedPath: extractPath,
+        slides: slides,
+        slideCount: slides.length,
+        zipDeleted: deleteZip
+      };
+    }
+  } catch (error) {
+    throw new Error(`Failed to import from zip: ${error.message}`);
+  }
+}
+
+/**
+ * Extract a zip file to a directory
+ * 
+ * @param {string} zipPath - Path to the zip file
+ * @param {string} extractPath - Path to extract to
+ * @returns {Promise<void>}
+ */
+async function extractZipFile(zipPath, extractPath) {
+  try {
+    // Create extraction directory
+    await fs.ensureDir(extractPath);
+
+    // Extract zip file
+    const zip = new AdmZip(zipPath);
+    zip.extractAllTo(extractPath, true);
+
+    // Verify extraction
+    const files = await fs.readdir(extractPath);
+    if (files.length === 0) {
+      throw new Error('Zip file appears to be empty');
+    }
+  } catch (error) {
+    throw new Error(`Failed to extract zip: ${error.message}`);
+  }
+}
+
 module.exports = {
   importPdf,
   importPowerpoint,
   createTextSlide,
   importFromFolder,
+  importFromZip,
   validateSlideFile,
   getSlideMetadata
 };
