@@ -266,23 +266,21 @@ const Slide = ({
         );
 
       default: // Lyrics slide
+        const lineCount = slide.text ? slide.text.length : 0;
+        const fontSize = lineCount > LYRICS_FONT_SIZE_THRESHOLD ? LYRICS_FONT_SIZE_SMALL : LYRICS_FONT_SIZE_NORMAL;
+        
         return (
           <div className="slide-lyrics-container">
             {slide.section && (
               <div className="slide-lyrics-section">[{slide.section}]</div>
             )}
-            <div className="slide-lyrics-text" style={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              alignItems: 'flex-start',
-              gap: '0.25rem'
-            }}>
+            <div 
+              className="slide-lyrics-text" 
+              data-line-count={lineCount}
+              style={{ '--lyrics-font-size': fontSize }}
+            >
               {slide.text && Array.isArray(slide.text) && slide.text.map((line, i) => (
-                <p key={i} className="slide-lyrics-line" style={{ 
-                  margin: 0,
-                  fontSize: slide.text.length > LYRICS_FONT_SIZE_THRESHOLD ? LYRICS_FONT_SIZE_SMALL : LYRICS_FONT_SIZE_NORMAL,
-                  lineHeight: 1.2
-                }}>{line}</p>
+                <p key={i} className="slide-lyrics-line">{line}</p>
               ))}
             </div>
           </div>
