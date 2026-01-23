@@ -1,6 +1,10 @@
 /**
  * Scheduler Service
  * Handles scheduled event management and execution
+ * 
+ * ⚠️  NOTE: Database-dependent CRUD functions in this file are DEPRECATED.
+ * The IPC handlers now call json-storage methods directly for all CRUD operations.
+ * Only validateScheduledEvent() and any execution logic are still actively used.
  */
 
 /**
