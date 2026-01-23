@@ -175,12 +175,12 @@ async function validateForYouTube(videoPath) {
 /**
  * Add YouTube link for a presentation
  * @deprecated This function is deprecated. Use jsonStorage.addYouTubeLink() directly.
- * @param {Object} db - Database connection (unused, kept for compatibility)
+ * @param {Object} _unusedDb - Database connection (UNUSED - kept for API compatibility only)
  * @param {string} presentationPath - Path to presentation folder
  * @param {string} url - YouTube URL
  * @returns {Promise<Object>} Link object with id, url, and presentation_path
  */
-async function addYouTubeLink(db, presentationPath, url) {
+async function addYouTubeLink(_unusedDb, presentationPath, url) {
   console.warn('⚠️  youtube-service.addYouTubeLink is deprecated. Use jsonStorage.addYouTubeLink() instead.');
   // This function is kept for backward compatibility but should not be used
   // The JSON storage handles YouTube links directly via text files
@@ -190,11 +190,11 @@ async function addYouTubeLink(db, presentationPath, url) {
 /**
  * Get YouTube links for a presentation
  * @deprecated This function is deprecated. Use jsonStorage.getYouTubeLinks() directly.
- * @param {Object} db - Database connection (unused, kept for compatibility)
+ * @param {Object} _unusedDb - Database connection (UNUSED - kept for API compatibility only)
  * @param {string} presentationPath - Path to presentation folder
  * @returns {Promise<Array>} Array of YouTube links
  */
-async function getYouTubeLinks(db, presentationPath) {
+async function getYouTubeLinks(_unusedDb, presentationPath) {
   console.warn('⚠️  youtube-service.getYouTubeLinks is deprecated. Use jsonStorage.getYouTubeLinks() instead.');
   throw new Error('youtube-service.getYouTubeLinks is deprecated. Use jsonStorage.getYouTubeLinks() instead.');
 }
@@ -202,12 +202,12 @@ async function getYouTubeLinks(db, presentationPath) {
 /**
  * Delete YouTube link
  * @deprecated This function is deprecated. Use jsonStorage.deleteYouTubeLink() directly.
- * @param {Object} db - Database connection (unused, kept for compatibility)
+ * @param {Object} _unusedDb - Database connection (UNUSED - kept for API compatibility only)
  * @param {string} presentationPath - Path to presentation folder
  * @param {string} url - YouTube URL to delete
  * @returns {Promise<boolean>}
  */
-async function deleteYouTubeLink(db, presentationPath, url) {
+async function deleteYouTubeLink(_unusedDb, presentationPath, url) {
   console.warn('⚠️  youtube-service.deleteYouTubeLink is deprecated. Use jsonStorage.deleteYouTubeLink() instead.');
   throw new Error('youtube-service.deleteYouTubeLink is deprecated. Use jsonStorage.deleteYouTubeLink() instead.');
 }
