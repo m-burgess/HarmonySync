@@ -17,6 +17,7 @@ const windowService = require('./services/window-service');
 const macroService = require('./services/macro-service');
 const schedulerService = require('./services/scheduler-service');
 const httpServer = require('./services/http-server');
+const remoteControlService = require('./services/remote-control-service');
 let midiManager;
 try {
   midiManager = require('./services/midi-manager');
@@ -101,6 +102,7 @@ function createMainWindow() {
     
     // Stop services
     await httpServer.stop();
+    await remoteControlService.stop();
     await stopAudioService();
     
     mainWindow.destroy();
@@ -336,6 +338,16 @@ app.whenReady().then(async () => {
     // Start HTTP server for video streaming
     await httpServer.start();
     
+    // Create windows first (needed for remote control service)
+    createMainWindow();
+    createAudienceWindow();
+    createConfidenceWindow();
+    createLowerThirdsWindow();
+    
+    // Initialize and start remote control service
+    remoteControlService.initialize(() => mainWindow);
+    await remoteControlService.start();
+    
     // Start audio service
     await startAudioService();
     
@@ -349,12 +361,6 @@ app.whenReady().then(async () => {
     if (midiManager) {
       await midiManager.initialize();
     }
-    
-    // Create windows
-    createMainWindow();
-    createAudienceWindow();
-    createConfidenceWindow();
-    createLowerThirdsWindow();
     
     console.log('Application initialized successfully');
   } catch (error) {
@@ -375,6 +381,7 @@ app.on('before-quit', async () => {
   await stopVideoService();
   await stopImageService();
   await httpServer.stop();
+  await remoteControlService.stop();
 });
 
 app.on('activate', () => {
@@ -401,6 +408,7 @@ require('./ipc-handlers')(ipcMain, {
   macroService,
   schedulerService,
   httpServer,
+  remoteControlService,
   midiManager,
   lyricsFetcher,
   fileManager,
