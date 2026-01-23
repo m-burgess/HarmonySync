@@ -5,10 +5,14 @@ import { Card, Button } from '../ui';
 import '../../styles/components/Slide.css';
 
 // Constants for lyrics display
-const LYRICS_FONT_SIZE_THRESHOLD = 6; // Number of lines that triggers smaller font size
+// LYRICS_FONT_SIZE_THRESHOLD: Sections with more than 6 lines use smaller font to fit more content
+// 6 is chosen as the typical verse/chorus length, allowing readability without shrinking unnecessarily
+const LYRICS_FONT_SIZE_THRESHOLD = 6;
 const LYRICS_FONT_SIZE_NORMAL = '0.8rem';
 const LYRICS_FONT_SIZE_SMALL = '0.7rem';
-const LYRICS_MAX_LINES = 12; // Maximum lines to display per section for readability
+// LYRICS_MAX_LINES: Limit to 12 lines for thumbnail readability and consistent slide appearance
+// Sections longer than 12 lines are truncated with an indicator; full lyrics still display on audience screen
+const LYRICS_MAX_LINES = 12;
 
 const Slide = ({
   slide,
@@ -289,7 +293,7 @@ const Slide = ({
                 <p key={i} className="slide-lyrics-line">{line}</p>
               ))}
               {hasMoreLines && (
-                <p className="slide-lyrics-line" style={{ opacity: 0.5, fontStyle: 'italic' }}>
+                <p className="slide-lyrics-line slide-lyrics-truncation">
                   ...{lineCount - LYRICS_MAX_LINES} more lines
                 </p>
               )}

@@ -243,6 +243,12 @@
   word-wrap: break-word;
 }
 
+/* Truncation indicator for sections with many lines */
+.slide-lyrics-truncation {
+  opacity: 0.5;
+  font-style: italic;
+}
+
 /* Dynamic font sizing for vertical sections */
 .slide-lyrics-text[data-line-count] .slide-lyrics-line {
   font-size: var(--lyrics-font-size, 0.8rem);

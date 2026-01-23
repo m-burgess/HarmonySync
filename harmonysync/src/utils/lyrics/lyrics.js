@@ -10,7 +10,7 @@ export function parseLyricsToSlides(lyricsText) {
 	let currentSectionLines = [];
 
 	// Split and trim lines, but preserve empty lines for now to maintain structure
-	// Empty lines are filtered when adding to sections (line 35)
+	// Empty lines are filtered when adding to sections (line 36)
 	const lines = lyricsText.split(/\r?\n/).map(line => line.trim());
 
 	for (const line of lines) {
