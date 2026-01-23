@@ -265,9 +265,18 @@ const Slide = ({
             {slide.section && (
               <div className="slide-lyrics-section">[{slide.section}]</div>
             )}
-            <div className="slide-lyrics-text">
-              {slide.text && Array.isArray(slide.text) && slide.text.slice(0, 4).map((line, i) => (
-                <p key={i} className="slide-lyrics-line">{line}</p>
+            <div className="slide-lyrics-text" style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'flex-start',
+              gap: '0.25rem'
+            }}>
+              {slide.text && Array.isArray(slide.text) && slide.text.map((line, i) => (
+                <p key={i} className="slide-lyrics-line" style={{ 
+                  margin: 0,
+                  fontSize: slide.text.length > 6 ? '0.7rem' : '0.8rem', // Smaller font for longer sections
+                  lineHeight: 1.2
+                }}>{line}</p>
               ))}
             </div>
           </div>
