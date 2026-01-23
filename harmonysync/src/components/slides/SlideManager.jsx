@@ -37,6 +37,21 @@ const SlideManager = ({ allSlides, setAllSlides, selectedSlide, setSelectedSlide
     }
   };
 
+  // Handle imported service (from zip file)
+  const handleServiceImported = (serviceStructure) => {
+    console.log('[SlideManager] Service imported:', serviceStructure);
+    
+    // Emit event to notify the app that a service was imported
+    // The SetlistManager can listen to this event and add the service to the setlist
+    if (window.electronAPI && window.electronAPI.sendToMain) {
+      window.electronAPI.sendToMain('service-imported', serviceStructure);
+    }
+    
+    // Also emit a custom event for the SetlistManager
+    const customEvent = new CustomEvent('service-imported', { detail: serviceStructure });
+    window.dispatchEvent(customEvent);
+  };
+
   // Calculate grid height based on available space
   const updateGridHeight = useCallback(() => {
     if (gridContainerRef.current) {
@@ -246,6 +261,7 @@ const SlideManager = ({ allSlides, setAllSlides, selectedSlide, setSelectedSlide
         isOpen={showImportModal}
         onClose={() => setShowImportModal(false)}
         onSlidesImported={handleSlidesImported}
+        onServiceImported={handleServiceImported}
       />
     </div>
   );

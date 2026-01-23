@@ -514,6 +514,7 @@ async function getSlideMetadata(filePath) {
  * Import slides from a zipped folder
  * 
  * Automatically extracts the zip file and imports all compatible slides.
+ * Also extracts complete service folders to "Service Order" directory.
  * This is particularly useful for Dropbox downloads.
  * 
  * @param {string} zipPath - Path to the zip file
@@ -521,7 +522,8 @@ async function getSlideMetadata(filePath) {
  * @param {number} options.dpi - Resolution for image conversion (default: 150)
  * @param {string} options.format - Output format: 'png' or 'jpeg' (default: 'png')
  * @param {boolean} options.deleteZip - Delete zip after extraction (default: false)
- * @param {string} options.extractDir - Directory to extract to (default: same as zip location)
+ * @param {string} options.extractDir - Directory to extract to (default: Service Order in userData)
+ * @param {boolean} options.importSlidesOnly - Only import slides, don't extract full service (default: false)
  * @param {Function} progressCallback - Callback for progress updates
  * @returns {Promise<Object>} Object with extracted folder path and imported slides
  */
@@ -530,7 +532,8 @@ async function importFromZip(zipPath, options = {}, progressCallback = null) {
     dpi = 150,
     format = 'png',
     deleteZip = false,
-    extractDir = null
+    extractDir = null,
+    importSlidesOnly = false
   } = options;
 
   try {
@@ -554,7 +557,19 @@ async function importFromZip(zipPath, options = {}, progressCallback = null) {
     }
 
     // Determine extraction directory
-    const baseDir = extractDir || path.dirname(zipPath);
+    // Default to "Service Order" in user's documents or home directory
+    let baseDir;
+    if (extractDir) {
+      baseDir = extractDir;
+    } else {
+      const { app } = require('electron');
+      const userDataPath = app.getPath('userData');
+      baseDir = path.join(userDataPath, 'Service Order');
+    }
+    
+    // Ensure base directory exists
+    await fs.ensureDir(baseDir);
+    
     const zipBaseName = path.basename(zipPath, '.zip');
     const extractPath = path.join(baseDir, zipBaseName);
 
@@ -578,26 +593,30 @@ async function importFromZip(zipPath, options = {}, progressCallback = null) {
         progressCallback({ 
           current: 30, 
           total: 100, 
-          message: 'Zip extracted, importing slides...' 
+          message: importSlidesOnly ? 'Zip extracted, importing slides...' : 'Service extracted successfully!' 
         });
       }
 
-      // Import slides from extracted folder
-      const slides = await importFromFolder(uniqueExtractPath, {
-        dpi,
-        format,
-        recursive: true
-      }, (progress) => {
-        if (progressCallback) {
-          // Map folder import progress (0-100) to overall progress (30-90)
-          const overallProgress = 30 + Math.floor((progress.current / progress.total) * 60);
-          progressCallback({
-            current: overallProgress,
-            total: 100,
-            message: progress.message
-          });
-        }
-      });
+      let slides = [];
+      
+      // Only import slides if requested (for backward compatibility)
+      if (importSlidesOnly) {
+        slides = await importFromFolder(uniqueExtractPath, {
+          dpi,
+          format,
+          recursive: true
+        }, (progress) => {
+          if (progressCallback) {
+            // Map folder import progress (0-100) to overall progress (30-90)
+            const overallProgress = 30 + Math.floor((progress.current / progress.total) * 60);
+            progressCallback({
+              current: overallProgress,
+              total: 100,
+              message: progress.message
+            });
+          }
+        });
+      }
 
       // Clean up zip file if requested
       if (deleteZip) {
@@ -615,7 +634,7 @@ async function importFromZip(zipPath, options = {}, progressCallback = null) {
         progressCallback({ 
           current: 100, 
           total: 100, 
-          message: 'Import complete!' 
+          message: importSlidesOnly ? 'Import complete!' : 'Service ready to load!' 
         });
       }
 
@@ -623,7 +642,8 @@ async function importFromZip(zipPath, options = {}, progressCallback = null) {
         extractedPath: uniqueExtractPath,
         slides: slides,
         slideCount: slides.length,
-        zipDeleted: deleteZip
+        zipDeleted: deleteZip,
+        servicePath: uniqueExtractPath // Path to the extracted service folder
       };
     } else {
       // Extract to new directory
@@ -633,26 +653,30 @@ async function importFromZip(zipPath, options = {}, progressCallback = null) {
         progressCallback({ 
           current: 30, 
           total: 100, 
-          message: 'Zip extracted, importing slides...' 
+          message: importSlidesOnly ? 'Zip extracted, importing slides...' : 'Service extracted successfully!' 
         });
       }
 
-      // Import slides from extracted folder
-      const slides = await importFromFolder(extractPath, {
-        dpi,
-        format,
-        recursive: true
-      }, (progress) => {
-        if (progressCallback) {
-          // Map folder import progress (0-100) to overall progress (30-90)
-          const overallProgress = 30 + Math.floor((progress.current / progress.total) * 60);
-          progressCallback({
-            current: overallProgress,
-            total: 100,
-            message: progress.message
-          });
-        }
-      });
+      let slides = [];
+      
+      // Only import slides if requested
+      if (importSlidesOnly) {
+        slides = await importFromFolder(extractPath, {
+          dpi,
+          format,
+          recursive: true
+        }, (progress) => {
+          if (progressCallback) {
+            // Map folder import progress (0-100) to overall progress (30-90)
+            const overallProgress = 30 + Math.floor((progress.current / progress.total) * 60);
+            progressCallback({
+              current: overallProgress,
+              total: 100,
+              message: progress.message
+            });
+          }
+        });
+      }
 
       // Clean up zip file if requested
       if (deleteZip) {
@@ -670,7 +694,7 @@ async function importFromZip(zipPath, options = {}, progressCallback = null) {
         progressCallback({ 
           current: 100, 
           total: 100, 
-          message: 'Import complete!' 
+          message: importSlidesOnly ? 'Import complete!' : 'Service ready to load!' 
         });
       }
 
@@ -678,7 +702,8 @@ async function importFromZip(zipPath, options = {}, progressCallback = null) {
         extractedPath: extractPath,
         slides: slides,
         slideCount: slides.length,
-        zipDeleted: deleteZip
+        zipDeleted: deleteZip,
+        servicePath: extractPath // Path to the extracted service folder
       };
     }
   } catch (error) {
@@ -712,12 +737,109 @@ async function extractZipFile(zipPath, extractPath) {
   }
 }
 
+/**
+ * Scan an extracted service folder and return its structure
+ * 
+ * @param {string} servicePath - Path to the service folder
+ * @returns {Promise<Object>} Service structure with songs, videos, images, etc.
+ */
+async function scanServiceFolder(servicePath) {
+  try {
+    const serviceStructure = {
+      path: servicePath,
+      name: path.basename(servicePath),
+      songs: [],
+      videos: [],
+      images: [],
+      slides: [],
+      otherFiles: []
+    };
+
+    // Read all entries in the service folder
+    const entries = await fs.readdir(servicePath, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const fullPath = path.join(servicePath, entry.name);
+
+      if (entry.isDirectory()) {
+        // Check if this is a song folder (contains 'ogg' subfolder)
+        const oggDir = path.join(fullPath, 'ogg');
+        const oggExists = await fs.pathExists(oggDir);
+
+        if (oggExists) {
+          // This is a song folder
+          try {
+            const oggFiles = await fs.readdir(oggDir);
+            const tracks = oggFiles
+              .filter(f => f.endsWith('.ogg'))
+              .sort()
+              .map(f => ({ file_path: path.join(oggDir, f), track_name: f }));
+
+            // Check for lyrics.txt
+            let lyrics = '';
+            const lyricsPath = path.join(fullPath, 'lyrics.txt');
+            if (await fs.pathExists(lyricsPath)) {
+              lyrics = await fs.readFile(lyricsPath, 'utf-8');
+            }
+
+            serviceStructure.songs.push({
+              id: `song-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              path: fullPath,
+              name: entry.name,
+              type: 'song',
+              tracks,
+              lyrics,
+              loaded: false
+            });
+          } catch (e) {
+            console.warn('Failed to read song folder:', fullPath, e);
+          }
+        }
+      } else if (entry.isFile()) {
+        const ext = path.extname(entry.name).toLowerCase();
+        
+        // Categorize files
+        if (['.mp4', '.mov', '.avi', '.mkv', '.webm'].includes(ext)) {
+          serviceStructure.videos.push({
+            name: entry.name,
+            path: fullPath,
+            type: 'video'
+          });
+        } else if (['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'].includes(ext)) {
+          serviceStructure.images.push({
+            name: entry.name,
+            path: fullPath,
+            type: 'image'
+          });
+        } else if (['.pdf', '.pptx', '.ppt'].includes(ext)) {
+          serviceStructure.slides.push({
+            name: entry.name,
+            path: fullPath,
+            type: 'slide-file'
+          });
+        } else if (ext === '.txt' && entry.name !== 'lyrics.txt') {
+          serviceStructure.otherFiles.push({
+            name: entry.name,
+            path: fullPath,
+            type: 'text'
+          });
+        }
+      }
+    }
+
+    return serviceStructure;
+  } catch (error) {
+    throw new Error(`Failed to scan service folder: ${error.message}`);
+  }
+}
+
 module.exports = {
   importPdf,
   importPowerpoint,
   createTextSlide,
   importFromFolder,
   importFromZip,
+  scanServiceFolder,
   validateSlideFile,
   getSlideMetadata
 };
