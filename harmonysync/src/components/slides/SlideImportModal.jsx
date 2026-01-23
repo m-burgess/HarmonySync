@@ -41,6 +41,7 @@ const SlideImportModal = ({ isOpen, onClose, onSlidesImported }) => {
   // Listen for import progress updates
   useEffect(() => {
     if (!window.electronAPI || !window.electronAPI.onSlidesImportProgress) {
+      console.warn('Electron API not available for slide import progress');
       return;
     }
 
@@ -91,6 +92,12 @@ const SlideImportModal = ({ isOpen, onClose, onSlidesImported }) => {
   };
 
   const handleImport = async () => {
+    // Check if Electron API is available
+    if (!window.electronAPI) {
+      setError('Electron API not available. Please ensure you are running in the Electron environment.');
+      return;
+    }
+
     setIsImporting(true);
     setError(null);
     setProgress(null);
@@ -268,17 +275,17 @@ const SlideImportModal = ({ isOpen, onClose, onSlidesImported }) => {
                 <span className="text-sm text-primary">
                   {progress.message || 'Importing slides...'}
                 </span>
-                {progress.page && progress.total && (
+                {progress.current && progress.total && (
                   <span className="text-sm text-muted">
-                    {progress.page} / {progress.total}
+                    {progress.current} / {progress.total}
                   </span>
                 )}
               </div>
-              {progress.page && progress.total && (
+              {progress.current && progress.total && (
                 <div className="w-full bg-border rounded-full h-2">
                   <div
                     className="bg-accent h-2 rounded-full transition-all"
-                    style={{ width: `${(progress.page / progress.total) * 100}%` }}
+                    style={{ width: `${(progress.current / progress.total) * 100}%` }}
                   />
                 </div>
               )}

@@ -666,16 +666,16 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
 
   // Slides Service handlers
   ipcMain.handle('slides:importPdf', async (event, pdfPath, options) => {
-    return await services.slidesService.importPdf(pdfPath, options, (page, total) => {
+    return await services.slidesService.importPdf(pdfPath, options, (progress) => {
       const win = mainWindow();
-      if (win) win.webContents.send('slides-import-progress', { page, total, type: 'pdf' });
+      if (win) win.webContents.send('slides-import-progress', { ...progress, type: 'pdf' });
     });
   });
 
   ipcMain.handle('slides:importPowerpoint', async (event, pptxPath, options) => {
-    return await services.slidesService.importPowerpoint(pptxPath, options, (progress, total, message) => {
+    return await services.slidesService.importPowerpoint(pptxPath, options, (progress) => {
       const win = mainWindow();
-      if (win) win.webContents.send('slides-import-progress', { progress, total, message, type: 'powerpoint' });
+      if (win) win.webContents.send('slides-import-progress', { ...progress, type: 'powerpoint' });
     });
   });
 
@@ -684,9 +684,9 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
   });
 
   ipcMain.handle('slides:importFromFolder', async (event, folderPath, options) => {
-    return await services.slidesService.importFromFolder(folderPath, options, (current, total, message) => {
+    return await services.slidesService.importFromFolder(folderPath, options, (progress) => {
       const win = mainWindow();
-      if (win) win.webContents.send('slides-import-progress', { current, total, message, type: 'folder' });
+      if (win) win.webContents.send('slides-import-progress', { ...progress, type: 'folder' });
     });
   });
 

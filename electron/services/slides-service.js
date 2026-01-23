@@ -70,7 +70,11 @@ async function importPdf(pdfPath, options = {}, progressCallback = null) {
     // Convert each page to image
     for (let pageNum = 1; pageNum <= pageCount; pageNum++) {
       if (progressCallback) {
-        progressCallback(pageNum, pageCount);
+        progressCallback({ 
+          current: pageNum, 
+          total: pageCount, 
+          message: `Converting page ${pageNum} of ${pageCount}` 
+        });
       }
 
       const result = await convert(pageNum, { responseType: 'image' });
@@ -148,20 +152,34 @@ async function importPowerpoint(pptxPath, options = {}, progressCallback = null)
     const pdfPath = path.join(tempDir, 'converted.pdf');
     
     if (progressCallback) {
-      progressCallback(0, 100, 'Converting PowerPoint to PDF...');
+      progressCallback({ current: 0, total: 100, message: 'Converting PowerPoint to PDF...' });
     }
 
     try {
-      execSync(
-        `libreoffice --headless --convert-to pdf --outdir "${tempDir}" "${pptxPath}"`,
-        { stdio: 'pipe', timeout: 60000 }
-      );
+      // Use array syntax to avoid command injection
+      const { spawnSync } = require('child_process');
+      let result = spawnSync('libreoffice', [
+        '--headless',
+        '--convert-to', 'pdf',
+        '--outdir', tempDir,
+        pptxPath
+      ], { timeout: 60000 });
+      
+      // Try alternative command if first fails
+      if (result.error) {
+        result = spawnSync('soffice', [
+          '--headless',
+          '--convert-to', 'pdf',
+          '--outdir', tempDir,
+          pptxPath
+        ], { timeout: 60000 });
+      }
+      
+      if (result.error) {
+        throw result.error;
+      }
     } catch (e) {
-      // Try alternative command
-      execSync(
-        `soffice --headless --convert-to pdf --outdir "${tempDir}" "${pptxPath}"`,
-        { stdio: 'pipe', timeout: 60000 }
-      );
+      throw new Error(`PowerPoint conversion failed: ${e.message}`);
     }
 
     // Find the generated PDF
@@ -175,7 +193,7 @@ async function importPowerpoint(pptxPath, options = {}, progressCallback = null)
     const convertedPdfPath = path.join(tempDir, pdfFile);
 
     if (progressCallback) {
-      progressCallback(50, 100, 'Converting PDF to images...');
+      progressCallback({ current: 50, total: 100, message: 'Converting PDF to images...' });
     }
 
     // Import the PDF
@@ -185,7 +203,11 @@ async function importPowerpoint(pptxPath, options = {}, progressCallback = null)
     }, (page, total) => {
       if (progressCallback) {
         const progress = 50 + Math.floor((page / total) * 50);
-        progressCallback(progress, 100, `Processing slide ${page} of ${total}`);
+        progressCallback({ 
+          current: progress, 
+          total: 100, 
+          message: `Processing slide ${page} of ${total}` 
+        });
       }
     });
 
@@ -319,7 +341,11 @@ async function importFromFolder(folderPath, options = {}, progressCallback = nul
       const ext = path.extname(filePath).toLowerCase();
       
       if (progressCallback) {
-        progressCallback(i + 1, files.length, `Importing ${path.basename(filePath)}...`);
+        progressCallback({ 
+          current: i + 1, 
+          total: files.length, 
+          message: `Importing ${path.basename(filePath)}...` 
+        });
       }
 
       try {
