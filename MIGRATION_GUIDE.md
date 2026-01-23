@@ -214,7 +214,7 @@ npm run build:mac
 │  └───────────────────────────────────┘  │
 │  ┌───────────────────────────────────┐  │
 │  │  Services (Node.js)               │  │
-│  │  - database.js                    │  │
+│  │  - json-storage.js                │  │
 │  │  - ffmpeg.js (transposition)      │  │
 │  │  - http-server.js                 │  │
 │  │  - google-drive.js                │  │
