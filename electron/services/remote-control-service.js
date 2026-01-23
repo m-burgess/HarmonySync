@@ -71,12 +71,22 @@ let server = null;
 let app = null;
 let mainWindow = null;
 const PORT = 3000;
+let cachedIPAddress = null; // Cache IP address to avoid recalculation
 
 /**
  * Get the local network IP address
  * @returns {string} The IP address or 'localhost' if not found
+ * 
+ * Note: This function is duplicated in http-server.js. In a future refactor,
+ * consider extracting to a shared utility module (e.g., network-utils.js)
+ * to avoid code duplication.
  */
 function getLocalIPAddress() {
+  // Return cached value if available
+  if (cachedIPAddress) {
+    return cachedIPAddress;
+  }
+  
   const interfaces = os.networkInterfaces();
   
   // Try to find local IP address
@@ -84,12 +94,14 @@ function getLocalIPAddress() {
     for (const iface of interfaces[name]) {
       // Skip internal and non-IPv4 addresses
       if (!iface.internal && iface.family === 'IPv4') {
-        return iface.address;
+        cachedIPAddress = iface.address;
+        return cachedIPAddress;
       }
     }
   }
   
-  return 'localhost';
+  cachedIPAddress = 'localhost';
+  return cachedIPAddress;
 }
 
 /**
