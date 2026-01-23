@@ -86,7 +86,7 @@ npm run test:coverage # Run with coverage
 - `sharp` - Image processing
 - `googleapis` - Google Drive integration
 - `dropbox` - Dropbox integration
-- `better-sqlite3` - Database operations
+- `fs-extra` - JSON file operations
 - `jest` - Testing framework
 
 ---
