@@ -68,6 +68,26 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks }) => {
     };
   }, [autoplayEnabled, currentSongIndex, setlist]);
 
+  // Listen for service import events from zip files
+  useEffect(() => {
+    const handleServiceImported = (event) => {
+      const serviceStructure = event.detail;
+      console.log('[SetlistManager] Service imported event received:', serviceStructure);
+      
+      // Auto-add all songs from the service to the setlist
+      if (serviceStructure && serviceStructure.songs && serviceStructure.songs.length > 0) {
+        setSetlist((prevSetlist) => [...prevSetlist, ...serviceStructure.songs]);
+        console.log(`[SetlistManager] Added ${serviceStructure.songs.length} songs from service to setlist`);
+      }
+    };
+
+    window.addEventListener('service-imported', handleServiceImported);
+    
+    return () => {
+      window.removeEventListener('service-imported', handleServiceImported);
+    };
+  }, []);
+
   // Update current song index when manually clicking setlist items
   const handleSetlistItemClickWithIndex = async (item, index) => {
     setCurrentSongIndex(index);
