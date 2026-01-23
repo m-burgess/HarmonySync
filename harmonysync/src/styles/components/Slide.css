@@ -176,8 +176,10 @@
   color: white;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
+  align-items: center;
   border-radius: 0.5rem;
+  overflow: hidden;
 }
 
 .slide-lyrics-section {
@@ -187,21 +189,69 @@
   margin-bottom: 0.5rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  width: 100%;
+  text-align: center;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid rgba(34, 211, 238, 0.3);
 }
 
 .slide-lyrics-text {
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: clamp(0.125rem, calc(var(--slide-width) / 80), 0.5rem);
+  justify-content: flex-start;
+  align-items: flex-start;
+  width: 100%;
+  gap: 0.25rem;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+  /* Accessibility: ensure focus indicator and scrollbar visibility */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(34, 211, 238, 0.5) rgba(0, 0, 0, 0.2);
+}
+
+.slide-lyrics-text:focus-within {
+  outline: 2px solid rgba(34, 211, 238, 0.5);
+  outline-offset: 2px;
+}
+
+/* Webkit browsers scrollbar styling */
+.slide-lyrics-text::-webkit-scrollbar {
+  width: 6px;
+}
+
+.slide-lyrics-text::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.slide-lyrics-text::-webkit-scrollbar-thumb {
+  background: rgba(34, 211, 238, 0.5);
+  border-radius: 3px;
+}
+
+.slide-lyrics-text::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 211, 238, 0.7);
 }
 
 .slide-lyrics-line {
   margin: 0;
   font-size: 0.75rem;
-  line-height: 1.3;
+  line-height: 1.2;
   opacity: 0.9;
+  width: 100%;
+  word-wrap: break-word;
+}
+
+/* Truncation indicator for sections with many lines */
+.slide-lyrics-truncation {
+  opacity: 0.5;
+  font-style: italic;
+}
+
+/* Dynamic font sizing for vertical sections */
+.slide-lyrics-text[data-line-count] .slide-lyrics-line {
+  font-size: var(--lyrics-font-size, 0.8rem);
 }
 
 .slide-small .slide-lyrics-line {
