@@ -31,6 +31,7 @@ const dropboxService = require('./services/dropbox-service');
 const scriptService = require('./services/script-service');
 const scriptingAPI = require('./services/scripting-api');
 const eventTriggerService = require('./services/event-trigger-service');
+const slidesService = require('./services/slides-service');
 
 const isDev = process.env.NODE_ENV === 'development';
 const VITE_DEV_SERVER_URL = 'http://localhost:5174';
@@ -406,7 +407,8 @@ require('./ipc-handlers')(ipcMain, {
   googleDriveService,
   dropboxService,
   scriptService,
-  scriptingAPI
+  scriptingAPI,
+  slidesService
 });
 
 // Initialize script storage
