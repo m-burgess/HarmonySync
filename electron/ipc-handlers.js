@@ -663,4 +663,49 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
   ipcMain.handle('scheduler:validate', async (event, scheduledEvent) => {
     return schedulerService.validateScheduledEvent(scheduledEvent);
   });
+
+  // Slides Service handlers
+  ipcMain.handle('slides:importPdf', async (event, pdfPath, options) => {
+    return await services.slidesService.importPdf(pdfPath, options, (progress) => {
+      const win = mainWindow();
+      if (win) win.webContents.send('slides-import-progress', { ...progress, type: 'pdf' });
+    });
+  });
+
+  ipcMain.handle('slides:importPowerpoint', async (event, pptxPath, options) => {
+    return await services.slidesService.importPowerpoint(pptxPath, options, (progress) => {
+      const win = mainWindow();
+      if (win) win.webContents.send('slides-import-progress', { ...progress, type: 'powerpoint' });
+    });
+  });
+
+  ipcMain.handle('slides:createTextSlide', async (event, text, style, backgroundImage) => {
+    return await services.slidesService.createTextSlide(text, style, backgroundImage);
+  });
+
+  ipcMain.handle('slides:importFromFolder', async (event, folderPath, options) => {
+    return await services.slidesService.importFromFolder(folderPath, options, (progress) => {
+      const win = mainWindow();
+      if (win) win.webContents.send('slides-import-progress', { ...progress, type: 'folder' });
+    });
+  });
+
+  ipcMain.handle('slides:validateFile', async (event, filePath) => {
+    return await services.slidesService.validateSlideFile(filePath);
+  });
+
+  ipcMain.handle('slides:getMetadata', async (event, filePath) => {
+    return await services.slidesService.getSlideMetadata(filePath);
+  });
+
+  ipcMain.handle('slides:importFromZip', async (event, zipPath, options) => {
+    return await services.slidesService.importFromZip(zipPath, options, (progress) => {
+      const win = mainWindow();
+      if (win) win.webContents.send('slides-import-progress', { ...progress, type: 'zip' });
+    });
+  });
+
+  ipcMain.handle('slides:scanServiceFolder', async (event, servicePath) => {
+    return await services.slidesService.scanServiceFolder(servicePath);
+  });
 };
