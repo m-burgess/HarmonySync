@@ -20,8 +20,7 @@ export function parseLyricsToSlides(lyricsText) {
 				slides.push({ 
 					text: currentSectionLines, 
 					section: currentSection,
-					type: 'lyric',
-					displayMode: 'vertical-section' // Mark this as a vertical section display
+					type: 'lyric'
 				});
 				currentSectionLines = [];
 			}
@@ -41,8 +40,7 @@ export function parseLyricsToSlides(lyricsText) {
 		slides.push({ 
 			text: currentSectionLines, 
 			section: currentSection,
-			type: 'lyric',
-			displayMode: 'vertical-section'
+			type: 'lyric'
 		});
 	}
 
