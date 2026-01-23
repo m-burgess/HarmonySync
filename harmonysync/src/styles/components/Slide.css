@@ -205,6 +205,33 @@
   gap: 0.25rem;
   overflow-y: auto;
   padding-right: 0.25rem;
+  /* Accessibility: ensure focus indicator and scrollbar visibility */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(34, 211, 238, 0.5) rgba(0, 0, 0, 0.2);
+}
+
+.slide-lyrics-text:focus-within {
+  outline: 2px solid rgba(34, 211, 238, 0.5);
+  outline-offset: 2px;
+}
+
+/* Webkit browsers scrollbar styling */
+.slide-lyrics-text::-webkit-scrollbar {
+  width: 6px;
+}
+
+.slide-lyrics-text::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.slide-lyrics-text::-webkit-scrollbar-thumb {
+  background: rgba(34, 211, 238, 0.5);
+  border-radius: 3px;
+}
+
+.slide-lyrics-text::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 211, 238, 0.7);
 }
 
 .slide-lyrics-line {

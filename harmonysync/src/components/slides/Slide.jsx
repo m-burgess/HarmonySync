@@ -8,6 +8,7 @@ import '../../styles/components/Slide.css';
 const LYRICS_FONT_SIZE_THRESHOLD = 6; // Number of lines that triggers smaller font size
 const LYRICS_FONT_SIZE_NORMAL = '0.8rem';
 const LYRICS_FONT_SIZE_SMALL = '0.7rem';
+const LYRICS_MAX_LINES = 12; // Maximum lines to display per section for readability
 
 const Slide = ({
   slide,
@@ -268,6 +269,9 @@ const Slide = ({
       default: // Lyrics slide
         const lineCount = slide.text ? slide.text.length : 0;
         const fontSize = lineCount > LYRICS_FONT_SIZE_THRESHOLD ? LYRICS_FONT_SIZE_SMALL : LYRICS_FONT_SIZE_NORMAL;
+        // Limit lines to maintain readability; sections with many lines will be scrollable
+        const displayLines = slide.text ? slide.text.slice(0, LYRICS_MAX_LINES) : [];
+        const hasMoreLines = lineCount > LYRICS_MAX_LINES;
         
         return (
           <div className="slide-lyrics-container">
@@ -278,10 +282,17 @@ const Slide = ({
               className="slide-lyrics-text" 
               data-line-count={lineCount}
               style={{ '--lyrics-font-size': fontSize }}
+              role="region"
+              aria-label={`Lyrics for ${slide.section || 'section'}`}
             >
-              {slide.text && Array.isArray(slide.text) && slide.text.map((line, i) => (
+              {displayLines.map((line, i) => (
                 <p key={i} className="slide-lyrics-line">{line}</p>
               ))}
+              {hasMoreLines && (
+                <p className="slide-lyrics-line" style={{ opacity: 0.5, fontStyle: 'italic' }}>
+                  ...{lineCount - LYRICS_MAX_LINES} more lines
+                </p>
+              )}
             </div>
           </div>
         );
