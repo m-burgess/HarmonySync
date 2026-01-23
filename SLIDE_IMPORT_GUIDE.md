@@ -1,8 +1,8 @@
-# Slide Import Feature
+# Slide Import & Service Import Feature
 
 ## Overview
 
-HarmonySync now supports importing slides from various sources, making it easy to integrate presentations into your worship services.
+HarmonySync now supports importing slides from various sources AND complete service imports from zip files, making it easy to integrate presentations and entire worship services into your workflow.
 
 ## Supported Formats
 
@@ -16,11 +16,18 @@ HarmonySync now supports importing slides from various sources, making it easy t
 - **Requires LibreOffice** to be installed on your system
 - Automatically converts PowerPoint slides to images
 
-### Zip Files (NEW!)
-- **Automatic extraction and import** of zipped folders
-- Perfect for Dropbox downloads
-- **Drag-and-drop support** for quick imports
-- Automatically processes all compatible files inside the zip
+### Zip Files - Complete Service Import (NEW!)
+- **Full service package import** from zipped folders
+- Extracts to "Service Order" directory in your user data folder
+- **Automatically imports all content types:**
+  - Song folders (with audio tracks and lyrics.txt)
+  - Video background loops
+  - Announcement images
+  - Sermon images or videos
+  - PDF and PowerPoint slides
+- **Drag-and-drop support** for instant setup
+- **Auto-adds songs to setlist** - ready to use immediately
+- Perfect for Dropbox downloads or team collaboration
 - Option to delete zip file after extraction
 
 ### Batch Import
@@ -96,24 +103,60 @@ Choose the output format:
 - Complex animations are converted to static images
 - Embedded videos are not preserved
 
-### For Zip Import (NEW!)
+### For Zip Import - Complete Service (NEW!)
 
-- **Perfect for Dropbox downloads**: Download your presentation folder as a zip from Dropbox
+- **Perfect for complete service packages**: Zip files containing entire worship services
 - **Drag and drop**: Simply drag the zip file onto the import dialog
-- **Automatic extraction**: The zip is automatically extracted to a folder
-- **Smart import**: All compatible files (PDF, PowerPoint) inside are automatically imported
+- **Automatic extraction to "Service Order"**: Extracted to dedicated folder in user data
+- **Full service import**: All content types recognized and imported:
+  - Song folders with audio tracks
+  - Lyrics.txt files automatically associated
+  - Video background loops
+  - Announcement images
+  - Sermon media (images/videos)
+  - PDF and PowerPoint slides
+- **Auto-add to setlist**: Songs automatically added and ready to play
 - **Clean up**: Option to automatically delete the zip file after extraction
-- **Use case**: Great for sharing presentations between team members or downloading from cloud storage
+- **Use cases**:
+  - Downloading complete services from Dropbox
+  - Sharing services between team members
+  - Preparing services offline and importing later
+  - Backing up and restoring services
 
-#### Zip Import Workflow Example:
+#### Complete Service Import Workflow:
 
-1. Download presentation folder from Dropbox as a .zip file
-2. Open HarmonySync and click the Slides import button
-3. Select "Zip File" as import type
-4. Drag and drop the .zip file onto the drop zone (or click Browse)
-5. The zip will be extracted and all slides will be imported automatically
-6. The extracted folder is kept for future reference
-7. The original zip can be deleted (optional)
+1. **Prepare service package**: Zip folder containing:
+   - Song folders (each with `/ogg` subfolder containing .ogg tracks)
+   - Optional `lyrics.txt` in each song folder
+   - Videos, images, slides as needed
+2. **Upload to Dropbox** or save locally
+3. **Open HarmonySync** and click the Slides import button
+4. **Select "Zip File"** as import type
+5. **Drag and drop** the .zip file onto the drop zone (or click Browse)
+6. **Automatic processing**:
+   - Zip extracted to "Service Order" folder
+   - All songs scanned and added to setlist
+   - Videos, images, and other media available
+   - Ready to use immediately!
+7. **Original zip deleted** (optional, enabled by default)
+
+**Example Service Structure**:
+```
+MyService.zip
+├── Song1/
+│   ├── ogg/
+│   │   ├── vocals.ogg
+│   │   ├── guitar.ogg
+│   │   └── drums.ogg
+│   └── lyrics.txt
+├── Song2/
+│   ├── ogg/
+│   │   └── track.ogg
+│   └── lyrics.txt
+├── background-video.mp4
+├── announcement.jpg
+└── sermon-slides.pdf
+```
 
 ### For Folder Import
 

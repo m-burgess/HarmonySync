@@ -17,7 +17,7 @@ import {
  * - Folder import (batch)
  * - Zip files (automatic extraction and import)
  */
-const SlideImportModal = ({ isOpen, onClose, onSlidesImported }) => {
+const SlideImportModal = ({ isOpen, onClose, onSlidesImported, onServiceImported }) => {
   const [importType, setImportType] = useState('pdf'); // 'pdf', 'powerpoint', 'folder', 'zip'
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedFolder, setSelectedFolder] = useState(null);
@@ -29,7 +29,8 @@ const SlideImportModal = ({ isOpen, onClose, onSlidesImported }) => {
   const [importOptions, setImportOptions] = useState({
     dpi: 150,
     format: 'png',
-    deleteZip: true // Auto-delete zip after extraction
+    deleteZip: true, // Auto-delete zip after extraction
+    importSlidesOnly: false // Import full service by default for zip files
   });
 
   // Reset state when modal closes
@@ -177,6 +178,17 @@ const SlideImportModal = ({ isOpen, onClose, onSlidesImported }) => {
       } else if (importType === 'zip' && selectedFile) {
         result = await window.electronAPI.importSlidesFromZip(selectedFile, importOptions);
         slides = result.slides || [];
+        
+        // If full service import, notify parent and close
+        if (!importOptions.importSlidesOnly && result.servicePath) {
+          if (onServiceImported) {
+            // Scan the service folder to get its structure
+            const serviceStructure = await window.electronAPI.scanServiceFolder(result.servicePath);
+            onServiceImported(serviceStructure);
+          }
+          onClose();
+          return;
+        }
       } else {
         throw new Error('No file or folder selected');
       }
@@ -184,7 +196,7 @@ const SlideImportModal = ({ isOpen, onClose, onSlidesImported }) => {
       if (slides && slides.length > 0) {
         onSlidesImported(slides);
         onClose();
-      } else {
+      } else if (importType !== 'zip') {
         setError('No slides were imported. Please check the file or folder.');
       }
     } catch (err) {
@@ -420,7 +432,7 @@ const SlideImportModal = ({ isOpen, onClose, onSlidesImported }) => {
           {importType === 'zip' && (
             <div className="bg-green-500 bg-opacity-10 border border-green-500 rounded-lg p-4">
               <p className="text-sm text-green-400">
-                <strong>Automatic Setup:</strong> The zip file will be automatically extracted and all compatible slides (PDF, PowerPoint) will be imported. The zip file can be deleted after extraction.
+                <strong>Complete Service Import:</strong> The zip file will be extracted to "Service Order" folder and all songs, videos, images, and slides will be automatically imported and added to your setlist. Perfect for Dropbox downloads!
               </p>
             </div>
           )}

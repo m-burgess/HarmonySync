@@ -704,4 +704,8 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
       if (win) win.webContents.send('slides-import-progress', { ...progress, type: 'zip' });
     });
   });
+
+  ipcMain.handle('slides:scanServiceFolder', async (event, servicePath) => {
+    return await services.slidesService.scanServiceFolder(servicePath);
+  });
 };
