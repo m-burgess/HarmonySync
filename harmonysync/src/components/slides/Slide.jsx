@@ -4,6 +4,11 @@ import { event, core } from '../../electron-adapter';
 import { Card, Button } from '../ui';
 import '../../styles/components/Slide.css';
 
+// Constants for lyrics display
+const LYRICS_FONT_SIZE_THRESHOLD = 6; // Number of lines that triggers smaller font size
+const LYRICS_FONT_SIZE_NORMAL = '0.8rem';
+const LYRICS_FONT_SIZE_SMALL = '0.7rem';
+
 const Slide = ({
   slide,
   index,
@@ -74,9 +79,10 @@ const Slide = ({
         console.log('Emitting display-lyric-slide with payload:', { text: slide.text, section: slide.section });
         await event.emit('display-lyric-slide', { text: slide.text, section: slide.section });
 
-        const line1 = slide.text && slide.text.length > 0 ? slide.text[0] : '';
-        const line2 = slide.text && slide.text.length > 1 ? slide.text[1] : '';
-        await event.emit('set-lower-thirds-text', { line1, line2 });
+        // For lower thirds, show section name and first line of the section
+        const sectionLabel = slide.section ? `[${slide.section}]` : '';
+        const firstLine = slide.text && slide.text.length > 0 ? slide.text[0] : '';
+        await event.emit('set-lower-thirds-text', { line1: sectionLabel, line2: firstLine });
       }
     } catch (error) {
       console.error('Error handling slide click:', error);
@@ -274,7 +280,7 @@ const Slide = ({
               {slide.text && Array.isArray(slide.text) && slide.text.map((line, i) => (
                 <p key={i} className="slide-lyrics-line" style={{ 
                   margin: 0,
-                  fontSize: slide.text.length > 6 ? '0.7rem' : '0.8rem', // Smaller font for longer sections
+                  fontSize: slide.text.length > LYRICS_FONT_SIZE_THRESHOLD ? LYRICS_FONT_SIZE_SMALL : LYRICS_FONT_SIZE_NORMAL,
                   lineHeight: 1.2
                 }}>{line}</p>
               ))}
