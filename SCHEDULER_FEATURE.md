@@ -110,10 +110,10 @@ Schedule a MIDI note to be sent every Sunday:
 - React component with state management for scheduled events
 - Uses localStorage for persistence
 - Checks events every minute via setInterval
-- Calls Tauri backend command to execute macros
+- Calls backend command to execute macros
 
 **Backend:**
-- New `execute_macro` Tauri command
+- New `execute_macro` IPC command
 - Emits events to main window based on macro action:
   - `start-preservice-music`
   - `stop-preservice-music`  
