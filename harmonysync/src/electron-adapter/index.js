@@ -337,6 +337,22 @@ async function invokeElectronCommand(command, args, api) {
     case 'settings:getSettingsPath':
       return await api.getSettingsPath();
     
+    // Display Configuration
+    case 'displayConfig:getAll':
+      return await api.displayConfigGetAll();
+    case 'displayConfig:get':
+      return await api.displayConfigGet(args.id);
+    case 'displayConfig:create':
+      return await api.displayConfigCreate(args.config);
+    case 'displayConfig:update':
+      return await api.displayConfigUpdate(args.id, args.updates);
+    case 'displayConfig:delete':
+      return await api.displayConfigDelete(args.id);
+    case 'displayConfig:reorder':
+      return await api.displayConfigReorder(args.orderedIds);
+    case 'displayConfig:getEnabled':
+      return await api.displayConfigGetEnabled();
+    
     default:
       console.warn(`Unknown command: ${command}`);
       throw new Error(`Command not implemented: ${command}`);
