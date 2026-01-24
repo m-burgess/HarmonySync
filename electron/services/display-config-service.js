@@ -118,13 +118,15 @@ function getDisplayConfig(id) {
  * Create a new display configuration
  */
 async function createDisplayConfig(config) {
+  // Generate unique ID using timestamp and random string
+  const randomStr = Math.random().toString(36).substring(2, 9);
   const newConfig = {
-    id: config.id || `display-${Date.now()}`,
+    id: config.id || `display-${Date.now()}-${randomStr}`,
     name: config.name,
     type: config.type || 'custom',
     deviceId: config.deviceId || '',
     ndiOutput: config.ndiOutput || '',
-    enabled: config.enabled !== false,
+    enabled: config.enabled ?? true,
     order: config.order || displayConfigs.length + 1
   };
   
