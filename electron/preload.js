@@ -85,6 +85,15 @@ const api = {
   getAudioDevices: () => ipcRenderer.invoke('settings:getAudioDevices'),
   getSettingsPath: () => ipcRenderer.invoke('settings:getSettingsPath'),
   
+  // Display Configuration
+  displayConfigGetAll: () => ipcRenderer.invoke('displayConfig:getAll'),
+  displayConfigGet: (id) => ipcRenderer.invoke('displayConfig:get', id),
+  displayConfigCreate: (config) => ipcRenderer.invoke('displayConfig:create', config),
+  displayConfigUpdate: (id, updates) => ipcRenderer.invoke('displayConfig:update', id, updates),
+  displayConfigDelete: (id) => ipcRenderer.invoke('displayConfig:delete', id),
+  displayConfigReorder: (orderedIds) => ipcRenderer.invoke('displayConfig:reorder', orderedIds),
+  displayConfigGetEnabled: () => ipcRenderer.invoke('displayConfig:getEnabled'),
+  
   // Event listeners
   onDisplaySettingsClicked: (callback) => {
     ipcRenderer.on('display-settings-clicked', callback);
