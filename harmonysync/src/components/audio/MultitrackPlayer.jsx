@@ -27,6 +27,7 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
   const [serviceError, setServiceError] = useState(null);
   const [isStartingService, setIsStartingService] = useState(false);
   const [currentDirectory, setCurrentDirectory] = useState(null);
+  const [isOperationInProgress, setIsOperationInProgress] = useState(false);
   
   // Transpose modal state
   const [isTransposeModalOpen, setIsTransposeModalOpen] = useState(false);
@@ -37,7 +38,67 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
     message: '',
   });
 
-  // Initialize audio service on component mount
+  // Wrapper functions to prevent multiple rapid operations
+  const handlePlayAll = async () => {
+    if (isOperationInProgress) {
+      console.log('⚠️ Operation already in progress, ignoring playAll');
+      return;
+    }
+    console.log('▶️ Starting playAll operation');
+    setIsOperationInProgress(true);
+    try {
+      await playAllTracks();
+      console.log('✅ playAll operation completed');
+    } catch (error) {
+      console.error('❌ playAll operation failed:', error);
+    } finally {
+      setTimeout(() => {
+        console.log('🔄 Resetting operation in progress flag');
+        setIsOperationInProgress(false);
+      }, 500);
+    }
+  };
+
+  const handleStopAll = async () => {
+    if (isOperationInProgress) {
+      console.log('⚠️ Operation already in progress, ignoring stopAll');
+      return;
+    }
+    console.log('⏹️ Starting stopAll operation');
+    setIsOperationInProgress(true);
+    try {
+      await stopAllAudio();
+      console.log('✅ stopAll operation completed');
+    } catch (error) {
+      console.error('❌ stopAll operation failed:', error);
+    } finally {
+      setTimeout(() => {
+        console.log('🔄 Resetting operation in progress flag');
+        setIsOperationInProgress(false);
+      }, 500);
+    }
+  };
+
+  const handleGoToBeginning = async () => {
+    if (isOperationInProgress) {
+      console.log('⚠️ Operation already in progress, ignoring goToBeginning');
+      return;
+    }
+    console.log('▶️ Starting goToBeginning operation');
+    setIsOperationInProgress(true);
+    try {
+      await goToBeginningAllTracks();
+      console.log('✅ goToBeginning operation completed');
+    } catch (error) {
+      console.error('❌ goToBeginning operation failed:', error);
+    } finally {
+      // Reset after a longer delay to prevent rapid clicking
+      setTimeout(() => {
+        console.log('🔄 Resetting operation in progress flag');
+        setIsOperationInProgress(false);
+      }, 2000);
+    }
+  };
   useEffect(() => {
     console.log('[MultitrackPlayer] allTracks prop:', allTracks);
     
@@ -244,7 +305,7 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
       
       const trackPaths = audioFiles.map(f => `${outputDir}/${f.name}`);
       
-      // Add the new tracks
+      // Add the new tracks as a song
       const results = await addTracks(trackPaths);
       
       // Update the tracks in the UI
@@ -264,7 +325,6 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
         });
       
       // Emit event to update tracks in parent component
-      // Since we can't directly call setAllTracks from parent, we'll emit an event
       event.emit('tracks-updated', loadedTracks);
       
       // Update current directory
@@ -357,15 +417,33 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
       )}
 
       <div className="flex items-center gap-3 mb-3">
-        <button aria-label="Play all tracks" title="Play All" className="p-2 bg-stage rounded-md text-primary" onClick={playAllTracks}>
+        <button 
+          aria-label="Play all tracks" 
+          title="Play All" 
+          className="p-2 bg-stage rounded-md text-primary disabled:opacity-50 disabled:cursor-not-allowed" 
+          onClick={handlePlayAll}
+          disabled={isOperationInProgress || allTracks.length === 0}
+        >
           <PlayIcon className="w-5 h-5 text-primary" />
         </button>
 
-        <button aria-label="Stop all tracks" title="Stop All" className="p-2 bg-surface rounded-md text-muted" onClick={stopAllAudio}>
+        <button 
+          aria-label="Stop all tracks" 
+          title="Stop All" 
+          className="p-2 bg-surface rounded-md text-muted disabled:opacity-50 disabled:cursor-not-allowed" 
+          onClick={handleStopAll}
+          disabled={isOperationInProgress}
+        >
           <PauseIcon className="w-5 h-5 text-primary" />
         </button>
 
-        <button aria-label="Restart all tracks" title="Start From Beginning" className="p-2 bg-surface rounded-md text-muted" onClick={goToBeginningAllTracks}>
+        <button 
+          aria-label="Restart all tracks" 
+          title="Start From Beginning" 
+          className="p-2 bg-surface rounded-md text-muted disabled:opacity-50 disabled:cursor-not-allowed" 
+          onClick={handleGoToBeginning}
+          disabled={isOperationInProgress || allTracks.length === 0}
+        >
           <BackwardIcon className="w-5 h-5 text-primary" />
         </button>
 

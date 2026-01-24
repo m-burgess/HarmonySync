@@ -4,6 +4,7 @@ const socketIo = require('socket.io');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const { v4: uuidv4 } = require('uuid');
 const { parseFile } = require('music-metadata');
 const wav = require('node-wav');
@@ -12,6 +13,19 @@ const { spawn } = require('child_process');
 // Configurable host and shutdown token
 const HOST = process.env.HOST || '127.0.0.1';
 const SHUTDOWN_TOKEN = process.env.SHUTDOWN_TOKEN || null;
+
+// Detect platform
+const IS_WINDOWS = process.platform === 'win32';
+const IS_LINUX = process.platform === 'linux';
+const IS_MAC = process.platform === 'darwin';
+
+console.log(`🖥️  Platform detected: ${process.platform} (Windows: ${IS_WINDOWS}, Linux: ${IS_LINUX}, Mac: ${IS_MAC})`);
+
+// Check for FFmpeg availability
+const ffmpegAvailable = IS_WINDOWS ? 
+    require('fs').existsSync('C:\\Users\\Admin\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-8.0.1-full_build\\bin\\ffplay.exe') :
+    false;
+console.log(`🎵 FFmpeg available: ${ffmpegAvailable}`);
 
 class AudioTrack {
     constructor(id, name, filePath, duration, channels, sampleRate) {
@@ -234,6 +248,8 @@ class AudioTrack {
 class AudioMixer {
     constructor() {
         this.tracks = new Map();
+        this.songs = new Map(); // Map of songId -> { id, name, trackIds: [], isPlaying: false }
+        this.currentSongId = null; // Only one song can play at a time
         this.masterVolume = 1.0;
         this.isPlaying = false;
         this.speaker = null;
@@ -289,7 +305,174 @@ class AudioMixer {
         }
         
         this.tracks.clear();
-        console.log('✅ All tracks cleared');
+        this.songs.clear();
+        this.currentSongId = null;
+        console.log('✅ All tracks and songs cleared');
+    }
+
+    // Song management methods
+    async createSong(songName, trackPaths) {
+        const songId = uuidv4();
+        const trackIds = [];
+        
+        console.log(`🎵 Creating song: "${songName}" with ${trackPaths.length} tracks`);
+        
+        // Load all tracks for this song
+        for (const trackPath of trackPaths) {
+            try {
+                const trackId = await this.loadTrack(trackPath);
+                trackIds.push(trackId);
+            } catch (error) {
+                console.error(`Failed to load track ${trackPath} for song ${songName}:`, error);
+                // Continue with other tracks
+            }
+        }
+        
+        const song = {
+            id: songId,
+            name: songName,
+            trackIds: trackIds,
+            isPlaying: false
+        };
+        
+        this.songs.set(songId, song);
+        console.log(`✅ Created song: ${songName} (ID: ${songId}) with ${trackIds.length} tracks`);
+        
+        // Set this as the current song
+        this.currentSongId = songId;
+        
+        return songId;
+    }
+
+    playSong(songId) {
+        const song = this.songs.get(songId);
+        if (!song) {
+            throw new Error(`Song not found: ${songId}`);
+        }
+        
+        // Stop any currently playing song
+        if (this.currentSongId && this.currentSongId !== songId) {
+            this.stopSong(this.currentSongId);
+        }
+        
+        // If this song is already playing, do nothing
+        if (song.isPlaying) {
+            console.log(`⚠️  Song ${song.name} is already playing`);
+            return;
+        }
+        
+        console.log(`▶️  Playing song: ${song.name}`);
+        
+        // Play all tracks in this song
+        const activeTracks = [];
+        for (const trackId of song.trackIds) {
+            const track = this.tracks.get(trackId);
+            if (track && !track.isMuted) {
+                activeTracks.push(track);
+            }
+        }
+        
+        if (activeTracks.length === 0) {
+            console.log('⚠️  No tracks to play in song');
+            return;
+        }
+        
+        // Use the same playback logic as playAllTracks
+        const clickTrack = activeTracks.find(track => 
+            track.name.toLowerCase().includes('click') || 
+            track.name.toLowerCase().includes('metronome') ||
+            track.name.toLowerCase().includes('guide')
+        );
+        
+        if (clickTrack) {
+            console.log(`🎯 Using ${clickTrack.name} as master clock for song`);
+            this.startMasterClockPlayback(activeTracks, clickTrack);
+        } else {
+            console.log('🎵 Using synchronized simultaneous playback for song');
+            this.startSynchronizedSimultaneousPlayback(activeTracks);
+        }
+        
+        song.isPlaying = true;
+        this.currentSongId = songId;
+        this.isPlaying = true;
+    }
+
+    stopSong(songId) {
+        const song = this.songs.get(songId);
+        if (!song) {
+            return false;
+        }
+        
+        console.log(`⏹️  Stopping song: ${song.name}`);
+        
+        // Stop all tracks in this song
+        for (const trackId of song.trackIds) {
+            const track = this.tracks.get(trackId);
+            if (track) {
+                track.stop();
+            }
+        }
+        
+        song.isPlaying = false;
+        if (this.currentSongId === songId) {
+            this.currentSongId = null;
+            this.isPlaying = false;
+        }
+        
+        return true;
+    }
+
+    removeSong(songId) {
+        const song = this.songs.get(songId);
+        if (!song) {
+            return false;
+        }
+        
+        // Stop the song if it's playing
+        this.stopSong(songId);
+        
+        // Remove all tracks in this song
+        for (const trackId of song.trackIds) {
+            this.removeTrack(trackId);
+        }
+        
+        this.songs.delete(songId);
+        console.log(`🗑️  Removed song: ${song.name}`);
+        
+        return true;
+    }
+
+    getSongState(songId) {
+        const song = this.songs.get(songId);
+        if (!song) {
+            return null;
+        }
+        
+        return {
+            id: song.id,
+            name: song.name,
+            isPlaying: song.isPlaying,
+            trackCount: song.trackIds.length,
+            tracks: song.trackIds.map(trackId => {
+                const track = this.tracks.get(trackId);
+                return track ? {
+                    id: track.id,
+                    name: track.name,
+                    isPlaying: track.isPlaying,
+                    volume: track.volume,
+                    pan: track.pan,
+                    isMuted: track.isMuted
+                } : null;
+            }).filter(Boolean)
+        };
+    }
+
+    getAllSongs() {
+        const songs = [];
+        for (const song of this.songs.values()) {
+            songs.push(this.getSongState(song.id));
+        }
+        return songs;
     }
 
     playTrack(trackId) {
@@ -311,6 +494,13 @@ class AudioMixer {
     }
 
     async playAllTracks() {
+        // If we have a current song, play it
+        if (this.currentSongId) {
+            this.playSong(this.currentSongId);
+            return;
+        }
+        
+        // Fallback: play all tracks (for backward compatibility)
         // Stop any currently playing tracks first
         this.stopAllTracks();
         await new Promise(resolve => setTimeout(resolve, 100)); // Brief pause
@@ -334,7 +524,8 @@ class AudioMixer {
         // Use click track as master clock if available
         const clickTrack = activeTracks.find(track => 
             track.name.toLowerCase().includes('click') || 
-            track.name.toLowerCase().includes('metronome')
+            track.name.toLowerCase().includes('metronome') ||
+            track.name.toLowerCase().includes('guide')
         );
         
         if (clickTrack) {
@@ -350,24 +541,28 @@ class AudioMixer {
 
     async startMasterClockPlayback(tracks, masterTrack) {
         try {
-            // Start the master clock track first
             console.log(`🎯 Starting master clock: ${masterTrack.name}`);
             console.log(`🔍 Master track path: ${masterTrack.filePath}`);
             
             await this.startTrackWithClock(masterTrack, true);
             
-            // Wait a tiny bit for the master to establish
-            await new Promise(resolve => setTimeout(resolve, 100));
+            // Wait for master to establish
+            await new Promise(resolve => setTimeout(resolve, 200));
             
-            // Check if master is still running after a brief moment
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
+            // Check if master is running
             if (!masterTrack.isPlaying) {
-                console.warn('⚠️ Master clock failed to start properly, switching to synchronized playback');
-                throw new Error('Master clock failed');
+                console.warn('⚠️ Master clock failed to start, checking again...');
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                if (!masterTrack.isPlaying) {
+                    console.warn('⚠️ Master clock still not running, switching to synchronized playback');
+                    throw new Error('Master clock failed');
+                }
             }
             
-            // Start all other tracks simultaneously, synchronized to master
+            console.log('✅ Master clock established, starting slave tracks...');
+            
+            // Start all other tracks simultaneously
             const slavePromises = tracks
                 .filter(track => track !== masterTrack)
                 .map(track => this.startTrackWithClock(track, false));
@@ -388,8 +583,8 @@ class AudioMixer {
         try {
             // Start all tracks as close to simultaneously as possible
             const startTime = Date.now();
-            const promises = tracks.map((track, index) => 
-                this.startTrackWithDelay(track, index * 10) // 10ms stagger to prevent audio driver conflicts
+            const promises = tracks.map(track => 
+                this.startTrackWithClock(track, false) // Remove delay for true simultaneity
             );
             
             await Promise.all(promises);
@@ -406,53 +601,110 @@ class AudioMixer {
     startTrackWithClock(track, isMaster) {
         return new Promise((resolve, reject) => {
             try {
-                const playerCmd = 'mpv';
+                // Select appropriate player based on platform
+                let playerCmd = 'ffplay';  // Fallback
+                let playerArgs = [];
                 
-                // Calculate initial volume based on mute state
-                const initialVolume = track.isMuted ? 0 : Math.round(track.volume * 100);
-                
-                // Calculate audio balance from pan (-1 to 1)
-                const audioBalance = track.pan || 0;
-                
-                const playerArgs = [
-                    '--no-video',
-                    '--keep-open=no',
-                    '--really-quiet',
-                    '--volume=' + initialVolume,
-                    '--audio-balance=' + audioBalance,  // Apply pan at startup
-                    '--audio-channels=stereo',
-                    '--audio-device=auto',
-                    '--ao=pulse,alsa,oss',  // Try multiple audio outputs
-                    '--gapless-audio=yes',
-                    '--input-terminal=no',  // Disable terminal input
-                    '--input-default-bindings=no',  // Disable default key bindings
-                    '--input-ipc-server=/tmp/mpv-socket-' + track.id,  // Enable IPC for runtime control
-                ];
-                
-                console.log(`🎛️ Starting track ${track.name} with volume=${initialVolume}, pan=${audioBalance}, muted=${track.isMuted}`);
-                
-                // Master clock gets priority and real-time scheduling
-                if (isMaster) {
-                    playerArgs.push('--priority=realtime');
-                    playerArgs.push('--audio-latency-hacks=yes');
-                    playerArgs.push('--audio-buffer=0.1');  // Lower buffer for tight timing
+                if (IS_WINDOWS) {
+                    // Try various Windows audio players in order of preference
+                    if (this.commandExists('ffplay')) {
+                        playerCmd = this.getCommandPath('ffplay');
+                        const initialVolume = track.isMuted ? 0 : Math.round(track.volume * 100);
+                        playerArgs = [
+                            '-nodisp',
+                            '-autoexit',
+                            '-volume', (initialVolume / 100).toString(), // ffplay expects 0-1 range
+                            track.filePath  // No quotes needed when not using shell mode
+                        ];
+                    } else if (this.commandExists('mplayer') || this.commandExists('mplayer.exe')) {
+                        playerCmd = this.getCommandPath('mplayer') || this.getCommandPath('mplayer.exe') || 'mplayer';
+                        const initialVolume = track.isMuted ? 0 : Math.round(track.volume * 100);
+                        playerArgs = [
+                            '-volume', initialVolume.toString(),
+                            '-really-quiet',
+                            track.filePath  // No quotes needed when not using shell mode
+                        ];
+                    } else {
+                        // Fallback to powershell for Windows
+                        playerCmd = 'powershell';
+                        playerArgs = [
+                            '-Command',
+                            `& {
+                                try {
+                                    $player = New-Object System.Media.SoundPlayer;
+                                    $player.SoundLocation = '${track.filePath.replace(/\\/g, '\\\\')}';
+                                    $player.Load();
+                                    $player.Play();
+                                    Write-Host 'SoundPlayer started';
+                                    while ($true) { Start-Sleep -Seconds 1 }
+                                } catch {
+                                    Write-Error $_.Exception.Message;
+                                    exit 1;
+                                }
+                            }`,
+                        ];
+                    }
+                } else if (IS_MAC) {
+                    playerCmd = 'afplay';
+                    playerArgs = [track.filePath];
                 } else {
-                    playerArgs.push('--audio-buffer=0.2');  // Slightly higher buffer for slaves
+                    // Linux
+                    if (this.commandExists('mpv')) {
+                        playerCmd = this.getCommandPath('mpv');
+                        const initialVolume = track.isMuted ? 0 : Math.round(track.volume * 100);
+                        playerArgs = [
+                            '--no-video',
+                            '--keep-open=no',
+                            '--really-quiet',
+                            '--volume=' + initialVolume,
+                            '--audio-balance=' + (track.pan || 0),
+                            '--audio-channels=stereo',
+                            '--gapless-audio=yes',
+                            '--input-terminal=no',
+                            '--input-default-bindings=no',
+                            '--ao=pulse,alsa,oss',
+                            `"${track.filePath}"`  // Quote the file path to handle spaces
+                        ];
+                    } else if (this.commandExists('ffplay')) {
+                        playerCmd = this.getCommandPath('ffplay');
+                        const initialVolume = track.isMuted ? 0 : Math.round(track.volume * 100);
+                        playerArgs = [
+                            '-nodisp',
+                            '-autoexit',
+                            '-volume', (initialVolume / 100).toString(),
+                            track.filePath  // No quotes needed when not using shell mode
+                        ];
+                    } else {
+                        playerCmd = 'paplay';
+                        playerArgs = [track.filePath];  // No quotes needed when not using shell mode
+                    }
                 }
                 
-                playerArgs.push(track.filePath);
-                
+                console.log(`🎛️ Starting track ${track.name} with volume=${track.volume}, pan=${track.pan}, muted=${track.isMuted}`);
                 console.log(`🎵 Starting ${isMaster ? 'MASTER' : 'slave'} track: ${track.name}`);
-                console.log(`   Command: mpv ${playerArgs.join(' ')}`);
+                console.log(`   Command: ${playerCmd} ${playerArgs.join(' ')}`);
+                
+                // Use shell mode only for PowerShell commands, not for native executables like ffplay
+                const useShell = IS_WINDOWS && playerCmd.includes('powershell');
                 
                 track.audioProcess = spawn(playerCmd, playerArgs, {
-                    stdio: ['pipe', 'pipe', 'pipe']  // Enable stdin for IPC control
+                    stdio: ['pipe', 'pipe', 'pipe'],
+                    shell: useShell
                 });
                 track.isPlaying = true;
                 
                 // Log any stderr output for debugging
                 track.audioProcess.stderr.on('data', (data) => {
-                    console.error(`🔊 ${track.name} stderr: ${data.toString().trim()}`);
+                    const msg = data.toString().trim();
+                    if (msg) {
+                        console.log(`🔊 ${track.name} audio: ${msg}`);
+                    }
+                });
+                
+                track.audioProcess.on('error', (error) => {
+                    console.error(`❌ ${playerCmd} error for ${track.name}:`, error.message);
+                    track.isPlaying = false;
+                    track.audioProcess = null;
                 });
                 
                 track.audioProcess.on('close', (code) => {
@@ -477,45 +729,97 @@ class AudioMixer {
                     
                     // If master track stops with error code, try fallback
                     if (isMaster && code !== 0) {
-                        console.error(`❌ Master clock failed with exit code ${code}, trying fallback playback`);
-                        // Don't stop all tracks immediately, let them continue for a bit
-                        setTimeout(() => {
-                            if (this.isPlaying) {
-                                console.log('🔄 Master clock failed, switching to synchronized playback mode');
-                                // Don't stop everything, just log the issue
-                            }
-                        }, 1000);
+                        console.error(`❌ Master clock failed with exit code ${code}`);
                     } else if (isMaster && code === 0) {
                         console.log('🛑 Master clock completed normally, stopping all tracks');
                         this.stopAllTracks();
                     }
                 });
                 
-                track.audioProcess.on('error', (error) => {
-                    console.error(`❌ Audio playback error for ${track.name}:`, error);
-                    track.isPlaying = false;
-                    track.audioProcess = null;
-                    
-                    if (isMaster) {
-                        console.error(`❌ Master clock failed to start: ${error.message}`);
-                        // Try to continue with slave tracks
-                        setTimeout(() => {
-                            console.log('🔄 Continuing with slave tracks after master failure');
-                        }, 500);
-                    }
-                    
-                    reject(error);
-                });
-                
-                // Resolve immediately after starting
                 resolve();
                 
             } catch (error) {
-                console.error(`❌ Failed to start playback for ${track.name}:`, error);
-                track.isPlaying = false;
+                console.error(`❌ Error starting track ${track.name}:`, error);
                 reject(error);
             }
         });
+    }
+    
+    commandExists(cmd) {
+        try {
+            // First try the standard PATH check
+            if (IS_WINDOWS) {
+                require('child_process').execSync(`where ${cmd}`, { stdio: 'ignore' });
+            } else {
+                require('child_process').execSync(`which ${cmd}`, { stdio: 'ignore' });
+            }
+            return true;
+        } catch (error) {
+            // For FFmpeg on Windows, check common installation locations
+            if (IS_WINDOWS && (cmd === 'ffplay' || cmd === 'ffmpeg')) {
+                const fs = require('fs');
+                const path = require('path');
+
+                const commonPaths = [
+                    'C:\\Program Files\\ffmpeg\\bin',
+                    'C:\\Program Files (x86)\\ffmpeg\\bin',
+                    'C:\\ffmpeg\\bin',
+                    'C:\\tools\\ffmpeg\\bin',
+                    path.join(process.env.USERPROFILE, 'scoop', 'apps', 'ffmpeg', 'current', 'bin'),
+                    path.join(process.env.PROGRAMDATA, 'chocolatey', 'lib', 'ffmpeg', 'tools', 'ffmpeg', 'bin'),
+                    path.join(process.env.USERPROFILE, 'ffmpeg', 'bin'),
+                    path.join(process.env.LOCALAPPDATA, 'Microsoft', 'WinGet', 'Packages', 'Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe', 'ffmpeg-8.0.1-full_build', 'bin')
+                ];
+
+                for (const binPath of commonPaths) {
+                    const fullPath = path.join(binPath, cmd + (IS_WINDOWS ? '.exe' : ''));
+                    if (fs.existsSync(fullPath)) {
+                        console.log(`🎵 Found ${cmd} at: ${fullPath}`);
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+    }
+
+    getCommandPath(cmd) {
+        try {
+            // First try the standard PATH check
+            if (IS_WINDOWS) {
+                const result = require('child_process').execSync(`where ${cmd}`, { encoding: 'utf8' });
+                return result.trim().split('\n')[0];
+            } else {
+                const result = require('child_process').execSync(`which ${cmd}`, { encoding: 'utf8' });
+                return result.trim();
+            }
+        } catch (error) {
+            // For FFmpeg on Windows, check common installation locations
+            if (IS_WINDOWS && (cmd === 'ffplay' || cmd === 'ffmpeg')) {
+                const fs = require('fs');
+                const path = require('path');
+
+                const commonPaths = [
+                    'C:\\Program Files\\ffmpeg\\bin',
+                    'C:\\Program Files (x86)\\ffmpeg\\bin',
+                    'C:\\ffmpeg\\bin',
+                    'C:\\tools\\ffmpeg\\bin',
+                    path.join(process.env.USERPROFILE, 'scoop', 'apps', 'ffmpeg', 'current', 'bin'),
+                    path.join(process.env.PROGRAMDATA, 'chocolatey', 'lib', 'ffmpeg', 'tools', 'ffmpeg', 'bin'),
+                    path.join(process.env.USERPROFILE, 'ffmpeg', 'bin'),
+                    path.join(process.env.LOCALAPPDATA, 'Microsoft', 'WinGet', 'Packages', 'Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe', 'ffmpeg-8.0.1-full_build', 'bin')
+                ];
+
+                for (const binPath of commonPaths) {
+                    const fullPath = path.join(binPath, cmd + (IS_WINDOWS ? '.exe' : ''));
+                    if (fs.existsSync(fullPath)) {
+                        console.log(`🎵 Using ${cmd} at: ${fullPath}`);
+                        return fullPath;
+                    }
+                }
+            }
+            return cmd; // Fall back to just the command name
+        }
     }
 
     startTrackWithDelay(track, delayMs) {
@@ -543,6 +847,12 @@ class AudioMixer {
 
     stopAllTracks() {
         console.log('🛑 Stopping all tracks');
+        
+        // Stop the current song if playing
+        if (this.currentSongId) {
+            this.stopSong(this.currentSongId);
+            return;
+        }
         
         // Stop individual track processes
         for (const track of this.tracks.values()) {
@@ -601,6 +911,8 @@ class AudioMixer {
         return {
             masterVolume: this.masterVolume,
             isPlaying: this.isPlaying,
+            currentSongId: this.currentSongId,
+            songs: this.getAllSongs(),
             tracks: Array.from(this.tracks.values()).map(track => track.getState()),
             memoryUsage: this.getMemoryUsage()
         };
@@ -1069,6 +1381,83 @@ app.get('/api/mixer/crossfade-status', (req, res) => {
         crossfade: mixer.activeCrossfade,
         defaultDuration: mixer.crossfadeDuration
     });
+});
+
+// Song management endpoints
+app.post('/api/songs/create', async (req, res) => {
+    try {
+        const { name, trackPaths } = req.body;
+        if (!name || !trackPaths || !Array.isArray(trackPaths)) {
+            return res.status(400).json({ error: 'name and trackPaths array are required' });
+        }
+
+        const songId = await mixer.createSong(name, trackPaths);
+        io.emit('mixer_state_changed', mixer.getMixerState());
+        res.json({ success: true, songId });
+    } catch (error) {
+        console.error('Error creating song:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/songs/:songId/play', (req, res) => {
+    try {
+        const { songId } = req.params;
+        mixer.playSong(songId);
+        io.emit('mixer_state_changed', mixer.getMixerState());
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error playing song:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/songs/:songId/stop', (req, res) => {
+    try {
+        const { songId } = req.params;
+        const success = mixer.stopSong(songId);
+        io.emit('mixer_state_changed', mixer.getMixerState());
+        res.json({ success });
+    } catch (error) {
+        console.error('Error stopping song:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.delete('/api/songs/:songId', (req, res) => {
+    try {
+        const { songId } = req.params;
+        const success = mixer.removeSong(songId);
+        io.emit('mixer_state_changed', mixer.getMixerState());
+        res.json({ success });
+    } catch (error) {
+        console.error('Error removing song:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/songs', (req, res) => {
+    try {
+        const songs = mixer.getAllSongs();
+        res.json({ success: true, songs });
+    } catch (error) {
+        console.error('Error getting songs:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/songs/:songId', (req, res) => {
+    try {
+        const { songId } = req.params;
+        const song = mixer.getSongState(songId);
+        if (!song) {
+            return res.status(404).json({ error: 'Song not found' });
+        }
+        res.json({ success: true, song });
+    } catch (error) {
+        console.error('Error getting song:', error);
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // Socket.IO for real-time communication

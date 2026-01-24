@@ -48,7 +48,8 @@ let imageServiceProcess = null;
 // Create main window
 function createMainWindow() {
   const preloadPath = path.join(__dirname, 'preload.js');
-  console.log('[MainWindow] Loading with preload:', preloadPath);
+  console.log('[MainWindow] Preload path:', preloadPath);
+  console.log('[MainWindow] Preload exists:', fs.existsSync(preloadPath));
   
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -56,6 +57,7 @@ function createMainWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      sandbox: false, // Disable sandbox to ensure preload runs
       preload: preloadPath
     },
     icon: path.join(__dirname, '../harmonysync/icons/icon.png')
@@ -85,9 +87,27 @@ function createMainWindow() {
   const menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);
 
+  // Wait for preload script to complete before loading URL
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('[MainWindow] Page finished loading');
+    
+    // Check if preload executed successfully
+    mainWindow.webContents.executeJavaScript(`
+      console.log('[MainWindow-Injection] Checking for electronAPI...');
+      console.log('[MainWindow-Injection] electronAPI:', typeof window.electronAPI);
+      console.log('[MainWindow-Injection] __electronAPICached:', typeof window.__electronAPICached);
+      console.log('[MainWindow-Injection] __preloadReady:', window.__preloadReady);
+    `).catch(err => console.error('[MainWindow] Failed to execute check script:', err));
+  });
+
   if (isDev) {
-    mainWindow.loadURL(`${VITE_DEV_SERVER_URL}/index.html`);
-    mainWindow.webContents.openDevTools();
+    console.log('[MainWindow] Loading dev URL:', `${VITE_DEV_SERVER_URL}/index.html`);
+    mainWindow.loadURL(`${VITE_DEV_SERVER_URL}/index.html`).then(() => {
+      console.log('[MainWindow] Dev URL loaded successfully');
+      mainWindow.webContents.openDevTools();
+    }).catch(err => {
+      console.error('[MainWindow] Error loading dev URL:', err);
+    });
   } else {
     mainWindow.loadFile(path.join(__dirname, '../harmonysync/dist/index.html'));
   }

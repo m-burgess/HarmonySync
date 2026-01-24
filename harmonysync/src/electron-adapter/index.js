@@ -2,27 +2,118 @@
 // This module provides a compatible interface for React components
 // Simplified for Electron-only usage (Tauri support removed)
 
+// CRITICAL: Store API in a global that survives HMR
+// Use globalThis to access the real window object, not Vite's HMR context
+const getGlobalWindow = () => {
+  if (typeof globalThis !== 'undefined') return globalThis;
+  if (typeof window !== 'undefined') return window;
+  if (typeof self !== 'undefined') return self;
+  return {};
+};
+
+const globalWindow = getGlobalWindow();
+
 // Module-level cache that persists across HMR
 let cachedElectronAPI = null;
-let apiCheckInitiated = false;
-let apiAvailablePromise = null;
 
-// Helper to get electronAPI quickly (no polling needed since preload confirmed)
+// On module load, try to recover cache from multiple sources
+if (globalWindow.__electronAPICached) {
+  cachedElectronAPI = globalWindow.__electronAPICached;
+  console.log('[electron-adapter] Module loaded - recovered from __electronAPICached');
+} else if (globalWindow.electronAPI) {
+  cachedElectronAPI = globalWindow.electronAPI;
+  globalWindow.__electronAPICached = globalWindow.electronAPI;
+  console.log('[electron-adapter] Module loaded - cached electronAPI');
+} else if (globalWindow.__electronAPI_PERMANENT_CACHE) {
+  // Last resort: permanent cache
+  cachedElectronAPI = globalWindow.__electronAPI_PERMANENT_CACHE;
+  console.log('[electron-adapter] Module loaded - recovered from permanent cache');
+}
+
+// Helper to get electronAPI - waits if not immediately available
 async function getElectronAPI() {
+  // Return cached API if available
   if (cachedElectronAPI) {
     return cachedElectronAPI;
   }
-  if (typeof window !== 'undefined') {
-    if (window.__electronAPICached) {
-      cachedElectronAPI = window.__electronAPICached;
-      return cachedElectronAPI;
-    }
-    if (window.electronAPI) {
-      cachedElectronAPI = window.electronAPI;
-      return cachedElectronAPI;
-    }
+  
+  // If we're not in a browser environment, fail immediately
+  if (typeof globalWindow === 'undefined') {
+    console.error('[electron-adapter] Not in browser context');
+    throw new Error('electronAPI not available - not in browser context');
   }
-  throw new Error('electronAPI not available - unexpected renderer context');
+  
+  // CRITICAL: Check for immediately available API from multiple sources
+  console.log('[electron-adapter] Checking for electronAPI...');
+  console.log('[electron-adapter] - globalWindow:', typeof globalWindow);
+  console.log('[electron-adapter] - globalWindow.__electronAPICached:', typeof globalWindow.__electronAPICached);
+  console.log('[electron-adapter] - globalWindow.electronAPI:', typeof globalWindow.electronAPI);
+  console.log('[electron-adapter] - globalWindow.__preloadReady:', globalWindow.__preloadReady);
+  console.log('[electron-adapter] - globalWindow.__electronAPI_PERMANENT_CACHE:', typeof globalWindow.__electronAPI_PERMANENT_CACHE);
+  
+  // Try permanent cache first (most reliable)
+  if (globalWindow.__electronAPI_PERMANENT_CACHE) {
+    cachedElectronAPI = globalWindow.__electronAPI_PERMANENT_CACHE;
+    console.log('[electron-adapter] ✅ Using permanent cache');
+    return cachedElectronAPI;
+  }
+  
+  if (globalWindow.__electronAPICached) {
+    cachedElectronAPI = globalWindow.__electronAPICached;
+    // Store in permanent cache
+    globalWindow.__electronAPI_PERMANENT_CACHE = cachedElectronAPI;
+    console.log('[electron-adapter] ✅ Using __electronAPICached (stored in permanent cache)');
+    return cachedElectronAPI;
+  }
+  
+  if (globalWindow.electronAPI) {
+    cachedElectronAPI = globalWindow.electronAPI;
+    console.log('[electron-adapter] ✅ Using globalWindow.electronAPI');
+    // Cache it in all locations
+    globalWindow.__electronAPICached = globalWindow.electronAPI;
+    globalWindow.__electronAPI_PERMANENT_CACHE = globalWindow.electronAPI;
+    return cachedElectronAPI;
+  }
+  
+  // If not immediately available, wait for it (with timeout)
+  console.warn('[electron-adapter] ⚠️ electronAPI not immediately available, waiting...');
+  let attempts = 0;
+  const maxAttempts = 50; // 5 seconds total
+  
+  while (attempts < maxAttempts) {
+    // Check permanent cache first
+    if (globalWindow.__electronAPI_PERMANENT_CACHE) {
+      cachedElectronAPI = globalWindow.__electronAPI_PERMANENT_CACHE;
+      console.log('[electron-adapter] ✅ Found in permanent cache after', attempts * 100, 'ms');
+      return cachedElectronAPI;
+    }
+    if (globalWindow.__electronAPICached) {
+      cachedElectronAPI = globalWindow.__electronAPICached;
+      globalWindow.__electronAPI_PERMANENT_CACHE = cachedElectronAPI;
+      console.log('[electron-adapter] ✅ electronAPI became available after', attempts * 100, 'ms');
+      return cachedElectronAPI;
+    }
+    if (globalWindow.electronAPI) {
+      cachedElectronAPI = globalWindow.electronAPI;
+      globalWindow.__electronAPICached = globalWindow.electronAPI;
+      globalWindow.__electronAPI_PERMANENT_CACHE = globalWindow.electronAPI;
+      console.log('[electron-adapter] ✅ electronAPI became available after', attempts * 100, 'ms');
+      return cachedElectronAPI;
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 100));
+    attempts++;
+  }
+  
+  // Final diagnostic before failing
+  console.error('[electron-adapter] ❌ Timeout! Final state:');
+  console.error('[electron-adapter] - typeof globalWindow:', typeof globalWindow);
+  console.error('[electron-adapter] - globalWindow === window:', globalWindow === (typeof window !== 'undefined' ? window : null));
+  console.error('[electron-adapter] - globalWindow keys with "electron":', Object.keys(globalWindow).filter(k => k.includes('electron')));
+  console.error('[electron-adapter] - globalWindow keys with "preload":', Object.keys(globalWindow).filter(k => k.includes('preload')));
+  console.error('[electron-adapter] - All globalWindow keys (sample):', Object.keys(globalWindow).slice(0, 20));
+  
+  throw new Error('electronAPI not available - timeout after 5 seconds');
 }
 
 // Helper function to detect runtime environment

@@ -151,23 +151,50 @@ export async function clearTracks() {
     tracks = [];
 }
 
-// Add tracks (load multiple audio files)
-export async function addTracks(trackPaths) {
+// Add tracks (load multiple audio files as a song)
+export async function addTracks(trackPaths, songName = null) {
     const client = await ensureAudioService();
     
     console.log(`📁 Loading ${trackPaths.length} tracks...`);
     console.log(`📁 Call stack:`, new Error().stack);
     console.log(`📁 Track paths being loaded:`, trackPaths);
     
-    const results = await client.loadMultipleTracks(trackPaths);
+    // Determine song name from directory if not provided
+    let finalSongName = songName;
+    if (!finalSongName && trackPaths.length > 0) {
+        // Extract directory name from first track path (browser-compatible)
+        const firstPath = trackPaths[0];
+        const lastSlashIndex = Math.max(firstPath.lastIndexOf('/'), firstPath.lastIndexOf('\\'));
+        const dirPath = firstPath.substring(0, lastSlashIndex);
+        const lastDirSlashIndex = Math.max(dirPath.lastIndexOf('/'), dirPath.lastIndexOf('\\'));
+        finalSongName = dirPath.substring(lastDirSlashIndex + 1);
+    }
+    finalSongName = finalSongName || 'Unnamed Song';
     
-    // Apply default panning (click/guide tracks to left)
-    await client.applyDefaultPanning();
+    console.log(`🎵 Creating song: "${finalSongName}"`);
     
-    const successCount = results.filter(r => r.success).length;
-    console.log(`✅ Loaded ${successCount}/${trackPaths.length} tracks successfully`);
-    
-    return results;
+    try {
+        const songResult = await client.createSong(finalSongName, trackPaths);
+        console.log(`✅ Created song: ${finalSongName} (ID: ${songResult.songId})`);
+        
+        // Apply default panning (click/guide tracks to left)
+        await client.applyDefaultPanning();
+        
+        // Get track information from mixer state for UI compatibility
+        const mixerState = await client.getMixerState();
+        
+        // Return track information in the expected format for backward compatibility
+        const trackResults = mixerState.tracks.map(track => ({
+            path: track.filePath,
+            trackId: track.id,
+            success: true
+        }));
+        
+        return trackResults;
+    } catch (error) {
+        console.error('❌ Failed to create song:', error);
+        throw error;
+    }
 }
 
 // Load a single audio file
@@ -212,6 +239,7 @@ export async function stopAllAudio() {
 
 // Go to beginning of all tracks (stop and restart)
 export async function goToBeginningAllTracks() {
+    console.log('🔄 goToBeginningAllTracks called');
     const client = await ensureAudioService();
     
     try {
@@ -479,6 +507,18 @@ export async function getCrossfadeStatus() {
         return await client.getCrossfadeStatus();
     } catch (error) {
         console.error('❌ Failed to get crossfade status:', error);
+        return null;
+    }
+}
+
+export async function getMixerState() {
+    const client = await ensureAudioService();
+    
+    try {
+        const state = await client.getMixerState();
+        return state;
+    } catch (error) {
+        console.error('❌ Failed to get mixer state:', error);
         return null;
     }
 }
