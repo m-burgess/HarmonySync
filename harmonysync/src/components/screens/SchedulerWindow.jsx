@@ -90,7 +90,6 @@ const SchedulerWindow = () => {
 
   // Check if event should execute at current time
   const shouldEventExecute = (event, now) => {
-    const eventDate = new Date(event.date + 'T' + event.time);
     const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
     // Check if time matches
