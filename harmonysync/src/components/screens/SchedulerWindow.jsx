@@ -3,24 +3,12 @@ import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/solid';
 import { core } from '../../electron-adapter';
 import Button from '../ui/Button.jsx';
 import Input from '../ui/Input.jsx';
+import AddEventModal from '../modals/AddEventModal.jsx';
 import commonMacros from '../../data/common_macros.json';
 
 const SchedulerWindow = () => {
   const [scheduledEvents, setScheduledEvents] = useState([]);
-  const [selectedMacro, setSelectedMacro] = useState('');
-  const [selectedDay, setSelectedDay] = useState('Saturday');
-  const [selectedTime, setSelectedTime] = useState('16:30');
-  const [isRecurring, setIsRecurring] = useState(true);
-
-  const daysOfWeek = [
-    'Sunday',
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday'
-  ];
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   // Load scheduled events from localStorage
   useEffect(() => {
@@ -36,20 +24,26 @@ const SchedulerWindow = () => {
     setScheduledEvents(events);
   };
 
-  const addScheduledEvent = () => {
-    if (!selectedMacro) {
-      alert('Please select a macro');
-      return;
+  const handleAddEvent = (eventData) => {
+    // Get macro or script name
+    let actionName = '';
+    if (eventData.actionType === 'macro') {
+      const macro = commonMacros.find(m => m.id === eventData.macroId);
+      actionName = macro ? macro.name : 'Unknown Macro';
+    } else if (eventData.actionType === 'script') {
+      actionName = 'Custom Script';
     }
 
-    const macro = commonMacros.find(m => m.id === selectedMacro);
     const newEvent = {
       id: Date.now(),
-      macroId: selectedMacro,
-      macroName: macro.name,
-      day: selectedDay,
-      time: selectedTime,
-      recurring: isRecurring,
+      name: eventData.name,
+      date: eventData.date,
+      time: eventData.time,
+      recurrenceType: eventData.recurrenceType,
+      actionType: eventData.actionType,
+      macroId: eventData.macroId,
+      scriptId: eventData.scriptId,
+      actionName: actionName,
       enabled: true
     };
 
@@ -73,12 +67,16 @@ const SchedulerWindow = () => {
   useEffect(() => {
     const checkSchedule = () => {
       const now = new Date();
-      const currentDay = daysOfWeek[now.getDay()];
-      const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
       scheduledEvents.forEach(event => {
-        if (event.enabled && event.day === currentDay && event.time === currentTime) {
-          executeMacro(event.macroId);
+        if (!event.enabled) return;
+
+        if (shouldEventExecute(event, now)) {
+          if (event.actionType === 'macro' && event.macroId) {
+            executeMacro(event.macroId);
+          } else if (event.actionType === 'script' && event.scriptId) {
+            executeScript(event.scriptId);
+          }
         }
       });
     };
@@ -90,6 +88,42 @@ const SchedulerWindow = () => {
     return () => clearInterval(interval);
   }, [scheduledEvents]);
 
+  // Check if event should execute at current time
+  const shouldEventExecute = (event, now) => {
+    const eventDate = new Date(event.date + 'T' + event.time);
+    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    // Check if time matches
+    if (event.time !== currentTime) return false;
+
+    switch (event.recurrenceType) {
+      case 'one-time':
+        // Execute only if date matches exactly
+        const eventDateOnly = event.date;
+        const nowDateOnly = now.toISOString().split('T')[0];
+        return eventDateOnly === nowDateOnly;
+
+      case 'daily':
+        // Execute every day at the specified time
+        return true;
+
+      case 'weekly':
+        // Execute if the day of week matches
+        const eventDay = new Date(event.date).getDay();
+        const currentDay = now.getDay();
+        return eventDay === currentDay;
+
+      case 'monthly':
+        // Execute if the day of month matches
+        const eventDayOfMonth = new Date(event.date).getDate();
+        const currentDayOfMonth = now.getDate();
+        return eventDayOfMonth === currentDayOfMonth;
+
+      default:
+        return false;
+    }
+  };
+
   const executeMacro = async (macroId) => {
     const macro = commonMacros.find(m => m.id === macroId);
     if (!macro) return;
@@ -98,7 +132,7 @@ const SchedulerWindow = () => {
     
     try {
       // Call backend command to execute macro
-      await TauriCore.invoke('execute_macro', {
+      await core.invoke('execute_macro', {
         macroId: macro.id,
         macroAction: macro.action,
         midiNote: macro.midiNote
@@ -107,6 +141,38 @@ const SchedulerWindow = () => {
       console.log(`Successfully executed macro: ${macro.name}`);
     } catch (error) {
       console.error(`Failed to execute macro ${macro.name}:`, error);
+    }
+  };
+
+  const executeScript = async (scriptId) => {
+    console.log(`Executing scheduled script: ${scriptId}`);
+    
+    try {
+      await core.invoke('script:execute', scriptId, {});
+      console.log(`Successfully executed script: ${scriptId}`);
+    } catch (error) {
+      console.error(`Failed to execute script ${scriptId}:`, error);
+    }
+  };
+
+  // Format recurrence type for display
+  const formatRecurrence = (event) => {
+    const eventDate = new Date(event.date);
+    const dateStr = eventDate.toLocaleDateString();
+    
+    switch (event.recurrenceType) {
+      case 'one-time':
+        return `Once on ${dateStr}`;
+      case 'daily':
+        return `Daily at ${event.time}`;
+      case 'weekly':
+        const dayName = eventDate.toLocaleDateString('en-US', { weekday: 'long' });
+        return `Every ${dayName} at ${event.time}`;
+      case 'monthly':
+        const dayOfMonth = eventDate.getDate();
+        return `Monthly on day ${dayOfMonth} at ${event.time}`;
+      default:
+        return dateStr;
     }
   };
 
@@ -132,102 +198,23 @@ const SchedulerWindow = () => {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Add New Event Section */}
-        <div className="bg-gray-700 rounded-lg p-4">
-          <h3 className="text-lg font-medium text-white mb-4">Schedule New Event</h3>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Select Macro
-              </label>
-              <select
-                value={selectedMacro}
-                onChange={(e) => setSelectedMacro(e.target.value)}
-                className="w-full bg-gray-600 text-white border border-gray-500 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">-- Select a macro --</option>
-                <optgroup label="Pre-service Music">
-                  {commonMacros
-                    .filter(m => m.action.includes('preservice'))
-                    .map(macro => (
-                      <option key={macro.id} value={macro.id}>
-                        {macro.name}
-                      </option>
-                    ))}
-                </optgroup>
-                <optgroup label="MIDI Notes">
-                  {commonMacros
-                    .filter(m => m.action === 'send_midi_note')
-                    .map(macro => (
-                      <option key={macro.id} value={macro.id}>
-                        {macro.name}
-                      </option>
-                    ))}
-                </optgroup>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Day of Week
-              </label>
-              <select
-                value={selectedDay}
-                onChange={(e) => setSelectedDay(e.target.value)}
-                className="w-full bg-gray-600 text-white border border-gray-500 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {daysOfWeek.map(day => (
-                  <option key={day} value={day}>
-                    {day}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Time
-              </label>
-              <input
-                type="time"
-                value={selectedTime}
-                onChange={(e) => setSelectedTime(e.target.value)}
-                className="w-full bg-gray-600 text-white border border-gray-500 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div className="flex items-end">
-              <label className="flex items-center space-x-2 text-gray-300 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isRecurring}
-                  onChange={(e) => setIsRecurring(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 bg-gray-600 border-gray-500 rounded focus:ring-blue-500"
-                />
-                <span>Recurring weekly</span>
-              </label>
-            </div>
-          </div>
-
-          <div className="mt-4">
-            <Button
-              onClick={addScheduledEvent}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded flex items-center space-x-2"
-            >
-              <PlusIcon className="w-5 h-5" />
-              <span>Add Scheduled Event</span>
-            </Button>
-          </div>
+        {/* Add Event Button */}
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-medium text-white">Scheduled Events</h3>
+          <Button
+            onClick={() => setIsAddModalOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded flex items-center space-x-2"
+          >
+            <PlusIcon className="w-5 h-5" />
+            <span>Add Event</span>
+          </Button>
         </div>
 
         {/* Scheduled Events List */}
         <div className="bg-gray-700 rounded-lg p-4">
-          <h3 className="text-lg font-medium text-white mb-4">Scheduled Events</h3>
-          
           {scheduledEvents.length === 0 ? (
             <p className="text-gray-400 text-center py-8">
-              No scheduled events. Add one above to get started.
+              No scheduled events. Click "Add Event" to create one.
             </p>
           ) : (
             <div className="space-y-2">
@@ -246,9 +233,9 @@ const SchedulerWindow = () => {
                       className="w-4 h-4 text-blue-600 bg-gray-600 border-gray-500 rounded focus:ring-blue-500"
                     />
                     <div>
-                      <div className="text-white font-medium">{event.macroName}</div>
+                      <div className="text-white font-medium">{event.name}</div>
                       <div className="text-sm text-gray-400">
-                        {event.recurring ? 'Every' : ''} {event.day} at {event.time}
+                        {event.actionName} • {formatRecurrence(event)}
                       </div>
                     </div>
                   </div>
@@ -263,35 +250,14 @@ const SchedulerWindow = () => {
             </div>
           )}
         </div>
-
-        {/* Calendar View (Simplified) */}
-        <div className="bg-gray-700 rounded-lg p-4">
-          <h3 className="text-lg font-medium text-white mb-4">Weekly Overview</h3>
-          <div className="grid grid-cols-7 gap-2">
-            {daysOfWeek.map(day => {
-              const dayEvents = scheduledEvents.filter(e => e.day === day && e.enabled);
-              return (
-                <div key={day} className="bg-gray-600 rounded p-2">
-                  <div className="text-xs font-medium text-gray-300 text-center mb-2">
-                    {day.substring(0, 3)}
-                  </div>
-                  <div className="space-y-1">
-                    {dayEvents.map(event => (
-                      <div
-                        key={event.id}
-                        className="text-xs bg-blue-600 text-white rounded px-1 py-0.5 truncate"
-                        title={`${event.macroName} at ${event.time}`}
-                      >
-                        {event.time}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
       </div>
+
+      {/* Add Event Modal */}
+      <AddEventModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSave={handleAddEvent}
+      />
     </div>
   );
 };
