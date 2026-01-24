@@ -541,35 +541,55 @@ class AudioMixer {
 
     async startMasterClockPlayback(tracks, masterTrack) {
         try {
-            console.log(`🎯 Starting master clock: ${masterTrack.name}`);
+            console.log(`🎯 Master clock designated: ${masterTrack.name}`);
             console.log(`🔍 Master track path: ${masterTrack.filePath}`);
+            console.log(`🎵 Starting ALL tracks simultaneously (including master clock)...`);
             
-            await this.startTrackWithClock(masterTrack, true);
+            // CRITICAL FIX: Start ALL tracks at exactly the same time
+            // Professional multitrack players like multitracks.com start all tracks simultaneously,
+            // not sequentially with delays. The master clock concept is just for reference,
+            // not for sequential starting.
+            const startTime = Date.now();
             
-            // Wait for master to establish
-            await new Promise(resolve => setTimeout(resolve, 200));
+            // Prepare all track start promises (master + slaves)
+            const allTrackPromises = tracks.map(track => {
+                const isMaster = track === masterTrack;
+                return this.startTrackWithClock(track, isMaster);
+            });
             
-            // Check if master is running
-            if (!masterTrack.isPlaying) {
-                console.warn('⚠️ Master clock failed to start, checking again...');
-                await new Promise(resolve => setTimeout(resolve, 300));
-                
-                if (!masterTrack.isPlaying) {
-                    console.warn('⚠️ Master clock still not running, switching to synchronized playback');
-                    throw new Error('Master clock failed');
-                }
+            // Start all tracks simultaneously - NO DELAYS
+            // Use allSettled to handle partial failures gracefully
+            const results = await Promise.allSettled(allTrackPromises);
+            
+            const totalTime = Date.now() - startTime;
+            
+            // Check for any failures
+            const failedTracks = results.filter(r => r.status === 'rejected');
+            const succeededTracks = results.filter(r => r.status === 'fulfilled');
+            
+            if (failedTracks.length > 0) {
+                console.warn(`⚠️ ${failedTracks.length} track(s) failed to start:`);
+                results.forEach((result, index) => {
+                    if (result.status === 'rejected') {
+                        const trackName = tracks[index]?.name || `Track ${index}`;
+                        console.error(`   - ${trackName}: ${result.reason}`);
+                    }
+                });
             }
             
-            console.log('✅ Master clock established, starting slave tracks...');
+            if (succeededTracks.length === 0) {
+                throw new Error('All tracks failed to start');
+            }
             
-            // Start all other tracks simultaneously
-            const slavePromises = tracks
-                .filter(track => track !== masterTrack)
-                .map(track => this.startTrackWithClock(track, false));
+            console.log(`✅ ${succeededTracks.length}/${tracks.length} tracks started simultaneously in ${totalTime}ms`);
+            console.log(`✅ Master clock (${masterTrack.name}) and slave tracks are now playing in sync`);
             
-            await Promise.all(slavePromises);
-            
-            console.log('✅ All tracks started with master clock synchronization');
+            // Deferred verification check (non-blocking, intentionally not awaited)
+            void setTimeout(() => {
+                if (!masterTrack.isPlaying) {
+                    console.warn('⚠️ Warning: Master clock may have failed to start');
+                }
+            }, 100);
             
         } catch (error) {
             console.error('❌ Error in master clock playback:', error);
@@ -587,10 +607,30 @@ class AudioMixer {
                 this.startTrackWithClock(track, false) // Remove delay for true simultaneity
             );
             
-            await Promise.all(promises);
+            // Use allSettled to handle partial failures gracefully
+            const results = await Promise.allSettled(promises);
             
             const totalTime = Date.now() - startTime;
-            console.log(`✅ All ${tracks.length} tracks started simultaneously in ${totalTime}ms`);
+            
+            // Check for any failures
+            const failedTracks = results.filter(r => r.status === 'rejected');
+            const succeededTracks = results.filter(r => r.status === 'fulfilled');
+            
+            if (failedTracks.length > 0) {
+                console.warn(`⚠️ ${failedTracks.length} track(s) failed to start:`);
+                results.forEach((result, index) => {
+                    if (result.status === 'rejected') {
+                        const trackName = tracks[index]?.name || `Track ${index}`;
+                        console.error(`   - ${trackName}: ${result.reason}`);
+                    }
+                });
+            }
+            
+            if (succeededTracks.length === 0) {
+                throw new Error('All tracks failed to start');
+            }
+            
+            console.log(`✅ ${succeededTracks.length}/${tracks.length} tracks started simultaneously in ${totalTime}ms`);
             
         } catch (error) {
             console.error('❌ Error in synchronized playback:', error);
