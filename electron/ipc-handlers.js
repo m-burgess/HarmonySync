@@ -26,7 +26,8 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
     googleDriveService,
     dropboxService,
     scriptService,
-    scriptingAPI
+    scriptingAPI,
+    displayConfigService
   } = services;
 
   // Dialog handlers
@@ -838,6 +839,35 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
     const { app } = require('electron');
     const path = require('path');
     return path.join(app.getPath('userData'), 'settings');
+  });
+
+  // Display Configuration handlers
+  ipcMain.handle('displayConfig:getAll', async () => {
+    return services.displayConfigService.getAllDisplayConfigs();
+  });
+
+  ipcMain.handle('displayConfig:get', async (event, id) => {
+    return services.displayConfigService.getDisplayConfig(id);
+  });
+
+  ipcMain.handle('displayConfig:create', async (event, config) => {
+    return await services.displayConfigService.createDisplayConfig(config);
+  });
+
+  ipcMain.handle('displayConfig:update', async (event, id, updates) => {
+    return await services.displayConfigService.updateDisplayConfig(id, updates);
+  });
+
+  ipcMain.handle('displayConfig:delete', async (event, id) => {
+    return await services.displayConfigService.deleteDisplayConfig(id);
+  });
+
+  ipcMain.handle('displayConfig:reorder', async (event, orderedIds) => {
+    return await services.displayConfigService.reorderDisplayConfigs(orderedIds);
+  });
+
+  ipcMain.handle('displayConfig:getEnabled', async () => {
+    return services.displayConfigService.getEnabledDisplayConfigs();
   });
 
   // Remote Control Event Handlers
