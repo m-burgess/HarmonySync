@@ -14,6 +14,42 @@ import type {
   CrossfadeRequest,
 } from './audio-api'
 
+// Song types
+export interface CreateSongRequest {
+  name: string
+  trackPaths: string[]
+}
+
+export interface CreateSongResponse {
+  success: boolean
+  songId: string
+}
+
+export interface SongState {
+  id: string
+  name: string
+  isPlaying: boolean
+  trackCount: number
+  tracks: Array<{
+    id: string
+    name: string
+    isPlaying: boolean
+    volume: number
+    pan: number
+    isMuted: boolean
+  }>
+}
+
+export interface GetSongsResponse {
+  success: boolean
+  songs: SongState[]
+}
+
+export interface GetSongResponse {
+  success: boolean
+  song: SongState
+}
+
 const DEFAULT_BASE = 'http://127.0.0.1:3001'
 const base = (import.meta.env.VITE_AUDIO_SERVICE_URL as string) || DEFAULT_BASE
 
@@ -104,6 +140,30 @@ export async function setCrossfadeDuration(duration: number): Promise<void> {
   await request('/api/mixer/crossfade-duration', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ duration })})
 }
 
+export async function createSong(body: CreateSongRequest): Promise<CreateSongResponse> {
+  return request('/api/songs/create', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body)})
+}
+
+export async function playSong(songId: string): Promise<void> {
+  await request(`/api/songs/${encodeURIComponent(songId)}/play`, {method: 'POST'})
+}
+
+export async function stopSong(songId: string): Promise<void> {
+  await request(`/api/songs/${encodeURIComponent(songId)}/stop`, {method: 'POST'})
+}
+
+export async function removeSong(songId: string): Promise<void> {
+  await request(`/api/songs/${encodeURIComponent(songId)}`, {method: 'DELETE'})
+}
+
+export async function getSongs(): Promise<GetSongsResponse> {
+  return request('/api/songs', {method: 'GET'})
+}
+
+export async function getSong(songId: string): Promise<GetSongResponse> {
+  return request(`/api/songs/${encodeURIComponent(songId)}`, {method: 'GET'})
+}
+
 export default {
   health,
   shutdown,
@@ -123,4 +183,10 @@ export default {
   applyDefaultPanning,
   getCrossfadeStatus,
   clearMixer,
+  createSong,
+  playSong,
+  stopSong,
+  removeSong,
+  getSongs,
+  getSong,
 }

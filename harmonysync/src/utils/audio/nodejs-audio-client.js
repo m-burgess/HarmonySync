@@ -355,6 +355,31 @@ class NodeJSAudioClient {
             return false;
         }
     }
+
+    // Song management methods
+    async createSong(name, trackPaths) {
+        return audioApi.createSong({ name, trackPaths })
+    }
+
+    async playSong(songId) {
+        return audioApi.playSong(songId)
+    }
+
+    async stopSong(songId) {
+        return audioApi.stopSong(songId)
+    }
+
+    async removeSong(songId) {
+        return audioApi.removeSong(songId)
+    }
+
+    async getSongs() {
+        return audioApi.getSongs()
+    }
+
+    async getSong(songId) {
+        return audioApi.getSong(songId)
+    }
 }
 
 export default NodeJSAudioClient;

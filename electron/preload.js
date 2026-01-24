@@ -1,6 +1,10 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
-console.log('[Preload] Starting preload script...');
+console.log('[Preload] ============================================');
+console.log('[Preload] Preload script executing...');
+console.log('[Preload] contextBridge available:', typeof contextBridge);
+console.log('[Preload] ipcRenderer available:', typeof ipcRenderer);
+console.log('[Preload] ============================================');
 
 // Build the API object once so we can expose it under multiple names
 const api = {
@@ -119,15 +123,36 @@ const api = {
 
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
-contextBridge.exposeInMainWorld('electronAPI', api);
-// Also expose a cached reference so renderer HMR reloads can find it immediately
-contextBridge.exposeInMainWorld('__electronAPICached', api);
+try {
+  contextBridge.exposeInMainWorld('electronAPI', api);
+  console.log('[Preload] electronAPI successfully exposed');
+  
+  // Also expose a cached reference so renderer HMR reloads can find it immediately
+  contextBridge.exposeInMainWorld('__electronAPICached', api);
+  console.log('[Preload] __electronAPICached successfully exposed');
+  
+  // Platform information
+  contextBridge.exposeInMainWorld('platform', {
+    os: process.platform,
+    arch: process.arch,
+    version: process.version
+  });
+  console.log('[Preload] platform information successfully exposed');
+  
+  // Signal that preload is complete
+  contextBridge.exposeInMainWorld('__preloadReady', true);
+  console.log('[Preload] __preloadReady flag set');
+  console.log('[Preload] ============================================');
+  console.log('[Preload] Preload script completed successfully!');
+  console.log('[Preload] All APIs exposed and ready');
+  console.log('[Preload] ============================================');
+} catch (error) {
+  console.error('[Preload] ============================================');
+  console.error('[Preload] CRITICAL ERROR exposing APIs:', error);
+  console.error('[Preload] Stack:', error.stack);
+  console.error('[Preload] ============================================');
+}
 
-// Platform information
-contextBridge.exposeInMainWorld('platform', {
-  os: process.platform,
-  arch: process.arch,
-  version: process.version
-});
-
-console.log('[Preload] Preload script completed. electronAPI exposed.');
+// Verify exposure worked by checking if we can access it
+// Note: We can't directly check window.electronAPI from here due to context isolation
+console.log('[Preload] Script execution complete');

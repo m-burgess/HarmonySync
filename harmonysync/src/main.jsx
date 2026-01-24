@@ -12,22 +12,50 @@ async function main() {
     // Wait for electronAPI with timeout (longer timeout for first boot)
     let attempts = 0;
     const maxAttempts = 80; // 8 seconds total
-    while (typeof window.electronAPI === 'undefined' && attempts < maxAttempts) {
+    
+    while (attempts < maxAttempts) {
+      // Check if preload is ready
+      if (window.__preloadReady && typeof window.electronAPI !== 'undefined') {
+        console.log('[main.jsx] electronAPI is available after', attempts * 100, 'ms');
+        break;
+      }
+      
+      // Also check for cached API (HMR recovery)
+      if (typeof window.__electronAPICached !== 'undefined' && !window.electronAPI) {
+        console.log('[main.jsx] Recovering electronAPI from cache');
+        window.electronAPI = window.__electronAPICached;
+        break;
+      }
+      
       await new Promise(r => setTimeout(r, 100));
       attempts++;
     }
     
     if (typeof window.electronAPI !== 'undefined') {
-      console.log('[main.jsx] electronAPI is available after', attempts * 100, 'ms');
+      console.log('[main.jsx] ✅ electronAPI successfully loaded');
       
-      // CRITICAL: Store the API reference on window so it survives Vite hot reloads
-      // The preload script may not re-execute on HMR, so cache it now
+      // CRITICAL: Store the API reference in multiple permanent caches
+      // This ensures it survives Vite HMR and module reloads
       if (!window.__electronAPICached) {
         window.__electronAPICached = window.electronAPI;
         console.log('[main.jsx] Cached electronAPI globally');
       }
+      
+      // SUPER CRITICAL: Create a permanent cache that absolutely won't be cleared
+      if (!window.__electronAPI_PERMANENT_CACHE) {
+        window.__electronAPI_PERMANENT_CACHE = window.electronAPI;
+        console.log('[main.jsx] Created permanent electronAPI cache');
+      }
+      
+      // Also store in globalThis if available
+      if (typeof globalThis !== 'undefined' && !globalThis.__electronAPI_PERMANENT_CACHE) {
+        globalThis.__electronAPI_PERMANENT_CACHE = window.electronAPI;
+        console.log('[main.jsx] Stored in globalThis permanent cache');
+      }
     } else {
-      console.warn('[main.jsx] electronAPI was not available after 8 seconds');
+      console.error('[main.jsx] ❌ electronAPI was not available after 8 seconds');
+      console.error('[main.jsx] __preloadReady:', window.__preloadReady);
+      console.error('[main.jsx] __electronAPICached:', typeof window.__electronAPICached);
     }
   }
   
