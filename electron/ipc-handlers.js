@@ -19,6 +19,7 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
     macroService,
     schedulerService,
     httpServer,
+    remoteControlService,
     midiManager,
     lyricsFetcher,
     fileManager,
@@ -469,6 +470,25 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
     return httpServer.getUrl();
   });
 
+  // Remote Control Service handlers
+  ipcMain.handle('remote:getUrl', async () => {
+    return remoteControlService.getUrl();
+  });
+
+  ipcMain.handle('remote:getState', async () => {
+    return remoteControlService.getState();
+  });
+
+  ipcMain.handle('remote:updateState', async (event, updates) => {
+    remoteControlService.updateState(updates);
+    return { success: true };
+  });
+
+  ipcMain.handle('remote:setSetlistDirectory', async (event, directory) => {
+    remoteControlService.setSetlistDirectory(directory);
+    return { success: true };
+  });
+
   // CSS generation (legacy support)
   ipcMain.handle('css:generateBackground', async (event, path) => {
     return await textService.generateAndSaveCSS(path);
@@ -707,5 +727,34 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
 
   ipcMain.handle('slides:scanServiceFolder', async (event, servicePath) => {
     return await services.slidesService.scanServiceFolder(servicePath);
+  });
+
+  // Remote Control Event Handlers
+  // These handlers are called when actions occur in the main app
+  // to sync state with the remote control service
+  
+  ipcMain.on('app:folder-loaded', (event, data) => {
+    // Update remote control state when a folder is loaded in the main app
+    remoteControlService.updateState({
+      currentFolder: data.folderPath,
+      currentSlideIndex: 0,
+      totalSlides: data.totalSlides || 0,
+      loadedTracks: data.audioTracks || []
+    });
+  });
+
+  ipcMain.on('app:slide-changed', (event, data) => {
+    // Update remote control state when slide changes in the main app
+    remoteControlService.updateState({
+      currentSlideIndex: data.slideIndex
+    });
+  });
+
+  ipcMain.on('app:playback-changed', (event, data) => {
+    // Update remote control state when playback state changes
+    remoteControlService.updateState({
+      playbackStatus: data.status,
+      playbackPosition: data.position || 0
+    });
   });
 };

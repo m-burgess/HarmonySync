@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>HarmonySync Remote Control</title>
+  <link rel="stylesheet" href="mobile-control.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <h1>🎵 HarmonySync Remote</h1>
+      <div class="connection-status" id="connectionStatus">
+        <span class="status-indicator" id="statusIndicator"></span>
+        <span id="statusText">Connecting...</span>
+      </div>
+    </header>
+
+    <!-- Current Status Card -->
+    <section class="card status-card">
+      <h2>Current Status</h2>
+      <div class="status-grid">
+        <div class="status-item">
+          <span class="status-label">Folder:</span>
+          <span class="status-value" id="currentFolder">None</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Slide:</span>
+          <span class="status-value" id="currentSlide">0 / 0</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Playback:</span>
+          <span class="status-value" id="playbackStatus">Stopped</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Tracks:</span>
+          <span class="status-value" id="trackCount">0</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Folder Selection -->
+    <section class="card">
+      <h2>Select Folder</h2>
+      <div class="folder-controls">
+        <button class="btn btn-secondary" id="refreshFoldersBtn" onclick="loadFolders()">
+          🔄 Refresh
+        </button>
+        <select id="folderSelect" class="folder-select">
+          <option value="">-- Select a folder --</option>
+        </select>
+        <button class="btn btn-primary" id="loadFolderBtn" onclick="loadSelectedFolder()" disabled>
+          📁 Load Folder
+        </button>
+      </div>
+    </section>
+
+    <!-- Slide Navigation -->
+    <section class="card">
+      <h2>Slide Control</h2>
+      <div class="slide-controls">
+        <button class="btn btn-nav btn-large" id="prevBtn" onclick="previousSlide()" disabled>
+          ◀ Previous
+        </button>
+        <button class="btn btn-nav btn-large" id="nextBtn" onclick="nextSlide()" disabled>
+          Next ▶
+        </button>
+      </div>
+    </section>
+
+    <!-- Playback Control -->
+    <section class="card">
+      <h2>Playback Control</h2>
+      <div class="playback-controls">
+        <button class="btn btn-success btn-large" id="playBtn" onclick="playAudio()" disabled>
+          ▶ Play
+        </button>
+        <button class="btn btn-warning btn-large" id="pauseBtn" onclick="pauseAudio()" disabled>
+          ⏸ Pause
+        </button>
+        <button class="btn btn-danger btn-large" id="stopBtn" onclick="stopAudio()" disabled>
+          ⏹ Stop
+        </button>
+      </div>
+    </section>
+
+    <!-- Messages -->
+    <div id="messageContainer" class="message-container"></div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>HarmonySync Presenter Remote Control v1.0</p>
+    </footer>
+  </div>
+
+  <script src="mobile-control.js"></script>
+</body>
+</html>
