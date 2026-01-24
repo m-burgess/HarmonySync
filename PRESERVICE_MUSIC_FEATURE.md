@@ -58,8 +58,8 @@ Added a new pre-service music feature that allows users to play YouTube Music or
    - Added PreserviceMusic modal component to render tree
 
 2. **PreserviceMusic.jsx** (New)
-   - Uses Tauri File System plugin to read/write config
-   - Uses Tauri Path API for platform-agnostic paths
+   - Uses Electron IPC for file operations
+   - Uses Node.js path API for platform-agnostic paths
    - React hooks for state management
    - URL parsing and embed URL generation
    - Full-screen modal with centered layout
@@ -82,9 +82,7 @@ Added a new pre-service music feature that allows users to play YouTube Music or
    - User can click "Change Playlist" to update URL
 
 ## Dependencies
-- `@tauri-apps/api/core` - Tauri core API
-- `@tauri-apps/plugin-fs` - File system operations
-- `@tauri-apps/api/path` - Path utilities
+- Electron IPC API - For communication with backend
 - `@heroicons/react/24/solid` - XMarkIcon for close button
 - `@heroicons/react/24/outline` - PlayIcon for activity bar
 

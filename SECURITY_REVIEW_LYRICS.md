@@ -18,10 +18,10 @@ $(date)
 - **XSS Prevention**: React handles all rendering, no dangerouslySetInnerHTML
 
 ### 3. File System Operations
-- **Write Operations**: Uses Rust's standard fs::write with proper error handling
-- **Path Construction**: Uses PathBuf for safe path manipulation
+- **Write Operations**: Uses Node.js fs API with proper error handling
+- **Path Construction**: Uses Node.js path module for safe path manipulation
 - **No Directory Traversal**: Paths are constructed from validated folder paths
-- **Permissions**: Uses default file permissions from fs::write
+- **Permissions**: Uses default file permissions
 
 ### 4. HTML Parsing/Scraping
 - **No External Parser**: Uses simple string operations
@@ -51,7 +51,7 @@ $(date)
 - No command injection vectors
 - No file path traversal
 - No XSS vulnerabilities
-- No buffer overflow risks (memory-safe Rust)
+- Proper memory and resource management
 
 ## Recommendations
 
