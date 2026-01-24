@@ -13,8 +13,6 @@ const Scheduler = ({ isOpen, onClose }) => {
   const [selectedDay, setSelectedDay] = useState('Saturday');
   const [selectedTime, setSelectedTime] = useState('16:30');
   const [isRecurring, setIsRecurring] = useState(true);
-  const [dmxScenes, setDmxScenes] = useState([]);
-  const [selectedEventType, setSelectedEventType] = useState('macro');
 
   const daysOfWeek = [
     'Sunday',
@@ -26,50 +24,38 @@ const Scheduler = ({ isOpen, onClose }) => {
     'Saturday'
   ];
 
-  // Load scheduled events from localStorage
+  // Load scheduled events from JSON storage
   useEffect(() => {
-    const savedEvents = localStorage.getItem('scheduled_events');
-    if (savedEvents) {
-      setScheduledEvents(JSON.parse(savedEvents));
-    }
-  }, []);
-
-  // Load DMX scenes
-  useEffect(() => {
-    const loadDmxScenes = async () => {
+    const loadEvents = async () => {
       try {
-        const scenes = await core.invoke('get_dmx_scenes');
-        setDmxScenes(scenes);
+        const events = await core.invoke('scheduler:getAllEvents');
+        setScheduledEvents(events || []);
       } catch (error) {
-        console.error('Failed to load DMX scenes:', error);
+        console.error('Failed to load scheduled events:', error);
+        setScheduledEvents([]);
       }
     };
     
     if (isOpen) {
-      loadDmxScenes();
+      loadEvents();
     }
   }, [isOpen]);
 
-  // Save scheduled events to localStorage
-  const saveEvents = (events) => {
-    localStorage.setItem('scheduled_events', JSON.stringify(events));
+  // Save scheduled events to JSON storage
+  const saveEvents = async (events) => {
     setScheduledEvents(events);
+    // Note: Individual operations (create/update/delete) handle persistence
   };
 
-  const addScheduledEvent = () => {
-    if (selectedEventType === 'macro' && !selectedMacro) {
+  const addScheduledEvent = async () => {
+    if (!selectedMacro) {
       alert('Please select a macro');
       return;
     }
-    if (selectedEventType === 'dmx_scene' && !selectedMacro) {
-      alert('Please select a DMX scene');
-      return;
-    }
 
-    let newEvent;
-    if (selectedEventType === 'macro') {
+    try {
       const macro = commonMacros.find(m => m.id === selectedMacro);
-      newEvent = {
+      const newEvent = {
         id: Date.now(),
         type: 'macro',
         macroId: selectedMacro,
@@ -79,34 +65,46 @@ const Scheduler = ({ isOpen, onClose }) => {
         recurring: isRecurring,
         enabled: true
       };
-    } else {
-      const scene = dmxScenes.find(s => s.id === selectedMacro);
-      newEvent = {
-        id: Date.now(),
-        type: 'dmx_scene',
-        sceneId: selectedMacro,
-        sceneName: scene.name,
-        day: selectedDay,
-        time: selectedTime,
-        recurring: isRecurring,
-        enabled: true
-      };
+
+      // Save to JSON storage
+      await core.invoke('scheduler:create', newEvent);
+
+      // Update local state
+      const updatedEvents = [...scheduledEvents, newEvent];
+      setScheduledEvents(updatedEvents);
+    } catch (error) {
+      console.error('Failed to create scheduled event:', error);
+      alert('Failed to create scheduled event. Please try again.');
     }
-
-    const updatedEvents = [...scheduledEvents, newEvent];
-    saveEvents(updatedEvents);
   };
 
-  const deleteEvent = (eventId) => {
-    const updatedEvents = scheduledEvents.filter(e => e.id !== eventId);
-    saveEvents(updatedEvents);
+  const deleteEvent = async (eventId) => {
+    try {
+      await core.invoke('scheduler:delete', eventId);
+      const updatedEvents = scheduledEvents.filter(e => e.id !== eventId);
+      setScheduledEvents(updatedEvents);
+    } catch (error) {
+      console.error('Failed to delete scheduled event:', error);
+      alert('Failed to delete scheduled event. Please try again.');
+    }
   };
 
-  const toggleEventEnabled = (eventId) => {
-    const updatedEvents = scheduledEvents.map(e =>
-      e.id === eventId ? { ...e, enabled: !e.enabled } : e
-    );
-    saveEvents(updatedEvents);
+  const toggleEventEnabled = async (eventId) => {
+    try {
+      const event = scheduledEvents.find(e => e.id === eventId);
+      if (!event) return;
+      
+      const updatedEvent = { ...event, enabled: !event.enabled };
+      await core.invoke('scheduler:update', updatedEvent);
+      
+      const updatedEvents = scheduledEvents.map(e =>
+        e.id === eventId ? updatedEvent : e
+      );
+      setScheduledEvents(updatedEvents);
+    } catch (error) {
+      console.error('Failed to update scheduled event:', error);
+      alert('Failed to update scheduled event. Please try again.');
+    }
   };
 
   // Check and execute scheduled events
@@ -120,11 +118,7 @@ const Scheduler = ({ isOpen, onClose }) => {
 
       scheduledEvents.forEach(event => {
         if (event.enabled && event.day === currentDay && event.time === currentTime) {
-          if (event.type === 'dmx_scene') {
-            executeDmxScene(event.sceneId);
-          } else {
-            executeMacro(event.macroId);
-          }
+          executeMacro(event.macroId);
         }
       });
     };
@@ -135,17 +129,6 @@ const Scheduler = ({ isOpen, onClose }) => {
 
     return () => clearInterval(interval);
   }, [scheduledEvents, isOpen]);
-
-  const executeDmxScene = async (sceneId) => {
-    console.log(`Executing scheduled DMX scene: ${sceneId}`);
-    
-    try {
-      await core.invoke('recall_dmx_scene', { sceneId });
-      console.log(`Successfully recalled DMX scene: ${sceneId}`);
-    } catch (error) {
-      console.error(`Failed to recall DMX scene ${sceneId}:`, error);
-    }
-  };
 
   const executeMacro = async (macroId) => {
     const macro = commonMacros.find(m => m.id === macroId);
@@ -193,45 +176,34 @@ const Scheduler = ({ isOpen, onClose }) => {
               }}
             >
               <option value="macro">Macro</option>
-              <option value="dmx_scene">DMX Scene</option>
             </select>
           </div>
 
           <div className="setting-row">
-            <label>{selectedEventType === 'macro' ? 'Select Macro' : 'Select DMX Scene'}</label>
+            <label>Select Macro</label>
             <select
               value={selectedMacro}
               onChange={(e) => setSelectedMacro(e.target.value)}
             >
-              <option value="">-- Select {selectedEventType === 'macro' ? 'a macro' : 'a DMX scene'} --</option>
-              {selectedEventType === 'macro' ? (
-                <>
-                  <optgroup label="Pre-service Music">
-                    {commonMacros
-                      .filter(m => m.action.includes('preservice'))
-                      .map(macro => (
-                        <option key={macro.id} value={macro.id}>
-                          {macro.name}
-                        </option>
-                      ))}
-                  </optgroup>
-                  <optgroup label="MIDI Notes">
-                    {commonMacros
-                      .filter(m => m.action === 'send_midi_note')
-                      .map(macro => (
-                        <option key={macro.id} value={macro.id}>
-                          {macro.name}
-                        </option>
-                      ))}
-                  </optgroup>
-                </>
-              ) : (
-                dmxScenes.map(scene => (
-                  <option key={scene.id} value={scene.id}>
-                    {scene.name}
-                  </option>
-                ))
-              )}
+              <option value="">-- Select a macro --</option>
+              <optgroup label="Pre-service Music">
+                {commonMacros
+                  .filter(m => m.action.includes('preservice'))
+                  .map(macro => (
+                    <option key={macro.id} value={macro.id}>
+                      {macro.name}
+                    </option>
+                  ))}
+              </optgroup>
+              <optgroup label="MIDI Notes">
+                {commonMacros
+                  .filter(m => m.action === 'send_midi_note')
+                  .map(macro => (
+                    <option key={macro.id} value={macro.id}>
+                      {macro.name}
+                    </option>
+                  ))}
+              </optgroup>
             </select>
           </div>
 
@@ -305,10 +277,10 @@ const Scheduler = ({ isOpen, onClose }) => {
                     />
                     <div>
                       <div className="scheduler-event-name">
-                        {event.type === 'dmx_scene' ? event.sceneName : event.macroName}
+                        {event.macroName}
                       </div>
                       <div className="scheduler-event-details">
-                        {event.type === 'dmx_scene' ? '💡 DMX Scene' : '⚡ Macro'} • {event.recurring ? 'Every' : ''} {event.day} at {event.time}
+                        ⚡ Macro • {event.recurring ? 'Every' : ''} {event.day} at {event.time}
                       </div>
                     </div>
                   </div>
@@ -340,7 +312,7 @@ const Scheduler = ({ isOpen, onClose }) => {
                       <div
                         key={event.id}
                         className="scheduler-calendar-event"
-                        title={`${event.type === 'dmx_scene' ? event.sceneName : event.macroName} at ${event.time}`}
+                        title={`${event.macroName} at ${event.time}`}
                       >
                         {event.time}
                       </div>

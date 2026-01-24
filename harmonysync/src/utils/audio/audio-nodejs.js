@@ -187,6 +187,7 @@ export async function addTracks(trackPaths, songName = null) {
         const trackResults = mixerState.tracks.map(track => ({
             path: track.filePath,
             trackId: track.id,
+            name: track.name, // Include the track name from backend
             success: true
         }));
         

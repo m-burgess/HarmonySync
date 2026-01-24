@@ -292,6 +292,12 @@ async function invokeElectronCommand(command, args, api) {
       return await api.showLowerThirdsWindow();
     case 'hide_lower_thirds_window':
       return await api.hideLowerThirdsWindow();
+    case 'open_preservice_music_window':
+      return await api.openPreserviceMusicWindow();
+    case 'close_preservice_music_window':
+      return await api.closePreserviceMusicWindow();
+    case 'open_scheduler_window':
+      return await api.openSchedulerWindow();
     
     // MIDI operations
     case 'get_midi_devices':
