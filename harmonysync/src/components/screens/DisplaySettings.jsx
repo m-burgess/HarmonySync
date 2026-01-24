@@ -233,7 +233,7 @@ const DisplaySettings = ({ isOpen, onClose }) => {
                         <td style={{ padding: '8px' }}>{config.name}</td>
                         <td style={{ padding: '8px', textTransform: 'capitalize' }}>{config.type}</td>
                         <td style={{ padding: '8px', fontSize: '12px', color: '#888' }}>
-                          {config.deviceId ? `Device: ${availableDisplays.find(d => d.id == config.deviceId)?.name || config.deviceId}` : 
+                          {config.deviceId ? `Device: ${availableDisplays.find(d => d.id === config.deviceId)?.name || config.deviceId}` : 
                            config.ndiOutput ? `NDI: ${config.ndiOutput}` : 
                            'Auto'}
                         </td>
