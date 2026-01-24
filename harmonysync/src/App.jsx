@@ -21,6 +21,7 @@ import SetlistManager from './components/setlist/SetlistManager.jsx';
 import SlideManager from './components/slides/SlideManager.jsx';
 import LyricsColumn from './components/lyrics/LyricsColumn.jsx';
 import MultitrackPlayer from './components/audio/MultitrackPlayer.jsx';
+import MixerSidebar from './components/audio/MixerSidebar.jsx';
 import DisplaySettings from './components/screens/DisplaySettings.jsx';
 import AudioSettings from './components/screens/AudioSettings.jsx';
 
@@ -39,19 +40,15 @@ const App = () => {
   const [isAudioSettingsOpen, setIsAudioSettingsOpen] = useState(false);
   const containerRef = useRef(null);
 
-  // Resizable layout: Service Order sidebar and Multitrack panel
+  // Resizable layout: Service Order sidebar and Mixer sidebar
   const DEFAULT_SIDEBAR_WIDTH = 300;
-  const DEFAULT_MULTITRACK_HEIGHT = 200;
+  const DEFAULT_MIXER_WIDTH = 220;
   
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const v = parseInt(localStorage.getItem('rp_sidebarWidth'), 10);
     return isNaN(v) ? DEFAULT_SIDEBAR_WIDTH : v;
   });
   
-  const [multitrackHeight, setMultitrackHeight] = useState(() => {
-    const v = parseInt(localStorage.getItem('rp_multitrackHeight'), 10);
-    return isNaN(v) ? DEFAULT_MULTITRACK_HEIGHT : v;
-  });
   const draggingRef = useRef(null);
   const rafRef = useRef(null);
 
@@ -170,56 +167,12 @@ const App = () => {
   // VS Code style multitrack panel resizing
   const startMultitrackResize = (e) => {
     e.preventDefault();
-    const startY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
-    const startHeight = multitrackHeight;
-    
-    draggingRef.current = { type: 'multitrack', startY, startHeight };
-    document.body.style.userSelect = 'none';
-    document.body.style.cursor = 'ns-resize'; // Double arrow vertical cursor
-
-    const onMove = (ev) => {
-      if (!draggingRef.current || draggingRef.current.type !== 'multitrack') return;
-      const clientY = ev.type.startsWith('touch') ? ev.touches[0].clientY : ev.clientY;
-      const { startY, startHeight } = draggingRef.current;
-      const dy = startY - clientY; // Inverted because we're dragging up to increase height
-      const minHeight = 100; // minimum multitrack height
-      const maxHeight = 400; // maximum multitrack height
-
-      // Use RAF to throttle layout updates
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      rafRef.current = requestAnimationFrame(() => {
-        let newHeight = Math.max(minHeight, Math.min(maxHeight, startHeight + dy));
-        setMultitrackHeight(newHeight);
-        localStorage.setItem('rp_multitrackHeight', String(newHeight));
-      });
-    };
-
-    const onUp = () => {
-      draggingRef.current = null;
-      document.body.style.userSelect = '';
-      document.body.style.cursor = '';
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('touchmove', onMove);
-      window.removeEventListener('mouseup', onUp);
-      window.removeEventListener('touchend', onUp);
-    };
-
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('touchmove', onMove, { passive: false });
-    window.addEventListener('mouseup', onUp);
-    window.addEventListener('touchend', onUp);
+    // Removed multitrack resize functionality - mixer is now a sidebar
   };
 
   const resetSidebar = () => {
     setSidebarWidth(DEFAULT_SIDEBAR_WIDTH);
     localStorage.removeItem('rp_sidebarWidth');
-  };
-
-  const resetMultitrack = () => {
-    setMultitrackHeight(DEFAULT_MULTITRACK_HEIGHT);
-    localStorage.removeItem('rp_multitrackHeight');
   };
 
   // Listen for display settings menu event
@@ -335,7 +288,7 @@ const App = () => {
         />
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col bg-gray-900">
+        <div className="flex-1 flex bg-gray-900">
           {/* Slide Editor or Lyrics Column */}
           <div className="flex-1 overflow-hidden">
             {currentLyrics ? (
@@ -350,20 +303,8 @@ const App = () => {
             )}
           </div>
 
-          {/* VS Code Resize Handle for Multitrack */}
-          <div
-            className="vscode-resize-handle-horizontal"
-            onMouseDown={startMultitrackResize}
-            onDoubleClick={resetMultitrack}
-          />
-
-          {/* Multitrack Panel */}
-          <div 
-            className="bg-gray-800 border-t border-gray-700"
-            style={{ height: `${multitrackHeight}px` }}
-          >
-            <MultitrackPlayer allTracks={allTracks} isLoadingTracks={isLoadingTracks} />
-          </div>
+          {/* Mixer Sidebar */}
+          <MixerSidebar allTracks={allTracks} isLoadingTracks={isLoadingTracks} />
         </div>
       </div>
 
