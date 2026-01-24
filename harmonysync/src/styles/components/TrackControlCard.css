@@ -1,25 +1,30 @@
 .track-control-card {
-  background-color: #2a2a2a;
-  border: 2px solid #444;
+  background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+  border: 1px solid #374151;
   border-radius: 8px;
-  padding: 12px;
-  width: 160px;
+  padding: 10px;
+  width: 100%;
+  min-width: 120px;
+  max-width: 150px;
+  min-height: 80px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .track-control-card:hover {
   border-color: #0078d4;
-  box-shadow: 0 4px 12px rgba(0, 120, 212, 0.2);
-  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 120, 212, 0.3);
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
 }
 
 .track-muted {
-  opacity: 0.5;
-  background-color: #1e1e1e;
-  border-color: #666;
+  opacity: 0.6;
+  background: linear-gradient(135deg, #0f1728 0%, #0a0e1a 100%) !important;
+  border-color: #4b5563;
 }
 
 .track-muted:hover {
@@ -71,9 +76,9 @@
   background: linear-gradient(135deg, #3a3a3a 0%, #2d2d2d 100%);
   border: 1px solid #555;
   border-radius: 6px;
-  padding: 10px 8px;
+  padding: 8px 6px;
   color: #e0e0e0;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -81,7 +86,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-height: 48px;
+  min-height: 40px;
   text-align: center;
 }
 

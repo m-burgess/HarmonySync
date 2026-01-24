@@ -350,24 +350,26 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
   };
 
   return (
-    <div id="multitrack-player" className="bg-stage text-primary p-3 rounded-md">
-      {/* Audio Service Status */}
-      <div className="flex items-center justify-between mb-2 text-xs">
+    <div id="multitrack-player" className="bg-stage text-primary h-full flex flex-col">
+      {/* Audio Service Status Bar */}
+      <div className="flex items-center justify-between mb-3 px-2 py-1.5 bg-gray-700 bg-opacity-50 rounded text-xs">
         <div className="flex items-center gap-2">
           <span className={`inline-block w-2 h-2 rounded-full ${
             audioServiceStatus === 'connected' ? 'bg-green-500' : 
             audioServiceStatus === 'connecting' ? 'bg-yellow-500 animate-pulse' : 'bg-red-500'
           }`}></span>
-          <span className="text-muted">
-            Audio Service: {audioServiceStatus === 'connected' ? 'Connected' : 
-                           audioServiceStatus === 'connecting' ? 'Connecting...' : 'Error'}
+          <span className={`${
+            audioServiceStatus === 'connected' ? 'text-green-300' : 
+            audioServiceStatus === 'connecting' ? 'text-yellow-300' : 'text-red-300'
+          }`}>
+            {audioServiceStatus === 'connected' ? '✓ Audio Ready' : 
+             audioServiceStatus === 'connecting' ? '⟳ Connecting' : '✕ Error'}
           </span>
         </div>
-        {memoryUsage && (
-          <div className="text-muted">
-            Memory: {memoryUsage.formatted?.total || `${(memoryUsage.rss / 1024 / 1024).toFixed(1)}MB`}
-          </div>
-        )}
+        <div className="text-gray-400">
+          {allTracks.length > 0 && <span>{allTracks.length} tracks</span>}
+          {memoryUsage && <span className="ml-3">Mem: {(memoryUsage.rss / 1024 / 1024).toFixed(0)}MB</span>}
+        </div>
       </div>
 
       {/* Service Error Message */}
@@ -407,61 +409,65 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
         </div>
       )}
 
-      <div className="flex items-center gap-3 mb-3">
-        <button 
-          aria-label="Play all tracks" 
-          title="Play All" 
-          className="p-2 bg-stage rounded-md text-primary disabled:opacity-50 disabled:cursor-not-allowed" 
-          onClick={handlePlayAll}
-          disabled={isOperationInProgress || allTracks.length === 0}
-        >
-          <PlayIcon className="w-5 h-5 text-primary" />
-        </button>
-
-        <button 
-          aria-label="Stop all tracks" 
-          title="Stop All" 
-          className="p-2 bg-surface rounded-md text-muted disabled:opacity-50 disabled:cursor-not-allowed" 
-          onClick={handleStopAll}
-          disabled={isOperationInProgress}
-        >
-          <PauseIcon className="w-5 h-5 text-primary" />
-        </button>
-
-        <button 
-          aria-label="Restart all tracks" 
-          title="Start From Beginning" 
-          className="p-2 bg-surface rounded-md text-muted disabled:opacity-50 disabled:cursor-not-allowed" 
-          onClick={handleGoToBeginning}
-          disabled={isOperationInProgress || allTracks.length === 0}
-        >
-          <BackwardIcon className="w-5 h-5 text-primary" />
-        </button>
-
-        {/* Transpose buttons */}
-        <div className="flex items-center gap-1 ml-3">
+      <div className="flex flex-wrap items-center gap-3 mb-3 p-2 bg-gray-700 bg-opacity-30 rounded-md">
+        {/* Playback Controls Group */}
+        <div className="flex items-center gap-1.5 border-r border-gray-600 pr-3">
           <button 
-            aria-label="Transpose up" 
-            title="Transpose Up (1 semitone)" 
-            className="p-2 bg-green-700 hover:bg-green-600 rounded-md text-white disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
-            onClick={handleTransposeUp}
-            disabled={allTracks.length === 0 || !currentDirectory}
+            aria-label="Play all tracks" 
+            title="Play All" 
+            className="p-2.5 bg-green-700 hover:bg-green-600 rounded-lg text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm" 
+            onClick={handlePlayAll}
+            disabled={isOperationInProgress || allTracks.length === 0}
           >
-            <ArrowUpIcon className="w-5 h-5" />
+            <PlayIcon className="w-5 h-5" />
           </button>
 
           <button 
-            aria-label="Transpose down" 
-            title="Transpose Down (1 semitone)" 
-            className="p-2 bg-red-700 hover:bg-red-600 rounded-md text-white disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
-            onClick={handleTransposeDown}
-            disabled={allTracks.length === 0 || !currentDirectory}
+            aria-label="Stop all tracks" 
+            title="Stop All" 
+            className="p-2.5 bg-red-700 hover:bg-red-600 rounded-lg text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm" 
+            onClick={handleStopAll}
+            disabled={isOperationInProgress}
           >
-            <ArrowDownIcon className="w-5 h-5" />
+            <PauseIcon className="w-5 h-5" />
+          </button>
+
+          <button 
+            aria-label="Restart all tracks" 
+            title="Start From Beginning" 
+            className="p-2.5 bg-blue-700 hover:bg-blue-600 rounded-lg text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm" 
+            onClick={handleGoToBeginning}
+            disabled={isOperationInProgress || allTracks.length === 0}
+          >
+            <BackwardIcon className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
+        {/* Transpose Controls Group */}
+        <div className="flex items-center gap-2 border-r border-gray-600 pr-3">
+          <span className="text-xs text-gray-400 font-medium">Transpose:</span>
+          <button 
+            aria-label="Transpose down" 
+            title="Transpose Down (-1)" 
+            className="p-2 bg-gray-600 hover:bg-gray-500 rounded-lg text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            onClick={handleTransposeDown}
+            disabled={allTracks.length === 0 || !currentDirectory}
+          >
+            <ArrowDownIcon className="w-4 h-4" />
+          </button>
+          <button 
+            aria-label="Transpose up" 
+            title="Transpose Up (+1)" 
+            className="p-2 bg-gray-600 hover:bg-gray-500 rounded-lg text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            onClick={handleTransposeUp}
+            disabled={allTracks.length === 0 || !currentDirectory}
+          >
+            <ArrowUpIcon className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="ml-auto flex items-center gap-3 border-l border-gray-600 pl-3">
+          <label htmlFor="volume-slider" className="text-xs text-gray-400 font-medium">Volume</label>
           <input
             type="range"
             id="volume-slider"
@@ -470,9 +476,9 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
             step="0.01"
             value={globalVolume}
             onChange={handleVolumeChange}
-            className="w-36"
+            className="w-24 sm:w-28 md:w-32 h-1.5 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-green-600"
           />
-          <label htmlFor="volume-slider" className="text-sm text-muted">Volume</label>
+          <span className="text-xs text-gray-400 w-6 text-right font-medium">{Math.round(globalVolume * 100)}%</span>
         </div>
       </div>
 
@@ -501,27 +507,26 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
             Select a song from the setlist to load audio tracks. Each track will appear here as a control card.
           </p>
           <p className="text-xs text-muted mt-3 max-w-md">
-            💡 <strong>Tip:</strong> Click on track names to mute/unmute, and use the pan controls to adjust stereo positioning.
+            💡 <strong>Tip:</strong> Click on track names to mute/unmute. Tracks are automatically panned left/right based on their names.
           </p>
         </div>
       ) : (
-        <div>
-          <div className="flex items-center justify-between mb-2 px-1">
-            <div className="text-xs text-muted">
-              <span className="font-semibold">{allTracks.length}</span> tracks loaded
-            </div>
-            <div className="text-xs text-muted">
-              💡 Click track name to mute/unmute
+        <div className="flex flex-col h-full p-3">
+          <div className="flex items-center justify-between mb-3 flex-shrink-0 pb-2 border-b border-gray-600">
+            <h3 className="text-sm font-semibold text-gray-200">
+              🎚️ Mixer
+            </h3>
+            <div className="text-xs text-gray-500">
+              Click name to mute
             </div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 overflow-auto max-h-[400px] p-2" id="track-controls">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-2 sm:gap-3 md:gap-4 overflow-y-auto flex-1 min-h-0" id="track-controls">
             {allTracks.sort(sortTracks).map((track, index) => (
-              <div key={index} className="bg-surface rounded">
-                <TrackControl
-                  track={track}
-                  onMuteToggle={handleMuteToggle}
-                />
-              </div>
+              <TrackControl
+                key={index}
+                track={track}
+                onMuteToggle={handleMuteToggle}
+              />
             ))}
           </div>
         </div>
