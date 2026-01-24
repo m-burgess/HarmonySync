@@ -33,6 +33,7 @@ const scriptService = require('./services/script-service');
 const scriptingAPI = require('./services/scripting-api');
 const eventTriggerService = require('./services/event-trigger-service');
 const slidesService = require('./services/slides-service');
+const displayConfigService = require('./services/display-config-service');
 
 const isDev = process.env.NODE_ENV === 'development';
 const VITE_DEV_SERVER_URL = 'http://localhost:5174';
@@ -361,6 +362,9 @@ app.whenReady().then(async () => {
     // Initialize JSON storage
     await jsonStorage.initialize();
     
+    // Initialize display configuration service
+    await displayConfigService.initialize();
+    
     // Start HTTP server for video streaming
     await httpServer.start();
     
@@ -442,7 +446,8 @@ require('./ipc-handlers')(ipcMain, {
   dropboxService,
   scriptService,
   scriptingAPI,
-  slidesService
+  slidesService,
+  displayConfigService
 });
 
 // Initialize script storage
