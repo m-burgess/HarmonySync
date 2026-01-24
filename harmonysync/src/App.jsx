@@ -231,6 +231,15 @@ const App = () => {
     return unlisten;
   }, []);
 
+  // Listen for audio settings menu event
+  useEffect(() => {
+    const unlisten = event.listen('audio-settings-clicked', () => {
+      setIsAudioSettingsOpen(true);
+    });
+
+    return unlisten;
+  }, []);
+
   // Listen for preservice music events from scheduler
   useEffect(() => {
     const unlistenStart = event.listen('start-preservice-music', async () => {

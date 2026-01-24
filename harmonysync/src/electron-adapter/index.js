@@ -329,6 +329,14 @@ async function invokeElectronCommand(command, args, api) {
     case 'generate_background_css':
       return await api.generateBackgroundCss(args.path);
     
+    // Settings
+    case 'settings:getDisplays':
+      return await api.getDisplays();
+    case 'settings:getAudioDevices':
+      return await api.getAudioDevices();
+    case 'settings:getSettingsPath':
+      return await api.getSettingsPath();
+    
     default:
       console.warn(`Unknown command: ${command}`);
       throw new Error(`Command not implemented: ${command}`);

@@ -49,8 +49,9 @@ const DisplaySettings = ({ isOpen, onClose }) => {
     try {
       setIsLoading(true);
       
-      // Use Electron's fs API to read settings from a JSON file
-      const settingsPath = '/display_settings.json'; // Will be stored in app data
+      // Get settings directory path
+      const settingsDir = await core.invoke('settings:getSettingsPath');
+      const settingsPath = `${settingsDir}/display_settings.json`;
       
       try {
         const settingsContent = await fs.readTextFile(settingsPath);
@@ -65,10 +66,10 @@ const DisplaySettings = ({ isOpen, onClose }) => {
         setConfidenceFontFamily(settings.confidenceFontFamily || 'Arial');
       } catch (readError) {
         // File doesn't exist yet, use defaults
-        console.log('No settings file found, using defaults');
+        console.log('No display settings file found, using defaults');
       }
     } catch (error) {
-      console.error('Error loading settings:', error);
+      console.error('Error loading display settings:', error);
     } finally {
       setIsLoading(false);
     }
@@ -76,11 +77,8 @@ const DisplaySettings = ({ isOpen, onClose }) => {
 
   const loadAvailableDisplays = async () => {
     try {
-      // Fallback to basic display list
-      setAvailableDisplays([
-        { id: 'primary', name: 'Primary Display' },
-        { id: 'secondary', name: 'Secondary Display' }
-      ]);
+      const displays = await core.invoke('settings:getDisplays');
+      setAvailableDisplays(displays);
     } catch (error) {
       console.error('Error loading available displays:', error);
       // Fallback to basic display list if command fails
@@ -95,8 +93,9 @@ const DisplaySettings = ({ isOpen, onClose }) => {
     try {
       setIsLoading(true);
       
-      // Save all settings to a JSON file
-      const settingsPath = '/display_settings.json'; // Will be stored in app data
+      // Get settings directory path
+      const settingsDir = await core.invoke('settings:getSettingsPath');
+      const settingsPath = `${settingsDir}/display_settings.json`;
       
       const settings = {
         audienceDisplay,

@@ -191,16 +191,6 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
     setGlobalVolume(newVolume); // Assuming setGlobalVolume exists in audio.js
   };
 
-  const handlePanChange = (track, newPanValue) => {
-    console.log(`🎛️  Pan updated for track ${track.name}: ${newPanValue}`);
-    // Update track in allTracks state
-    const updatedTracks = allTracks.map(t => 
-      t.id === track.id ? { ...t, panValue: newPanValue } : t
-    );
-    // Note: We don't call setAllTracks here as it's managed by the parent (App.jsx)
-    // The audio service call is handled in TrackControl
-  };
-
   const handleMuteToggle = (track, newMuteState) => {
     console.log(`🔇 Mute updated for track ${track.name}: ${newMuteState}`);
     // Update track in allTracks state
@@ -318,7 +308,7 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
             id: result.trackId,
             path: result.path,
             name: trackName,
-            panValue: 0,
+            pan: 0,
             isMuted: false,
             isPlaying: false,
             individualVolume: 0.7,
@@ -529,7 +519,6 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
               <div key={index} className="bg-surface rounded">
                 <TrackControl
                   track={track}
-                  onPanChange={handlePanChange}
                   onMuteToggle={handleMuteToggle}
                 />
               </div>
