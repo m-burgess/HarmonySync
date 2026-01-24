@@ -34,3 +34,5 @@ gdrive-token.json
 # Database
 *.db
 *.db-journal
+node_modules/
+package-lock.json
