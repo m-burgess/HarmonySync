@@ -1,6 +1,6 @@
 # HarmonySync Presenter - Modern Worship & Media Software
 
-A comprehensive presentation software built with a Tauri (Rust) backend and a React (JavaScript) frontend, designed for worship services and live events. HarmonySync offers robust multitrack audio playback, dynamic media display, and flexible presentation capabilities.
+A comprehensive presentation software built with an Electron (Node.js) backend and a React (JavaScript) frontend, designed for worship services and live events. HarmonySync offers robust multitrack audio playback, dynamic media display, and flexible presentation capabilities.
 
 ## ✨ Key Features
 
@@ -82,72 +82,90 @@ To enhance readability and visual appeal:
 ### Performance Optimizations
 HarmonySync is optimized for efficient resource usage:
 - ✅ **Hardware-accelerated video encoding** (NVENC, QuickSync, VAAPI, VideoToolbox)
-- ✅ **Multi-threaded processing** using Tokio for parallel operations
-- ✅ **Link-Time Optimization (LTO)** for faster runtime performance
-- ✅ **Efficient memory management** with Rust's zero-cost abstractions
-- ✅ **Optimized caching** using DashMap for thread-safe concurrent access
+- ✅ **Multi-threaded processing** using Node.js async operations
+- ✅ **Efficient memory management** with streaming audio service
+- ✅ **Optimized caching** for media files and audio data
+- ✅ **FFmpeg-based audio processing** for format conversion and transposition
 
 See [PERFORMANCE_OPTIMIZATIONS.md](PERFORMANCE_OPTIMIZATIONS.md) for detailed information.
 
 ## 🛠️ Getting Started
 
 ### Prerequisites
-- [Rust](https://www.rust-lang.org/tools/install) (latest stable version)
-- [Node.js](https://nodejs.org/en/download/) (LTS version) and npm
-- Tauri prerequisites for your operating system (see [Tauri documentation](https://tauri.app/v1/guides/getting-started/prerequisites))
+- [Node.js](https://nodejs.org/en/download/) (LTS version 18+) and npm
 - [FFmpeg](https://ffmpeg.org/download.html) - Required for audio processing and transposition. Ensure `ffmpeg` is in your system PATH.
 
 ### Installation
 ```bash
 git clone <repository-url>
+cd RustPresenter
+
+# Install root dependencies (Electron)
+npm install
+
+# Install frontend dependencies
 cd harmonysync
 npm install
+cd ..
+
+# Install audio service dependencies
+cd harmonysync-audio-service
+npm install
+cd ..
 ```
 
 ### Running the Application
 ```bash
-# In the harmonysync directory
-npm run tauri dev
+# In the root directory
+npm run dev
+```
+
+This will start the Electron app with the React frontend and audio service.
+
+### Building for Production
+```bash
+# Build for all platforms
+npm run build
+
+# Build for specific platforms
+npm run build:win    # Windows
+npm run build:mac    # macOS
+npm run build:linux  # Linux
 ```
 
 ## 📁 Project Structure
 
 ```
-harmonysync/
-├── public/                  # Static assets
-├── src/                     # React frontend source code
-│   ├── App.jsx
-│   ├── MultitrackPlayer.jsx # Multitrack player component
-│   ├── ScreenButtons.jsx    # Controls for opening display windows
-│   ├── SlideManager.jsx     # Manages presentation slides
-│   ├── TrackControl.jsx     # Individual track control component
-│   ├── audience-main.jsx    # Entry point for Audience Screen
-│   ├── AudienceScreen.jsx   # Audience display component
-│   ├── confidence-main.jsx  # Entry point for Confidence Monitor
-│   ├── ConfidenceMonitor.jsx# Confidence Monitor component
-│   ├── lowerthirds-main.jsx # Entry point for Lower Thirds Window
-│   ├── LowerThirdsScreen.jsx# Lower Thirds display component
-│   ├── styles/              # CSS stylesheets
-│   │   ├── App.css
-│   │   ├── audience.css
-│   │   ├── confidence.css
-│   │   ├── lowerthirds.css
-│   │   └── ...
-│   └── utils/               # Utility functions
-│       ├── audio.js         # Web Audio API utilities
-│       ├── lyrics.js        # Lyric parsing and formatting
-│       ├── video.js         # Video utilities
-│       └── ui.js            # UI helper functions
-├── src-tauri/               # Rust backend (Tauri) source code
-│   ├── src/                 # Rust application logic
-│   │   ├── main.rs
-│   │   └── application/     # Backend commands and services
-│   ├── tauri.conf.json      # Tauri configuration
-│   └── capabilities/        # Tauri capability definitions
-├── index.html               # Main application HTML
-├── audience.html            # Audience Screen HTML
-├── confidence.html          # Confidence Monitor HTML
-└── lowerthirds.html         # Lower Thirds Window HTML
+RustPresenter/
+├── electron/                    # Electron main process (Node.js backend)
+│   ├── main.js                  # Application entry point
+│   ├── preload.js               # Preload script for IPC
+│   └── services/                # Backend services
+│       ├── json-storage.js      # Data persistence
+│       ├── ffmpeg.js            # Audio/video processing
+│       ├── http-server.js       # Video streaming server
+│       ├── file-manager.js      # File system operations
+│       ├── midi-manager.js      # MIDI device control
+│       ├── lyrics-fetcher.js    # Genius API integration
+│       └── google-drive.js      # Google Drive sync
+├── harmonysync/                 # React frontend
+│   ├── public/                  # Static assets
+│   ├── src/                     # React components
+│   │   ├── App.jsx
+│   │   ├── MultitrackPlayer.jsx
+│   │   ├── SlideManager.jsx
+│   │   ├── electron-adapter/    # Electron compatibility layer
+│   │   ├── components/          # React components
+│   │   ├── styles/              # CSS stylesheets
+│   │   └── utils/               # Utility functions
+│   ├── index.html               # Main application HTML
+│   ├── audience.html            # Audience Screen HTML
+│   ├── confidence.html          # Confidence Monitor HTML
+│   └── lowerthirds.html         # Lower Thirds Window HTML
+├── harmonysync-audio-service/   # Node.js audio service
+│   ├── index.js                 # Audio service entry point
+│   └── package.json
+└── package.json                 # Root package with Electron scripts
 ```
 
 ## 📄 License
@@ -156,9 +174,10 @@ MIT License - see LICENSE file for details.
 
 ## 🙏 Acknowledgments
 
-- Built with [Tauri](https://tauri.app/) and [React](https://react.dev/)
-- Audio processing via [Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)
+- Built with [Electron](https://www.electronjs.org/) and [React](https://react.dev/)
+- Audio processing via [Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API) and Node.js
 - Video and audio conversion powered by [FFmpeg](https://ffmpeg.org/)
+- MIDI support via [easymidi](https://www.npmjs.com/package/easymidi)
 
 ---
 

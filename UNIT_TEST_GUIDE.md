@@ -465,8 +465,8 @@ fn test_file_operation() {
 
 ## Resources
 
-- [Rust Testing Documentation](https://doc.rust-lang.org/book/ch11-00-testing.html)
-- [Cargo Test Documentation](https://doc.rust-lang.org/cargo/commands/cargo-test.html)
+- [Node.js Testing Documentation](https://nodejs.org/api/test.html)
+- [Jest Testing Framework](https://jestjs.io/)
 - [Clean Architecture Testing Patterns](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
 
 ---
