@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Menu, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, dialog, screen } = require('electron');
 const path = require('path');
 const fs = require('fs-extra');
 const { spawn, exec } = require('child_process');
@@ -78,6 +78,12 @@ function createMainWindow() {
           label: 'Display Settings',
           click: () => {
             mainWindow.webContents.send('display-settings-clicked');
+          }
+        },
+        {
+          label: 'Audio Settings',
+          click: () => {
+            mainWindow.webContents.send('audio-settings-clicked');
           }
         }
       ]

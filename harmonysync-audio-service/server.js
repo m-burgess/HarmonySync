@@ -8,6 +8,7 @@ const os = require('os');
 const { v4: uuidv4 } = require('uuid');
 const { parseFile } = require('music-metadata');
 const wav = require('node-wav');
+const Audic = require('audic').default;
 const { spawn } = require('child_process');
 
 // Configurable host and shutdown token
@@ -43,6 +44,8 @@ class AudioTrack {
         this.stream = null;
         this.decoder = null;
         this.audioProcess = null;
+        this.audic = null;
+        this.tempFilePath = null;
     }
 
     async loadMetadata() {
@@ -78,45 +81,116 @@ class AudioTrack {
         this.isPlaying = true;
         console.log(`▶️  Playing individual track: ${this.name}`);
         
-        // Use system audio player for immediate playback
         try {
-            // Try different audio players based on what's available
-            let playerCmd = 'aplay'; // Default for Linux
-            let playerArgs = [this.filePath];
-            
-            // Check if we can use mpv (better format support)
-            if (this.checkCommand('mpv')) {
-                playerCmd = 'mpv';
-                playerArgs = [
-                    '--no-video',
-                    '--volume=' + Math.round(this.volume * 100),
-                    this.filePath
-                ];
-            } else if (this.checkCommand('ffplay')) {
-                playerCmd = 'ffplay';
-                playerArgs = [
-                    '-nodisp',
-                    '-autoexit',
-                    '-volume', Math.round(this.volume * 100),
-                    this.filePath
-                ];
-            } else if (this.checkCommand('paplay')) {
-                playerCmd = 'paplay';
-                playerArgs = [this.filePath];
+            // Clean up any existing audic instance
+            if (this.audic) {
+                try {
+                    this.audic.destroy();
+                } catch (error) {
+                    console.error(`⚠️ Error cleaning up existing audic for ${this.name}:`, error);
+                }
+                this.audic = null;
             }
             
-            this.audioProcess = spawn(playerCmd, playerArgs);
+            // Clean up any existing temp file
+            if (this.tempFilePath && fs.existsSync(this.tempFilePath)) {
+                try {
+                    fs.unlinkSync(this.tempFilePath);
+                } catch (error) {
+                    console.error(`⚠️ Error cleaning up existing temp file for ${this.name}:`, error);
+                }
+                this.tempFilePath = null;
+            }
             
-            this.audioProcess.on('close', (code) => {
-                console.log(`🏁 Track finished: ${this.name} (exit code: ${code})`);
-                this.isPlaying = false;
-                this.audioProcess = null;
+            // Determine pan based on track type
+            const isClickOrGuide = this.name.toLowerCase().includes('click') || 
+                                 this.name.toLowerCase().includes('guide') ||
+                                 this.name.toLowerCase().includes('metronome');
+            const pan = isClickOrGuide ? -1 : 1; // -1 = full left, 1 = full right
+            
+            // Update track's pan value for UI consistency
+            this.pan = pan;
+            
+            // Decode WAV file
+            const buffer = fs.readFileSync(this.filePath);
+            const result = wav.decode(buffer);
+            
+            // Apply constant power panning
+            if (result.channelData.length >= 2) { // Stereo
+                const leftChannel = result.channelData[0];
+                const rightChannel = result.channelData[1];
+                
+                // Constant power panning formula
+                const angle = ((pan + 1) * Math.PI) / 4; // 0 to π/2
+                const leftGain = Math.cos(angle);
+                const rightGain = Math.sin(angle);
+                
+                for (let i = 0; i < leftChannel.length; i++) {
+                    const sample = leftChannel[i];
+                    leftChannel[i] = sample * leftGain;
+                    rightChannel[i] = sample * rightGain;
+                }
+            }
+            
+            // Encode back to WAV buffer
+            const pannedBuffer = wav.encode(result.channelData, {
+                sampleRate: result.sampleRate,
+                bitDepth: 16
             });
             
-            this.audioProcess.on('error', (error) => {
+            // Save to temporary file
+            const tempDir = os.tmpdir();
+            const tempFileName = `harmony_${this.id}_${Date.now()}.wav`;
+            const tempFilePath = path.join(tempDir, tempFileName);
+            fs.writeFileSync(tempFilePath, Buffer.from(pannedBuffer));
+            
+            // Store temp file path for cleanup
+            this.tempFilePath = tempFilePath;
+            
+            // Play with audic
+            this.audic = new Audic(tempFilePath);
+            this.audic.volume = this.isMuted ? 0 : this.volume;
+            
+            console.log(`▶️ Starting individual track: ${this.name} (pan: ${pan})`);
+            this.audic.play();
+            
+            this.audic.on('ended', () => {
+                console.log(`🏁 Track finished: ${this.name}`);
+                this.isPlaying = false;
+                
+                // Clean up temp file
+                if (this.tempFilePath && fs.existsSync(this.tempFilePath)) {
+                    try {
+                        fs.unlinkSync(this.tempFilePath);
+                        console.log(`🗑️ Cleaned up temp file: ${this.tempFilePath}`);
+                    } catch (error) {
+                        console.error(`❌ Failed to clean up temp file ${this.tempFilePath}:`, error);
+                    }
+                }
+                
+                this.audic.destroy();
+                this.audic = null;
+                this.tempFilePath = null;
+            });
+            
+            this.audic.on('error', (error) => {
                 console.error(`❌ Audio playback error for ${this.name}:`, error);
                 this.isPlaying = false;
-                this.audioProcess = null;
+                
+                // Clean up temp file on error
+                if (this.tempFilePath && fs.existsSync(this.tempFilePath)) {
+                    try {
+                        fs.unlinkSync(this.tempFilePath);
+                    } catch (cleanupError) {
+                        console.error(`❌ Failed to clean up temp file ${this.tempFilePath}:`, cleanupError);
+                    }
+                }
+                
+                if (this.audic) {
+                    this.audic.destroy();
+                    this.audic = null;
+                }
+                this.tempFilePath = null;
             });
             
         } catch (error) {
@@ -140,9 +214,23 @@ class AudioTrack {
             this.audioProcess.kill('SIGTERM');
             this.audioProcess = null;
         }
+        if (this.audic) {
+            this.audic.destroy();
+            this.audic = null;
+        }
         if (this.stream) {
             this.stream.destroy();
             this.stream = null;
+        }
+        // Clean up temp file
+        if (this.tempFilePath && fs.existsSync(this.tempFilePath)) {
+            try {
+                fs.unlinkSync(this.tempFilePath);
+                console.log(`🗑️ Cleaned up temp file: ${this.tempFilePath}`);
+            } catch (error) {
+                console.error(`❌ Failed to clean up temp file ${this.tempFilePath}:`, error);
+            }
+            this.tempFilePath = null;
         }
         console.log(`⏹️  Stopped track: ${this.name}`);
     }
@@ -160,8 +248,11 @@ class AudioTrack {
     setVolume(volume) {
         this.volume = Math.max(0, Math.min(2, volume)); // 0-200%
         
-        // Apply volume to running mpv process (only if not muted)
-        if (this.audioProcess && !this.audioProcess.killed && !this.isMuted) {
+        // For audic-based playback, apply volume immediately if playing
+        if (this.audic) {
+            this.audic.volume = this.isMuted ? 0 : this.volume;
+            console.log(`🎚️ Applied volume=${this.volume} to track: ${this.name}`);
+        } else if (this.audioProcess && !this.audioProcess.killed && !this.isMuted) {
             try {
                 const mpvVolume = this.volume * 100;
                 const command = `{ "command": ["set_property", "volume", ${mpvVolume}] }\n`;
@@ -203,8 +294,11 @@ class AudioTrack {
     setMute(muted) {
         this.isMuted = muted;
         
-        // Apply mute to running mpv process
-        if (this.audioProcess && !this.audioProcess.killed) {
+        // Apply mute to running audic instance
+        if (this.audic) {
+            this.audic.volume = muted ? 0 : this.volume;
+            console.log(`🔇 Applied mute=${muted} (volume=${this.audic.volume}) to track: ${this.name}`);
+        } else if (this.audioProcess && !this.audioProcess.killed) {
             const volume = muted ? 0 : (this.volume * 100);
             try {
                 // Send volume command to mpv via stdin (mpv accepts JSON commands)
@@ -283,6 +377,9 @@ class AudioMixer {
 
         this.tracks.set(trackId, track);
         console.log(`Loaded track: ${trackName} (${track.duration.toFixed(2)}s)`);
+        
+        // Apply automatic panning based on track name
+        this.applyDefaultPanningToTrack(track);
         
         return trackId;
     }
@@ -641,117 +738,103 @@ class AudioMixer {
 
     startTrackWithClock(track, isMaster) {
         return new Promise((resolve, reject) => {
+            // Prevent starting if already playing
+            if (track.isPlaying) {
+                console.log(`⚠️ Track ${track.name} is already playing, skipping duplicate start`);
+                resolve();
+                return;
+            }
+            
             try {
-                // Select appropriate player based on platform
-                let playerCmd = 'ffplay';  // Fallback
-                let playerArgs = [];
-                
-                if (IS_WINDOWS) {
-                    // Try various Windows audio players in order of preference
-                    if (this.commandExists('ffplay')) {
-                        playerCmd = this.getCommandPath('ffplay');
-                        const initialVolume = track.isMuted ? 0 : Math.round(track.volume * 100);
-                        playerArgs = [
-                            '-nodisp',
-                            '-autoexit',
-                            '-volume', (initialVolume / 100).toString(), // ffplay expects 0-1 range
-                            track.filePath  // No quotes needed when not using shell mode
-                        ];
-                    } else if (this.commandExists('mplayer') || this.commandExists('mplayer.exe')) {
-                        playerCmd = this.getCommandPath('mplayer') || this.getCommandPath('mplayer.exe') || 'mplayer';
-                        const initialVolume = track.isMuted ? 0 : Math.round(track.volume * 100);
-                        playerArgs = [
-                            '-volume', initialVolume.toString(),
-                            '-really-quiet',
-                            track.filePath  // No quotes needed when not using shell mode
-                        ];
-                    } else {
-                        // Fallback to powershell for Windows
-                        playerCmd = 'powershell';
-                        playerArgs = [
-                            '-Command',
-                            `& {
-                                try {
-                                    $player = New-Object System.Media.SoundPlayer;
-                                    $player.SoundLocation = '${track.filePath.replace(/\\/g, '\\\\')}';
-                                    $player.Load();
-                                    $player.Play();
-                                    Write-Host 'SoundPlayer started';
-                                    while ($true) { Start-Sleep -Seconds 1 }
-                                } catch {
-                                    Write-Error $_.Exception.Message;
-                                    exit 1;
-                                }
-                            }`,
-                        ];
+                // Clean up any existing audic instance
+                if (track.audic) {
+                    try {
+                        track.audic.destroy();
+                    } catch (error) {
+                        console.error(`⚠️ Error cleaning up existing audic for ${track.name}:`, error);
                     }
-                } else if (IS_MAC) {
-                    playerCmd = 'afplay';
-                    playerArgs = [track.filePath];
-                } else {
-                    // Linux
-                    if (this.commandExists('mpv')) {
-                        playerCmd = this.getCommandPath('mpv');
-                        const initialVolume = track.isMuted ? 0 : Math.round(track.volume * 100);
-                        playerArgs = [
-                            '--no-video',
-                            '--keep-open=no',
-                            '--really-quiet',
-                            '--volume=' + initialVolume,
-                            '--audio-balance=' + (track.pan || 0),
-                            '--audio-channels=stereo',
-                            '--gapless-audio=yes',
-                            '--input-terminal=no',
-                            '--input-default-bindings=no',
-                            '--ao=pulse,alsa,oss',
-                            `"${track.filePath}"`  // Quote the file path to handle spaces
-                        ];
-                    } else if (this.commandExists('ffplay')) {
-                        playerCmd = this.getCommandPath('ffplay');
-                        const initialVolume = track.isMuted ? 0 : Math.round(track.volume * 100);
-                        playerArgs = [
-                            '-nodisp',
-                            '-autoexit',
-                            '-volume', (initialVolume / 100).toString(),
-                            track.filePath  // No quotes needed when not using shell mode
-                        ];
-                    } else {
-                        playerCmd = 'paplay';
-                        playerArgs = [track.filePath];  // No quotes needed when not using shell mode
+                    track.audic = null;
+                }
+                
+                // Clean up any existing temp file
+                if (track.tempFilePath && fs.existsSync(track.tempFilePath)) {
+                    try {
+                        fs.unlinkSync(track.tempFilePath);
+                    } catch (error) {
+                        console.error(`⚠️ Error cleaning up existing temp file for ${track.name}:`, error);
+                    }
+                    track.tempFilePath = null;
+                }
+                // Determine pan based on track type
+                const isClickOrGuide = track.name.toLowerCase().includes('click') || 
+                                     track.name.toLowerCase().includes('guide') ||
+                                     track.name.toLowerCase().includes('metronome');
+                const pan = isClickOrGuide ? -1 : 1; // -1 = full left, 1 = full right
+                
+                // Update track's pan value for UI consistency
+                track.pan = pan;
+                
+                // Decode WAV file
+                const buffer = fs.readFileSync(track.filePath);
+                const result = wav.decode(buffer);
+                
+                // Apply constant power panning
+                if (result.channelData.length >= 2) { // Stereo
+                    const leftChannel = result.channelData[0];
+                    const rightChannel = result.channelData[1];
+                    
+                    // Constant power panning formula
+                    const angle = ((pan + 1) * Math.PI) / 4; // 0 to π/2
+                    const leftGain = Math.cos(angle);
+                    const rightGain = Math.sin(angle);
+                    
+                    for (let i = 0; i < leftChannel.length; i++) {
+                        const sample = leftChannel[i];
+                        leftChannel[i] = sample * leftGain;
+                        rightChannel[i] = sample * rightGain;
                     }
                 }
                 
-                console.log(`🎛️ Starting track ${track.name} with volume=${track.volume}, pan=${track.pan}, muted=${track.isMuted}`);
-                console.log(`🎵 Starting ${isMaster ? 'MASTER' : 'slave'} track: ${track.name}`);
-                console.log(`   Command: ${playerCmd} ${playerArgs.join(' ')}`);
-                
-                // Use shell mode only for PowerShell commands, not for native executables like ffplay
-                const useShell = IS_WINDOWS && playerCmd.includes('powershell');
-                
-                track.audioProcess = spawn(playerCmd, playerArgs, {
-                    stdio: ['pipe', 'pipe', 'pipe'],
-                    shell: useShell
+                // Encode back to WAV buffer
+                const pannedBuffer = wav.encode(result.channelData, {
+                    sampleRate: result.sampleRate,
+                    bitDepth: 16
                 });
+                
+                // Save to temporary file
+                const tempDir = os.tmpdir();
+                const tempFileName = `harmony_${track.id}_${Date.now()}.wav`;
+                const tempFilePath = path.join(tempDir, tempFileName);
+                fs.writeFileSync(tempFilePath, Buffer.from(pannedBuffer));
+                
+                // Store temp file path for cleanup
+                track.tempFilePath = tempFilePath;
+                
+                // Play with audic
+                track.audic = new Audic(tempFilePath);
+                track.audic.volume = track.isMuted ? 0 : track.volume;
+                
+                console.log(`▶️ Starting track: ${track.name} (pan: ${pan})`);
+                track.audic.play();
                 track.isPlaying = true;
                 
-                // Log any stderr output for debugging
-                track.audioProcess.stderr.on('data', (data) => {
-                    const msg = data.toString().trim();
-                    if (msg) {
-                        console.log(`🔊 ${track.name} audio: ${msg}`);
+                track.audic.on('ended', () => {
+                    console.log(`🏁 Track finished: ${track.name}`);
+                    track.isPlaying = false;
+                    
+                    // Clean up temp file
+                    if (track.tempFilePath && fs.existsSync(track.tempFilePath)) {
+                        try {
+                            fs.unlinkSync(track.tempFilePath);
+                            console.log(`🗑️ Cleaned up temp file: ${track.tempFilePath}`);
+                        } catch (error) {
+                            console.error(`❌ Failed to clean up temp file ${track.tempFilePath}:`, error);
+                        }
                     }
-                });
-                
-                track.audioProcess.on('error', (error) => {
-                    console.error(`❌ ${playerCmd} error for ${track.name}:`, error.message);
-                    track.isPlaying = false;
-                    track.audioProcess = null;
-                });
-                
-                track.audioProcess.on('close', (code) => {
-                    console.log(`🏁 Track finished: ${track.name} (exit code: ${code})`);
-                    track.isPlaying = false;
-                    track.audioProcess = null;
+                    
+                    track.audic.destroy();
+                    track.audic = null;
+                    track.tempFilePath = null;
                     
                     // Check if all tracks have finished
                     const allTracksFinished = !Array.from(this.tracks.values()).some(t => t.isPlaying);
@@ -768,13 +851,31 @@ class AudioMixer {
                         }
                     }
                     
-                    // If master track stops with error code, try fallback
-                    if (isMaster && code !== 0) {
-                        console.error(`❌ Master clock failed with exit code ${code}`);
-                    } else if (isMaster && code === 0) {
-                        console.log('🛑 Master clock completed normally, stopping all tracks');
+                    // If master track stops, stop all tracks
+                    if (isMaster) {
+                        console.log('🛑 Master clock completed, stopping all tracks');
                         this.stopAllTracks();
                     }
+                });
+                
+                track.audic.on('error', (error) => {
+                    console.error(`❌ Audio playback error for ${track.name}:`, error);
+                    track.isPlaying = false;
+                    
+                    // Clean up temp file on error
+                    if (track.tempFilePath && fs.existsSync(track.tempFilePath)) {
+                        try {
+                            fs.unlinkSync(track.tempFilePath);
+                        } catch (cleanupError) {
+                            console.error(`❌ Failed to clean up temp file ${track.tempFilePath}:`, cleanupError);
+                        }
+                    }
+                    
+                    if (track.audic) {
+                        track.audic.destroy();
+                        track.audic = null;
+                    }
+                    track.tempFilePath = null;
                 });
                 
                 resolve();
@@ -895,7 +996,7 @@ class AudioMixer {
             return;
         }
         
-        // Stop individual track processes
+        // Stop individual track processes/audic instances
         for (const track of this.tracks.values()) {
             if (track.audioProcess) {
                 try {
@@ -905,8 +1006,27 @@ class AudioMixer {
                     console.error(`❌ Error stopping track ${track.name}:`, error);
                 }
             }
+            if (track.audic) {
+                try {
+                    track.audic.destroy();
+                    console.log(`⏹️ Stopped track: ${track.name}`);
+                } catch (error) {
+                    console.error(`❌ Error stopping track ${track.name}:`, error);
+                }
+            }
+            // Clean up temp file
+            if (track.tempFilePath && fs.existsSync(track.tempFilePath)) {
+                try {
+                    fs.unlinkSync(track.tempFilePath);
+                    console.log(`🗑️ Cleaned up temp file: ${track.tempFilePath}`);
+                } catch (error) {
+                    console.error(`❌ Failed to clean up temp file ${track.tempFilePath}:`, error);
+                }
+            }
             track.isPlaying = false;
             track.audioProcess = null;
+            track.audic = null;
+            track.tempFilePath = null;
         }
         
         this.isPlaying = false;
@@ -1165,6 +1285,27 @@ class AudioMixer {
 
             track.setPan(panValue);
         }
+    }
+
+    applyDefaultPanningToTrack(track) {
+        const trackArray = Array.from(this.tracks.values());
+        const hasClickOrGuide = trackArray.some(t => 
+            t.name.toLowerCase().includes('click') || 
+            t.name.toLowerCase().includes('guide')
+        );
+
+        const lowerName = track.name.toLowerCase();
+        let panValue = 0; // Center by default
+
+        if (hasClickOrGuide) {
+            if (lowerName.includes('click') || lowerName.includes('guide')) {
+                panValue = -1; // Hard left
+            } else {
+                panValue = 1; // Hard right
+            }
+        }
+
+        track.setPan(panValue);
     }
 }
 

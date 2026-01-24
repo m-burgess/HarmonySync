@@ -80,10 +80,20 @@ const api = {
   // Background CSS generation
   generateBackgroundCss: (path) => ipcRenderer.invoke('css:generateBackground', path),
   
+  // Settings
+  getDisplays: () => ipcRenderer.invoke('settings:getDisplays'),
+  getAudioDevices: () => ipcRenderer.invoke('settings:getAudioDevices'),
+  getSettingsPath: () => ipcRenderer.invoke('settings:getSettingsPath'),
+  
   // Event listeners
   onDisplaySettingsClicked: (callback) => {
     ipcRenderer.on('display-settings-clicked', callback);
     return () => ipcRenderer.removeListener('display-settings-clicked', callback);
+  },
+  
+  onAudioSettingsClicked: (callback) => {
+    ipcRenderer.on('audio-settings-clicked', callback);
+    return () => ipcRenderer.removeListener('audio-settings-clicked', callback);
   },
   
   onOggConversionProgress: (callback) => {

@@ -24,8 +24,9 @@ const AudioSettings = ({ isOpen, onClose }) => {
     try {
       setIsLoading(true);
       
-      // Use Electron's fs API to read settings from a JSON file
-      const settingsPath = '/audio_settings.json'; // Will be stored in app data
+      // Get settings directory path
+      const settingsDir = await core.invoke('settings:getSettingsPath');
+      const settingsPath = `${settingsDir}/audio_settings.json`;
       
       try {
         const settingsContent = await fs.readTextFile(settingsPath);
@@ -49,10 +50,8 @@ const AudioSettings = ({ isOpen, onClose }) => {
     try {
       // Call Electron IPC to get available audio and MIDI devices
       try {
-        const audioDevices = await core.invoke('midi:getDevices');
-        setAvailableAudioDevices(audioDevices || [
-          { id: 'default', name: 'Default Audio Device' }
-        ]);
+        const audioDevices = await core.invoke('settings:getAudioDevices');
+        setAvailableAudioDevices(audioDevices);
       } catch (error) {
         console.error('Error loading audio devices:', error);
         setAvailableAudioDevices([
@@ -86,7 +85,8 @@ const AudioSettings = ({ isOpen, onClose }) => {
       setIsLoading(true);
       
       // Save all settings to a JSON file
-      const settingsPath = '/audio_settings.json'; // Will be stored in app data
+      const settingsDir = await core.invoke('settings:getSettingsPath');
+      const settingsPath = `${settingsDir}/audio_settings.json`;
       
       const settings = {
         audioOutputDevice,

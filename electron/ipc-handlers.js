@@ -812,6 +812,34 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
     return await services.slidesService.scanServiceFolder(servicePath);
   });
 
+  // Display and Audio Settings handlers
+  ipcMain.handle('settings:getDisplays', async () => {
+    const { screen } = require('electron');
+    const displays = screen.getAllDisplays();
+    return displays.map(display => ({
+      id: display.id,
+      name: `Display ${display.id} (${display.size.width}x${display.size.height})`,
+      bounds: display.bounds,
+      workArea: display.workArea
+    }));
+  });
+
+  ipcMain.handle('settings:getAudioDevices', async () => {
+    // For now, return basic device list
+    // TODO: Implement actual audio device enumeration
+    return [
+      { id: 'default', name: 'Default Audio Device' },
+      { id: 'speakers', name: 'Speakers' },
+      { id: 'headphones', name: 'Headphones' }
+    ];
+  });
+
+  ipcMain.handle('settings:getSettingsPath', async () => {
+    const { app } = require('electron');
+    const path = require('path');
+    return path.join(app.getPath('userData'), 'settings');
+  });
+
   // Remote Control Event Handlers
   // These handlers are called when actions occur in the main app
   // to sync state with the remote control service

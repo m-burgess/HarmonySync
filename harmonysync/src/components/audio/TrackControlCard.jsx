@@ -1,22 +1,13 @@
 import React from 'react';
-import PanControl from './PanControl.jsx';
 import '../../styles/components/TrackControlCard.css';
 
 const TrackControlCard = ({
   trackId,
   trackName,
-  panValue = 0,
   isMuted = false,
-  onPanChange,
   onMuteToggle,
   className = ''
 }) => {
-  const handlePanChange = (newPan) => {
-    if (onPanChange) {
-      onPanChange(trackId, newPan);
-    }
-  };
-
   const handleMuteToggle = () => {
     if (onMuteToggle) {
       onMuteToggle(trackId, !isMuted);
@@ -55,14 +46,6 @@ const TrackControlCard = ({
         )}
         <span className="track-display-name">{shortName}</span>
       </button>
-      
-      <div className="track-pan-section">
-        <PanControl
-          value={panValue}
-          onChange={handlePanChange}
-          disabled={isMuted}
-        />
-      </div>
     </div>
   );
 };
