@@ -87,7 +87,7 @@ HarmonySync is optimized for efficient resource usage:
 - ✅ **Optimized caching** for media files and audio data
 - ✅ **FFmpeg-based audio processing** for format conversion and transposition
 
-See [PERFORMANCE_OPTIMIZATIONS.md](PERFORMANCE_OPTIMIZATIONS.md) for detailed information.
+See [ELECTRON_README.md](ELECTRON_README.md) for more details on the architecture.
 
 ## 🛠️ Getting Started
 
