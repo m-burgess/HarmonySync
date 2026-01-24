@@ -10,13 +10,13 @@ HarmonySync now includes automatic lyrics fetching from the Genius API, making i
 
 The feature consists of three main components:
 
-1. **Backend Service (`lyrics_fetcher.rs`)**:
+1. **Backend Service (`lyrics-fetcher.js`)**:
    - Integrates with Genius API for song search
    - Scrapes lyrics from Genius web pages
    - Formats lyrics with section headers (Verse, Chorus, etc.)
    - Saves lyrics to song folders as `lyrics.txt`
 
-2. **Tauri Commands**:
+2. **IPC Commands**:
    - `fetch_lyrics_from_genius`: Searches and fetches lyrics
    - `save_lyrics_to_file`: Saves lyrics to a specified folder
    - `fetch_and_save_lyrics`: Combined workflow command

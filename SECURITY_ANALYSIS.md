@@ -44,8 +44,8 @@ let samples_size = decoded.samples.len() * std::mem::size_of::<f32>();
 ```
 
 **Security Impact**: ✅ SAFE
-- Rust checks for overflow in debug builds
-- Types are sized appropriately (usize for sizes)
+- Proper type handling and bounds checking
+- Types are sized appropriately (size limits enforced)
 - No arithmetic on user-controlled values
 
 ### ✅ Path Injection Prevention
@@ -160,7 +160,7 @@ let samples_size = decoded.samples.len() * std::mem::size_of::<f32>();
 The changes significantly improve security by:
 - Preventing memory-based DOS attacks
 - Enforcing resource limits
-- Using safe, idiomatic Rust patterns
+- Using safe coding patterns
 - No introduction of new vulnerabilities
 
 **Recommendation**: APPROVE for merge

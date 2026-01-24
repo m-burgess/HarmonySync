@@ -2,7 +2,7 @@
 
 ## Prerequisites
 - System must have ffmpeg installed with libvorbis support
-- Required system libraries for Tauri build (glib-2.0, etc.)
+- Node.js and required npm packages installed
 - Test song folders with multiple audio tracks (WAV, MP3, FLAC, etc.)
 
 ## Test Cases
