@@ -609,7 +609,90 @@ module.exports = function setupIpcHandlers(ipcMain, services) {
     return await windowService.getAllWindowsStatus(audienceWindow, confidenceWindow, lowerThirdsWindow);
   });
 
-  // Macro Service handlers
+  // Additional window handlers for modal windows
+  ipcMain.handle('open_preservice_music_window', async () => {
+    const { BrowserWindow } = require('electron');
+    const path = require('path');
+    const isDev = process.env.NODE_ENV === 'development';
+    const VITE_DEV_SERVER_URL = 'http://localhost:5174';
+
+    let preserviceWindow = new BrowserWindow({
+      width: 800,
+      height: 600,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        preload: path.join(__dirname, 'preload.js')
+      },
+      title: 'Pre-Service Music',
+      show: false
+    });
+
+    if (isDev) {
+      preserviceWindow.loadURL(`${VITE_DEV_SERVER_URL}/preservice-music.html`);
+    } else {
+      preserviceWindow.loadFile(path.join(__dirname, '../harmonysync/dist/preservice-music.html'));
+    }
+
+    preserviceWindow.once('ready-to-show', () => {
+      preserviceWindow.show();
+    });
+
+    preserviceWindow.on('closed', () => {
+      preserviceWindow = null;
+    });
+
+    return { success: true };
+  });
+
+  ipcMain.handle('close_preservice_music_window', async () => {
+    // This would need to track the preservice window instance
+    // For now, just return success
+    return { success: true };
+  });
+
+  ipcMain.handle('open_scheduler_window', async () => {
+    console.log('[IPC] open_scheduler_window called');
+    const { BrowserWindow } = require('electron');
+    const path = require('path');
+    const isDev = process.env.NODE_ENV === 'development';
+    const VITE_DEV_SERVER_URL = 'http://localhost:5174';
+
+    console.log('[IPC] Creating scheduler window, isDev:', isDev);
+    let schedulerWindow = new BrowserWindow({
+      width: 900,
+      height: 700,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        preload: path.join(__dirname, 'preload.js')
+      },
+      title: 'Scheduler',
+      show: false
+    });
+
+    if (isDev) {
+      console.log('[IPC] Loading dev URL:', `${VITE_DEV_SERVER_URL}/scheduler.html`);
+      schedulerWindow.loadURL(`${VITE_DEV_SERVER_URL}/scheduler.html`);
+    } else {
+      const filePath = path.join(__dirname, '../harmonysync/dist/scheduler.html');
+      console.log('[IPC] Loading file:', filePath);
+      schedulerWindow.loadFile(filePath);
+    }
+
+    schedulerWindow.once('ready-to-show', () => {
+      console.log('[IPC] Scheduler window ready, showing');
+      schedulerWindow.show();
+    });
+
+    schedulerWindow.on('closed', () => {
+      console.log('[IPC] Scheduler window closed');
+      schedulerWindow = null;
+    });
+
+    console.log('[IPC] Scheduler window created successfully');
+    return { success: true };
+  });
   ipcMain.handle('macro:execute', async (event, macroId, macroAction, options) => {
     const appHandle = require('electron').app;
     return await macroService.executeMacro(appHandle, macroId, macroAction, options);

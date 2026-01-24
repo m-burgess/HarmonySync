@@ -312,11 +312,12 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
       const loadedTracks = results
         .filter(result => result.success)
         .map((result, index) => {
-          const audioFile = audioFiles.find(f => `${outputDir}/${f.name}` === result.path);
+          // Use the track name from the backend response
+          const trackName = result.name || path.basename(result.path, path.extname(result.path));
           return {
             id: result.trackId,
             path: result.path,
-            name: audioFile?.name || 'Unknown Track',
+            name: trackName,
             panValue: 0,
             isMuted: false,
             isPlaying: false,
@@ -502,17 +503,38 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
             <span>Loading tracks...</span>
           </div>
         </div>
+      ) : allTracks.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 px-6 text-center bg-surface rounded-md">
+          <div className="text-4xl mb-4">🎵</div>
+          <h3 className="text-lg font-semibold text-primary mb-2">No Audio Tracks Loaded</h3>
+          <p className="text-sm text-muted max-w-md">
+            Select a song from the setlist to load audio tracks. Each track will appear here as a control card.
+          </p>
+          <p className="text-xs text-muted mt-3 max-w-md">
+            💡 <strong>Tip:</strong> Click on track names to mute/unmute, and use the pan controls to adjust stereo positioning.
+          </p>
+        </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-0.5 overflow-auto" id="track-controls">
-          {allTracks.sort(sortTracks).map((track, index) => (
-            <div key={index} className="bg-surface rounded">
-              <TrackControl
-                track={track}
-                onPanChange={handlePanChange}
-                onMuteToggle={handleMuteToggle}
-              />
+        <div>
+          <div className="flex items-center justify-between mb-2 px-1">
+            <div className="text-xs text-muted">
+              <span className="font-semibold">{allTracks.length}</span> tracks loaded
             </div>
-          ))}
+            <div className="text-xs text-muted">
+              💡 Click track name to mute/unmute
+            </div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 overflow-auto max-h-[400px] p-2" id="track-controls">
+            {allTracks.sort(sortTracks).map((track, index) => (
+              <div key={index} className="bg-surface rounded">
+                <TrackControl
+                  track={track}
+                  onPanChange={handlePanChange}
+                  onMuteToggle={handleMuteToggle}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

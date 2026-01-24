@@ -1,9 +1,9 @@
 .track-control-card {
-  background-color: #333;
-  border: 1px solid #444;
+  background-color: #2a2a2a;
+  border: 2px solid #444;
   border-radius: 8px;
   padding: 12px;
-  width: 140px;
+  width: 160px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -11,13 +11,19 @@
 }
 
 .track-control-card:hover {
-  border-color: #555;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  border-color: #0078d4;
+  box-shadow: 0 4px 12px rgba(0, 120, 212, 0.2);
+  transform: translateY(-2px);
 }
 
 .track-muted {
-  opacity: 0.6;
-  background-color: #2a2a2a;
+  opacity: 0.5;
+  background-color: #1e1e1e;
+  border-color: #666;
+}
+
+.track-muted:hover {
+  opacity: 0.7;
 }
 
 .track-solo {
@@ -33,14 +39,14 @@
 
 .track-name {
   margin: 0;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  color: #d4d4d4;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  color: #e0e0e0;
+  letter-spacing: 0.3px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.4;
 }
 
 .track-control-body {
@@ -57,6 +63,74 @@
   align-items: center;
   gap: 8px;
   width: 100%;
+}
+
+/* Track name button styling */
+.track-name-button {
+  width: 100%;
+  background: linear-gradient(135deg, #3a3a3a 0%, #2d2d2d 100%);
+  border: 1px solid #555;
+  border-radius: 6px;
+  padding: 10px 8px;
+  color: #e0e0e0;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 48px;
+  text-align: center;
+}
+
+.track-name-button:hover {
+  background: linear-gradient(135deg, #4a4a4a 0%, #3d3d3d 100%);
+  border-color: #0078d4;
+  transform: scale(1.02);
+}
+
+.track-name-button:active {
+  transform: scale(0.98);
+}
+
+.track-name-button.muted {
+  background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
+  border-color: #777;
+  color: #888;
+}
+
+.track-status-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.active-icon {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.muted-icon {
+  opacity: 0.5;
+}
+
+.track-display-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.3;
+}
+
+/* Pan control section */
+.track-pan-section {
+  width: 100%;
+  padding: 4px 0;
 }
 
 .track-control-buttons {
@@ -105,7 +179,7 @@
 
 @media (max-width: 768px) {
   .track-control-card {
-    width: 120px;
+    width: 140px;
     padding: 10px;
   }
   
@@ -124,62 +198,33 @@
   }
 }
 
+/* Simplified track control card for volunteer-friendly layout */
 .track-control-simplified {
-  width: 120px;
-  padding: 8px;
-  gap: 8px;
+  width: 160px;
+  padding: 10px;
+  gap: 10px;
 }
 
-.track-name-button {
-  background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
-  border: 1px solid #4a5568;
-  border-radius: 6px;
-  color: #e2e8f0;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 8px 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .track-control-simplified {
+    width: 140px;
+  }
 }
 
-.track-name-button:hover {
-  background: linear-gradient(135deg, #5a6578 0%, #3d4758 100%);
-  border-color: #5a6578;
-  transform: translateY(-1px);
-}
-
-.track-name-button:active {
-  transform: translateY(0);
-}
-
-.track-name-button.muted {
-  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
-  border-color: #dc2626;
-  color: white;
-}
-
-.track-name-button.muted:hover {
-  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
-  border-color: #ef4444;
-}
-
-.mute-indicator {
-  font-size: 10px;
-  margin-right: 2px;
-}
-
-.track-pan-section {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 4px 0;
+@media (max-width: 768px) {
+  .track-control-simplified {
+    width: 120px;
+    padding: 8px;
+  }
+  
+  .track-name-button {
+    font-size: 10px !important;
+    min-height: 40px !important;
+    padding: 8px 4px !important;
+  }
+  
+  .track-status-icon {
+    font-size: 14px !important;
+  }
 }

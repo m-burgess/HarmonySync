@@ -504,11 +504,12 @@ const SetlistManager = ({ setAllSlides, setAllTracks, setIsLoadingTracks, setCur
           const loadedTracks = results
             .filter(result => result.success)
             .map((result, index) => {
-              const trackEntry = trackEntries.find(t => t.file_path === result.path);
+              // Use the track name from the backend if available, otherwise fall back to file path
+              const trackName = result.name || path.basename(result.path, path.extname(result.path));
               return {
                 id: result.trackId, // Node.js service track ID
                 path: result.path,
-                name: trackEntry?.track_name || 'Unknown Track',
+                name: trackName,
                 panValue: 0,
                 isMuted: false,
                 isPlaying: false,

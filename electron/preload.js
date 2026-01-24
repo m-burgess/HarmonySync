@@ -41,6 +41,9 @@ const api = {
   hideConfidenceWindow: () => ipcRenderer.invoke('window:hideConfidence'),
   showLowerThirdsWindow: () => ipcRenderer.invoke('window:showLowerThirds'),
   hideLowerThirdsWindow: () => ipcRenderer.invoke('window:hideLowerThirds'),
+  openPreserviceMusicWindow: () => ipcRenderer.invoke('open_preservice_music_window'),
+  closePreserviceMusicWindow: () => ipcRenderer.invoke('close_preservice_music_window'),
+  openSchedulerWindow: () => ipcRenderer.invoke('open_scheduler_window'),
   
   // Display video/slides
   displayVideoSlide: (path, duration) => ipcRenderer.invoke('display:videoSlide', path, duration),

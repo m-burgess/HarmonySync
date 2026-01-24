@@ -233,6 +233,7 @@ class AudioTrack {
         return {
             id: this.id,
             name: this.name,
+            filePath: this.filePath,
             duration: this.duration,
             channels: this.channels,
             sampleRate: this.sampleRate,
