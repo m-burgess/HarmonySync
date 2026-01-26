@@ -331,12 +331,17 @@ describe('Integration: Audio Transpose Workflow', () => {
     // Start transpose (don't await)
     const transposePromise = audioViewModel.transpose(1);
 
-    // Cancel after short delay
-    setTimeout(async () => {
-      if (audioViewModel.cancelTranspose) {
-        await audioViewModel.cancelTranspose();
-      }
-    }, 100);
+    // Cancel after short delay and wait for the timer to fire
+    await new Promise((resolve) => {
+      setTimeout(() => {
+        if (audioViewModel.cancelTranspose) {
+          audioViewModel.cancelTranspose().catch(() => {
+            // Ignore cancellation errors here; they are handled via transposePromise.
+          });
+        }
+        resolve();
+      }, 100);
+    });
 
     // The transpose should be cancelled or handle cancellation gracefully
     try {
