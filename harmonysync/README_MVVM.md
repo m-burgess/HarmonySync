@@ -128,11 +128,11 @@ All items have:
 ## 🚀 Next Steps
 
 ### Immediate (Week 7)
-1. **Configure Jest**
-   - Install dependencies
-   - Add test scripts
-   - Run all 187+ tests
-   - Verify all pass
+1. **Configure Vitest test runner**
+   - Ensure Vitest test dependencies are installed
+   - Verify `npm run test` and `npm run test:coverage` scripts are present in `package.json`
+   - Run all 187+ tests using `npm run test`
+   - Verify all tests pass
 
 2. **Refactor First Component**
    - Start with SlideManager.jsx
