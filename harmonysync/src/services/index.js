@@ -10,6 +10,7 @@ import AudioService from './AudioService.js';
 import FileService from './FileService.js';
 import DisplayService from './DisplayService.js';
 import SlideService from './SlideService.js';
+import SetlistService from './SetlistService.js';
 
 /**
  * Setup all services in the DI container
@@ -24,6 +25,7 @@ export function setupServices() {
   container.register('fileService', FileService, ['ipcService'], true);
   container.register('displayService', DisplayService, ['ipcService'], true);
   container.register('slideService', SlideService, ['ipcService'], true);
+  container.register('setlistService', SetlistService, ['ipcService', 'fileService'], true);
 
   console.log('[ServiceRegistry] All services registered successfully');
 }

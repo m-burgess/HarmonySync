@@ -21,6 +21,27 @@ class FileService {
   }
 
   /**
+   * Open multiple folders selection dialog
+   * @returns {Promise<Array<string>|null>} Selected folder paths or null if cancelled
+   */
+  async selectFolders() {
+    // Direct access to window.electronAPI for multi-folder selection
+    // Note: This is environment-specific and should be refactored to use IpcService
+    // TODO: Add selectFolders to IpcService for consistent abstraction
+    const { dialog } = window.electronAPI || {};
+    if (dialog && dialog.open) {
+      return await dialog.open({
+        directory: true,
+        multiple: true,
+        title: 'Select folders for the presentation',
+      });
+    }
+    // Fallback to single folder
+    const folder = await this.selectFolder();
+    return folder ? [folder] : null;
+  }
+
+  /**
    * Open file selection dialog
    * @param {Object} options - Dialog options (filters, multiple, etc.)
    * @returns {Promise<string|string[]|null>} Selected file path(s) or null
@@ -60,12 +81,59 @@ class FileService {
   }
 
   /**
+   * Read directory contents (with entries)
+   * @param {string} path - Directory path
+   * @param {Object} options - Read options (recursive, etc.)
+   * @returns {Promise<Array>} Array of file/folder entries
+   */
+  async readDir(path, options = {}) {
+    // Use Tauri fs API directly
+    const { fs } = window.electronAPI || {};
+    if (fs && fs.readDir) {
+      return await fs.readDir(path, options);
+    }
+    // Fallback to IPC
+    return await this.ipc.invoke('fs:readDir', path, options);
+  }
+
+  /**
    * Read directory contents
    * @param {string} path - Directory path
    * @returns {Promise<Array<string>>} Array of file/folder names
    */
   async readDirectory(path) {
     return await this.ipc.invoke('fs:readDir', path);
+  }
+
+  /**
+   * Read text file contents
+   * @param {string} path - File path
+   * @returns {Promise<string>} File contents as text
+   */
+  async readTextFile(path) {
+    // Use Tauri fs API directly
+    const { fs } = window.electronAPI || {};
+    if (fs && fs.readTextFile) {
+      return await fs.readTextFile(path);
+    }
+    // Fallback to readFile
+    return await this.readFile(path, 'utf8');
+  }
+
+  /**
+   * Write text file contents
+   * @param {string} path - File path
+   * @param {string} contents - Text contents
+   * @returns {Promise<void>}
+   */
+  async writeTextFile(path, contents) {
+    // Use Tauri fs API directly
+    const { fs } = window.electronAPI || {};
+    if (fs && fs.writeTextFile) {
+      return await fs.writeTextFile(path, contents);
+    }
+    // Fallback to writeFile
+    return await this.writeFile(path, contents, 'utf8');
   }
 
   /**
