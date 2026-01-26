@@ -6,6 +6,10 @@
  */
 import { container } from '../di/Container.js';
 import AudioViewModel from './AudioViewModel.js';
+import SetlistViewModel from './SetlistViewModel.js';
+import SlideViewModel from './SlideViewModel.js';
+import DisplayViewModel from './DisplayViewModel.js';
+import MixerViewModel from './MixerViewModel.js';
 
 /**
  * Setup all ViewModels in the DI container
@@ -14,6 +18,14 @@ import AudioViewModel from './AudioViewModel.js';
 export function setupViewModels() {
   // Register ViewModels (depend on services)
   container.register('audioViewModel', AudioViewModel, ['audioService'], true);
+  container.register('setlistViewModel', SetlistViewModel, 
+    ['setlistService', 'audioService', 'displayService', 'slideService'], true);
+  container.register('slideViewModel', SlideViewModel, 
+    ['slideService', 'displayService'], true);
+  container.register('displayViewModel', DisplayViewModel, 
+    ['displayService', 'fileService', 'ipcService'], true);
+  container.register('mixerViewModel', MixerViewModel, 
+    ['audioService'], true);
 
   console.log('[ViewModelRegistry] All ViewModels registered successfully');
 }
