@@ -3,6 +3,10 @@ import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './styles/style.css';
 
+// Import MVVM infrastructure
+import { setupServices } from './services/index.js';
+import { setupViewModels } from './viewmodels/index.js';
+
 // Wait for electronAPI to be available (preload script must run first)
 async function main() {
   console.log('[main.jsx] Starting main...');
@@ -51,6 +55,16 @@ async function main() {
       if (typeof globalThis !== 'undefined' && !globalThis.__electronAPI_PERMANENT_CACHE) {
         globalThis.__electronAPI_PERMANENT_CACHE = window.electronAPI;
         console.log('[main.jsx] Stored in globalThis permanent cache');
+      }
+
+      // Initialize MVVM architecture
+      console.log('[main.jsx] Setting up MVVM services and ViewModels...');
+      try {
+        setupServices();
+        setupViewModels();
+        console.log('[main.jsx] ✅ MVVM architecture initialized successfully');
+      } catch (error) {
+        console.error('[main.jsx] ❌ Failed to initialize MVVM architecture:', error);
       }
     } else {
       console.error('[main.jsx] ❌ electronAPI was not available after 8 seconds');
