@@ -1,9 +1,23 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import path from 'path';
 
 export default defineConfig({
   clearScreen: false,
-  plugins: [react()],
+  plugins: [
+    react({
+      babel: {
+        parserOpts: {
+          plugins: ['decorators-legacy'],
+        },
+      },
+    }),
+  ],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
   server: {
     port: 5174,
     strictPort: true,
@@ -31,5 +45,10 @@ export default defineConfig({
     esbuildOptions: {
       target: 'es2022',
     },
+  },
+  esbuild: {
+    // Enable JSX/TSX in source files for React support
+    loader: 'jsx',
+    include: /src\/.*\.[jt]sx?$/,
   },
 });
