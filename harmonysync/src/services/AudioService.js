@@ -7,10 +7,18 @@
  * - Playback controls
  * - Volume and pan controls
  * - Mixer configuration persistence
+ * - Memory monitoring
+ * - Audio service management
  */
+
+// Import audio utilities for delegation
+import * as audioUtils from '../utils/audio/audio-nodejs.js';
+
 class AudioService {
   constructor(ipcService) {
     this.ipc = ipcService;
+    this.memoryMonitorInterval = null;
+    this.isInitialized = false;
   }
 
   /**
@@ -143,7 +151,175 @@ class AudioService {
    * @returns {Promise<void>}
    */
   async cleanup() {
-    return await this.ipc.invoke('audio:cleanup');
+    this.stopMemoryMonitoring();
+    return await audioUtils.cleanupAndStopAudio();
+  }
+
+  /**
+   * Initialize audio service (connects to Node.js audio service)
+   * @returns {Promise<void>}
+   */
+  async initializeAudioService() {
+    if (this.isInitialized) {
+      return;
+    }
+    await audioUtils.initializeAudioService();
+    this.isInitialized = true;
+  }
+
+  /**
+   * Get all tracks
+   * @returns {Array} Current tracks
+   */
+  getTracks() {
+    return audioUtils.getTracks();
+  }
+
+  /**
+   * Clear all tracks
+   * @returns {Promise<void>}
+   */
+  async clearTracks() {
+    return await audioUtils.clearTracks();
+  }
+
+  /**
+   * Add tracks (load multiple audio files as a song)
+   * @param {Array<string>} trackPaths - Array of track file paths
+   * @param {string} songName - Optional song name
+   * @returns {Promise<Array>} Array of loaded track results
+   */
+  async addTracks(trackPaths, songName = null) {
+    return await audioUtils.addTracks(trackPaths, songName);
+  }
+
+  /**
+   * Play all tracks
+   * @returns {Promise<void>}
+   */
+  async playAllTracks() {
+    return await audioUtils.playAllTracks();
+  }
+
+  /**
+   * Stop all audio
+   * @returns {Promise<void>}
+   */
+  async stopAllAudio() {
+    return await audioUtils.stopAllAudio();
+  }
+
+  /**
+   * Go to beginning of all tracks (stop and restart)
+   * @returns {Promise<void>}
+   */
+  async goToBeginningAllTracks() {
+    return await audioUtils.goToBeginningAllTracks();
+  }
+
+  /**
+   * Set global/master volume
+   * @param {number} volume - Volume (0-1)
+   * @returns {Promise<void>}
+   */
+  async setGlobalVolume(volume) {
+    return await audioUtils.setGlobalVolume(volume);
+  }
+
+  /**
+   * Set track mute state
+   * @param {Object} track - Track object with id
+   * @param {boolean} muted - Mute state
+   * @returns {Promise<void>}
+   */
+  async setTrackMuteState(track, muted) {
+    return await audioUtils.setTrackMute(track, muted);
+  }
+
+  /**
+   * Set track pan
+   * @param {Object} track - Track object with id
+   * @param {number} panValue - Pan value (-1 to 1)
+   * @returns {Promise<void>}
+   */
+  async setTrackPanValue(track, panValue) {
+    return await audioUtils.setPan(track, panValue);
+  }
+
+  /**
+   * Start audio service from app
+   * @returns {Promise<Object>} Result object
+   */
+  async startAudioServiceFromApp() {
+    const result = await audioUtils.startAudioServiceFromApp();
+    this.isInitialized = true;
+    return result;
+  }
+
+  /**
+   * Check audio service status
+   * @returns {Promise<boolean>} Service status
+   */
+  async checkAudioServiceStatus() {
+    return await audioUtils.checkAudioServiceStatusFromApp();
+  }
+
+  /**
+   * Get audio service health
+   * @returns {Promise<Object>} Health information
+   */
+  async getAudioServiceHealth() {
+    return await audioUtils.getAudioServiceHealth();
+  }
+
+  /**
+   * Get service checker for UI feedback
+   * @returns {Object} Service checker instance
+   */
+  getServiceChecker() {
+    return audioUtils.getServiceChecker();
+  }
+
+  /**
+   * Start memory monitoring
+   * @param {number} intervalMs - Monitoring interval in milliseconds
+   * @param {Function} callback - Callback to receive memory updates
+   */
+  startMemoryMonitoring(intervalMs, callback) {
+    if (this.memoryMonitorInterval) {
+      clearInterval(this.memoryMonitorInterval);
+    }
+    
+    this.memoryMonitorInterval = setInterval(async () => {
+      try {
+        const usage = await this.getMemoryUsage();
+        if (usage && callback) {
+          callback(usage);
+        }
+      } catch (error) {
+        console.error('Failed to check memory usage:', error);
+      }
+    }, intervalMs);
+  }
+
+  /**
+   * Stop memory monitoring
+   */
+  stopMemoryMonitoring() {
+    if (this.memoryMonitorInterval) {
+      clearInterval(this.memoryMonitorInterval);
+      this.memoryMonitorInterval = null;
+    }
+  }
+
+  /**
+   * Cleanup and stop audio service
+   * @returns {Promise<void>}
+   */
+  async cleanupAndStopAudio() {
+    this.stopMemoryMonitoring();
+    this.isInitialized = false;
+    return await audioUtils.cleanupAndStopAudio();
   }
 
   /**
