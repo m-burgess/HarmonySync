@@ -11,12 +11,16 @@ import FileService from './FileService.js';
 import DisplayService from './DisplayService.js';
 import SlideService from './SlideService.js';
 import SetlistService from './SetlistService.js';
+import EventBusService from './EventBusService.js';
 
 /**
  * Setup all services in the DI container
  * Call this once at application startup
  */
 export function setupServices() {
+  // Register EventBus service first (no dependencies)
+  container.register('eventBusService', EventBusService, [], true);
+
   // Register IPC service (foundation)
   container.register('ipcService', IpcService, [], true);
 

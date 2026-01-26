@@ -419,6 +419,11 @@ class SetlistViewModel {
     this.currentLoadedFolder = null;
     this.preloadedSongs.clear();
   }
+
+  // Direct state setter for App.jsx compatibility (to be phased out)
+  setSelectedSongForLyrics(lyrics) {
+    this.selectedSongForLyrics = lyrics;
+  }
 }
 
 export default SetlistViewModel;
