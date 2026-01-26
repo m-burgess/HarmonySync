@@ -2,7 +2,9 @@
 // This file shows how to use the performance metrics API
 
 import React from 'react';
-import { core } from '../../electron-adapter';
+import adapter from '../electron-adapter';
+
+const { core } = adapter;
 
 /**
  * Performance metrics returned from the backend
@@ -23,7 +25,7 @@ interface PerformanceMetrics {
  */
 export async function getPerformanceMetrics(): Promise<PerformanceMetrics> {
   try {
-    const metrics = await core.invoke<PerformanceMetrics>('get_performance_metrics');
+    const metrics = await core.invoke('get_performance_metrics') as PerformanceMetrics;
     return metrics;
   } catch (error) {
     console.error('Failed to get performance metrics:', error);
