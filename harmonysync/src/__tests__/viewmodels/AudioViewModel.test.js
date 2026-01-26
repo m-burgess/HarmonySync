@@ -27,7 +27,25 @@ describe('AudioViewModel', () => {
       getMemoryUsage: jest.fn(),
       cleanup: jest.fn(),
       onPositionUpdate: jest.fn(() => () => {}),
-      onStateChange: jest.fn(() => () => {})
+      onStateChange: jest.fn(() => () => {}),
+      // New methods for refactored functionality
+      initializeAudioService: jest.fn().mockResolvedValue(),
+      getTracks: jest.fn(() => []),
+      clearTracks: jest.fn().mockResolvedValue(),
+      addTracks: jest.fn().mockResolvedValue([]),
+      playAllTracks: jest.fn().mockResolvedValue(),
+      stopAllAudio: jest.fn().mockResolvedValue(),
+      goToBeginningAllTracks: jest.fn().mockResolvedValue(),
+      setGlobalVolume: jest.fn().mockResolvedValue(),
+      setTrackMuteState: jest.fn().mockResolvedValue(),
+      setTrackPanValue: jest.fn().mockResolvedValue(),
+      startAudioServiceFromApp: jest.fn().mockResolvedValue({ success: true }),
+      checkAudioServiceStatus: jest.fn().mockResolvedValue(true),
+      getAudioServiceHealth: jest.fn().mockResolvedValue({ status: 'ok' }),
+      getServiceChecker: jest.fn(() => ({})),
+      startMemoryMonitoring: jest.fn(),
+      stopMemoryMonitoring: jest.fn(),
+      cleanupAndStopAudio: jest.fn().mockResolvedValue()
     };
 
     // Create ViewModel with mock service
@@ -241,6 +259,53 @@ describe('AudioViewModel', () => {
 
       // Assert
       expect(audioViewModel.error).toBe('Transpose failed');
+    });
+  });
+
+  describe('playAll', () => {
+    test('plays all tracks with operation lock', async () => {
+      mockAudioService.playAllTracks = jest.fn().mockResolvedValue();
+      
+      await audioViewModel.playAll();
+      
+      expect(mockAudioService.playAllTracks).toHaveBeenCalled();
+      expect(audioViewModel.isPlaying).toBe(true);
+      expect(audioViewModel.isPaused).toBe(false);
+    });
+
+    test('prevents concurrent operations', async () => {
+      mockAudioService.playAllTracks = jest.fn().mockImplementation(() => 
+        new Promise(resolve => setTimeout(resolve, 100))
+      );
+      
+      audioViewModel.isOperationInProgress = true;
+      await audioViewModel.playAll();
+      
+      expect(mockAudioService.playAllTracks).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('stopAll', () => {
+    test('stops all tracks', async () => {
+      mockAudioService.stopAllAudio = jest.fn().mockResolvedValue();
+      
+      await audioViewModel.stopAll();
+      
+      expect(mockAudioService.stopAllAudio).toHaveBeenCalled();
+      expect(audioViewModel.isPlaying).toBe(false);
+      expect(audioViewModel.isPaused).toBe(false);
+      expect(audioViewModel.currentPosition).toBe(0);
+    });
+  });
+
+  describe('setGlobalVolume', () => {
+    test('sets global volume', async () => {
+      mockAudioService.setGlobalVolume = jest.fn().mockResolvedValue();
+      
+      await audioViewModel.setGlobalVolume(0.7);
+      
+      expect(mockAudioService.setGlobalVolume).toHaveBeenCalledWith(0.7);
+      expect(audioViewModel.globalVolume).toBe(0.7);
     });
   });
 
