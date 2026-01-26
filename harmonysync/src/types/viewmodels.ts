@@ -8,9 +8,7 @@ import type {
   Display,
   DisplayWindow,
   MemoryUsage,
-  MixerConfig,
   Slide,
-  Song,
   SetlistFolder,
   TransposeProgress,
 } from './models';
@@ -82,17 +80,17 @@ export interface IAudioViewModel extends IViewModel {
 export interface ISetlistViewModel extends IViewModel {
   // Observable state
   folders: SetlistFolder[];
-  currentSong: Song | null;
+  currentSong: any; // SetlistItem internal type
   isLoading: boolean;
   error: string | null;
   searchQuery: string;
-  filteredSongs: Song[];
+  filteredSongs: any[];
 
   // Actions
   loadSetlist(basePath: string): Promise<void>;
   addFolder(): Promise<void>;
   removeFolder(folderPath: string): Promise<void>;
-  selectSong(song: Song): Promise<void>;
+  selectSong(song: any): Promise<void>;
   setSearchQuery(query: string): void;
 
   // Computed
@@ -119,7 +117,7 @@ export interface ISlideViewModel extends IViewModel {
   displaySlide(slideId: string): Promise<void>;
   clearDisplay(): Promise<void>;
   importSlide(content: string): Promise<void>;
-  deleteSlide(slideId: string): Promise<void>;
+  deleteSlide(slide: Slide): void;
   reorderSlides(slideIds: string[]): Promise<void>;
 
   // Computed
@@ -171,7 +169,7 @@ export interface IMixerViewModel extends IViewModel {
   // Actions
   setTrackVolume(trackIndex: number, volume: number): Promise<void>;
   setTrackPan(trackIndex: number, pan: number): Promise<void>;
-  toggleMute(trackIndex: number): Promise<void>;
+  toggleMute(trackIndex: number): Promise<boolean>;
   toggleSolo(trackIndex: number): Promise<void>;
   setGlobalVolume(volume: number): Promise<void>;
   resetTrack(trackIndex: number): Promise<void>;

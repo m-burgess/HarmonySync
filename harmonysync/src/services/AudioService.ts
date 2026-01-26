@@ -29,7 +29,7 @@ export class AudioService extends BaseService implements IAudioService {
   protected readonly serviceName = 'AudioService';
   
   private readonly ipc: IIpcService;
-  private memoryMonitorInterval: NodeJS.Timeout | null = null;
+  private memoryMonitorInterval: ReturnType<typeof setTimeout> | null = null;
 
   /**
    * Constructor
@@ -335,6 +335,67 @@ export class AudioService extends BaseService implements IAudioService {
     this.ipc.on('audio:transposeError', ((...args: unknown[]) => {
       callback(args[0], args[1] as Error);
     }));
+  }
+
+  /**
+   * Listen for state changes
+   * @param callback - Callback receiving state
+   */
+  public onStateChange(callback: (event: unknown, state: { isPlaying: boolean; isPaused: boolean }) => void): void {
+    this.ipc.on('audio:stateChange', ((...args: unknown[]) => {
+      callback(args[0], args[1] as { isPlaying: boolean; isPaused: boolean });
+    }));
+  }
+
+  /**
+   * Start audio service from app (stub for compatibility)
+   */
+  public async startAudioServiceFromApp(): Promise<unknown> {
+    return await this.ipc.invoke('audio:startServiceFromApp');
+  }
+
+  /**
+   * Cleanup audio resources
+   */
+  public async cleanup(): Promise<void> {
+    await this.ipc.invoke('audio:cleanup');
+  }
+
+  /**
+   * Play all tracks
+   */
+  public async playAllTracks(): Promise<void> {
+    await this.ipc.invoke('audio:playAllTracks');
+  }
+
+  /**
+   * Stop all audio
+   */
+  public async stopAllAudio(): Promise<void> {
+    await this.ipc.invoke('audio:stopAllAudio');
+  }
+
+  /**
+   * Go to beginning of all tracks
+   */
+  public async goToBeginningAllTracks(): Promise<void> {
+    await this.ipc.invoke('audio:goToBeginning');
+  }
+
+  /**
+   * Clear all tracks
+   */
+  public async clearTracks(): Promise<void> {
+    await this.ipc.invoke('audio:clearTracks');
+  }
+
+  /**
+   * Add multiple tracks
+   * @param trackPaths - Array of track file paths
+   */
+  public async addTracks(trackPaths: string[]): Promise<unknown[]> {
+    const result = await this.ipc.invoke('audio:addTracks', trackPaths);
+    return Array.isArray(result) ? result : [];
   }
 
   /**

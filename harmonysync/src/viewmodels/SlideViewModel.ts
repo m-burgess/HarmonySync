@@ -186,7 +186,7 @@ export class SlideViewModel extends BaseViewModel implements ISlideViewModel {
   public async importFromFolder(): Promise<Slide[] | undefined> {
     try {
       const folderPath = await this.slideService.selectFolder();
-      if (!folderPath) return;
+      if (!folderPath) return undefined;
 
       return await this.importSlides(folderPath, { type: 'folder' });
     } catch (error) {
@@ -194,6 +194,7 @@ export class SlideViewModel extends BaseViewModel implements ISlideViewModel {
       runInAction(() => {
         this.error = error instanceof Error ? error.message : String(error);
       });
+      return undefined;
     }
   }
 
@@ -201,7 +202,7 @@ export class SlideViewModel extends BaseViewModel implements ISlideViewModel {
   public async importFromPDF(): Promise<Slide[] | undefined> {
     try {
       const pdfPath = await this.slideService.selectPDF();
-      if (!pdfPath) return;
+      if (!pdfPath) return undefined;
 
       return await this.importSlides(pdfPath, { type: 'pdf' });
     } catch (error) {
@@ -209,6 +210,7 @@ export class SlideViewModel extends BaseViewModel implements ISlideViewModel {
       runInAction(() => {
         this.error = error instanceof Error ? error.message : String(error);
       });
+      return undefined;
     }
   }
 
@@ -216,7 +218,7 @@ export class SlideViewModel extends BaseViewModel implements ISlideViewModel {
   public async importFromZIP(): Promise<ServiceStructure | undefined> {
     try {
       const zipPath = await this.slideService.selectZIP();
-      if (!zipPath) return;
+      if (!zipPath) return undefined;
 
       const serviceStructure = await this.slideService.importFromZIP(zipPath);
 
@@ -245,11 +247,13 @@ export class SlideViewModel extends BaseViewModel implements ISlideViewModel {
 
         return serviceStructure;
       }
+      return undefined;
     } catch (error) {
       this.handleError('Import from ZIP', error);
       runInAction(() => {
         this.error = error instanceof Error ? error.message : String(error);
       });
+      return undefined;
     }
   }
 
@@ -475,7 +479,7 @@ export class SlideViewModel extends BaseViewModel implements ISlideViewModel {
   /**
    * Handle errors and update error state
    */
-  protected override onError(operation: string, errorMessage: string): void {
+  protected override onError(_operation: string, errorMessage: string): void {
     this.error = errorMessage;
   }
 }

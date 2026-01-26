@@ -22,7 +22,7 @@
 import { makeObservable, observable, action, computed, runInAction } from 'mobx';
 import { BaseViewModel } from '../base/BaseViewModel';
 import type { ISetlistViewModel } from '../types/viewmodels';
-import type { Song } from '../types';
+import type { Song, SetlistFolder } from '../types';
 
 // Service interfaces (to be imported from actual services)
 interface ISetlistService {
@@ -59,7 +59,7 @@ export class SetlistViewModel extends BaseViewModel implements Partial<ISetlistV
   protected readonly viewModelName = 'SetlistViewModel';
 
   // Observable state
-  public folders: unknown[] = [];
+  public folders: SetlistFolder[] = [];
   public setlist: SetlistItem[] = [];
   public currentSongIndex: number = -1;
   public currentLoadedFolder: string | null = null;
@@ -499,7 +499,7 @@ export class SetlistViewModel extends BaseViewModel implements Partial<ISetlistV
 
     if (serviceStructure && serviceStructure.songs && serviceStructure.songs.length > 0) {
       runInAction(() => {
-        this.setlist.push(...serviceStructure.songs);
+        this.setlist.push(...(serviceStructure.songs || []));
       });
       this.log(`[SetlistViewModel] Added ${serviceStructure.songs.length} songs from service to setlist`);
     }
@@ -550,7 +550,7 @@ export class SetlistViewModel extends BaseViewModel implements Partial<ISetlistV
   /**
    * Handle errors and update error state
    */
-  protected override onError(operation: string, errorMessage: string): void {
+  protected override onError(_operation: string, errorMessage: string): void {
     this.error = errorMessage;
   }
 }
