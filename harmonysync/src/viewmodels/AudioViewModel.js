@@ -709,6 +709,21 @@ class AudioViewModel {
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   }
+
+  // Direct state setters for App.jsx compatibility (to be phased out)
+  setTracks(tracks) {
+    this.tracks = tracks.map((track, index) => ({
+      ...track,
+      index,
+      volume: track.volume ?? 1.0,
+      pan: track.pan ?? 0.0,
+      muted: track.muted ?? false,
+    }));
+  }
+
+  setIsLoading(isLoading) {
+    this.isLoading = isLoading;
+  }
 }
 
 export default AudioViewModel;

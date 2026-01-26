@@ -305,6 +305,11 @@ class SlideViewModel {
     this.slides = [];
     this.selectedSlide = null;
   }
+
+  // Direct state setter for App.jsx compatibility (to be phased out)
+  setSelectedSlide(slide) {
+    this.selectedSlide = slide;
+  }
 }
 
 export default SlideViewModel;
