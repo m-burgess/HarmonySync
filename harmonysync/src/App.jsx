@@ -1,4 +1,20 @@
+/**
+ * App Component - MVVM Refactored Root Component
+ * 
+ * This is the refactored root component using MVVM architecture:
+ * - Uses ViewModels via DI container
+ * - Wrapped with observer() for reactive state
+ * - Minimal state management (only UI state like dialog visibility)
+ * - Business logic delegated to ViewModels
+ * - EventBus for cross-component communication
+ * 
+ * Key improvements:
+ * - No props drilling (ViewModels accessed via DI)
+ * - Cleaner separation of concerns
+ * - Focus on layout and routing
+ */
 import React, { useState, useEffect, useRef } from 'react';
+import { observer } from 'mobx-react-lite';
 import { core, event } from './electron-adapter';
 import { 
   PresentationChartBarIcon, 
@@ -25,24 +41,24 @@ import MixerSidebar from './components/audio/MixerSidebar.jsx';
 import DisplaySettings from './components/screens/DisplaySettings.jsx';
 import AudioSettings from './components/screens/AudioSettings.jsx';
 
+import { getViewModel } from './viewmodels';
+import { getService } from './services';
+import { EVENT_TYPES } from './services/EventBusService.js';
 
+const App = observer(() => {
+  // Get ViewModels from DI container
+  const setlistViewModel = getViewModel('setlistViewModel');
+  const slideViewModel = getViewModel('slideViewModel');
+  const audioViewModel = getViewModel('audioViewModel');
+  const eventBusService = getService('eventBusService');
 
-
-
-const App = () => {
-  const [allSlides, setAllSlides] = useState([]);
-  const [allTracks, setAllTracks] = useState([]);
-  const [isLoadingTracks, setIsLoadingTracks] = useState(false);
-  const [serviceOrder, setServiceOrder] = useState([]); // New state for service order
-  const [selectedSlide, setSelectedSlide] = useState(null);
-  const [currentLyrics, setCurrentLyrics] = useState(null); // Current song lyrics for scrollable column
+  // UI-only state (not business logic)
   const [isDisplaySettingsOpen, setIsDisplaySettingsOpen] = useState(false);
   const [isAudioSettingsOpen, setIsAudioSettingsOpen] = useState(false);
   const containerRef = useRef(null);
 
-  // Resizable layout: Service Order sidebar and Mixer sidebar
+  // Resizable layout state
   const DEFAULT_SIDEBAR_WIDTH = 300;
-  const DEFAULT_MIXER_WIDTH = 220;
   
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const v = parseInt(localStorage.getItem('rp_sidebarWidth'), 10);
@@ -52,59 +68,61 @@ const App = () => {
   const draggingRef = useRef(null);
   const rafRef = useRef(null);
 
-  // Add imported songs/presentations directly to service order
-  const addToServiceOrder = (item) => {
-    setServiceOrder(prevOrder => [...prevOrder, {
-      type: item.type,
-      id: item.id || Date.now(),
-      name: item.name,
-      loaded: false,
-      slides: item.slides || [],
-      tracks: item.tracks || []
-    }]);
-  };
-
-  const handleAddSongToSetlist = async (songId, songTitle) => {
-    setServiceOrder(prevOrder => [...prevOrder, { type: 'song', id: songId, name: songTitle, loaded: false, slides: [], tracks: [] }]);
-  };
-
-  const handleAddPresentationToSetlist = async (presentationId, presentationName) => {
-    setServiceOrder(prevOrder => [...prevOrder, { type: 'presentation', id: presentationId, name: presentationName, loaded: false, slides: [], tracks: [] }]);
-  };
-
+  // Listen to EventBus for cross-component events
   useEffect(() => {
-    console.log('[App] allTracks state updated:', allTracks);
-  }, [allTracks]);
-  
-  // Listen for tracks-updated events (from transpose)
+    // Subscribe to tracks-updated event from transpose
+    const unsubscribeTracks = eventBusService.subscribe(
+      EVENT_TYPES.TRACKS_UPDATED,
+      (payload) => {
+        console.log('[App] Tracks updated via EventBus:', payload);
+        // AudioViewModel handles this internally now
+      }
+    );
+
+    // Subscribe to video-ended event
+    const unsubscribeVideo = eventBusService.subscribe(
+      EVENT_TYPES.VIDEO_ENDED,
+      () => {
+        console.log('[App] Video ended - advancing to next slide');
+        // Simulate ArrowDown key press
+        document.dispatchEvent(new KeyboardEvent('keydown', {
+          key: 'ArrowDown',
+          code: 'ArrowDown',
+          keyCode: 40,
+          which: 40,
+          bubbles: true,
+        }));
+      }
+    );
+
+    return () => {
+      unsubscribeTracks();
+      unsubscribeVideo();
+    };
+  }, [eventBusService]);
+
+  // Listen for legacy window events (to be migrated to EventBus)
   useEffect(() => {
     const unlisten = event.listen('tracks-updated', (evt) => {
-      console.log('[App] Tracks updated event received:', evt.payload);
-      setAllTracks(evt.payload);
+      console.log('[App] Legacy tracks-updated event:', evt.payload);
+      // Publish to EventBus for migration
+      eventBusService.publish(EVENT_TYPES.TRACKS_UPDATED, evt.payload);
     });
 
     return unlisten;
-  }, []);
-  
-  // Listen for video-ended events (separate effect)
+  }, [eventBusService]);
+
   useEffect(() => {
     const unlisten = event.listen('video-ended', () => {
-      console.log('Video ended event received. Advancing to next slide.');
-      // Simulate ArrowDown key press
-      document.dispatchEvent(new KeyboardEvent('keydown', {
-        key: 'ArrowDown',
-        code: 'ArrowDown',
-        keyCode: 40,
-        which: 40,
-        bubbles: true,
-      }));
+      // Publish to EventBus
+      eventBusService.publish(EVENT_TYPES.VIDEO_ENDED);
     });
 
     return unlisten;
-  }, []);
+  }, [eventBusService]);
 
+  // Window resize cleanup
   useEffect(() => {
-    // Clean up in case component unmounts while dragging
     const handleUp = () => {
       draggingRef.current = null;
       document.body.style.userSelect = '';
@@ -127,17 +145,16 @@ const App = () => {
     
     draggingRef.current = { type: 'sidebar', startX, startWidth };
     document.body.style.userSelect = 'none';
-    document.body.style.cursor = 'ew-resize'; // Double arrow horizontal cursor
+    document.body.style.cursor = 'ew-resize';
 
     const onMove = (ev) => {
       if (!draggingRef.current || draggingRef.current.type !== 'sidebar') return;
       const clientX = ev.type.startsWith('touch') ? ev.touches[0].clientX : ev.clientX;
       const { startX, startWidth } = draggingRef.current;
       const dx = clientX - startX;
-      const minWidth = 200; // minimum sidebar width
-      const maxWidth = 600; // maximum sidebar width
+      const minWidth = 200;
+      const maxWidth = 600;
 
-      // Use RAF to throttle layout updates
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       rafRef.current = requestAnimationFrame(() => {
         let newWidth = Math.max(minWidth, Math.min(maxWidth, startWidth + dx));
@@ -162,12 +179,6 @@ const App = () => {
     window.addEventListener('touchmove', onMove, { passive: false });
     window.addEventListener('mouseup', onUp);
     window.addEventListener('touchend', onUp);
-  };
-
-  // VS Code style multitrack panel resizing
-  const startMultitrackResize = (e) => {
-    e.preventDefault();
-    // Removed multitrack resize functionality - mixer is now a sidebar
   };
 
   const resetSidebar = () => {
@@ -204,7 +215,6 @@ const App = () => {
     });
 
     const unlistenStop = event.listen('stop-preservice-music', async () => {
-      // Close the preservice music window if it's open
       try {
         await core.invoke('close_preservice_music_window');
       } catch (error) {
@@ -217,6 +227,27 @@ const App = () => {
       unlistenStop();
     };
   }, []);
+
+  // Callbacks for child components (temporary - will be removed when all components are refactored)
+  const handleSetAllSlides = (slides) => {
+    slideViewModel.setSlides(slides);
+  };
+
+  const handleSetAllTracks = (tracks) => {
+    audioViewModel.setTracks(tracks);
+  };
+
+  const handleSetIsLoadingTracks = (isLoading) => {
+    audioViewModel.setIsLoading(isLoading);
+  };
+
+  const handleSetCurrentLyrics = (lyrics) => {
+    setlistViewModel.setSelectedSongForLyrics(lyrics);
+  };
+
+  const handleSetSelectedSlide = (slide) => {
+    slideViewModel.setSelectedSlide(slide);
+  };
 
   return (
     <div className="h-screen w-screen bg-gray-900 text-gray-300 vscode-ui-font flex" ref={containerRef}>
@@ -271,12 +302,10 @@ const App = () => {
           style={{ width: `${sidebarWidth}px` }}
         >
           <SetlistManager 
-            setAllSlides={setAllSlides} 
-            setAllTracks={setAllTracks} 
-            setIsLoadingTracks={setIsLoadingTracks}
-            setCurrentLyrics={setCurrentLyrics}
-            serviceOrder={serviceOrder} 
-            setServiceOrder={setServiceOrder} 
+            setAllSlides={handleSetAllSlides} 
+            setAllTracks={handleSetAllTracks} 
+            setIsLoadingTracks={handleSetIsLoadingTracks}
+            setCurrentLyrics={handleSetCurrentLyrics}
           />
         </div>
 
@@ -291,20 +320,23 @@ const App = () => {
         <div className="flex-1 flex bg-gray-900">
           {/* Slide Editor or Lyrics Column */}
           <div className="flex-1 overflow-hidden">
-            {currentLyrics ? (
-              <LyricsColumn lyrics={currentLyrics} />
+            {setlistViewModel.selectedSongForLyrics ? (
+              <LyricsColumn lyrics={setlistViewModel.selectedSongForLyrics} />
             ) : (
               <SlideManager 
-                allSlides={allSlides} 
-                setAllSlides={setAllSlides} 
-                selectedSlide={selectedSlide} 
-                setSelectedSlide={setSelectedSlide} 
+                allSlides={slideViewModel.slides} 
+                setAllSlides={handleSetAllSlides} 
+                selectedSlide={slideViewModel.selectedSlide} 
+                setSelectedSlide={handleSetSelectedSlide} 
               />
             )}
           </div>
 
           {/* Mixer Sidebar */}
-          <MixerSidebar allTracks={allTracks} isLoadingTracks={isLoadingTracks} />
+          <MixerSidebar 
+            allTracks={audioViewModel.tracks} 
+            isLoadingTracks={audioViewModel.isLoading} 
+          />
         </div>
       </div>
 
@@ -319,6 +351,6 @@ const App = () => {
       />
     </div>
   );
-};
+});
 
 export default App;
