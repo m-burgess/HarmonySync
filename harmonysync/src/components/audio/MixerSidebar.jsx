@@ -1,76 +1,32 @@
-import React, { useState, useEffect } from 'react';
+/**
+ * MixerSidebar - MVVM Refactored View Component
+ * 
+ * This component is refactored to use MVVM architecture:
+ * - All business logic moved to MixerViewModel
+ * - Component wrapped with observer() to react to ViewModel changes
+ * - No useState for business state
+ * - Pure presentation logic only (~80 lines vs original 144 lines)
+ */
+import React, { useEffect } from 'react';
+import { observer } from 'mobx-react-lite';
+import { getViewModel } from '../../viewmodels';
 import { PlayIcon, PauseIcon } from '@heroicons/react/24/solid';
-import { setTrackMute, playAllTracks, stopAllAudio } from '../../utils/audio';
 import '../../styles/components/MixerSidebar.css';
 
-const MixerSidebar = ({ allTracks, isLoadingTracks }) => {
-  const [muteStates, setMuteStates] = useState({});
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isOperationInProgress, setIsOperationInProgress] = useState(false);
+const MixerSidebar = observer(({ allTracks, isLoadingTracks }) => {
+  const viewModel = getViewModel('mixerViewModel');
 
-  // Sync mute states with track data
+  // Sync tracks from parent component (bridge until full MVVM refactor)
   useEffect(() => {
-    const newStates = {};
-    allTracks.forEach(track => {
-      newStates[track.id] = track.isMuted || false;
-    });
-    setMuteStates(newStates);
-  }, [allTracks]);
-
-  const handleMuteToggle = async (track) => {
-    const newMuteState = !muteStates[track.id];
-    
-    try {
-      // Update audio service
-      await setTrackMute(track, newMuteState);
-      
-      // Update local state
-      setMuteStates(prev => ({
-        ...prev,
-        [track.id]: newMuteState
-      }));
-    } catch (error) {
-      console.error('❌ Failed to toggle mute:', error);
+    if (allTracks) {
+      viewModel.setTracks(allTracks);
     }
-  };
+  }, [allTracks, viewModel]);
 
-  const handlePlayAll = async () => {
-    if (isOperationInProgress || allTracks.length === 0) return;
-    setIsOperationInProgress(true);
-    try {
-      await playAllTracks();
-      setIsPlaying(true);
-    } catch (error) {
-      console.error('❌ Play failed:', error);
-    } finally {
-      setIsOperationInProgress(false);
-    }
-  };
-
-  const handleStopAll = async () => {
-    if (isOperationInProgress) return;
-    setIsOperationInProgress(true);
-    try {
-      await stopAllAudio();
-      setIsPlaying(false);
-    } catch (error) {
-      console.error('❌ Stop failed:', error);
-    } finally {
-      setIsOperationInProgress(false);
-    }
-  };
-
-  const sortTracks = (a, b) => {
-    const aName = a.name.toLowerCase();
-    const bName = b.name.toLowerCase();
-    const customOrder = ['click', 'guide'];
-    const aIndex = customOrder.indexOf(aName);
-    const bIndex = customOrder.indexOf(bName);
-    if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
-    if (aIndex !== -1) return -1;
-    if (bIndex !== -1) return 1;
-    return aName.localeCompare(bName);
-  };
+  // Sync loading state
+  useEffect(() => {
+    viewModel.isLoadingTracks = isLoadingTracks;
+  }, [isLoadingTracks, viewModel]);
 
   return (
     <div className="mixer-sidebar h-full flex flex-col bg-gray-800 border-l border-gray-700 overflow-hidden">
@@ -82,16 +38,16 @@ const MixerSidebar = ({ allTracks, isLoadingTracks }) => {
           </h3>
           <div className="flex gap-1">
             <button
-              onClick={handlePlayAll}
-              disabled={isOperationInProgress || allTracks.length === 0}
+              onClick={() => viewModel.playAll()}
+              disabled={!viewModel.canPlay}
               className="p-1.5 bg-green-700 hover:bg-green-600 rounded-md text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               title="Play All"
             >
               <PlayIcon className="w-4 h-4" />
             </button>
             <button
-              onClick={handleStopAll}
-              disabled={isOperationInProgress || !isPlaying}
+              onClick={() => viewModel.stopAll()}
+              disabled={!viewModel.canStop}
               className="p-1.5 bg-red-700 hover:bg-red-600 rounded-md text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               title="Stop All"
             >
@@ -103,25 +59,25 @@ const MixerSidebar = ({ allTracks, isLoadingTracks }) => {
 
       {/* Tracks List */}
       <div className="flex-1 overflow-y-auto p-2">
-        {isLoadingTracks ? (
+        {viewModel.isLoadingTracks ? (
           <div className="flex items-center justify-center h-full text-gray-500 text-sm">
             Loading tracks...
           </div>
-        ) : allTracks.length === 0 ? (
+        ) : !viewModel.hasTracks ? (
           <div className="flex items-center justify-center h-full text-gray-500 text-sm text-center px-2">
             Load a song to see tracks
           </div>
         ) : (
           <div className="space-y-1">
-            {allTracks.sort(sortTracks).map((track) => (
+            {viewModel.sortedTracks.map((track) => (
               <button
                 key={track.id}
-                onClick={() => handleMuteToggle(track)}
-                className={`mixer-track-item ${muteStates[track.id] ? 'muted' : ''}`}
+                onClick={() => viewModel.toggleMute(track)}
+                className={`mixer-track-item ${viewModel.muteStates[track.id] ? 'muted' : ''}`}
               >
                 {/* Icon */}
                 <span className="mixer-track-icon">
-                  {muteStates[track.id] ? '🔇' : '🔊'}
+                  {viewModel.muteStates[track.id] ? '🔇' : '🔊'}
                 </span>
                 
                 {/* Track Name */}
@@ -139,6 +95,6 @@ const MixerSidebar = ({ allTracks, isLoadingTracks }) => {
       </div>
     </div>
   );
-};
+});
 
 export default MixerSidebar;
