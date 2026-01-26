@@ -4,15 +4,43 @@
   Run `npm run generate:audio-api` from the `harmonysync` folder to refresh types.
 */
 
-import type {
-  HealthResponse,
-  TrackLoadRequest,
-  VolumeRequest,
-  PanRequest,
-  MuteRequest,
-  MixerState,
-  CrossfadeRequest,
-} from './audio-api'
+// Define types locally since audio-api.ts uses OpenAPI structure
+export interface HealthResponse {
+  status: string;
+}
+
+export interface TrackLoadRequest {
+  path: string;
+}
+
+export interface VolumeRequest {
+  trackId: string;
+  volume: number;
+}
+
+export interface PanRequest {
+  trackId: string;
+  pan: number;
+}
+
+export interface MuteRequest {
+  trackId: string;
+  muted: boolean;
+}
+
+export interface MixerState {
+  tracks: Array<{
+    id: string;
+    name: string;
+    volume: number;
+    pan: number;
+    isMuted: boolean;
+  }>;
+}
+
+export interface CrossfadeRequest {
+  duration: number;
+}
 
 // Song types
 export interface CreateSongRequest {

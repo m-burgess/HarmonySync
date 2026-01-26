@@ -101,7 +101,7 @@ export class MixerViewModel extends BaseViewModel implements IMixerViewModel {
    */
   private setupListeners(): void {
     // Listen for state changes
-    this.audioService.onStateChange((event: unknown, state: { isPlaying: boolean }) => {
+    this.audioService.onStateChange((_event: unknown, state: { isPlaying: boolean }) => {
       runInAction(() => {
         this.isPlaying = state.isPlaying;
       });
@@ -402,7 +402,7 @@ export class MixerViewModel extends BaseViewModel implements IMixerViewModel {
   /**
    * Handle errors and update error state
    */
-  protected override onError(operation: string, errorMessage: string): void {
+  protected override onError(_operation: string, errorMessage: string): void {
     this.error = errorMessage;
   }
 }

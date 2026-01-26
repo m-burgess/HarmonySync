@@ -21,7 +21,7 @@ import { makeObservable, observable, action, computed, runInAction } from 'mobx'
 import { BaseViewModel } from '../base/BaseViewModel';
 import type { IAudioViewModel } from '../types/viewmodels';
 import type { IAudioService } from '../types/services';
-import type { AudioTrack, MemoryUsage, TransposeProgress } from '../types';
+import type { AudioTrack, MemoryUsage, TransposeProgress, MixerConfig } from '../types';
 
 export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
   protected readonly viewModelName = 'AudioViewModel';
@@ -132,14 +132,14 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
    */
   private setupListeners(): void {
     // Listen for position updates
-    this.audioService.onPositionUpdate((event: unknown, position: number) => {
+    this.audioService.onPositionUpdate((_event: unknown, position: number) => {
       runInAction(() => {
         this.currentPosition = position;
       });
     });
 
     // Listen for state changes
-    this.audioService.onStateChange((event: unknown, state: { isPlaying: boolean; isPaused: boolean }) => {
+    this.audioService.onStateChange((_event: unknown, state: { isPlaying: boolean; isPaused: boolean }) => {
       runInAction(() => {
         this.isPlaying = state.isPlaying;
         this.isPaused = state.isPaused;
@@ -422,16 +422,19 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
   public async saveMixerConfig(): Promise<void> {
     if (!this.currentSongPath) return;
 
-    const config = {
+    const config: MixerConfig = {
+      songPath: this.currentSongPath,
       tracks: this.tracks.map(t => ({
         volume: t.volume,
         pan: t.pan,
         muted: t.muted,
       })),
+      globalVolume: this.globalVolume,
+      timestamp: Date.now(),
     };
 
     try {
-      await this.audioService.saveMixerConfig(this.currentSongPath, config);
+      await this.audioService.saveMixerConfig(config);
     } catch (error) {
       this.logWarn('Failed to save mixer config:', error);
     }
@@ -708,7 +711,8 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
       // TODO: Refactor to inject electron-adapter through services
       // Dynamic imports in ViewModels create tight coupling to platform-specific modules
       // Consider injecting these dependencies through services to improve testability
-      const { core, fs, event } = await import('../electron-adapter');
+      const adapter = await import('../electron-adapter');
+      const { core, fs } = adapter;
 
       // Call the Rust command to transpose files
       const outputDir = await core.invoke('transpose_audio_files', {
@@ -726,7 +730,7 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
       this.log('🔄 Loading transposed tracks from:', outputDir);
 
       // Read the new directory to get track paths
-      const entries = await fs.readDir(outputDir, { recursive: false });
+      const entries = await fs.readDir(outputDir);
       const audioFiles = entries
         .filter((e: { children?: unknown; name: string }) => 
           e.children === undefined &&
@@ -741,32 +745,37 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
       const trackPaths = audioFiles.map((f: { name: string }) => `${outputDir}/${f.name}`);
 
       // Add the new tracks as a song
-      const results = await this.audioService.addTracks(trackPaths);
+      const results = await this.audioService.addTracks(trackPaths) as Array<{
+        success: boolean;
+        path?: string;
+        trackId?: string;
+        name?: string;
+      }>;
 
       // Update the tracks in the UI
-      const loadedTracks = results
-        .filter((result: { success: boolean }) => result.success)
-        .map((result: { path: string; trackId: string; name?: string }, index: number) => {
+      const loadedTracks: AudioTrack[] = results
+        .filter((result) => result.success && result.path && result.trackId)
+        .map((result) => {
           // Extract filename without extension using cross-platform string operations
-          const path = result.path;
+          const path = result.path!;
           const lastSeparator = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
           const fileName = path.substring(lastSeparator + 1);
           const lastDot = fileName.lastIndexOf('.');
           const trackName = result.name || (lastDot > 0 ? fileName.substring(0, lastDot) : fileName);
 
           return {
-            id: result.trackId,
-            path: result.path,
+            id: result.trackId!,
+            path: result.path!,
             name: trackName,
+            duration: 0, // Will be updated by audio service
+            volume: 0.7,
             pan: 0,
-            isMuted: false,
-            isPlaying: false,
-            individualVolume: 0.7,
+            muted: false,
           };
         });
 
       // Emit event to update tracks in parent component
-      event.emit('tracks-updated', loadedTracks);
+      adapter.event.emit('tracks-updated', loadedTracks);
 
       // Update current directory
       runInAction(() => {
@@ -830,30 +839,28 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
   public setupTransposeProgressListener(): void {
     // Import and setup listener asynchronously
     import('../electron-adapter')
-      .then(({ event }) => {
-        event
-          .listen('transpose-progress', (e: { payload: unknown }) => {
-            this.log('Transpose progress:', e.payload);
-            runInAction(() => {
-              const payload = e.payload as {
-                current_file?: string;
-                total_files?: number;
-                completed_files?: number;
-                message?: string;
-              };
-              this.transposeProgress = {
-                currentFile: payload.current_file || '',
-                totalFiles: payload.total_files || 0,
-                completedFiles: payload.completed_files || 0,
-                message: payload.message || '',
-              };
-            });
-          })
-          .then((unlisten: () => void) => {
-            // Store unlisten function for cleanup
-            this.transposeUnlisten = unlisten;
-            this.addSubscription(unlisten);
+      .then((adapter) => {
+        const unlisten = adapter.event.listen('transpose-progress', (e: { payload: unknown }) => {
+          this.log('Transpose progress:', e.payload);
+          runInAction(() => {
+            const payload = e.payload as {
+              current_file?: string;
+              total_files?: number;
+              completed_files?: number;
+              message?: string;
+            };
+            this.transposeProgress = {
+              currentFile: payload.current_file || '',
+              totalFiles: payload.total_files || 0,
+              completedFiles: payload.completed_files || 0,
+              message: payload.message || '',
+            };
           });
+        });
+        
+        // Store unlisten function for cleanup
+        this.transposeUnlisten = unlisten;
+        this.addSubscription(unlisten);
       })
       .catch((error: unknown) => {
         this.logError('Failed to setup transpose progress listener', error);
@@ -902,7 +909,7 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
   /**
    * Handle errors and update error state
    */
-  protected override onError(operation: string, errorMessage: string): void {
+  protected override onError(_operation: string, errorMessage: string): void {
     this.error = errorMessage;
   }
 }

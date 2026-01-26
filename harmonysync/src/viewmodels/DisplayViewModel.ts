@@ -555,7 +555,7 @@ export class DisplayViewModel extends BaseViewModel implements IDisplayViewModel
   /**
    * Handle errors and update error state
    */
-  protected override onError(operation: string, errorMessage: string): void {
+  protected override onError(_operation: string, errorMessage: string): void {
     this.error = errorMessage;
   }
 }

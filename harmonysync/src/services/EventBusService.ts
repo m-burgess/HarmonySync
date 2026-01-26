@@ -30,7 +30,7 @@
 
 import { BaseService } from '../base/BaseService';
 import type { IEventBusService } from '../types/services';
-import type { EventType, EventHandler, UnsubscribeFunction, EventRecord } from '../types';
+import type { EventType, EventHandler, UnsubscribeFunction, EventRecord, EventPayload } from '../types';
 import { EVENT_TYPES } from '../types';
 
 /**
@@ -150,7 +150,9 @@ export class EventBusService extends BaseService implements IEventBusService {
     
     for (const handler of handlersCopy) {
       try {
-        handler(payload);
+        if (payload !== undefined) {
+          handler(payload as EventPayload);
+        }
       } catch (error) {
         this.logError(`Error in handler for "${eventType}"`, error);
         // Continue executing other handlers even if one fails
@@ -226,7 +228,7 @@ export class EventBusService extends BaseService implements IEventBusService {
   private recordEvent(eventType: EventType, payload: unknown): void {
     this.eventHistory.push({
       type: eventType,
-      payload,
+      payload: payload as EventPayload,
       timestamp: Date.now(),
     });
 
@@ -259,7 +261,7 @@ export class EventBusService extends BaseService implements IEventBusService {
    */
   public waitFor<T = unknown>(eventType: EventType, timeout: number = 0): Promise<T> {
     return new Promise((resolve, reject) => {
-      let timeoutId: NodeJS.Timeout | null = null;
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
       
       const unsubscribe = this.once(eventType, (payload) => {
         if (timeoutId) clearTimeout(timeoutId);
