@@ -1,23 +1,58 @@
-// Client interface for communicating with the Node.js video processing service
+// Client interface for communicating with the Node.js image processing service
 
-import io from 'socket.io-client';
+import io, { Socket } from 'socket.io-client';
+import type { Job, EventHandler } from '../../types/audio';
 
-class VideoServiceClient {
-    constructor() {
-        this.socket = null;
-        this.isConnected = false;
-        this.serviceUrl = 'http://localhost:3002';
-        this.eventHandlers = new Map();
-        this.reconnectAttempts = 0;
-        this.maxReconnectAttempts = 5;
-        this.reconnectDelay = 2000;
-        this.activeJobs = new Map();
-    }
+/**
+ * Image processing options
+ */
+interface ImageProcessingOptions {
+  width?: number;
+  height?: number;
+  quality?: number;
+  format?: string;
+  outputDir?: string;
+  [key: string]: unknown;
+}
 
-    // Initialize connection to video service
-    async connect() {
+/**
+ * Batch processing options
+ */
+interface BatchProcessingOptions extends ImageProcessingOptions {
+  images?: string[];
+  operation?: string;
+}
+
+/**
+ * Queue status response
+ */
+interface QueueStatus {
+  pending: number;
+  processing: number;
+  completed: number;
+}
+
+/**
+ * Health check response
+ */
+interface HealthResponse {
+  status: string;
+  [key: string]: unknown;
+}
+
+class ImageServiceClient {
+    private socket: Socket | null = null;
+    private isConnected = false;
+    private serviceUrl = 'http://localhost:3003';
+    private eventHandlers: Map<string, Array<EventHandler<Job>>> = new Map();
+    private reconnectAttempts = 0;
+    private maxReconnectAttempts = 5;
+    private reconnectDelay = 2000;
+    private activeJobs: Map<string, Job> = new Map();
+
+    async connect(): Promise<boolean> {
         try {
-            console.log('🎬 Connecting to video processing service...');
+            console.log('🖼️  Connecting to image processing service...');
             
             this.socket = io(this.serviceUrl, {
                 transports: ['websocket', 'polling'],
@@ -26,22 +61,27 @@ class VideoServiceClient {
             });
 
             return new Promise((resolve, reject) => {
+                if (!this.socket) {
+                    reject(new Error('Socket initialization failed'));
+                    return;
+                }
+
                 this.socket.on('connect', () => {
-                    console.log('✅ Connected to video service');
+                    console.log('✅ Connected to image service');
                     this.isConnected = true;
                     this.reconnectAttempts = 0;
                     this.setupEventHandlers();
                     resolve(true);
                 });
 
-                this.socket.on('connect_error', (error) => {
-                    console.error('❌ Video service connection error:', error);
+                this.socket.on('connect_error', (error: Error) => {
+                    console.error('❌ Image service connection error:', error);
                     this.isConnected = false;
                     reject(error);
                 });
 
                 this.socket.on('disconnect', () => {
-                    console.log('🔌 Disconnected from video service');
+                    console.log('🔌 Disconnected from image service');
                     this.isConnected = false;
                     this.handleReconnection();
                 });
@@ -53,39 +93,40 @@ class VideoServiceClient {
                 }, 5000);
             });
         } catch (error) {
-            console.error('Failed to connect to video service:', error);
+            console.error('Failed to connect to image service:', error);
             throw error;
         }
     }
 
-    setupEventHandlers() {
-        this.socket.on('job:created', (job) => {
+    private setupEventHandlers(): void {
+        if (!this.socket) return;
+
+        this.socket.on('job:created', (job: Job) => {
             this.activeJobs.set(job.id, job);
             this.emit('jobCreated', job);
         });
 
-        this.socket.on('job:progress', (job) => {
+        this.socket.on('job:progress', (job: Job) => {
             this.activeJobs.set(job.id, job);
             this.emit('jobProgress', job);
         });
 
-        this.socket.on('job:complete', (job) => {
+        this.socket.on('job:complete', (job: Job) => {
             this.activeJobs.set(job.id, job);
             this.emit('jobComplete', job);
-            // Remove from active jobs after delay
             setTimeout(() => this.activeJobs.delete(job.id), 60000);
         });
 
-        this.socket.on('job:error', (job) => {
+        this.socket.on('job:error', (job: Job) => {
             this.activeJobs.set(job.id, job);
             this.emit('jobError', job);
         });
     }
 
-    async handleReconnection() {
+    private async handleReconnection(): Promise<void> {
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
             console.error('Max reconnection attempts reached');
-            this.emit('connectionLost');
+            this.emit('connectionLost', { id: '', status: 'error', progress: 0, error: 'Connection lost' });
             return;
         }
 
@@ -101,27 +142,28 @@ class VideoServiceClient {
         }, this.reconnectDelay);
     }
 
-    // Event handling
-    on(event, handler) {
+    on(event: string, handler: EventHandler<Job>): void {
         if (!this.eventHandlers.has(event)) {
             this.eventHandlers.set(event, []);
         }
-        this.eventHandlers.get(event).push(handler);
+        this.eventHandlers.get(event)?.push(handler);
     }
 
-    off(event, handler) {
+    off(event: string, handler: EventHandler<Job>): void {
         if (this.eventHandlers.has(event)) {
             const handlers = this.eventHandlers.get(event);
-            const index = handlers.indexOf(handler);
-            if (index > -1) {
-                handlers.splice(index, 1);
+            if (handlers) {
+                const index = handlers.indexOf(handler);
+                if (index > -1) {
+                    handlers.splice(index, 1);
+                }
             }
         }
     }
 
-    emit(event, data) {
+    private emit(event: string, data: Job): void {
         if (this.eventHandlers.has(event)) {
-            this.eventHandlers.get(event).forEach(handler => {
+            this.eventHandlers.get(event)?.forEach(handler => {
                 try {
                     handler(data);
                 } catch (error) {
@@ -131,33 +173,35 @@ class VideoServiceClient {
         }
     }
 
-    // Video service methods
-    async checkHealth() {
+    async checkHealth(): Promise<HealthResponse> {
         try {
             const response = await fetch(`${this.serviceUrl}/api/health`);
-            return await response.json();
+            return await response.json() as HealthResponse;
         } catch (error) {
             console.error('Health check failed:', error);
             throw error;
         }
     }
 
-    /**
-     * Transcode a video file
-     * @param {string} inputPath - Path to input video
-     * @param {Object} options - Transcoding options
-     * @returns {Promise<string>} Job ID
-     */
-    async transcodeVideo(inputPath, options = {}) {
+    async getQueueStatus(): Promise<QueueStatus> {
+        try {
+            const response = await fetch(`${this.serviceUrl}/api/queue`);
+            return await response.json() as QueueStatus;
+        } catch (error) {
+            console.error('Failed to get queue status:', error);
+            throw error;
+        }
+    }
+
+    async resizeImage(inputPath: string, options: ImageProcessingOptions = {}): Promise<string> {
         if (!this.isConnected) {
-            throw new Error('Not connected to video service');
+            throw new Error('Not connected to image service');
         }
 
         return new Promise((resolve) => {
-            this.socket.emit('video:transcode', { inputPath, options });
+            this.socket?.emit('image:resize', { inputPath, options });
             
-            // Wait for job creation
-            const handler = (job) => {
+            const handler: EventHandler<Job> = (job) => {
                 this.off('jobCreated', handler);
                 resolve(job.id);
             };
@@ -165,21 +209,15 @@ class VideoServiceClient {
         });
     }
 
-    /**
-     * Generate video thumbnail
-     * @param {string} inputPath - Path to input video
-     * @param {Object} options - Thumbnail options (timestamp, size, outputDir)
-     * @returns {Promise<string>} Job ID
-     */
-    async generateThumbnail(inputPath, options = {}) {
+    async convertFormat(inputPath: string, options: ImageProcessingOptions = {}): Promise<string> {
         if (!this.isConnected) {
-            throw new Error('Not connected to video service');
+            throw new Error('Not connected to image service');
         }
 
         return new Promise((resolve) => {
-            this.socket.emit('video:thumbnail', { inputPath, options });
+            this.socket?.emit('image:convert', { inputPath, options });
             
-            const handler = (job) => {
+            const handler: EventHandler<Job> = (job) => {
                 this.off('jobCreated', handler);
                 resolve(job.id);
             };
@@ -187,20 +225,15 @@ class VideoServiceClient {
         });
     }
 
-    /**
-     * Extract video metadata
-     * @param {string} inputPath - Path to input video
-     * @returns {Promise<string>} Job ID
-     */
-    async extractMetadata(inputPath) {
+    async generateThumbnail(inputPath: string, options: ImageProcessingOptions = {}): Promise<string> {
         if (!this.isConnected) {
-            throw new Error('Not connected to video service');
+            throw new Error('Not connected to image service');
         }
 
         return new Promise((resolve) => {
-            this.socket.emit('video:metadata', { inputPath });
+            this.socket?.emit('image:thumbnail', { inputPath, options });
             
-            const handler = (job) => {
+            const handler: EventHandler<Job> = (job) => {
                 this.off('jobCreated', handler);
                 resolve(job.id);
             };
@@ -208,58 +241,75 @@ class VideoServiceClient {
         });
     }
 
-    /**
-     * Get job status
-     * @param {string} jobId - Job ID
-     * @returns {Promise<Object>} Job status
-     */
-    async getJobStatus(jobId) {
+    async optimizeForWeb(inputPath: string, options: ImageProcessingOptions = {}): Promise<string> {
+        if (!this.isConnected) {
+            throw new Error('Not connected to image service');
+        }
+
+        return new Promise((resolve) => {
+            this.socket?.emit('image:optimize', { inputPath, options });
+            
+            const handler: EventHandler<Job> = (job) => {
+                this.off('jobCreated', handler);
+                resolve(job.id);
+            };
+            this.on('jobCreated', handler);
+        });
+    }
+
+    async processBatch(images: string[], operation = 'resize', options: ImageProcessingOptions = {}): Promise<string> {
+        if (!this.isConnected) {
+            throw new Error('Not connected to image service');
+        }
+
+        return new Promise((resolve) => {
+            const batchOptions: BatchProcessingOptions = { images, operation, ...options };
+            this.socket?.emit('image:batch', { options: batchOptions });
+            
+            const handler: EventHandler<Job> = (job) => {
+                this.off('jobCreated', handler);
+                resolve(job.id);
+            };
+            this.on('jobCreated', handler);
+        });
+    }
+
+    async getJobStatus(jobId: string): Promise<Job> {
         try {
             const response = await fetch(`${this.serviceUrl}/api/jobs/${jobId}`);
             if (!response.ok) {
                 throw new Error(`Job not found: ${jobId}`);
             }
-            return await response.json();
+            return await response.json() as Job;
         } catch (error) {
             console.error('Failed to get job status:', error);
             throw error;
         }
     }
 
-    /**
-     * Cancel a job
-     * @param {string} jobId - Job ID
-     * @returns {Promise<Object>} Cancellation result
-     */
-    async cancelJob(jobId) {
+    async cancelJob(jobId: string): Promise<{ success: boolean }> {
         try {
             const response = await fetch(`${this.serviceUrl}/api/jobs/${jobId}`, {
                 method: 'DELETE'
             });
-            return await response.json();
+            return await response.json() as { success: boolean };
         } catch (error) {
             console.error('Failed to cancel job:', error);
             throw error;
         }
     }
 
-    /**
-     * Wait for job completion
-     * @param {string} jobId - Job ID
-     * @param {Function} progressCallback - Progress callback
-     * @returns {Promise<Object>} Job result
-     */
-    async waitForJob(jobId, progressCallback = null) {
+    async waitForJob(jobId: string, progressCallback: ((progress: number, job: Job) => void) | null = null): Promise<unknown> {
         return new Promise((resolve, reject) => {
             let isResolved = false;
 
-            const progressHandler = (job) => {
+            const progressHandler: EventHandler<Job> = (job) => {
                 if (job.id === jobId && progressCallback) {
                     progressCallback(job.progress, job);
                 }
             };
 
-            const completeHandler = (job) => {
+            const completeHandler: EventHandler<Job> = (job) => {
                 if (job.id === jobId && !isResolved) {
                     isResolved = true;
                     this.off('jobProgress', progressHandler);
@@ -269,7 +319,7 @@ class VideoServiceClient {
                 }
             };
 
-            const errorHandler = (job) => {
+            const errorHandler: EventHandler<Job> = (job) => {
                 if (job.id === jobId && !isResolved) {
                     isResolved = true;
                     this.off('jobProgress', progressHandler);
@@ -283,7 +333,6 @@ class VideoServiceClient {
             this.on('jobComplete', completeHandler);
             this.on('jobError', errorHandler);
 
-            // Check if job already exists and is complete
             const existingJob = this.activeJobs.get(jobId);
             if (existingJob) {
                 if (existingJob.status === 'completed') {
@@ -297,8 +346,7 @@ class VideoServiceClient {
         });
     }
 
-    // Disconnect from service
-    disconnect() {
+    disconnect(): void {
         if (this.socket) {
             this.socket.disconnect();
             this.socket = null;
@@ -308,4 +356,4 @@ class VideoServiceClient {
     }
 }
 
-export default VideoServiceClient;
+export default ImageServiceClient;

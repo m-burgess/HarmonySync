@@ -1,20 +1,80 @@
-// Updated audio.js that uses Node.js audio service instead of FFmpeg/Symphonia
-import NodeJSAudioClient from './nodejs-audio-client.js';
-import AudioServiceChecker from './service-checker.js';
-import * as audioApi from '../api'
+// Updated audio.ts that uses Node.js audio service instead of FFmpeg/Symphonia
+import NodeJSAudioClient from './nodejs-audio-client';
+import AudioServiceChecker from './service-checker';
+import * as audioApi from '../api';
+import type { 
+    Track, 
+    MixerState, 
+    EventHandler,
+    ServiceStatus,
+    MemoryUsage,
+    HealthResponse,
+    CrossfadeStatus,
+    BatchTrackResult,
+    StartupInstructions
+} from '../../types/audio';
+
+// Event handlers map type
+interface EventHandlersMap {
+    playbackComplete: Array<EventHandler<PlaybackCompleteData>>;
+    crossfadeComplete: Array<EventHandler<CrossfadeCompleteData>>;
+}
+
+// Event data types
+interface PlaybackCompleteData {
+    trackId?: string;
+    [key: string]: unknown;
+}
+
+interface CrossfadeCompleteData {
+    newTracks: Track[];
+    [key: string]: unknown;
+}
+
+interface CrossfadeProgressData {
+    progress: number;
+    [key: string]: unknown;
+}
+
+interface CreateSongResult {
+    songId: string;
+    tracks: Track[];
+}
+
+interface TrackLoadResult {
+    path: string;
+    trackId: string;
+    name: string;
+    success: boolean;
+}
+
+interface MemoryUsageResult {
+    rss: number;
+    heapUsed: number;
+    formatted: string;
+}
+
+interface CrossfadeResult {
+    success: boolean;
+    [key: string]: unknown;
+}
+
+interface ClearTracksResult {
+    success: boolean;
+}
 
 // Global audio client instance
-let audioClient = null;
-let serviceChecker = null;
-let tracks = [];
+let audioClient: NodeJSAudioClient | null = null;
+let serviceChecker: AudioServiceChecker | null = null;
+let tracks: Track[] = [];
 let isInitialized = false;
-let eventHandlers = {
+let eventHandlers: EventHandlersMap = {
     playbackComplete: [],
     crossfadeComplete: []
 };
 
 // Initialize the Node.js audio service connection
-export async function initializeAudioService() {
+export async function initializeAudioService(): Promise<NodeJSAudioClient> {
     if (isInitialized && audioClient && audioClient.isConnected) {
         return audioClient;
     }
@@ -28,9 +88,9 @@ export async function initializeAudioService() {
         }
         
         // Check if service is running
-        const status = await serviceChecker.checkServiceStatus();
+        const status: ServiceStatus = await serviceChecker.checkServiceStatus();
         if (!status.isRunning) {
-            const instructions = serviceChecker.getStartupInstructions();
+            const instructions: StartupInstructions = serviceChecker.getStartupInstructions();
             console.error('❌ Audio service not running!');
             console.log('📋 To start the service:');
             instructions.commands.forEach(cmd => console.log(`   ${cmd}`));
@@ -41,14 +101,14 @@ export async function initializeAudioService() {
         audioClient = new NodeJSAudioClient();
         
         // Setup event handlers
-        audioClient.on('mixerStateChanged', (state) => {
+        audioClient.on('mixerStateChanged', (state: MixerState) => {
             tracks = state.tracks;
             console.log(`Audio state updated: ${tracks.length} tracks, ${(state.memoryUsage.rss / 1024 / 1024).toFixed(1)}MB memory`);
             
             // Debug: Log track names to identify duplicates
             if (tracks.length > 0) {
                 console.log('🎵 Current tracks in mixer:');
-                const tracksByName = {};
+                const tracksByName: Record<string, number[]> = {};
                 tracks.forEach((track, index) => {
                     const trackName = track.name || 'Unknown';
                     if (!tracksByName[trackName]) {
@@ -59,7 +119,7 @@ export async function initializeAudioService() {
                 });
                 
                 // Check for duplicates
-                const duplicates = Object.entries(tracksByName).filter(([name, indices]) => indices.length > 1);
+                const duplicates = Object.entries(tracksByName).filter(([, indices]) => indices.length > 1);
                 if (duplicates.length > 0) {
                     console.warn('⚠️ DUPLICATE TRACKS DETECTED:');
                     duplicates.forEach(([name, indices]) => {
@@ -69,7 +129,7 @@ export async function initializeAudioService() {
             }
         });
         
-        audioClient.on('error', (error) => {
+        audioClient.on('error', (error: Error) => {
             console.error('Audio service error:', error);
         });
         
@@ -78,7 +138,7 @@ export async function initializeAudioService() {
             isInitialized = false;
         });
         
-        audioClient.on('playbackComplete', (data) => {
+        audioClient.on('playbackComplete', (data: PlaybackCompleteData) => {
             console.log('🎵 Playback completed:', data);
             // Notify all registered handlers
             eventHandlers.playbackComplete.forEach(handler => {
@@ -90,7 +150,7 @@ export async function initializeAudioService() {
             });
         });
         
-        audioClient.on('crossfadeComplete', (data) => {
+        audioClient.on('crossfadeComplete', (data: CrossfadeCompleteData) => {
             console.log('🎵 Crossfade completed:', data);
             // Notify all registered handlers
             eventHandlers.crossfadeComplete.forEach(handler => {
@@ -107,11 +167,11 @@ export async function initializeAudioService() {
             console.log('🗑️  Tracks cleared');
         });
 
-        audioClient.on('crossfadeProgress', (data) => {
+        audioClient.on('crossfadeProgress', (data: CrossfadeProgressData) => {
             console.log(`🔄 Crossfade progress: ${Math.round(data.progress * 100)}%`);
         });
 
-        audioClient.on('crossfadeComplete', (data) => {
+        audioClient.on('crossfadeComplete', (data: CrossfadeCompleteData) => {
             console.log(`✅ Crossfade complete: ${data.newTracks.length} new tracks`);
             // Force refresh track list after crossfade
             refreshTrackList();
@@ -132,27 +192,27 @@ export async function initializeAudioService() {
 }
 
 // Ensure audio service is initialized before operations
-async function ensureAudioService() {
+async function ensureAudioService(): Promise<NodeJSAudioClient> {
     if (!audioClient || !isInitialized) {
         await initializeAudioService();
     }
-    return audioClient;
+    return audioClient!;
 }
 
 // Get current tracks
-export function getTracks() {
+export function getTracks(): Track[] {
     return tracks;
 }
 
 // Clear all tracks
-export async function clearTracks() {
+export async function clearTracks(): Promise<void> {
     const client = await ensureAudioService();
     await client.clearAllTracks();
     tracks = [];
 }
 
 // Add tracks (load multiple audio files as a song)
-export async function addTracks(trackPaths, songName = null) {
+export async function addTracks(trackPaths: string[], songName: string | null = null): Promise<TrackLoadResult[]> {
     const client = await ensureAudioService();
     
     console.log(`📁 Loading ${trackPaths.length} tracks...`);
@@ -174,20 +234,20 @@ export async function addTracks(trackPaths, songName = null) {
     console.log(`🎵 Creating song: "${finalSongName}"`);
     
     try {
-        const songResult = await client.createSong(finalSongName, trackPaths);
+        const songResult: CreateSongResult = await client.createSong(finalSongName, trackPaths);
         console.log(`✅ Created song: ${finalSongName} (ID: ${songResult.songId})`);
         
         // Apply default panning (click/guide tracks to left)
         await client.applyDefaultPanning();
         
         // Get track information from mixer state for UI compatibility
-        const mixerState = await client.getMixerState();
+        const mixerState: MixerState = await client.getMixerState();
         
         // Return track information in the expected format for backward compatibility
-        const trackResults = mixerState.tracks.map(track => ({
+        const trackResults: TrackLoadResult[] = mixerState.tracks.map(track => ({
             path: track.filePath,
             trackId: track.id,
-            name: track.name, // Include the track name from backend
+            name: track.name,
             success: true
         }));
         
@@ -199,11 +259,11 @@ export async function addTracks(trackPaths, songName = null) {
 }
 
 // Load a single audio file
-export async function loadAudioFile(path, name = null) {
+export async function loadAudioFile(path: string, name: string | null = null): Promise<string> {
     const client = await ensureAudioService();
     
     try {
-        const trackId = await client.loadTrack(path, name);
+        const trackId: string = await client.loadTrack(path, name);
         console.log(`✅ Loaded track: ${name || path}`);
         return trackId;
     } catch (error) {
@@ -213,7 +273,7 @@ export async function loadAudioFile(path, name = null) {
 }
 
 // Play all tracks
-export async function playAllTracks() {
+export async function playAllTracks(): Promise<void> {
     const client = await ensureAudioService();
     
     try {
@@ -226,7 +286,7 @@ export async function playAllTracks() {
 }
 
 // Stop all audio
-export async function stopAllAudio() {
+export async function stopAllAudio(): Promise<void> {
     const client = await ensureAudioService();
     
     try {
@@ -239,7 +299,7 @@ export async function stopAllAudio() {
 }
 
 // Go to beginning of all tracks (stop and restart)
-export async function goToBeginningAllTracks() {
+export async function goToBeginningAllTracks(): Promise<void> {
     console.log('🔄 goToBeginningAllTracks called');
     const client = await ensureAudioService();
     
@@ -255,7 +315,7 @@ export async function goToBeginningAllTracks() {
 }
 
 // Set global/master volume
-export async function setGlobalVolume(volume) {
+export async function setGlobalVolume(volume: number): Promise<void> {
     const client = await ensureAudioService();
     
     try {
@@ -268,7 +328,7 @@ export async function setGlobalVolume(volume) {
 }
 
 // Set individual track volume
-export async function setTrackVolume(trackId, volume) {
+export async function setTrackVolume(trackId: string, volume: number): Promise<void> {
     const client = await ensureAudioService();
     
     try {
@@ -281,7 +341,7 @@ export async function setTrackVolume(trackId, volume) {
 }
 
 // Set track panning
-export async function setPan(track, panValue) {
+export async function setPan(track: Track, panValue: number): Promise<void> {
     const client = await ensureAudioService();
     
     try {
@@ -296,7 +356,7 @@ export async function setPan(track, panValue) {
 }
 
 // Set track mute state
-export async function setTrackMute(track, muted) {
+export async function setTrackMute(track: Track, muted: boolean): Promise<void> {
     const client = await ensureAudioService();
     
     try {
@@ -311,7 +371,7 @@ export async function setTrackMute(track, muted) {
 }
 
 // Play individual track
-export async function playTrack(trackId) {
+export async function playTrack(trackId: string): Promise<void> {
     const client = await ensureAudioService();
     
     try {
@@ -324,7 +384,7 @@ export async function playTrack(trackId) {
 }
 
 // Stop individual track
-export async function stopTrack(trackId) {
+export async function stopTrack(trackId: string): Promise<void> {
     const client = await ensureAudioService();
     
     try {
@@ -337,7 +397,7 @@ export async function stopTrack(trackId) {
 }
 
 // Remove track
-export async function removeTrack(trackId) {
+export async function removeTrack(trackId: string): Promise<void> {
     const client = await ensureAudioService();
     
     try {
@@ -350,11 +410,11 @@ export async function removeTrack(trackId) {
 }
 
 // Get memory usage
-export async function getMemoryUsage() {
+export async function getMemoryUsage(): Promise<MemoryUsageResult | null> {
     const client = await ensureAudioService();
     
     try {
-        const usage = await client.getMemoryUsage();
+        const usage: MemoryUsage = await client.getMemoryUsage();
         return {
             rss: usage.rss,
             heapUsed: usage.heapUsed,
@@ -367,7 +427,7 @@ export async function getMemoryUsage() {
 }
 
 // Get audio service health
-export async function getAudioServiceHealth() {
+export async function getAudioServiceHealth(): Promise<HealthResponse | null> {
     const client = await ensureAudioService();
     
     try {
@@ -379,7 +439,7 @@ export async function getAudioServiceHealth() {
 }
 
 // Cleanup function (called when component unmounts)
-export function cleanupAudio() {
+export function cleanupAudio(): void {
     if (audioClient) {
         audioClient.disconnect();
         audioClient = null;
@@ -390,7 +450,7 @@ export function cleanupAudio() {
 }
 
 // Cleanup and stop audio service (called when app closes)
-export async function cleanupAndStopAudio() {
+export async function cleanupAndStopAudio(): Promise<void> {
     console.log('🧹 Cleaning up and stopping audio service...');
     
     try {
@@ -406,7 +466,7 @@ export async function cleanupAndStopAudio() {
 }
 
 // Get service checker for UI feedback
-export function getServiceChecker() {
+export function getServiceChecker(): AudioServiceChecker {
     if (!serviceChecker) {
         serviceChecker = new AudioServiceChecker();
     }
@@ -414,28 +474,28 @@ export function getServiceChecker() {
 }
 
 // Legacy compatibility functions (these were in the old audio.js)
-export function clearAudioBufferCache() {
+export function clearAudioBufferCache(): void {
     // No-op for Node.js service (streaming doesn't cache)
     console.log('📦 Audio buffer cache cleared (streaming mode)');
 }
 
-export function addTrack(track) {
+export function addTrack(track: Track): void {
     tracks.push(track);
 }
 
 // Backward compatibility for existing code
-export { getTracks as getAudioContext }; // Some code might call this
+export { getTracks as getAudioContext };
 export { initializeAudioService as initAudio };
 
 // Export the client for direct access if needed
-export function getAudioClient() {
+export function getAudioClient(): NodeJSAudioClient | null {
     return audioClient;
 }
 
 // Monitor memory usage periodically
-let memoryMonitor = null;
+let memoryMonitor: NodeJS.Timeout | null = null;
 
-export function startMemoryMonitoring(intervalMs = 30000) {
+export function startMemoryMonitoring(intervalMs: number = 30000): void {
     if (memoryMonitor) {
         clearInterval(memoryMonitor);
     }
@@ -458,7 +518,7 @@ export function startMemoryMonitoring(intervalMs = 30000) {
     }, intervalMs);
 }
 
-export function stopMemoryMonitoring() {
+export function stopMemoryMonitoring(): void {
     if (memoryMonitor) {
         clearInterval(memoryMonitor);
         memoryMonitor = null;
@@ -466,7 +526,7 @@ export function stopMemoryMonitoring() {
 }
 
 // Crossfade functions
-export async function crossfadeToTracks(trackPaths, fadeDuration = 3000) {
+export async function crossfadeToTracks(trackPaths: string[], fadeDuration: number = 3000): Promise<CrossfadeResult> {
     const client = await ensureAudioService();
     
     try {
@@ -474,7 +534,7 @@ export async function crossfadeToTracks(trackPaths, fadeDuration = 3000) {
         console.log(`🎵 Crossfade call stack:`, new Error().stack);
         console.log(`🎵 Crossfade track paths:`, trackPaths);
         
-        const result = await client.crossfadeToTracks(trackPaths, fadeDuration);
+        const result: CrossfadeResult = await client.crossfadeToTracks(trackPaths, fadeDuration);
         
         if (result.success) {
             console.log('✅ Crossfade initiated successfully');
@@ -489,7 +549,7 @@ export async function crossfadeToTracks(trackPaths, fadeDuration = 3000) {
     }
 }
 
-export async function setCrossfadeDuration(duration) {
+export async function setCrossfadeDuration(duration: number): Promise<void> {
     const client = await ensureAudioService();
     
     try {
@@ -501,7 +561,7 @@ export async function setCrossfadeDuration(duration) {
     }
 }
 
-export async function getCrossfadeStatus() {
+export async function getCrossfadeStatus(): Promise<CrossfadeStatus | null> {
     const client = await ensureAudioService();
     
     try {
@@ -512,11 +572,11 @@ export async function getCrossfadeStatus() {
     }
 }
 
-export async function getMixerState() {
+export async function getMixerState(): Promise<MixerState | null> {
     const client = await ensureAudioService();
     
     try {
-        const state = await client.getMixerState();
+        const state: MixerState = await client.getMixerState();
         return state;
     } catch (error) {
         console.error('❌ Failed to get mixer state:', error);
@@ -525,11 +585,11 @@ export async function getMixerState() {
 }
 
 // Force refresh track list from server
-export async function refreshTrackList() {
+export async function refreshTrackList(): Promise<Track[]> {
     const client = await ensureAudioService();
     
     try {
-        const state = await client.getMixerState();
+        const state: MixerState = await client.getMixerState();
         tracks = state.tracks;
         console.log(`🔄 Track list refreshed: ${tracks.length} tracks`);
         return tracks;
@@ -540,7 +600,7 @@ export async function refreshTrackList() {
 }
 
 // Start audio service via backend command
-export async function startAudioServiceFromApp() {
+export async function startAudioServiceFromApp(): Promise<unknown> {
     if (!audioClient) {
         audioClient = new NodeJSAudioClient();
     }
@@ -563,7 +623,7 @@ export async function startAudioServiceFromApp() {
 }
 
 // Check audio service status via backend command
-export async function checkAudioServiceStatusFromApp() {
+export async function checkAudioServiceStatusFromApp(): Promise<boolean> {
     if (!audioClient) {
         audioClient = new NodeJSAudioClient();
     }
@@ -577,7 +637,7 @@ export async function checkAudioServiceStatusFromApp() {
 }
 
 // Stop audio service via backend command
-export async function stopAudioServiceFromApp() {
+export async function stopAudioServiceFromApp(): Promise<unknown> {
     try {
         const { core } = await import('../../electron-adapter');
         const result = await core.invoke('stop_audio_service');
@@ -599,7 +659,7 @@ export async function stopAudioServiceFromApp() {
 }
 
 // Clear all tracks to prevent duplicates
-export async function clearAllTracks() {
+export async function clearAllTracks(): Promise<ClearTracksResult> {
     const client = await ensureAudioService();
     
     try {
@@ -614,26 +674,26 @@ export async function clearAllTracks() {
 }
 
 // Event handler registration functions
-export function onPlaybackComplete(handler) {
+export function onPlaybackComplete(handler: EventHandler<PlaybackCompleteData>): void {
     if (typeof handler === 'function') {
         eventHandlers.playbackComplete.push(handler);
     }
 }
 
-export function offPlaybackComplete(handler) {
+export function offPlaybackComplete(handler: EventHandler<PlaybackCompleteData>): void {
     const index = eventHandlers.playbackComplete.indexOf(handler);
     if (index > -1) {
         eventHandlers.playbackComplete.splice(index, 1);
     }
 }
 
-export function onCrossfadeComplete(handler) {
+export function onCrossfadeComplete(handler: EventHandler<CrossfadeCompleteData>): void {
     if (typeof handler === 'function') {
         eventHandlers.crossfadeComplete.push(handler);
     }
 }
 
-export function offCrossfadeComplete(handler) {
+export function offCrossfadeComplete(handler: EventHandler<CrossfadeCompleteData>): void {
     const index = eventHandlers.crossfadeComplete.indexOf(handler);
     if (index > -1) {
         eventHandlers.crossfadeComplete.splice(index, 1);

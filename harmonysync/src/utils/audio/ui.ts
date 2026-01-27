@@ -1,8 +1,7 @@
+import { setPan } from './audio-nodejs';
+import type { Track } from '../../types/audio';
 
-import { setPan } from './audio.js';
-
-
-function applyDefaultPanning(tracks) {
+export function applyDefaultPanning(tracks: Track[]): void {
 	let hasClickOrGuide = false;
 	tracks.forEach(track => {
 		const lowerCaseName = track.name.toLowerCase();
@@ -28,4 +27,3 @@ function applyDefaultPanning(tracks) {
 		track.panValue = panValue; // Update the track object's panValue
 	});
 }
-

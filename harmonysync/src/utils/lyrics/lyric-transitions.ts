@@ -1,24 +1,26 @@
-
 // Lyric Transition Manager for smooth 0.2s fade transitions
 // Handles fade-in/fade-out effects for lyrics display
 
 import { core } from '../../electron-adapter';
+import type { DisplayContent, TransitionStatus } from '../../types/audio';
 
 class LyricTransitionManager {
-	constructor() {
-		this.transitionDuration = 200; // 0.2 seconds in milliseconds
-		this.isTransitioning = false;
-		this.currentContent = null;
-		this.pendingContent = null;
-	}
+	private transitionDuration = 200; // 0.2 seconds in milliseconds
+	private isTransitioning = false;
+	private currentContent: DisplayContent = null;
+	private pendingContent: DisplayContent = null;
 
-	// Set custom transition duration (default 200ms = 0.2s)
-	setTransitionDuration(duration) {
+	/**
+	 * Set custom transition duration (default 200ms = 0.2s)
+	 */
+	setTransitionDuration(duration: number): void {
 		this.transitionDuration = duration;
 	}
 
-	// Smooth transition between lyric content
-	async transitionTo(newContent, targetElement) {
+	/**
+	 * Smooth transition between lyric content
+	 */
+	async transitionTo(newContent: DisplayContent, targetElement?: HTMLElement): Promise<void> {
 		if (this.isTransitioning) {
 			// Queue the new content if already transitioning
 			this.pendingContent = newContent;
@@ -57,8 +59,10 @@ class LyricTransitionManager {
 		}
 	}
 
-	// Fade out current content
-	async fadeOut(element) {
+	/**
+	 * Fade out current content
+	 */
+	private async fadeOut(element: HTMLElement): Promise<void> {
 		return new Promise((resolve) => {
 			if (!element) {
 				resolve();
@@ -88,8 +92,10 @@ class LyricTransitionManager {
 		});
 	}
 
-	// Fade in new content
-	async fadeIn(element, content) {
+	/**
+	 * Fade in new content
+	 */
+	private async fadeIn(element: HTMLElement, content: DisplayContent): Promise<void> {
 		return new Promise((resolve) => {
 			if (!element) {
 				resolve();
@@ -116,20 +122,20 @@ class LyricTransitionManager {
 			} else if (content.type === 'image') {
 				const assetUrl = core.convertFileSrc ? core.convertFileSrc(content.path) : content.path;
 				element.innerHTML = `<img src="${assetUrl}" alt="${content.name}" style="max-width: 100%; max-height: 100%; object-fit: contain;" />`;
-			} else {
-				element.innerHTML = '';
 			}
 
 			// Start fade in animation
 			setTimeout(() => {
 				element.style.opacity = '1';
-				setTimeout(resolve, this.transitionDuration);
+				setTimeout(() => resolve(), this.transitionDuration);
 			}, 10); // Small delay to ensure display change is applied
 		});
 	}
 
-	// Immediate display without transition (for initial load)
-	displayImmediate(content, element) {
+	/**
+	 * Immediate display without transition (for initial load)
+	 */
+	displayImmediate(content: DisplayContent, element: HTMLElement): void {
 		if (!element) return;
 
 		this.currentContent = content;
@@ -150,8 +156,6 @@ class LyricTransitionManager {
 		} else if (content.type === 'image') {
 			const assetUrl = core.convertFileSrc ? core.convertFileSrc(content.path) : content.path;
 			element.innerHTML = `<img src="${assetUrl}" alt="${content.name}" style="max-width: 100%; max-height: 100%; object-fit: contain;" />`;
-		} else {
-			element.innerHTML = '';
 		}
 
 		// Restore transition for future changes
@@ -160,13 +164,17 @@ class LyricTransitionManager {
 		}, 50);
 	}
 
-	// Clear display with fade out
-	async clear(element) {
+	/**
+	 * Clear display with fade out
+	 */
+	async clear(element?: HTMLElement): Promise<void> {
 		await this.transitionTo(null, element);
 	}
 
-	// Get current status
-	getStatus() {
+	/**
+	 * Get current status
+	 */
+	getStatus(): TransitionStatus {
 		return {
 			isTransitioning: this.isTransitioning,
 			transitionDuration: this.transitionDuration,
@@ -181,4 +189,3 @@ export const lyricTransitionManager = new LyricTransitionManager();
 
 // Export class for testing/multiple instances
 export { LyricTransitionManager };
-

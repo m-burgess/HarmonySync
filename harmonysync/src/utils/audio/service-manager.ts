@@ -2,13 +2,11 @@
 // Note: Command functionality will need to be adapted for Electron
 
 class AudioServiceManager {
-    constructor() {
-        this.servicePath = '/home/mikeb/projects/RustPresenter/harmonysync-audio-service';
-        this.serviceUrl = 'http://localhost:3001';
-        this.isServiceRunning = false;
-    }
+    private servicePath = '/home/mikeb/projects/RustPresenter/harmonysync-audio-service';
+    private serviceUrl = 'http://localhost:3001';
+    private isServiceRunning = false;
 
-    async checkServiceHealth() {
+    async checkServiceHealth(): Promise<boolean> {
         try {
             const api = await import('../api');
             await api.health();
@@ -18,7 +16,7 @@ class AudioServiceManager {
         }
     }
 
-    async startService() {
+    async startService(): Promise<boolean> {
         try {
             console.log('🚀 Starting Node.js audio service...');
             
@@ -39,7 +37,7 @@ class AudioServiceManager {
         }
     }
 
-    async ensureServiceRunning() {
+    async ensureServiceRunning(): Promise<boolean> {
         try {
             // Check if service is already running
             const isRunning = await this.checkServiceHealth();
@@ -61,7 +59,7 @@ class AudioServiceManager {
         }
     }
 
-    async stopService() {
+    async stopService(): Promise<void> {
         try {
             // TODO: Adapt for Electron - use child_process or IPC instead of Command
             console.warn('Command functionality needs to be adapted for Electron');

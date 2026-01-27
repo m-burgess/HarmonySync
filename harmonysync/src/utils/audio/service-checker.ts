@@ -1,12 +1,13 @@
 // Simple service checker that provides user feedback (no shell permissions needed)
-class AudioServiceChecker {
-    constructor() {
-        this.serviceUrl = 'http://localhost:3001';
-        this.lastCheckTime = 0;
-        this.checkInterval = 5000; // Check every 5 seconds
-    }
 
-    async checkServiceStatus() {
+import type { ServiceStatus, StartupInstructions, MemoryUsage } from '../../types/audio';
+
+class AudioServiceChecker {
+    private serviceUrl = 'http://localhost:3001';
+    private lastCheckTime = 0;
+    private checkInterval = 5000; // Check every 5 seconds
+
+    async checkServiceStatus(): Promise<ServiceStatus> {
         try {
             // Use the typed API client (lazy import to avoid bundling issues)
             const api = await import('../api');
@@ -16,15 +17,16 @@ class AudioServiceChecker {
                 memoryUsage: health.memoryUsage,
                 version: health.version
             };
-        } catch (error) {
+        } catch (error: unknown) {
+            const err = error as { name?: string; message?: string };
             return { 
                 isRunning: false, 
-                error: error?.name === 'TimeoutError' ? 'Service timeout' : (error?.message || 'Connection failed')
+                error: err.name === 'TimeoutError' ? 'Service timeout' : (err.message || 'Connection failed')
             };
         }
     }
 
-    async waitForService(timeoutMs = 30000) {
+    async waitForService(timeoutMs = 30000): Promise<ServiceStatus> {
         const startTime = Date.now();
         
         while (Date.now() - startTime < timeoutMs) {
@@ -40,7 +42,7 @@ class AudioServiceChecker {
         throw new Error('Service did not start within timeout period');
     }
 
-    getStartupInstructions() {
+    getStartupInstructions(): StartupInstructions {
         return {
             title: '🎵 Audio Service Required',
             message: 'The Node.js audio service needs to be started manually.',
@@ -58,7 +60,7 @@ class AudioServiceChecker {
         };
     }
 
-    createStatusDisplay(containerElement) {
+    createStatusDisplay(containerElement?: HTMLElement): HTMLDivElement {
         const statusDiv = document.createElement('div');
         statusDiv.className = 'audio-service-status';
         statusDiv.innerHTML = `
@@ -75,10 +77,10 @@ class AudioServiceChecker {
         return statusDiv;
     }
 
-    updateStatusDisplay(statusElement, status) {
+    updateStatusDisplay(statusElement: HTMLElement | null, status: ServiceStatus): void {
         if (!statusElement) return;
         
-        if (status.isRunning) {
+        if (status.isRunning && status.memoryUsage) {
             const memoryMB = (status.memoryUsage.rss / 1024 / 1024).toFixed(1);
             statusElement.innerHTML = `
                 <div class="flex items-center gap-2 p-3 bg-green-100 dark:bg-green-900 border border-green-300 dark:border-green-700 rounded-md">
