@@ -20,7 +20,7 @@
  */
 interface ServiceConfig<T = unknown> {
   /** Constructor or factory function */
-  factory: new (...args: unknown[]) => T;
+  factory: new (...args: any[]) => T;
   /** Array of dependency names */
   deps: string[];
   /** Whether to create single instance (default: true) */
@@ -50,7 +50,7 @@ export class Container {
    */
   public register<T>(
     name: string,
-    factory: new (...args: unknown[]) => T,
+    factory: new (...args: any[]) => T,
     deps: string[] = [],
     singleton: boolean = true
   ): void {

@@ -18,6 +18,37 @@ export type {
   FolderSelectionResult,
 } from './models';
 
+// Audio types
+export type {
+  CacheStats,
+  Track,
+  MixerState,
+  ServiceStatus,
+  JobStatus,
+  Job,
+  HealthResponse,
+  LoadTrackResponse,
+  CrossfadeRequest,
+  CrossfadeStatus,
+  VideoMetadata,
+  LyricSlide,
+  ImageContent,
+  LyricsContent,
+  DisplayContent,
+  TransitionStatus,
+  SongDetails,
+  StreamingTrack,
+  TrackInfo,
+  FormattedMemoryUsage,
+  FormattedMixerState,
+  StartupInstructions,
+  CreateSongRequest,
+  FadeType,
+  TransitionType,
+  PreloadedSong,
+  BatchTrackResult,
+} from './audio';
+
 // Events
 export {
   EVENT_TYPES,

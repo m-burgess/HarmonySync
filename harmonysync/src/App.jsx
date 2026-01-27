@@ -43,7 +43,7 @@ import AudioSettings from './components/screens/AudioSettings.jsx';
 
 import { getViewModel } from './viewmodels';
 import { getService } from './services';
-import { EVENT_TYPES } from './services/EventBusService.js';
+import { EVENT_TYPES } from './services/EventBusService.ts';
 
 const App = observer(() => {
   // Get ViewModels from DI container

@@ -20,7 +20,7 @@
 import { BaseService } from '../base/BaseService';
 import type { IAudioService, IIpcService } from '../types/services';
 import type { AudioTrack, MemoryUsage, MixerConfig, TransposeResult } from '../types';
-import * as audioUtils from '../utils/audio/audio-nodejs.js';
+import * as audioUtils from '../utils/audio/audio-nodejs';
 
 /**
  * Audio Service Implementation

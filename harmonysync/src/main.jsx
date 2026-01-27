@@ -4,8 +4,8 @@ import App from './App.jsx';
 import './styles/style.css';
 
 // Import MVVM infrastructure
-import { setupServices } from './services/index.js';
-import { setupViewModels } from './viewmodels/index.js';
+import { setupServices } from './services/index.ts';
+import { setupViewModels } from './viewmodels/index.ts';
 
 // Wait for electronAPI to be available (preload script must run first)
 async function main() {
