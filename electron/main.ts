@@ -23,7 +23,6 @@ const googleDriveService = require('./services/google-drive');
 const dropboxService = require('./services/dropbox-service');
 const scriptService = require('./services/script-service');
 const scriptingAPI = require('./services/scripting-api');
-const eventTriggerService = require('./services/event-trigger-service');
 const slidesService = require('./services/slides-service');
 const displayConfigService = require('./services/display-config-service');
 
@@ -164,45 +163,17 @@ class ElectronApplication {
     try {
       console.log('[Application] Initializing...');
 
-      // Initialize JSON storage
-      await jsonStorage.initialize();
+      // Register IPC handlers FIRST (before creating windows)
+      this.setupIpcHandlers();
 
-      // Initialize display configuration service
-      await displayConfigService.initialize();
-
-      // Start HTTP server for video streaming
-      await httpServer.start();
-
-      // Create windows first (needed for remote control service)
+      // Create windows
       this.createMainWindow();
       this.createAudienceWindow();
       this.createConfidenceWindow();
       this.createLowerThirdsWindow();
 
-      // Initialize and start remote control service
-      remoteControlService.initialize(() => this.mainWindow);
-      await remoteControlService.start();
-
-      // Start external services
+      // Start external services (audio, video, image)
       await this.startExternalServices();
-
-      // Initialize MIDI
-      if (midiManager) {
-        await midiManager.initialize();
-      }
-
-      // Initialize IPC handlers
-      this.setupIpcHandlers();
-
-      // Initialize script storage
-      await scriptService.initializeScriptStorage().catch((err: Error) => {
-        console.error('Failed to initialize script storage:', err);
-      });
-
-      // Initialize event trigger service
-      await eventTriggerService.initializeEventTriggers().catch((err: Error) => {
-        console.error('Failed to initialize event triggers:', err);
-      });
 
       console.log('[Application] Initialized successfully');
     } catch (error) {
@@ -415,21 +386,21 @@ class ElectronApplication {
     // Start audio service
     await this.serviceManager.startService(
       'Audio Service',
-      path.join(__dirname, '../harmonysync-audio-service/server.js'),
+      path.join(__dirname, '../../harmonysync-audio-service/server.js'),
       { PORT: '3001', HOST: '127.0.0.1' }
     );
 
     // Start video service
     await this.serviceManager.startService(
       'Video Service',
-      path.join(__dirname, '../harmonysync-video-service/server.js'),
+      path.join(__dirname, '../../harmonysync-video-service/server.js'),
       { PORT: '3002', HOST: '127.0.0.1' }
     );
 
     // Start image service
     await this.serviceManager.startService(
       'Image Service',
-      path.join(__dirname, '../harmonysync-image-service/server.js'),
+      path.join(__dirname, '../../harmonysync-image-service/server.js'),
       { PORT: '3003', HOST: '127.0.0.1', MAX_CONCURRENT_JOBS: '3' }
     );
 

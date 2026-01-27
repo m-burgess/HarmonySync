@@ -114,6 +114,67 @@ export class SetlistService extends BaseService implements ISetlistService {
       return [];
     }
   }
+
+  /**
+   * Select folders using file dialog
+   * @returns Array of selected folder paths
+   */
+  public async selectFolders(): Promise<string[] | null> {
+    try {
+      return await this.fileService.selectFolders();
+    } catch (error) {
+      return this.handleError('selectFolders', error);
+    }
+  }
+
+  /**
+   * Check if a path already exists in the setlist
+   * @param setlist - Array of setlist items
+   * @param path - Path to check
+   * @returns True if path exists in setlist
+   */
+  public pathExistsInSetlist(setlist: SetlistFolder[], path: string): boolean {
+    return setlist.some(item => item.path === path);
+  }
+
+  /**
+   * Load song metadata from a folder
+   * @param folderPath - Path to song folder
+   * @returns Setlist item with metadata
+   */
+  public async loadSongMetadata(folderPath: string): Promise<SetlistFolder> {
+    try {
+      return await this.ipc.invoke('setlist:loadSongMetadata', folderPath) as SetlistFolder;
+    } catch (error) {
+      return this.handleError('loadSongMetadata', error);
+    }
+  }
+
+  /**
+   * Load lyrics for a song
+   * @param songPath - Path to song folder
+   * @returns Lyrics content
+   */
+  public async loadLyrics(songPath: string): Promise<string | null> {
+    try {
+      return await this.ipc.invoke('setlist:loadLyrics', songPath) as string | null;
+    } catch (error) {
+      this.logError('loadLyrics failed', error);
+      return null;
+    }
+  }
+
+  /**
+   * Open lyrics file for editing
+   * @param songPath - Path to song folder
+   */
+  public async openLyricsFile(songPath: string): Promise<void> {
+    try {
+      await this.ipc.invoke('setlist:openLyricsFile', songPath);
+    } catch (error) {
+      return this.handleError('openLyricsFile', error);
+    }
+  }
 }
 
 export default SetlistService;

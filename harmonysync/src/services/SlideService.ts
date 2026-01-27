@@ -48,6 +48,20 @@ export class SlideService extends BaseService implements ISlideService {
   }
 
   /**
+   * Load slides and audio tracks from a folder (used by setlist)
+   * @param folderPath - Path to folder containing slides and audio
+   * @returns Object containing slides array and tracks array
+   */
+  public async loadFromFolder(folderPath: string): Promise<{ slides: unknown[]; tracks: unknown[] }> {
+    try {
+      return await this.ipc.invoke('slides:loadFromFolder', folderPath) as { slides: unknown[]; tracks: unknown[] };
+    } catch (error) {
+      this.handleError('loadFromFolder', error);
+      return { slides: [], tracks: [] };
+    }
+  }
+
+  /**
    * Import a slide from content
    * @param content - Slide content
    * @returns Imported slide

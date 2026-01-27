@@ -147,6 +147,20 @@ export class FileService extends BaseService implements IFileService {
       return [];
     }
   }
+
+  /**
+   * Open folder selection dialog for multiple folders
+   * @param title - Dialog title
+   * @returns Array of selected folder paths
+   */
+  public async selectFolders(title: string = 'Select Folders'): Promise<string[] | null> {
+    try {
+      const result = await this.ipc.invoke('dialog:selectFolders', { title }) as FolderSelectionResult;
+      return result?.canceled ? null : (result?.filePaths || null);
+    } catch (error) {
+      return this.handleError('selectFolders', error);
+    }
+  }
 }
 
 export default FileService;

@@ -105,6 +105,7 @@ export interface IAudioService extends IService {
 export interface IFileService extends IService {
   selectFolder(title?: string): Promise<FolderSelectionResult>;
   selectFile(title?: string, filters?: Array<{ name: string; extensions: string[] }>): Promise<FileSelectionResult>;
+  selectFolders(title?: string): Promise<string[] | null>;
   readTextFile(filePath: string): Promise<string>;
   writeTextFile(filePath: string, content: string): Promise<void>;
   exists(filePath: string): Promise<boolean>;
@@ -122,6 +123,7 @@ export interface IDisplayService extends IService {
   closeWindow(type: DisplayWindow['type']): Promise<void>;
   getWindowConfig(type: DisplayWindow['type']): Promise<DisplayWindow | null>;
   setWindowBounds(type: DisplayWindow['type'], bounds: { x: number; y: number; width: number; height: number }): Promise<void>;
+  clearAll(): Promise<void>;
 }
 
 /**
@@ -129,6 +131,7 @@ export interface IDisplayService extends IService {
  */
 export interface ISlideService extends IService {
   loadSlides(folderPath: string): Promise<Slide[]>;
+  loadFromFolder(folderPath: string): Promise<{ slides: unknown[]; tracks: unknown[] }>;
   importSlide(content: string): Promise<Slide>;
   saveSlide(slide: Slide): Promise<void>;
   deleteSlide(slideId: string): Promise<void>;
@@ -147,4 +150,9 @@ export interface ISetlistService extends IService {
   getSongDetails(songPath: string): Promise<Song>;
   saveSong(song: Song): Promise<void>;
   searchSongs(query: string): Promise<Song[]>;
+  selectFolders(): Promise<string[] | null>;
+  pathExistsInSetlist(setlist: SetlistFolder[], path: string): boolean;
+  loadSongMetadata(folderPath: string): Promise<SetlistFolder>;
+  loadLyrics(songPath: string): Promise<string | null>;
+  openLyricsFile(songPath: string): Promise<void>;
 }

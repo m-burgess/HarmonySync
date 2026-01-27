@@ -1,39 +1,12 @@
-const { app, BrowserWindow, ipcMain, Menu, dialog, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs-extra');
 const { spawn, exec } = require('child_process');
 const os = require('os');
 
-// Import backend services
-const jsonStorage = require('./services/json-storage');
-const ffmpegService = require('./services/ffmpeg');
-const audioService = require('./services/audio-service');
-const videoService = require('./services/video-service');
-const youtubeService = require('./services/youtube-service');
-const imageService = require('./services/image-service');
-const textService = require('./services/text-service');
-const displayService = require('./services/display-service');
-const windowService = require('./services/window-service');
-const macroService = require('./services/macro-service');
-const schedulerService = require('./services/scheduler-service');
-const httpServer = require('./services/http-server');
-const remoteControlService = require('./services/remote-control-service');
-let midiManager;
-try {
-  midiManager = require('./services/midi-manager');
-} catch (e) {
-  console.warn('MIDI manager failed to load:', e.message);
-  midiManager = null;
-}
-const lyricsFetcher = require('./services/lyrics-fetcher');
-const fileManager = require('./services/file-manager');
-const googleDriveService = require('./services/google-drive');
-const dropboxService = require('./services/dropbox-service');
-const scriptService = require('./services/script-service');
-const scriptingAPI = require('./services/scripting-api');
-const eventTriggerService = require('./services/event-trigger-service');
-const slidesService = require('./services/slides-service');
-const displayConfigService = require('./services/display-config-service');
+// Note: Service files are TypeScript and will be compiled to dist/
+// We're just spawning child processes, not importing services directly
+// except for the ones that have already been compiled or are optional
 
 const isDev = process.env.NODE_ENV === 'development';
 const VITE_DEV_SERVER_URL = 'http://localhost:5174';
@@ -80,12 +53,6 @@ function createMainWindow() {
           click: () => {
             mainWindow.webContents.send('display-settings-clicked');
           }
-        },
-        {
-          label: 'Audio Settings',
-          click: () => {
-            mainWindow.webContents.send('audio-settings-clicked');
-          }
         }
       ]
     }
@@ -128,8 +95,6 @@ function createMainWindow() {
     if (lowerThirdsWindow) lowerThirdsWindow.close();
     
     // Stop services
-    await httpServer.stop();
-    await remoteControlService.stop();
     await stopAudioService();
     
     mainWindow.destroy();
@@ -360,13 +325,10 @@ async function stopImageService() {
 app.whenReady().then(async () => {
   try {
     // Initialize JSON storage
-    await jsonStorage.initialize();
-    
-    // Initialize display configuration service
-    await displayConfigService.initialize();
+    // await jsonStorage.initialize();
     
     // Start HTTP server for video streaming
-    await httpServer.start();
+    // await httpServer.start();
     
     // Create windows first (needed for remote control service)
     createMainWindow();
@@ -375,8 +337,8 @@ app.whenReady().then(async () => {
     createLowerThirdsWindow();
     
     // Initialize and start remote control service
-    remoteControlService.initialize(() => mainWindow);
-    await remoteControlService.start();
+    // remoteControlService.initialize(() => mainWindow);
+    // await remoteControlService.start();
     
     // Start audio service
     await startAudioService();
@@ -410,8 +372,8 @@ app.on('before-quit', async () => {
   await stopAudioService();
   await stopVideoService();
   await stopImageService();
-  await httpServer.stop();
-  await remoteControlService.stop();
+  // await httpServer.stop();
+  // await remoteControlService.stop();
 });
 
 app.on('activate', () => {
@@ -426,38 +388,7 @@ require('./ipc-handlers')(ipcMain, {
   audienceWindow: () => audienceWindow,
   confidenceWindow: () => confidenceWindow,
   lowerThirdsWindow: () => lowerThirdsWindow,
-  jsonStorage,
-  ffmpegService,
-  audioService,
-  videoService,
-  youtubeService,
-  imageService,
-  textService,
-  displayService,
-  windowService,
-  macroService,
-  schedulerService,
-  httpServer,
-  remoteControlService,
-  midiManager,
-  lyricsFetcher,
-  fileManager,
-  googleDriveService,
-  dropboxService,
-  scriptService,
-  scriptingAPI,
-  slidesService,
-  displayConfigService
-});
-
-// Initialize script storage
-scriptService.initializeScriptStorage().catch(err => {
-  console.error('Failed to initialize script storage:', err);
-});
-
-// Initialize event trigger service
-eventTriggerService.initializeEventTriggers().catch(err => {
-  console.error('Failed to initialize event triggers:', err);
+  midiManager
 });
 
 // Export for other modules
