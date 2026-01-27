@@ -2,10 +2,41 @@
  * Tests for Window Service
  */
 
-const windowService = require('../window-service');
+import { BrowserWindow } from 'electron';
+import WindowService from '../window-service';
+
+type WindowGetter = () => BrowserWindow | null;
+
+interface MockWindow {
+  show: jest.Mock;
+  hide: jest.Mock;
+  focus: jest.Mock;
+  minimize: jest.Mock;
+  maximize: jest.Mock;
+  unmaximize: jest.Mock;
+  setAlwaysOnTop: jest.Mock;
+  isVisible: jest.Mock;
+  isMaximized: jest.Mock;
+}
+
+interface WindowStatus {
+  audience: {
+    visible: boolean;
+    exists: boolean;
+  };
+  confidence: {
+    visible: boolean;
+    exists: boolean;
+  };
+  lowerThirds: {
+    visible: boolean;
+    exists: boolean;
+  };
+}
 
 describe('Window Service', () => {
-  let mockWindow;
+  let mockWindow: MockWindow;
+  let service: WindowService;
   
   beforeEach(() => {
     mockWindow = {
@@ -19,25 +50,29 @@ describe('Window Service', () => {
       isVisible: jest.fn().mockReturnValue(true),
       isMaximized: jest.fn().mockReturnValue(false)
     };
+    
+    service = new WindowService();
+    const getWindow: WindowGetter = () => mockWindow as any;
+    service.registerWindowGetters(getWindow, getWindow, getWindow);
   });
   
   describe('showAudienceWindow', () => {
     it('should call show on window', async () => {
-      const getWindow = () => mockWindow;
-      await windowService.showAudienceWindow(getWindow);
+      await service.showAudience();
       expect(mockWindow.show).toHaveBeenCalled();
     });
     
     it('should handle null window', async () => {
-      const getWindow = () => null;
-      await expect(windowService.showAudienceWindow(getWindow)).resolves.not.toThrow();
+      const serviceWithNull = new WindowService();
+      const getNull: WindowGetter = () => null;
+      serviceWithNull.registerWindowGetters(getNull, getNull, getNull);
+      await expect(serviceWithNull.showAudience()).resolves.not.toThrow();
     });
   });
   
   describe('hideAudienceWindow', () => {
     it('should call hide on window', async () => {
-      const getWindow = () => mockWindow;
-      await windowService.hideAudienceWindow(getWindow);
+      await service.hideAudience();
       expect(mockWindow.hide).toHaveBeenCalled();
     });
   });
@@ -45,9 +80,8 @@ describe('Window Service', () => {
   describe('toggleWindow', () => {
     it('should hide visible window', async () => {
       mockWindow.isVisible.mockReturnValue(true);
-      const getWindow = () => mockWindow;
       
-      const result = await windowService.toggleWindow(getWindow);
+      const result: boolean = await service.toggleWindow('audience');
       
       expect(mockWindow.hide).toHaveBeenCalled();
       expect(result).toBe(false);
@@ -55,9 +89,8 @@ describe('Window Service', () => {
     
     it('should show hidden window', async () => {
       mockWindow.isVisible.mockReturnValue(false);
-      const getWindow = () => mockWindow;
       
-      const result = await windowService.toggleWindow(getWindow);
+      const result: boolean = await service.toggleWindow('audience');
       
       expect(mockWindow.show).toHaveBeenCalled();
       expect(result).toBe(true);
@@ -67,18 +100,16 @@ describe('Window Service', () => {
   describe('maximizeWindow', () => {
     it('should maximize window when not maximized', async () => {
       mockWindow.isMaximized.mockReturnValue(false);
-      const getWindow = () => mockWindow;
       
-      await windowService.maximizeWindow(getWindow);
+      await service.maximizeWindow('audience');
       
       expect(mockWindow.maximize).toHaveBeenCalled();
     });
     
     it('should unmaximize window when maximized', async () => {
       mockWindow.isMaximized.mockReturnValue(true);
-      const getWindow = () => mockWindow;
       
-      await windowService.maximizeWindow(getWindow);
+      await service.maximizeWindow('audience');
       
       expect(mockWindow.unmaximize).toHaveBeenCalled();
     });
@@ -86,9 +117,7 @@ describe('Window Service', () => {
   
   describe('setAlwaysOnTop', () => {
     it('should set window always on top', async () => {
-      const getWindow = () => mockWindow;
-      
-      await windowService.setAlwaysOnTop(getWindow, true);
+      await service.setAlwaysOnTop('audience', true);
       
       expect(mockWindow.setAlwaysOnTop).toHaveBeenCalledWith(true);
     });
@@ -97,17 +126,18 @@ describe('Window Service', () => {
   describe('isWindowVisible', () => {
     it('should return visibility status', async () => {
       mockWindow.isVisible.mockReturnValue(true);
-      const getWindow = () => mockWindow;
       
-      const result = await windowService.isWindowVisible(getWindow);
+      const result: boolean = await service.isWindowVisible('audience');
       
       expect(result).toBe(true);
     });
     
     it('should return false for null window', async () => {
-      const getWindow = () => null;
+      const serviceWithNull = new WindowService();
+      const getNull: WindowGetter = () => null;
+      serviceWithNull.registerWindowGetters(getNull, getNull, getNull);
       
-      const result = await windowService.isWindowVisible(getWindow);
+      const result: boolean = await serviceWithNull.isWindowVisible('audience');
       
       expect(result).toBe(false);
     });
@@ -115,9 +145,7 @@ describe('Window Service', () => {
   
   describe('getAllWindowsStatus', () => {
     it('should return status of all windows', async () => {
-      const getWindow = () => mockWindow;
-      
-      const status = await windowService.getAllWindowsStatus(getWindow, getWindow, getWindow);
+      const status: WindowStatus = await service.getAllWindowsStatus();
       
       expect(status).toHaveProperty('audience');
       expect(status).toHaveProperty('confidence');
@@ -127,5 +155,3 @@ describe('Window Service', () => {
     });
   });
 });
-
-module.exports = {};
