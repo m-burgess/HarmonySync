@@ -60,6 +60,11 @@ const AudienceApp = () => {
         try {
           // Extract filename from path (handles both forward/backward slashes and multiple separators)
           const fileName = videoPath.replace(/\\/g, '/').split('/').filter(Boolean).pop();
+          
+          if (!fileName) {
+            throw new Error('Could not extract filename from path');
+          }
+          
           const videoUrl = `${httpServerUrl.current}/${fileName}`;
 
           console.log('Audience Screen: Video URL from custom HTTP server:', videoUrl);
