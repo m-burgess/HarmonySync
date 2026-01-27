@@ -4,9 +4,9 @@
  * This service runs IN-PROCESS as it primarily coordinates with other services
  * and manages slide metadata. It delegates CPU-intensive operations to other services:
  * 
- * - PDF rendering → harmonysync-image-service
- * - PowerPoint conversion → LibreOffice + harmonysync-image-service
- * - Image optimization → harmonysync-image-service
+ * - PDF rendering -> harmonysync-image-service
+ * - PowerPoint conversion -> LibreOffice + harmonysync-image-service
+ * - Image optimization -> harmonysync-image-service
  * 
  * This service handles:
  * - Slide import coordination

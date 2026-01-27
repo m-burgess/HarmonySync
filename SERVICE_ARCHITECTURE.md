@@ -51,7 +51,7 @@ These services run **within the Electron main process** for quick, non-blocking 
   - Format detection
   - Audio file validation
   - Simple format conversions (to Ogg)
-  - Audio transposition (creates new files, doesn't block)
+  - Audio transposition (creates new files asynchronously without blocking)
 - **Why In-Process**: These are quick operations (< 1 second) that don't justify the overhead of inter-process communication.
 
 #### Video Service (`electron/services/video-service.ts`)
@@ -87,7 +87,7 @@ These services run **within the Electron main process** for quick, non-blocking 
   - Send content to audience/confidence/lower-thirds windows
   - Coordinate which content goes to which display
   - IPC message routing
-- **Why In-Process**: Just routes messages between windows, no computation.
+- **Why In-Process**: Routes messages between windows with no computation required.
 
 #### Text Service (`electron/services/text-service.ts`)
 - **Purpose**: Text and CSS generation

@@ -3,7 +3,7 @@
  * 
  * NOTE: This service handles LIGHTWEIGHT video operations within the Electron
  * main process. For CPU-intensive operations like transcoding and batch processing,
- * use the separate Video Service (harmonysync-video-service/).
+ * use the separate Video Service (harmonysync-video-service).
  * 
  * This service is responsible for:
  * - Quick video metadata extraction (duration, dimensions, codec)

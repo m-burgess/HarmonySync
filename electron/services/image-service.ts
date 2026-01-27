@@ -3,7 +3,7 @@
  * 
  * NOTE: This service handles LIGHTWEIGHT image operations within the Electron
  * main process. For memory-intensive operations like batch processing and large
- * image manipulation, use the separate Image Service (harmonysync-image-service/).
+ * image manipulation, use the separate Image Service (harmonysync-image-service).
  * 
  * This service is responsible for:
  * - Quick image metadata extraction (dimensions, format, size)
