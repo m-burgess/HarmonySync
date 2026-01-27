@@ -1,8 +1,8 @@
 /**
  * Display Service (In-Process - Window Coordination Only)
  * 
- * This service MUST run IN-PROCESS as it directly manages Electron BrowserWindow
- * instances and sends IPC messages between windows.
+ * This service MUST run IN-PROCESS because it directly manages Electron BrowserWindow
+ * instances, which cannot be accessed from separate processes.
  * 
  * This service is responsible for:
  * - Coordinating content display across multiple windows (audience, confidence, lower thirds)

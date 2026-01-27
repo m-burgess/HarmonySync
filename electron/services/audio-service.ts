@@ -9,7 +9,7 @@
  * - Quick metadata extraction (duration, codec, sample rate)
  * - Audio format validation and detection
  * - Simple format conversions (e.g., to Ogg)
- * - Audio transposition (creates new files asynchronously without blocking)
+ * - Audio transposition (creates new files without blocking the main thread)
  * - Audio synchronization checks
  * 
  * CPU-intensive operations handled by separate service:

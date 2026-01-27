@@ -104,7 +104,7 @@ These services run **within the Electron main process** for quick, non-blocking 
 - **Protocol**: HTTP REST + Socket.io
 - **Clients**: 
   - Frontend: `harmonysync/src/utils/*-client.ts`
-  - Backend: Could use same clients or direct HTTP/socket calls
+  - Backend: Can use HTTP fetch or Socket.io for service communication
 - **Events**: Real-time progress updates via Socket.io
 
 ### In-Process Services → IPC
@@ -115,20 +115,23 @@ These services run **within the Electron main process** for quick, non-blocking 
 ## Performance Considerations
 
 ### When to Use Separate Services
-Use separate service processes when operations:
+Use separate service processes when operations are CPU or memory intensive:
 - Take > 1 second to complete
-- Use significant CPU (> 20% for > 1 second)
+- Use significant CPU (sustained > 20%)
 - Allocate large memory (> 100MB)
 - Process multiple files in batch
 - Run continuously (like audio playback)
 
 ### When to Keep In-Process
-Keep operations in-process when:
-- Completing in < 500ms
-- Using minimal CPU (< 10%)
+Keep operations in-process when they are lightweight:
+- Complete quickly (< 500ms)
+- Use minimal CPU (< 10%)
 - Small memory footprint (< 10MB)
-- Needed for immediate UI feedback
+- Need immediate UI feedback
 - Called frequently (reduce IPC overhead)
+
+**Note**: For operations falling between these thresholds (500ms-1s, 10-20% CPU, 10-100MB), 
+consider the frequency of calls and impact on user experience when deciding.
 
 ## Service Lifecycle
 
