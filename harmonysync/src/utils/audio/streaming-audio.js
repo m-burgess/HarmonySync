@@ -161,7 +161,7 @@ export async function preloadTrack(assetUrl, { decode = false, timeout = 30000 }
     
     try {
       // Fetch the audio file and store as ArrayBuffer
-      // This uses less memory than decoding the entire file
+      // Streaming audio uses less memory than decoding the entire file at once
       const response = await fetch(assetUrl);
       if (!response.ok) {
         throw new Error(`Failed to fetch ${assetUrl}: ${response.status} ${response.statusText}`);
