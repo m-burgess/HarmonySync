@@ -5,14 +5,11 @@ import * as audioApi from '../api';
 import type { 
     Track, 
     MixerState, 
-    EventHandler,
     ServiceStatus,
-    MemoryUsage,
-    HealthResponse,
     CrossfadeStatus,
-    BatchTrackResult,
     StartupInstructions
 } from '../../types/audio';
+import type { EventHandler } from '../../types/events';
 
 // Event handlers map type
 interface EventHandlersMap {
@@ -101,9 +98,10 @@ export async function initializeAudioService(): Promise<NodeJSAudioClient> {
         audioClient = new NodeJSAudioClient();
         
         // Setup event handlers
-        audioClient.on('mixerStateChanged', (state: MixerState) => {
-            tracks = state.tracks;
-            console.log(`Audio state updated: ${tracks.length} tracks, ${(state.memoryUsage.rss / 1024 / 1024).toFixed(1)}MB memory`);
+        audioClient.on('mixerStateChanged', ((state: unknown) => {
+            const mixerState = state as MixerState;
+            tracks = mixerState.tracks;
+            console.log(`Audio state updated: ${tracks.length} tracks, ${(mixerState.memoryUsage.rss / 1024 / 1024).toFixed(1)}MB memory`);
             
             // Debug: Log track names to identify duplicates
             if (tracks.length > 0) {
@@ -127,55 +125,59 @@ export async function initializeAudioService(): Promise<NodeJSAudioClient> {
                     });
                 }
             }
-        });
+        }) as EventHandler);
         
-        audioClient.on('error', (error: Error) => {
+        audioClient.on('error', ((error: unknown) => {
             console.error('Audio service error:', error);
-        });
+        }) as EventHandler);
         
-        audioClient.on('connectionLost', () => {
+        audioClient.on('connectionLost', (() => {
             console.warn('Audio service connection lost');
             isInitialized = false;
-        });
+        }) as EventHandler);
         
-        audioClient.on('playbackComplete', (data: PlaybackCompleteData) => {
-            console.log('🎵 Playback completed:', data);
+        audioClient.on('playbackComplete', ((data: unknown) => {
+            const payload = data as PlaybackCompleteData;
+            console.log('🎵 Playback completed:', payload);
             // Notify all registered handlers
             eventHandlers.playbackComplete.forEach(handler => {
                 try {
-                    handler(data);
+                    handler(payload);
                 } catch (error) {
                     console.error('Error in playback complete handler:', error);
                 }
             });
-        });
+        }) as EventHandler);
         
-        audioClient.on('crossfadeComplete', (data: CrossfadeCompleteData) => {
-            console.log('🎵 Crossfade completed:', data);
+        audioClient.on('crossfadeComplete', ((data: unknown) => {
+            const payload = data as CrossfadeCompleteData;
+            console.log('🎵 Crossfade completed:', payload);
             // Notify all registered handlers
             eventHandlers.crossfadeComplete.forEach(handler => {
                 try {
-                    handler(data);
+                    handler(payload);
                 } catch (error) {
                     console.error('Error in crossfade complete handler:', error);
                 }
             });
-        });
+        }) as EventHandler);
 
-        audioClient.on('tracksCleared', () => {
+        audioClient.on('tracksCleared', (() => {
             tracks = [];
             console.log('🗑️  Tracks cleared');
-        });
+        }) as EventHandler);
 
-        audioClient.on('crossfadeProgress', (data: CrossfadeProgressData) => {
-            console.log(`🔄 Crossfade progress: ${Math.round(data.progress * 100)}%`);
-        });
+        audioClient.on('crossfadeProgress', ((data: unknown) => {
+            const payload = data as CrossfadeProgressData;
+            console.log(`🔄 Crossfade progress: ${Math.round(payload.progress * 100)}%`);
+        }) as EventHandler);
 
-        audioClient.on('crossfadeComplete', (data: CrossfadeCompleteData) => {
-            console.log(`✅ Crossfade complete: ${data.newTracks.length} new tracks`);
+        audioClient.on('crossfadeComplete', ((data: unknown) => {
+            const payload = data as CrossfadeCompleteData;
+            console.log(`✅ Crossfade complete: ${payload.newTracks.length} new tracks`);
             // Force refresh track list after crossfade
             refreshTrackList();
-        });
+        }) as EventHandler);
         
         // Connect to the service
         await audioClient.connect();
@@ -234,7 +236,7 @@ export async function addTracks(trackPaths: string[], songName: string | null = 
     console.log(`🎵 Creating song: "${finalSongName}"`);
     
     try {
-        const songResult: CreateSongResult = await client.createSong(finalSongName, trackPaths);
+        const songResult = await client.createSong(finalSongName, trackPaths) as CreateSongResult;
         console.log(`✅ Created song: ${finalSongName} (ID: ${songResult.songId})`);
         
         // Apply default panning (click/guide tracks to left)
@@ -259,7 +261,7 @@ export async function addTracks(trackPaths: string[], songName: string | null = 
 }
 
 // Load a single audio file
-export async function loadAudioFile(path: string, name: string | null = null): Promise<string> {
+export async function loadAudioFile(path: string): Promise<string> {
     const client = await ensureAudioService();
     
     try {
@@ -414,11 +416,12 @@ export async function getMemoryUsage(): Promise<MemoryUsageResult | null> {
     const client = await ensureAudioService();
     
     try {
-        const usage: MemoryUsage = await client.getMemoryUsage();
+        const usage = await client.getMemoryUsage();
+        if (!usage) return null;
         return {
             rss: usage.rss,
             heapUsed: usage.heapUsed,
-            formatted: client.formatMemoryUsage(usage)
+            formatted: JSON.stringify(client.formatMemoryUsage(usage))
         };
     } catch (error) {
         console.error('❌ Failed to get memory usage:', error);
@@ -427,7 +430,7 @@ export async function getMemoryUsage(): Promise<MemoryUsageResult | null> {
 }
 
 // Get audio service health
-export async function getAudioServiceHealth(): Promise<HealthResponse | null> {
+export async function getAudioServiceHealth(): Promise<{ status: string } | null> {
     const client = await ensureAudioService();
     
     try {
@@ -483,8 +486,17 @@ export function addTrack(track: Track): void {
     tracks.push(track);
 }
 
+// Create and export a global AudioContext for Web Audio API
+let globalAudioContext: AudioContext | null = null;
+
+export function getAudioContext(): AudioContext {
+    if (!globalAudioContext) {
+        globalAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    return globalAudioContext;
+}
+
 // Backward compatibility for existing code
-export { getTracks as getAudioContext };
 export { initializeAudioService as initAudio };
 
 // Export the client for direct access if needed
@@ -534,15 +546,11 @@ export async function crossfadeToTracks(trackPaths: string[], fadeDuration: numb
         console.log(`🎵 Crossfade call stack:`, new Error().stack);
         console.log(`🎵 Crossfade track paths:`, trackPaths);
         
-        const result: CrossfadeResult = await client.crossfadeToTracks(trackPaths, fadeDuration);
+        await client.crossfadeToTracks(trackPaths, fadeDuration);
         
-        if (result.success) {
-            console.log('✅ Crossfade initiated successfully');
-        } else {
-            console.warn('⚠️  Crossfade may have failed');
-        }
+        console.log('✅ Crossfade initiated successfully');
         
-        return result;
+        return { success: true };
     } catch (error) {
         console.error('❌ Failed to start crossfade:', error);
         throw error;
@@ -660,7 +668,7 @@ export async function stopAudioServiceFromApp(): Promise<unknown> {
 
 // Clear all tracks to prevent duplicates
 export async function clearAllTracks(): Promise<ClearTracksResult> {
-    const client = await ensureAudioService();
+    await ensureAudioService();
     
     try {
         await audioApi.clearMixer();

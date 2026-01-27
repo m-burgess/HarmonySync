@@ -2,10 +2,6 @@
 // Note: Command functionality will need to be adapted for Electron
 
 class AudioServiceManager {
-    private servicePath = '/home/mikeb/projects/RustPresenter/harmonysync-audio-service';
-    private serviceUrl = 'http://localhost:3001';
-    private isServiceRunning = false;
-
     async checkServiceHealth(): Promise<boolean> {
         try {
             const api = await import('../api');
@@ -26,7 +22,6 @@ class AudioServiceManager {
             // For now, just try to connect and assume service is started externally
             const isHealthy = await this.checkServiceHealth();
             if (isHealthy) {
-                this.isServiceRunning = true;
                 return true;
             } else {
                 throw new Error('Service not running - start it manually');
@@ -44,7 +39,6 @@ class AudioServiceManager {
             
             if (isRunning) {
                 console.log('✅ Audio service already running');
-                this.isServiceRunning = true;
                 return true;
             }
 
@@ -64,7 +58,6 @@ class AudioServiceManager {
             // TODO: Adapt for Electron - use child_process or IPC instead of Command
             console.warn('Command functionality needs to be adapted for Electron');
             
-            this.isServiceRunning = false;
             console.log('🛑 Audio service stopped');
         } catch (error) {
             console.error('Failed to stop audio service:', error);

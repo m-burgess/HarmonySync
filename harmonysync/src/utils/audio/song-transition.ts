@@ -7,7 +7,6 @@ import type { SongDetails, Track, FadeType, TransitionType, PreloadedSong } from
 
 class SongTransitionManager {
   private isTransitioning = false;
-  private currentSong: SongDetails | null = null;
   private preloadedSongs: Map<string | number, PreloadedSong> = new Map();
   private transitionDuration = 3000;
   private fadeType: FadeType = 'logarithmic';
@@ -60,7 +59,6 @@ class SongTransitionManager {
         await this.performCrossfade(currentTracks, nextTracks);
       }
       
-      this.currentSong = songDetails;
       this.cleanupOldPreloads();
       return true;
     } catch (err) {
@@ -133,7 +131,7 @@ class SongTransitionManager {
           }
         });
         if (i === fadeSteps) {
-          this.completeTransition(currentTracks, nextTracks);
+          this.completeTransition(nextTracks);
         }
       }, i * stepDuration);
     }
@@ -176,7 +174,7 @@ class SongTransitionManager {
         }
       }
     });
-    this.completeTransition(currentTracks, nextTracks);
+    this.completeTransition(nextTracks);
   }
 
   private calculateFadeValue(progress: number): number {
@@ -247,7 +245,7 @@ class SongTransitionManager {
     });
   }
 
-  private completeTransition(oldTracks: Track[], newTracks: Track[]): void {
+  private completeTransition(newTracks: Track[]): void {
     const globalTracks = getTracks();
     globalTracks.length = 0;
     newTracks.forEach(t => globalTracks.push(t));

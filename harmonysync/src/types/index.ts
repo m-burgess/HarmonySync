@@ -43,7 +43,6 @@ export type {
   FormattedMixerState,
   StartupInstructions,
   CreateSongRequest,
-  EventHandler,
   FadeType,
   TransitionType,
   PreloadedSong,
