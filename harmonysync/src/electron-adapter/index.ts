@@ -28,7 +28,14 @@ interface DisplayConfig {
   [key: string]: unknown;
 }
 
-interface ElectronAPI {
+export interface ElectronAPI {
+  // Generic IPC methods
+  invoke?: (channel: string, ...args: unknown[]) => Promise<unknown>;
+  send?: (channel: string, ...args: unknown[]) => void;
+  on?: (channel: string, callback: (...args: unknown[]) => void) => void;
+  once?: (channel: string, callback: (...args: unknown[]) => void) => void;
+  removeListener?: (channel: string, callback: (...args: unknown[]) => void) => void;
+  
   // IPC
   receive: (channel: string, callback: (data: unknown) => void) => (() => void) | undefined;
   
@@ -507,6 +514,20 @@ export const core = {
       console.error('[electron-adapter] Failed to invoke command:', command, error);
       throw error;
     }
+  },
+  
+  // Convert file paths to proper URLs for Electron
+  convertFileSrc: (filePath: string): string => {
+    // In Electron, local files can be accessed directly
+    // Convert to file:// protocol if needed
+    if (filePath.startsWith('file://')) {
+      return filePath;
+    }
+    if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+      return filePath;
+    }
+    // Convert to file:// URL
+    return `file://${filePath}`;
   }
 };
 

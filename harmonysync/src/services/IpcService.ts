@@ -16,26 +16,7 @@
 import { BaseService } from '../base/BaseService';
 import type { IIpcService } from '../types/services';
 import type { UnsubscribeFunction } from '../types';
-
-/**
- * Electron API interface (from preload script)
- */
-interface ElectronAPI {
-  invoke(channel: string, ...args: unknown[]): Promise<unknown>;
-  send(channel: string, ...args: unknown[]): void;
-  on?(channel: string, callback: (...args: unknown[]) => void): void;
-  once?(channel: string, callback: (...args: unknown[]) => void): void;
-  removeListener?(channel: string, callback: (...args: unknown[]) => void): void;
-}
-
-/**
- * Window interface extension
- */
-declare global {
-  interface Window {
-    electronAPI?: ElectronAPI;
-  }
-}
+import type { ElectronAPI } from '../electron-adapter/index.js';
 
 /**
  * IPC Service Implementation
@@ -67,6 +48,9 @@ export class IpcService extends BaseService implements IIpcService {
    */
   public async invoke(channel: string, ...args: unknown[]): Promise<unknown> {
     try {
+      if (!this.electronAPI.invoke) {
+        throw new Error('Electron API does not support invoke method');
+      }
       return await this.electronAPI.invoke(channel, ...args);
     } catch (error) {
       this.logError(`IPC invoke failed on channel '${channel}'`, error);
@@ -81,6 +65,9 @@ export class IpcService extends BaseService implements IIpcService {
    */
   public send(channel: string, ...args: unknown[]): void {
     try {
+      if (!this.electronAPI.send) {
+        throw new Error('Electron API does not support send method');
+      }
       this.electronAPI.send(channel, ...args);
     } catch (error) {
       this.logError(`IPC send failed on channel '${channel}'`, error);
