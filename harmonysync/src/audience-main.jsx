@@ -58,7 +58,8 @@ const AudienceApp = () => {
 
       if (videoRef.current && httpServerUrl.current) {
         try {
-          const fileName = videoPath.split('/').pop().split('\\').pop(); // Get just the filename (cross-platform)
+          // Extract filename from path (handles both forward/backward slashes and multiple separators)
+          const fileName = videoPath.replace(/\\/g, '/').split('/').filter(Boolean).pop();
           const videoUrl = `${httpServerUrl.current}/${fileName}`;
 
           console.log('Audience Screen: Video URL from custom HTTP server:', videoUrl);
