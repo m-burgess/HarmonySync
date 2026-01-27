@@ -718,7 +718,7 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
       const outputDir = await core.invoke('transpose_audio_files', {
         directory: currentDirectory,
         semitones: semitones,
-      });
+      }) as string;
 
       this.log('✅ Transposition complete! Output directory:', outputDir);
 
