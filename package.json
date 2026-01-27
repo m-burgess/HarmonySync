@@ -60,7 +60,7 @@
     "@types/fluent-ffmpeg": "^2.1.24",
     "@types/fs-extra": "^11.0.4",
     "@types/jest": "^29.5.11",
-    "@types/node": "^20.11.0",
+    "@types/node": "^20.19.30",
     "@types/sharp": "^0.32.0",
     "@types/uuid": "^9.0.7",
     "concurrently": "^8.2.2",

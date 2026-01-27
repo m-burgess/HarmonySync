@@ -793,16 +793,16 @@ class IPCHandlerManager {
       });
 
       if (isDev) {
-        preserviceWindow.loadURL(`${VITE_DEV_SERVER_URL}/preservice-music.html`);
+        preserviceWindow?.loadURL(`${VITE_DEV_SERVER_URL}/preservice-music.html`);
       } else {
-        preserviceWindow.loadFile(path.join(__dirname, '../harmonysync/dist/preservice-music.html'));
+        preserviceWindow?.loadFile(path.join(__dirname, '../harmonysync/dist/preservice-music.html'));
       }
 
-      preserviceWindow.once('ready-to-show', () => {
+      preserviceWindow?.once('ready-to-show', () => {
         preserviceWindow?.show();
       });
 
-      preserviceWindow.on('closed', () => {
+      preserviceWindow?.on('closed', () => {
         preserviceWindow = null;
       });
 
@@ -834,19 +834,19 @@ class IPCHandlerManager {
 
       if (isDev) {
         console.log('[IPC] Loading dev URL:', `${VITE_DEV_SERVER_URL}/scheduler.html`);
-        schedulerWindow.loadURL(`${VITE_DEV_SERVER_URL}/scheduler.html`);
+        schedulerWindow?.loadURL(`${VITE_DEV_SERVER_URL}/scheduler.html`);
       } else {
         const filePath = path.join(__dirname, '../harmonysync/dist/scheduler.html');
         console.log('[IPC] Loading file:', filePath);
-        schedulerWindow.loadFile(filePath);
+        schedulerWindow?.loadFile(filePath);
       }
 
-      schedulerWindow.once('ready-to-show', () => {
+      schedulerWindow?.once('ready-to-show', () => {
         console.log('[IPC] Scheduler window ready, showing');
         schedulerWindow?.show();
       });
 
-      schedulerWindow.on('closed', () => {
+      schedulerWindow?.on('closed', () => {
         console.log('[IPC] Scheduler window closed');
         schedulerWindow = null;
       });
