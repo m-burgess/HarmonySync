@@ -7,13 +7,14 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "useDefineForClassFields": false,
-    "types": ["vite/client"],
+    // "types": ["vite/client"],  // Temporarily disabled - vite types not found
 
     /* Modules */
     "module": "ESNext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "allowImportingTsExtensions": true,
+    "allowJs": true,
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
