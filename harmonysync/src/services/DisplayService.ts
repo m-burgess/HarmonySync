@@ -100,6 +100,17 @@ export class DisplayService extends BaseService implements IDisplayService {
       return this.handleError('setWindowBounds', error);
     }
   }
+
+  /**
+   * Clear all display content
+   */
+  public async clearAll(): Promise<void> {
+    try {
+      await this.ipc.invoke('display:clearAll');
+    } catch (error) {
+      return this.handleError('clearAll', error);
+    }
+  }
 }
 
 export default DisplayService;

@@ -65,6 +65,7 @@ class IPCHandlerManager {
     this.registerYouTubeServiceHandlers();
     this.registerImageServiceHandlers();
     this.registerTextServiceHandlers();
+    this.registerSetlistHandlers();
     this.registerMIDIHandlers();
     this.registerLyricsHandlers();
     this.registerCloudStorageHandlers();
@@ -103,6 +104,17 @@ class IPCHandlerManager {
         return result.filePaths || [];
       }
     );
+
+    this.ipcMain.handle('dialog:selectFolders', async (_event, options: { title?: string } = {}) => {
+      const result = await dialog.showOpenDialog({
+        title: options.title || 'Select Folders',
+        properties: ['openDirectory', 'multiSelections'],
+      });
+      return {
+        canceled: result.canceled,
+        filePaths: result.filePaths || [],
+      };
+    });
 
     this.ipcMain.handle('dialog:openFile', async (_event, filters: Electron.FileFilter[]) => {
       const result = await dialog.showOpenDialog({
@@ -360,6 +372,61 @@ class IPCHandlerManager {
 
     this.ipcMain.handle('text:getTextStats', async (_event, text: string) => {
       return this.services.textService.getTextStats(text);
+    });
+  }
+
+  /**
+   * Setlist handlers
+   */
+  private registerSetlistHandlers(): void {
+    this.ipcMain.handle('setlist:loadSongMetadata', async (_event, folderPath: string) => {
+      try {
+        const path = require('path');
+        const fs = require('fs-extra');
+        
+        // Get folder name from path
+        const folderName = path.basename(folderPath);
+        
+        // Try to read files in folder to get metadata
+        let files: string[] = [];
+        try {
+          files = await fs.readdir(folderPath);
+        } catch (error) {
+          console.error('[setlist:loadSongMetadata] Error reading directory:', error);
+        }
+        
+        return {
+          path: folderPath,
+          name: folderName,
+          files,
+          id: folderName,
+        };
+      } catch (error) {
+        console.error('[setlist:loadSongMetadata] Error:', error);
+        return { path: folderPath, name: folderPath.split(/[\\/]/).pop() || folderPath, files: [] };
+      }
+    });
+
+    this.ipcMain.handle('setlist:loadLyrics', async (_event, songPath: string) => {
+      try {
+        const path = require('path');
+        const fs = require('fs-extra');
+        const lyricsPath = path.join(songPath, 'lyrics.txt');
+        return await fs.readFile(lyricsPath, 'utf8');
+      } catch (error) {
+        return null;
+      }
+    });
+
+    this.ipcMain.handle('setlist:openLyricsFile', async (_event, songPath: string) => {
+      try {
+        const path = require('path');
+        const { shell } = require('electron');
+        const lyricsPath = path.join(songPath, 'lyrics.txt');
+        await shell.openPath(lyricsPath);
+      } catch (error) {
+        console.error('[setlist:openLyricsFile] Error:', error);
+      }
     });
   }
 
@@ -672,6 +739,204 @@ class IPCHandlerManager {
     this.ipcMain.handle('audio:normalize', async (_event, inputPath: string, targetLevel?: number) => {
       return await this.services.audioService.normalizeAudio(inputPath, targetLevel);
     });
+
+    // Playback control handlers (proxy to audio service on port 3001)
+    this.ipcMain.handle('audio:loadTracks', async (_event, folderPath: string) => {
+      try {
+        const response = await fetch('http://127.0.0.1:3001/api/tracks/load', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ folderPath }),
+        });
+        return await response.json();
+      } catch (error) {
+        console.error('[audio:loadTracks] Error:', error);
+        return [];
+      }
+    });
+
+    this.ipcMain.handle('audio:transpose', async (_event, sourcePath: string, semitones: number) => {
+      try {
+        const response = await fetch('http://127.0.0.1:3001/api/transpose', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sourcePath, semitones }),
+        });
+        return await response.json();
+      } catch (error) {
+        console.error('[audio:transpose] Error:', error);
+        return { success: false };
+      }
+    });
+
+    this.ipcMain.handle('audio:play', async (_event) => {
+      try {
+        await fetch('http://127.0.0.1:3001/api/playback/play', { method: 'POST' });
+      } catch (error) {
+        console.error('[audio:play] Error:', error);
+      }
+    });
+
+    this.ipcMain.handle('audio:stop', async (_event) => {
+      try {
+        await fetch('http://127.0.0.1:3001/api/playback/stop', { method: 'POST' });
+      } catch (error) {
+        console.error('[audio:stop] Error:', error);
+      }
+    });
+
+    this.ipcMain.handle('audio:pause', async (_event) => {
+      try {
+        await fetch('http://127.0.0.1:3001/api/playback/pause', { method: 'POST' });
+      } catch (error) {
+        console.error('[audio:pause] Error:', error);
+      }
+    });
+
+    this.ipcMain.handle('audio:seek', async (_event, position: number) => {
+      try {
+        await fetch('http://127.0.0.1:3001/api/playback/seek', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ position }),
+        });
+      } catch (error) {
+        console.error('[audio:seek] Error:', error);
+      }
+    });
+
+    this.ipcMain.handle('audio:setTrackVolume', async (_event, trackIndex: number, volume: number) => {
+      try {
+        await fetch('http://127.0.0.1:3001/api/tracks/volume', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ trackIndex, volume }),
+        });
+      } catch (error) {
+        console.error('[audio:setTrackVolume] Error:', error);
+      }
+    });
+
+    this.ipcMain.handle('audio:setTrackPan', async (_event, trackIndex: number, pan: number) => {
+      try {
+        await fetch('http://127.0.0.1:3001/api/tracks/pan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ trackIndex, pan }),
+        });
+      } catch (error) {
+        console.error('[audio:setTrackPan] Error:', error);
+      }
+    });
+
+    this.ipcMain.handle('audio:setTrackMute', async (_event, trackIndex: number, muted: boolean) => {
+      try {
+        await fetch('http://127.0.0.1:3001/api/tracks/mute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ trackIndex, muted }),
+        });
+      } catch (error) {
+        console.error('[audio:setTrackMute] Error:', error);
+      }
+    });
+
+    this.ipcMain.handle('audio:saveMixerConfig', async (_event, songPath: string, config: any) => {
+      try {
+        await fetch('http://127.0.0.1:3001/api/mixer/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ songPath, config }),
+        });
+      } catch (error) {
+        console.error('[audio:saveMixerConfig] Error:', error);
+      }
+    });
+
+    this.ipcMain.handle('audio:loadMixerConfig', async (_event, songPath: string) => {
+      try {
+        const response = await fetch(`http://127.0.0.1:3001/api/mixer/load?songPath=${encodeURIComponent(songPath)}`);
+        return await response.json();
+      } catch (error) {
+        console.error('[audio:loadMixerConfig] Error:', error);
+        return null;
+      }
+    });
+
+    this.ipcMain.handle('audio:getMemoryUsage', async (_event) => {
+      try {
+        const response = await fetch('http://127.0.0.1:3001/api/health');
+        const data = await response.json() as any;
+        return { rss: (data as any)?.memory?.rss || 0, heapUsed: (data as any)?.memory?.heapUsed || 0, heapTotal: (data as any)?.memory?.heapTotal || 0 };
+      } catch (error) {
+        console.error('[audio:getMemoryUsage] Error:', error);
+        return { rss: 0, heapUsed: 0, heapTotal: 0 };
+      }
+    });
+
+    this.ipcMain.handle('audio:startServiceFromApp', async (_event) => {
+      try {
+        const response = await fetch('http://127.0.0.1:3001/api/health');
+        return await response.json();
+      } catch (error) {
+        console.error('[audio:startServiceFromApp] Error:', error);
+        return { success: false };
+      }
+    });
+
+    this.ipcMain.handle('audio:cleanup', async (_event) => {
+      try {
+        await fetch('http://127.0.0.1:3001/api/cleanup', { method: 'POST' });
+      } catch (error) {
+        console.error('[audio:cleanup] Error:', error);
+      }
+    });
+
+    this.ipcMain.handle('audio:playAllTracks', async (_event) => {
+      try {
+        await fetch('http://127.0.0.1:3001/api/playback/play-all', { method: 'POST' });
+      } catch (error) {
+        console.error('[audio:playAllTracks] Error:', error);
+      }
+    });
+
+    this.ipcMain.handle('audio:stopAllAudio', async (_event) => {
+      try {
+        await fetch('http://127.0.0.1:3001/api/playback/stop', { method: 'POST' });
+      } catch (error) {
+        console.error('[audio:stopAllAudio] Error:', error);
+      }
+    });
+
+    this.ipcMain.handle('audio:goToBeginning', async (_event) => {
+      try {
+        await fetch('http://127.0.0.1:3001/api/playback/reset', { method: 'POST' });
+      } catch (error) {
+        console.error('[audio:goToBeginning] Error:', error);
+      }
+    });
+
+    this.ipcMain.handle('audio:clearTracks', async (_event) => {
+      try {
+        await fetch('http://127.0.0.1:3001/api/tracks/clear', { method: 'POST' });
+      } catch (error) {
+        console.error('[audio:clearTracks] Error:', error);
+      }
+    });
+
+    this.ipcMain.handle('audio:addTracks', async (_event, trackPaths: string[]) => {
+      try {
+        const response = await fetch('http://127.0.0.1:3001/api/tracks/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ trackPaths }),
+        });
+        return await response.json();
+      } catch (error) {
+        console.error('[audio:addTracks] Error:', error);
+        return [];
+      }
+    });
   }
 
   /**
@@ -692,11 +957,21 @@ class IPCHandlerManager {
     });
 
     this.ipcMain.handle('display:clearAll', async () => {
-      return await this.services.displayService.clearAllDisplays(
-        this.services.audienceWindow,
-        this.services.confidenceWindow,
-        this.services.lowerThirdsWindow
-      );
+      // Send clear message to all display windows
+      try {
+        const windows = [
+          this.services.audienceWindow(),
+          this.services.confidenceWindow(),
+          this.services.lowerThirdsWindow(),
+        ];
+        for (const win of windows) {
+          if (win) {
+            win.webContents.send('display:clear');
+          }
+        }
+      } catch (error) {
+        console.error('[display:clearAll] Error:', error);
+      }
     });
 
     this.ipcMain.handle('display:updateLowerThirds', async (_event, textData: any) => {
@@ -943,6 +1218,37 @@ class IPCHandlerManager {
    * Slides Service handlers
    */
   private registerSlidesHandlers(): void {
+    this.ipcMain.handle('slides:loadFromFolder', async (_event, folderPath: string) => {
+      try {
+        // Load slides from the folder
+        let slides: unknown[] = [];
+        let tracks: unknown[] = [];
+
+        // Try to load slides if slidesService is available
+        if (this.services.slidesService && typeof this.services.slidesService.importFromFolder === 'function') {
+          try {
+            slides = await this.services.slidesService.importFromFolder(folderPath);
+          } catch (error) {
+            console.warn('[ipc-handlers] Failed to load slides from folder:', error);
+          }
+        }
+
+        // Try to load audio tracks if audioService is available
+        if (this.services.audioService && typeof this.services.audioService.loadTracks === 'function') {
+          try {
+            tracks = await this.services.audioService.loadTracks(folderPath);
+          } catch (error) {
+            console.warn('[ipc-handlers] Failed to load tracks from folder:', error);
+          }
+        }
+
+        return { slides, tracks };
+      } catch (error) {
+        console.error('[ipc-handlers] Error in slides:loadFromFolder:', error);
+        return { slides: [], tracks: [] };
+      }
+    });
+
     this.ipcMain.handle('slides:importPdf', async (_event, pdfPath: string, options?: any) => {
       return await this.services.slidesService.importPdf(pdfPath, options, (progress: any) => {
         const win = this.services.mainWindow();

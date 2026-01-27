@@ -11,6 +11,9 @@ console.log('[Preload] ============================================');
  * Defines the shape of the API exposed to the renderer process
  */
 interface ElectronAPI {
+  // Generic IPC invoke method for any channel
+  invoke: (channel: string, ...args: unknown[]) => Promise<unknown>;
+
   // File operations
   openDirectory: (options?: { multiple?: boolean }) => Promise<string[]>;
   openFile: (filters?: Electron.FileFilter[]) => Promise<string>;
@@ -131,6 +134,12 @@ class ElectronAPIBuilder {
    */
   public static build(): ElectronAPI {
     return {
+      // Generic IPC invoke method
+      invoke: (channel: string, ...args: unknown[]) => {
+        console.log('[Preload] invoke called on channel:', channel, 'with args:', args);
+        return ipcRenderer.invoke(channel, ...args);
+      },
+
       // File operations
       openDirectory: (options?: { multiple?: boolean }) => {
         console.log('[Preload] openDirectory invoked with options:', options);
