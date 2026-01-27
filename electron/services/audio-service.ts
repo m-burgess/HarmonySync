@@ -3,13 +3,13 @@
  * 
  * NOTE: This service handles LIGHTWEIGHT audio operations within the Electron
  * main process. For CPU-intensive operations like multitrack playback and
- * real-time mixing, use the separate Audio Service (harmonysync-audio-service/).
+ * real-time mixing, use the separate Audio Service (harmonysync-audio-service).
  * 
  * This service is responsible for:
  * - Quick metadata extraction (duration, codec, sample rate)
  * - Audio format validation and detection
  * - Simple format conversions (e.g., to Ogg)
- * - Audio transposition (creates new files asynchronously)
+ * - Audio transposition (creates new files asynchronously without blocking)
  * - Audio synchronization checks
  * 
  * CPU-intensive operations handled by separate service:
