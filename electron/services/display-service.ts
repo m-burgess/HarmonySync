@@ -1,7 +1,22 @@
 /**
- * Display Service
- * Handles coordination of content display across multiple windows
- * (audience, confidence, lower thirds)
+ * Display Service (In-Process - Window Coordination Only)
+ * 
+ * This service MUST run IN-PROCESS as it directly manages Electron BrowserWindow
+ * instances and sends IPC messages between windows.
+ * 
+ * This service is responsible for:
+ * - Coordinating content display across multiple windows (audience, confidence, lower thirds)
+ * - Routing IPC messages to appropriate windows
+ * - Managing which content appears on which display
+ * - Broadcasting messages to all display windows
+ * 
+ * This service does NOT perform any CPU-intensive operations. It only:
+ * - Checks window availability
+ * - Sends IPC messages via webContents.send()
+ * - Coordinates display state
+ * 
+ * All actual media processing (video, image, audio) is handled by their respective
+ * services (separate or in-process depending on operation intensity).
  */
 
 import { BrowserWindow } from 'electron';

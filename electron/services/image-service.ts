@@ -1,7 +1,25 @@
 /**
- * Image Service
- * Handles image operations including loading, caching, format conversion,
- * thumbnail generation, resizing, optimization, and text overlays.
+ * Image Service (In-Process - Lightweight Operations)
+ * 
+ * NOTE: This service handles LIGHTWEIGHT image operations within the Electron
+ * main process. For memory-intensive operations like batch processing and large
+ * image manipulation, use the separate Image Service (harmonysync-image-service/).
+ * 
+ * This service is responsible for:
+ * - Quick image metadata extraction (dimensions, format, size)
+ * - Format validation and detection
+ * - Small thumbnail generation (< 1MB images)
+ * - Dominant color extraction
+ * - Image caching
+ * - Simple format conversions for small images
+ * 
+ * Memory-intensive operations handled by separate service:
+ * - Large image resizing (4K+ images)
+ * - Batch image processing
+ * - Complex image transformations
+ * - Web optimization for large files
+ * 
+ * For intensive operations, delegate to harmonysync-image-service via Socket.io/HTTP.
  */
 
 import * as path from 'path';
