@@ -32,7 +32,7 @@ const ConfidenceMonitor = () => {
     return () => clearInterval(intervalId); // Cleanup on unmount
   }, []);
 
-  // Tauri event listeners
+  // Event listeners for slide display
   useEffect(() => {
     const unlistenDisplay = event.listen('display-confidence-slide', async (e) => {
       console.log('Confidence: display-confidence-slide event received:', e.payload);

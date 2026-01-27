@@ -332,10 +332,10 @@ class NodeJSAudioClient {
         };
     }
 
-    // Tauri command to start the audio service
+    // Backend command to start the audio service
     async startAudioService() {
         try {
-            console.log('🎵 Starting audio service via Tauri...');
+            console.log('🎵 Starting audio service via Electron backend...');
             const result = await core.invoke('start_audio_service');
             console.log('✅ Audio service start result:', result);
             return result;
@@ -345,7 +345,7 @@ class NodeJSAudioClient {
         }
     }
 
-    // Tauri command to check audio service status
+    // Backend command to check audio service status
     async checkAudioServiceStatus() {
         try {
             const isRunning = await core.invoke('check_audio_service_status');

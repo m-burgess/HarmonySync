@@ -539,7 +539,7 @@ export async function refreshTrackList() {
     }
 }
 
-// Start audio service via Tauri command
+// Start audio service via backend command
 export async function startAudioServiceFromApp() {
     if (!audioClient) {
         audioClient = new NodeJSAudioClient();
@@ -562,7 +562,7 @@ export async function startAudioServiceFromApp() {
     }
 }
 
-// Check audio service status via Tauri command
+// Check audio service status via backend command
 export async function checkAudioServiceStatusFromApp() {
     if (!audioClient) {
         audioClient = new NodeJSAudioClient();
@@ -576,7 +576,7 @@ export async function checkAudioServiceStatusFromApp() {
     }
 }
 
-// Stop audio service via Tauri command
+// Stop audio service via backend command
 export async function stopAudioServiceFromApp() {
     try {
         const { core } = await import('../../electron-adapter');
