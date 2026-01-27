@@ -87,7 +87,7 @@ class FileService {
    * @returns {Promise<Array>} Array of file/folder entries
    */
   async readDir(path, options = {}) {
-    // Use Tauri fs API directly
+    // Use Electron fs API directly
     const { fs } = window.electronAPI || {};
     if (fs && fs.readDir) {
       return await fs.readDir(path, options);
@@ -111,7 +111,7 @@ class FileService {
    * @returns {Promise<string>} File contents as text
    */
   async readTextFile(path) {
-    // Use Tauri fs API directly
+    // Use Electron fs API directly
     const { fs } = window.electronAPI || {};
     if (fs && fs.readTextFile) {
       return await fs.readTextFile(path);
@@ -127,7 +127,7 @@ class FileService {
    * @returns {Promise<void>}
    */
   async writeTextFile(path, contents) {
-    // Use Tauri fs API directly
+    // Use Electron fs API directly
     const { fs } = window.electronAPI || {};
     if (fs && fs.writeTextFile) {
       return await fs.writeTextFile(path, contents);

@@ -97,19 +97,6 @@ npm run build:linux
 - `GENIUS_API_TOKEN` - For lyrics fetching
 - `NODE_ENV` - `development` or `production`
 
-## Migration Notes
-
-### Removed Components
-- All Rust code in `/harmonysync/src-tauri/`
-- Cargo dependencies and build files
-- Tauri configuration
-
-### New Components
-- Electron main process and IPC system
-- Node.js backend services
-- Google Drive integration
-- Audio sync mechanism
-
 ## Troubleshooting
 
 ### Audio Service Won't Start

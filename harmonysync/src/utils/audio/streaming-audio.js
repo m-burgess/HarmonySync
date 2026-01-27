@@ -161,7 +161,7 @@ export async function preloadTrack(assetUrl, { decode = false, timeout = 30000 }
     
     try {
       // Fetch the audio file and store as ArrayBuffer
-      // This is more reliable than Audio elements in Tauri and uses less memory than decoding
+      // Streaming audio uses less memory than decoding the entire file at once
       const response = await fetch(assetUrl);
       if (!response.ok) {
         throw new Error(`Failed to fetch ${assetUrl}: ${response.status} ${response.statusText}`);

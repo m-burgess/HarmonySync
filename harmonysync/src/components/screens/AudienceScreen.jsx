@@ -27,7 +27,7 @@ const AudienceScreen = () => {
   console.log('AudienceScreen component loaded, content:', content);
 
   useEffect(() => {
-    const unlistenBackground = TauriEvent.listen('set-background', (event) => {
+    const unlistenBackground = event.listen('set-background', (event) => {
       console.log('Audience: set-background event received:', event.payload);
       const head = document.getElementsByTagName('head')[0];
       let oldStyle = document.getElementById('song-background-style');
@@ -41,7 +41,7 @@ const AudienceScreen = () => {
       head.appendChild(style);
     });
 
-    const unlistenLyric = TauriEvent.listen('display-lyric-slide', async (event) => {
+    const unlistenLyric = event.listen('display-lyric-slide', async (event) => {
       console.log('Audience: display-lyric-slide event received:', event.payload);
       const newContent = { type: 'lyrics', text: event.payload.text };
       
@@ -52,7 +52,7 @@ const AudienceScreen = () => {
       setContent(newContent);
     });
 
-    const unlistenImage = TauriEvent.listen('display-image-slide', async (event) => {
+    const unlistenImage = event.listen('display-image-slide', async (event) => {
       console.log('Audience: display-image-slide event received:', event.payload);
       const newContent = { type: 'image', path: event.payload.path, name: event.payload.name };
       
@@ -63,7 +63,7 @@ const AudienceScreen = () => {
       setContent(newContent);
     });
 
-    const unlistenClear = TauriEvent.listen('clear-lyric-display', async () => {
+    const unlistenClear = event.listen('clear-lyric-display', async () => {
       console.log('Audience: clear-lyric-display event received');
       
       // Use smooth transition to clear display
@@ -73,17 +73,17 @@ const AudienceScreen = () => {
       setContent(null);
     });
 
-    const unlistenNavigate = TauriEvent.listen('navigate', (event) => {
+    const unlistenNavigate = event.listen('navigate', (event) => {
       console.log('Audience: navigate event received:', event.payload);
       setContent({ type: 'video', videoId: event.payload.videoId });
     });
 
-    const unlistenStartBackgroundVideo = TauriEvent.listen('start-background-video', (event) => {
+    const unlistenStartBackgroundVideo = event.listen('start-background-video', (event) => {
       console.log('Audience: start-background-video event received:', event.payload);
       setBackgroundVideo(event.payload.path);
     });
 
-    const unlistenStopBackgroundVideo = TauriEvent.listen('stop-background-video', () => {
+    const unlistenStopBackgroundVideo = event.listen('stop-background-video', () => {
       console.log('Audience: stop-background-video event received');
       setBackgroundVideo(null);
     });
@@ -103,7 +103,7 @@ const AudienceScreen = () => {
           const intervalId = setInterval(() => {
             const currentTime = event.target.getCurrentTime();
             const duration = event.target.getDuration();
-            TauriEvent.emit('video-progress', { currentTime, duration });
+            event.emit('video-progress', { currentTime, duration });
 
             if (duration - currentTime <= 3) {
               document.getElementById('youtube-player').classList.add('fade-out');
@@ -112,7 +112,7 @@ const AudienceScreen = () => {
             }
           }, 1000);
           playerRef.current.intervalId = intervalId;        } else if (event.data === window.YT.PlayerState.ENDED) {
-          TauriEvent.emit('video-ended', 'YouTube video finished');
+          event.emit('video-ended', 'YouTube video finished');
           document.getElementById('youtube-player').classList.remove('fade-out'); // Remove fade-out class
         } else {
           // If the video is not playing, clear the interval
