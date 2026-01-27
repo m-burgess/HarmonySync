@@ -36,3 +36,10 @@ gdrive-token.json
 *.db-journal
 node_modules/
 package-lock.json
+
+# TypeScript
+*.tsbuildinfo
+electron/dist/
+electron/**/*.js.map
+electron/**/*.d.ts
+!electron/**/*.test.js
