@@ -51,7 +51,7 @@
     "skipLibCheck": true,
 
     /* Type Declarations */
-    "types": ["node", "jest"],
+    "types": ["node"],
     "typeRoots": ["./node_modules/@types", "../node_modules/@types", "./types"]
   },
   "include": [
