@@ -2,8 +2,9 @@
  * Tests for Display Configuration Service
  */
 
-const fs = require('fs-extra');
-const path = require('path');
+import * as fs from 'fs-extra';
+import * as path from 'path';
+import { DisplayConfig } from '../../types/models';
 
 // Mock electron app
 jest.mock('electron', () => ({
@@ -12,29 +13,34 @@ jest.mock('electron', () => ({
   }
 }));
 
-const displayConfigService = require('../display-config-service');
+// Import after mocking electron
+import DisplayConfigService from '../display-config-service';
 
 describe('Display Configuration Service', () => {
   const mockSettingsPath = '/mock/path/settings';
   const mockConfigPath = path.join(mockSettingsPath, 'display_configs.json');
+  let service: DisplayConfigService;
   
   beforeEach(async () => {
     // Reset mocks
     jest.clearAllMocks();
     
     // Mock fs operations
-    fs.ensureDir = jest.fn();
-    fs.pathExists = jest.fn();
-    fs.readJson = jest.fn();
-    fs.writeJson = jest.fn();
+    (fs.ensureDir as jest.Mock) = jest.fn();
+    (fs.pathExists as jest.Mock) = jest.fn();
+    (fs.readJson as jest.Mock) = jest.fn();
+    (fs.writeJson as jest.Mock) = jest.fn();
+    
+    // Create a new service instance for each test
+    service = new DisplayConfigService();
   });
   
   describe('initialize', () => {
     it('should create default displays if config does not exist', async () => {
-      fs.pathExists.mockResolvedValue(false);
-      fs.writeJson.mockResolvedValue();
+      (fs.pathExists as jest.Mock).mockResolvedValue(false);
+      (fs.writeJson as jest.Mock).mockResolvedValue(undefined);
       
-      await displayConfigService.initialize();
+      await service.initialize();
       
       expect(fs.ensureDir).toHaveBeenCalledWith(mockSettingsPath);
       expect(fs.writeJson).toHaveBeenCalled();
@@ -44,15 +50,15 @@ describe('Display Configuration Service', () => {
       const mockConfig = {
         displays: [
           { id: 'test-1', name: 'Test Display', type: 'custom', enabled: true }
-        ]
+        ] as DisplayConfig[]
       };
       
-      fs.pathExists.mockResolvedValue(true);
-      fs.readJson.mockResolvedValue(mockConfig);
+      (fs.pathExists as jest.Mock).mockResolvedValue(true);
+      (fs.readJson as jest.Mock).mockResolvedValue(mockConfig);
       
-      await displayConfigService.initialize();
+      await service.initialize();
       
-      const configs = displayConfigService.getAllDisplayConfigs();
+      const configs = service.getAllDisplayConfigs();
       expect(configs).toHaveLength(1);
       expect(configs[0].name).toBe('Test Display');
     });
@@ -60,10 +66,10 @@ describe('Display Configuration Service', () => {
   
   describe('getAllDisplayConfigs', () => {
     it('should return all display configurations', async () => {
-      fs.pathExists.mockResolvedValue(false);
-      await displayConfigService.initialize();
+      (fs.pathExists as jest.Mock).mockResolvedValue(false);
+      await service.initialize();
       
-      const configs = displayConfigService.getAllDisplayConfigs();
+      const configs = service.getAllDisplayConfigs();
       expect(configs.length).toBeGreaterThan(0);
       expect(configs[0]).toHaveProperty('id');
       expect(configs[0]).toHaveProperty('name');
@@ -73,18 +79,17 @@ describe('Display Configuration Service', () => {
   
   describe('createDisplayConfig', () => {
     it('should create a new display configuration', async () => {
-      fs.pathExists.mockResolvedValue(false);
-      fs.writeJson.mockResolvedValue();
-      await displayConfigService.initialize();
+      (fs.pathExists as jest.Mock).mockResolvedValue(false);
+      (fs.writeJson as jest.Mock).mockResolvedValue(undefined);
+      await service.initialize();
       
-      const newConfig = {
+      const newConfig: Partial<DisplayConfig> = {
         name: 'LED Wall',
         type: 'graphics',
-        deviceId: '123',
         enabled: true
       };
       
-      const created = await displayConfigService.createDisplayConfig(newConfig);
+      const created = await service.createDisplayConfig(newConfig);
       
       expect(created).toHaveProperty('id');
       expect(created.name).toBe('LED Wall');
@@ -95,14 +100,14 @@ describe('Display Configuration Service', () => {
   
   describe('updateDisplayConfig', () => {
     it('should update an existing display configuration', async () => {
-      fs.pathExists.mockResolvedValue(false);
-      fs.writeJson.mockResolvedValue();
-      await displayConfigService.initialize();
+      (fs.pathExists as jest.Mock).mockResolvedValue(false);
+      (fs.writeJson as jest.Mock).mockResolvedValue(undefined);
+      await service.initialize();
       
-      const configs = displayConfigService.getAllDisplayConfigs();
+      const configs = service.getAllDisplayConfigs();
       const firstId = configs[0].id;
       
-      const updated = await displayConfigService.updateDisplayConfig(firstId, {
+      const updated = await service.updateDisplayConfig(firstId, {
         name: 'Updated Name'
       });
       
@@ -112,65 +117,65 @@ describe('Display Configuration Service', () => {
     });
     
     it('should throw error if display not found', async () => {
-      fs.pathExists.mockResolvedValue(false);
-      await displayConfigService.initialize();
+      (fs.pathExists as jest.Mock).mockResolvedValue(false);
+      await service.initialize();
       
       await expect(
-        displayConfigService.updateDisplayConfig('nonexistent', { name: 'Test' })
+        service.updateDisplayConfig('nonexistent', { name: 'Test' })
       ).rejects.toThrow('Display configuration not found');
     });
   });
   
   describe('deleteDisplayConfig', () => {
     it('should delete a display configuration', async () => {
-      fs.pathExists.mockResolvedValue(false);
-      fs.writeJson.mockResolvedValue();
-      await displayConfigService.initialize();
+      (fs.pathExists as jest.Mock).mockResolvedValue(false);
+      (fs.writeJson as jest.Mock).mockResolvedValue(undefined);
+      await service.initialize();
       
-      const configs = displayConfigService.getAllDisplayConfigs();
+      const configs = service.getAllDisplayConfigs();
       const initialCount = configs.length;
       const firstId = configs[0].id;
       
-      await displayConfigService.deleteDisplayConfig(firstId);
+      await service.deleteDisplayConfig(firstId);
       
-      const newConfigs = displayConfigService.getAllDisplayConfigs();
+      const newConfigs = service.getAllDisplayConfigs();
       expect(newConfigs.length).toBe(initialCount - 1);
       expect(fs.writeJson).toHaveBeenCalled();
     });
     
     it('should throw error if display not found', async () => {
-      fs.pathExists.mockResolvedValue(false);
-      await displayConfigService.initialize();
+      (fs.pathExists as jest.Mock).mockResolvedValue(false);
+      await service.initialize();
       
       await expect(
-        displayConfigService.deleteDisplayConfig('nonexistent')
+        service.deleteDisplayConfig('nonexistent')
       ).rejects.toThrow('Display configuration not found');
     });
   });
   
   describe('getEnabledDisplayConfigs', () => {
     it('should return only enabled displays', async () => {
-      fs.pathExists.mockResolvedValue(false);
-      fs.writeJson.mockResolvedValue();
-      await displayConfigService.initialize();
+      (fs.pathExists as jest.Mock).mockResolvedValue(false);
+      (fs.writeJson as jest.Mock).mockResolvedValue(undefined);
+      await service.initialize();
       
       // Create a disabled display
-      await displayConfigService.createDisplayConfig({
+      await service.createDisplayConfig({
         name: 'Disabled Display',
         type: 'custom',
         enabled: false
       });
       
-      const enabled = displayConfigService.getEnabledDisplayConfigs();
-      expect(enabled.every(d => d.enabled)).toBe(true);
+      const enabled = service.getEnabledDisplayConfigs();
+      expect(enabled.every((d: DisplayConfig) => d.enabled)).toBe(true);
     });
     
     it('should return displays sorted by order', async () => {
-      fs.pathExists.mockResolvedValue(false);
-      fs.writeJson.mockResolvedValue();
-      await displayConfigService.initialize();
+      (fs.pathExists as jest.Mock).mockResolvedValue(false);
+      (fs.writeJson as jest.Mock).mockResolvedValue(undefined);
+      await service.initialize();
       
-      const enabled = displayConfigService.getEnabledDisplayConfigs();
+      const enabled = service.getEnabledDisplayConfigs();
       
       for (let i = 1; i < enabled.length; i++) {
         expect(enabled[i].order).toBeGreaterThanOrEqual(enabled[i - 1].order);
@@ -178,5 +183,3 @@ describe('Display Configuration Service', () => {
     });
   });
 });
-
-module.exports = {};

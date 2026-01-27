@@ -1,15 +1,23 @@
-const fs = require('fs-extra');
-const path = require('path');
-const os = require('os');
-const slidesService = require('../slides-service');
+/**
+ * Tests for Slides Service
+ */
+
+import * as fs from 'fs-extra';
+import * as path from 'path';
+import * as os from 'os';
+import AdmZip from 'adm-zip';
+import SlidesService from '../slides-service';
 
 describe('Slides Service', () => {
-  let tempDir;
+  let tempDir: string;
+  let service: SlidesService;
 
   beforeEach(async () => {
     // Create a temporary directory for tests
     tempDir = path.join(os.tmpdir(), 'slides-service-test-' + Date.now());
     await fs.ensureDir(tempDir);
+    
+    service = new SlidesService();
   });
 
   afterEach(async () => {
@@ -21,13 +29,13 @@ describe('Slides Service', () => {
 
   describe('validateSlideFile', () => {
     it('should reject non-existent files', async () => {
-      const result = await slidesService.validateSlideFile('/nonexistent/file.pdf');
+      const result = await service.validateSlideFile('/nonexistent/file.pdf');
       expect(result.valid).toBe(false);
       expect(result.message).toContain('does not exist');
     });
 
     it('should reject directories', async () => {
-      const result = await slidesService.validateSlideFile(tempDir);
+      const result = await service.validateSlideFile(tempDir);
       expect(result.valid).toBe(false);
       expect(result.message).toContain('not a file');
     });
@@ -36,7 +44,7 @@ describe('Slides Service', () => {
       const testFile = path.join(tempDir, 'test.txt');
       await fs.writeFile(testFile, 'test content');
       
-      const result = await slidesService.validateSlideFile(testFile);
+      const result = await service.validateSlideFile(testFile);
       expect(result.valid).toBe(false);
       expect(result.message).toContain('Unsupported file type');
     });
@@ -45,7 +53,7 @@ describe('Slides Service', () => {
       const testFile = path.join(tempDir, 'test.pptx');
       await fs.writeFile(testFile, '');
       
-      const result = await slidesService.validateSlideFile(testFile);
+      const result = await service.validateSlideFile(testFile);
       expect(result.valid).toBe(false);
       expect(result.message).toContain('empty');
     });
@@ -54,7 +62,7 @@ describe('Slides Service', () => {
       const testFile = path.join(tempDir, 'test.pptx');
       await fs.writeFile(testFile, 'dummy content');
       
-      const result = await slidesService.validateSlideFile(testFile);
+      const result = await service.validateSlideFile(testFile);
       expect(result.valid).toBe(true);
       expect(result.type).toBe('powerpoint');
     });
@@ -62,14 +70,14 @@ describe('Slides Service', () => {
 
   describe('createTextSlide', () => {
     it('should create a text slide with default styling', async () => {
-      const slide = await slidesService.createTextSlide('Test Slide Content');
+      const slide = await service.createTextSlide('Test Slide Content');
       
       expect(slide.type).toBe('text');
       expect(slide.content).toBe('Test Slide Content');
-      expect(slide.style.fontSize).toBe('48px');
-      expect(slide.style.fontFamily).toBe('Arial, sans-serif');
-      expect(slide.style.color).toBe('#FFFFFF');
-      expect(slide.style.backgroundColor).toBe('#000000');
+      expect(slide.style?.fontSize).toBe('48px');
+      expect(slide.style?.fontFamily).toBe('Arial, sans-serif');
+      expect(slide.style?.color).toBe('#FFFFFF');
+      expect(slide.style?.backgroundColor).toBe('#000000');
       expect(slide.width).toBe(1920);
       expect(slide.height).toBe(1080);
     });
@@ -83,18 +91,18 @@ describe('Slides Service', () => {
         textAlign: 'left'
       };
       
-      const slide = await slidesService.createTextSlide('Custom Slide', customStyle);
+      const slide = await service.createTextSlide('Custom Slide', customStyle);
       
-      expect(slide.style.fontSize).toBe('64px');
-      expect(slide.style.fontFamily).toBe('Times New Roman');
-      expect(slide.style.color).toBe('#FF0000');
-      expect(slide.style.backgroundColor).toBe('#0000FF');
-      expect(slide.style.textAlign).toBe('left');
+      expect(slide.style?.fontSize).toBe('64px');
+      expect(slide.style?.fontFamily).toBe('Times New Roman');
+      expect(slide.style?.color).toBe('#FF0000');
+      expect(slide.style?.backgroundColor).toBe('#0000FF');
+      expect(slide.style?.textAlign).toBe('left');
     });
 
     it('should truncate long titles', async () => {
       const longText = 'A'.repeat(100);
-      const slide = await slidesService.createTextSlide(longText);
+      const slide = await service.createTextSlide(longText);
       
       expect(slide.title.length).toBe(53); // 50 + '...'
       expect(slide.title).toContain('...');
@@ -102,7 +110,7 @@ describe('Slides Service', () => {
 
     it('should reject slides with non-existent background images', async () => {
       await expect(
-        slidesService.createTextSlide('Test', {}, '/nonexistent/image.png')
+        service.createTextSlide('Test', {}, '/nonexistent/image.png')
       ).rejects.toThrow('Background image not found');
     });
   });
@@ -110,7 +118,7 @@ describe('Slides Service', () => {
   describe('getSlideMetadata', () => {
     it('should reject non-existent files', async () => {
       await expect(
-        slidesService.getSlideMetadata('/nonexistent/file.pdf')
+        service.getSlideMetadata('/nonexistent/file.pdf')
       ).rejects.toThrow('does not exist');
     });
 
@@ -118,7 +126,7 @@ describe('Slides Service', () => {
       const testFile = path.join(tempDir, 'presentation.pptx');
       await fs.writeFile(testFile, 'test content');
       
-      const metadata = await slidesService.getSlideMetadata(testFile);
+      const metadata = await service.getSlideMetadata(testFile);
       
       expect(metadata.filename).toBe('presentation.pptx');
       expect(metadata.basename).toBe('presentation');
@@ -132,7 +140,7 @@ describe('Slides Service', () => {
   describe('importFromFolder', () => {
     it('should reject non-existent folders', async () => {
       await expect(
-        slidesService.importFromFolder('/nonexistent/folder')
+        service.importFromFolder('/nonexistent/folder')
       ).rejects.toThrow('Folder not found');
     });
 
@@ -141,12 +149,12 @@ describe('Slides Service', () => {
       await fs.writeFile(testFile, 'test');
       
       await expect(
-        slidesService.importFromFolder(testFile)
+        service.importFromFolder(testFile)
       ).rejects.toThrow('must be a directory');
     });
 
     it('should return empty array for empty folders', async () => {
-      const slides = await slidesService.importFromFolder(tempDir);
+      const slides = await service.importFromFolder(tempDir);
       expect(slides).toEqual([]);
     });
 
@@ -155,7 +163,7 @@ describe('Slides Service', () => {
       await fs.writeFile(path.join(tempDir, 'test1.pptx'), 'content');
       await fs.writeFile(path.join(tempDir, 'test2.txt'), 'content');
       
-      const slides = await slidesService.importFromFolder(tempDir, {
+      const slides = await service.importFromFolder(tempDir, {
         extensions: ['.pptx']
       });
       
@@ -171,7 +179,7 @@ describe('Slides Service', () => {
       await fs.writeFile(invalidPdf, 'not a real pdf');
       
       await expect(
-        slidesService.importPdf(invalidPdf)
+        service.importPdf(invalidPdf)
       ).rejects.toThrow('Failed to import PDF');
     });
 
@@ -181,9 +189,9 @@ describe('Slides Service', () => {
       
       // PowerPoint import requires LibreOffice
       try {
-        await slidesService.importPowerpoint(testFile);
+        await service.importPowerpoint(testFile);
         // If LibreOffice is installed, this won't throw
-      } catch (error) {
+      } catch (error: any) {
         expect(error.message).toContain('LibreOffice');
       }
     });
@@ -192,7 +200,7 @@ describe('Slides Service', () => {
   describe('importFromZip', () => {
     it('should reject non-existent zip files', async () => {
       await expect(
-        slidesService.importFromZip('/nonexistent/file.zip')
+        service.importFromZip('/nonexistent/file.zip')
       ).rejects.toThrow('Zip file not found');
     });
 
@@ -201,18 +209,17 @@ describe('Slides Service', () => {
       await fs.writeFile(testFile, 'test');
       
       await expect(
-        slidesService.importFromZip(testFile)
+        service.importFromZip(testFile)
       ).rejects.toThrow('must have .zip extension');
     });
 
     it('should handle empty zip files', async () => {
-      const AdmZip = require('adm-zip');
       const zipPath = path.join(tempDir, 'empty.zip');
       const zip = new AdmZip();
       zip.writeZip(zipPath);
       
       await expect(
-        slidesService.importFromZip(zipPath)
+        service.importFromZip(zipPath)
       ).rejects.toThrow();
     });
   });

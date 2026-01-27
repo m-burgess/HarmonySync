@@ -2,14 +2,53 @@
  * Tests for Script Service
  */
 
-const scriptService = require('../script-service');
-const { createHarmonySyncAPI } = require('../scripting-api');
+import { createHarmonySyncAPI } from '../scripting-api';
+import ScriptService from '../script-service';
+import type { ScriptValidationResult } from '../script-service';
+
+interface MockServices {
+  displayService?: any;
+  audioService?: any;
+  videoService?: any;
+  windowService?: any;
+  macroService?: any;
+  imageService?: any;
+  textService?: any;
+  schedulerService?: any;
+  midiManager?: any;
+  mainWindow: () => any;
+  audienceWindow: () => any;
+  confidenceWindow: () => any;
+  lowerThirdsWindow: () => any;
+}
+
+interface HarmonySyncAPI {
+  display?: any;
+  audio?: any;
+  video?: any;
+  image?: any;
+  text?: any;
+  window?: any;
+  midi?: any;
+  macro?: any;
+  scheduler?: any;
+  utils: {
+    wait: (ms: number) => Promise<void>;
+    [key: string]: any;
+  };
+}
 
 describe('Script Service', () => {
+  let service: ScriptService;
+  
+  beforeEach(() => {
+    service = new ScriptService();
+  });
+  
   describe('validateScript', () => {
     it('should validate correct JavaScript code', () => {
       const code = 'console.log("Hello World");';
-      const result = scriptService.validateScript(code);
+      const result: ScriptValidationResult = service.validateScript(code);
       
       expect(result.valid).toBe(true);
       expect(result.errors).toHaveLength(0);
@@ -17,7 +56,7 @@ describe('Script Service', () => {
     
     it('should detect syntax errors', () => {
       const code = 'console.log("Unclosed string';
-      const result = scriptService.validateScript(code);
+      const result: ScriptValidationResult = service.validateScript(code);
       
       expect(result.valid).toBe(false);
       expect(result.errors.length).toBeGreaterThan(0);
@@ -31,7 +70,7 @@ describe('Script Service', () => {
         }
         test();
       `;
-      const result = scriptService.validateScript(code);
+      const result: ScriptValidationResult = service.validateScript(code);
       
       expect(result.valid).toBe(true);
     });
@@ -50,7 +89,7 @@ describe('Script Service', () => {
 console.log("test");`;
       
       // Access private function via module internals (for testing)
-      const metadata = scriptService.validateScript(code);
+      const metadata: ScriptValidationResult = service.validateScript(code);
       expect(metadata.valid).toBe(true);
     });
   });
@@ -58,7 +97,7 @@ console.log("test");`;
 
 describe('HarmonySync API', () => {
   it('should create API object with all namespaces', () => {
-    const mockServices = {
+    const mockServices: MockServices = {
       displayService: {},
       audioService: {},
       videoService: {},
@@ -74,7 +113,7 @@ describe('HarmonySync API', () => {
       lowerThirdsWindow: () => null
     };
     
-    const api = createHarmonySyncAPI(mockServices);
+    const api: HarmonySyncAPI = createHarmonySyncAPI(mockServices);
     
     expect(api).toHaveProperty('display');
     expect(api).toHaveProperty('audio');
@@ -89,14 +128,14 @@ describe('HarmonySync API', () => {
   });
   
   it('should have utils.wait function', async () => {
-    const mockServices = {
+    const mockServices: MockServices = {
       mainWindow: () => null,
       audienceWindow: () => null,
       confidenceWindow: () => null,
       lowerThirdsWindow: () => null
     };
     
-    const api = createHarmonySyncAPI(mockServices);
+    const api: HarmonySyncAPI = createHarmonySyncAPI(mockServices);
     
     const start = Date.now();
     await api.utils.wait(100);
