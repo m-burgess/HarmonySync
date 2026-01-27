@@ -1,5 +1,5 @@
 /**
- * Integration helper for Rust audio cache
+ * Integration helper for audio cache management
  * Provides easy access to cache management from frontend
  */
 

@@ -51,7 +51,7 @@ const LyricsFetcher = ({ songItem, onLyricsFetched }) => {
     try {
       console.log(`Fetching lyrics for "${songTitle}" by "${artistName || 'Unknown'}"...`);
       
-      // Call the Tauri command to fetch and save lyrics
+      // Call the backend command to fetch and save lyrics
       const savedPath = await core.invoke('fetch_and_save_lyrics', {
         songTitle: songTitle.trim(),
         artist: artistName.trim() || null,
