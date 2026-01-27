@@ -8,7 +8,7 @@ export default defineConfig({
     react({
       babel: {
         parserOpts: {
-          plugins: ['decorators-legacy'],
+          plugins: ['decorators-legacy', 'typescript'],
         },
       },
     }),
@@ -44,11 +44,13 @@ export default defineConfig({
   optimizeDeps: {
     esbuildOptions: {
       target: 'es2022',
+      tsconfigRaw: {
+        compilerOptions: {
+          experimentalDecorators: true,
+          emitDecoratorMetadata: true,
+          useDefineForClassFields: false,
+        }
+      }
     },
-  },
-  esbuild: {
-    // Enable JSX/TSX in source files for React support
-    loader: 'jsx',
-    include: /src\/.*\.[jt]sx?$/,
   },
 });
