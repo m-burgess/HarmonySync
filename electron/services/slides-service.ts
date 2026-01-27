@@ -1,14 +1,21 @@
 /**
- * Slides Service
+ * Slides Service (In-Process - Coordination and Management)
  * 
- * Handles slide import from various sources with OOP architecture:
- * - PowerPoint (.pptx) files
- * - PDF documents
- * - Google Slides
- * - Text/Image slides
- * - Zip archives containing complete service folders
+ * This service runs IN-PROCESS as it primarily coordinates with other services
+ * and manages slide metadata. It delegates CPU-intensive operations to other services:
  * 
- * This service runs in-process for optimal performance and memory efficiency.
+ * - PDF rendering -> harmonysync-image-service
+ * - PowerPoint conversion -> LibreOffice + harmonysync-image-service
+ * - Image optimization -> harmonysync-image-service
+ * 
+ * This service handles:
+ * - Slide import coordination
+ * - Metadata management
+ * - Text slide creation (lightweight HTML generation)
+ * - File system operations (zip extraction, folder scanning)
+ * - Parsing service metadata from folder structures
+ * 
+ * Keeps main app responsive by delegating heavy image processing to separate services.
  */
 
 import * as fs from 'fs-extra';

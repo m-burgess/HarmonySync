@@ -1,7 +1,22 @@
 /**
- * Audio Service
- * Handles all audio-related operations including format conversion,
- * transposition, and synchronization checks using FFmpeg.
+ * Audio Service (In-Process - Lightweight Operations)
+ * 
+ * NOTE: This service handles LIGHTWEIGHT audio operations within the Electron
+ * main process. For CPU-intensive operations like multitrack playback and
+ * real-time mixing, use the separate Audio Service (harmonysync-audio-service).
+ * 
+ * This service is responsible for:
+ * - Quick metadata extraction (duration, codec, sample rate)
+ * - Audio format validation and detection
+ * - Simple format conversions (e.g., to Ogg)
+ * - Audio transposition (creates new files without blocking the main thread)
+ * - Audio synchronization checks
+ * 
+ * CPU-intensive operations handled by separate service:
+ * - Multitrack audio playback
+ * - Real-time mixing and synchronization
+ * - Audio crossfading
+ * - Memory-intensive buffer management
  */
 
 import ffmpeg from 'fluent-ffmpeg';

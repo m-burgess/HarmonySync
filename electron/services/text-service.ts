@@ -1,7 +1,20 @@
 /**
- * Text Service
- * Handles text and CSS operations including background CSS generation,
- * text formatting, slide text rendering, lyrics processing, and font management.
+ * Text Service (In-Process - Text Processing Only)
+ * 
+ * This service runs IN-PROCESS as it only performs lightweight text and CSS operations.
+ * 
+ * This service is responsible for:
+ * - Text and CSS generation for slides
+ * - Lyrics formatting and parsing
+ * - HTML generation for text slides
+ * - Background CSS animation generation
+ * - Text wrapping and formatting
+ * - Simple string manipulation
+ * 
+ * All operations are purely string-based and extremely fast, making them
+ * suitable for in-process execution without risking UI freezing.
+ * 
+ * No CPU-intensive operations are performed - just text manipulation and HTML/CSS generation.
  */
 
 import * as path from 'path';
