@@ -1,13 +1,14 @@
+import type { LyricSlide } from '../../types/audio';
 
 /**
  * Parse lyrics with vertical section-based grouping
  * Each section becomes a single slide with all its lines displayed vertically
  * This makes it easier for volunteers to work with complete song sections
  */
-export function parseLyricsToSlides(lyricsText) {
-	const slides = [];
+export function parseLyricsToSlides(lyricsText: string): LyricSlide[] {
+	const slides: LyricSlide[] = [];
 	let currentSection = 'Intro';
-	let currentSectionLines = [];
+	let currentSectionLines: string[] = [];
 
 	// Split and trim lines, but preserve empty lines for now to maintain structure
 	// Empty lines are filtered when adding to sections (line 36)
@@ -49,4 +50,3 @@ export function parseLyricsToSlides(lyricsText) {
 
 	return slides;
 }
-

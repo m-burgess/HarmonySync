@@ -1,15 +1,34 @@
 // Streaming audio functionality for individual track files
 // This approach loads tracks as individual files for streaming playback
 
-const audioBufferCache = new Map();
+import { getAudioContext } from './utils/audio/audio-nodejs';
+import { core } from './electron-adapter';
+import type { Track, TrackInfo } from './types/audio';
 
-// Load a single track file for streaming playback
-export async function loadTrackForStreaming(trackPath, trackName) {
+/**
+ * Streaming source with Web Audio nodes
+ */
+interface StreamingSource {
+  source: AudioBufferSourceNode;
+  gainNode: GainNode;
+  pannerNode: StereoPannerNode;
+  start: (when?: number) => void;
+  stop: (when?: number) => void;
+  setVolume: (volume: number) => void;
+  setPan: (pan: number) => void;
+}
+
+const audioBufferCache = new Map<string, AudioBuffer>();
+
+/**
+ * Load a single track file for streaming playback
+ */
+export async function loadTrackForStreaming(trackPath: string, trackName: string): Promise<AudioBuffer | null> {
   const cacheKey = `${trackPath}_${trackName}`;
   
   // Check cache first
   if (audioBufferCache.has(cacheKey)) {
-    return audioBufferCache.get(cacheKey);
+    return audioBufferCache.get(cacheKey)!;
   }
 
   try {
@@ -35,8 +54,13 @@ export async function loadTrackForStreaming(trackPath, trackName) {
   }
 }
 
-// Create a streaming audio source for real-time playback
-export function createStreamingSource(audioBuffer, audioContext) {
+/**
+ * Create a streaming audio source for real-time playback
+ */
+export function createStreamingSource(
+  audioBuffer: AudioBuffer | null,
+  audioContext: AudioContext | null
+): StreamingSource | null {
   if (!audioBuffer || !audioContext) {
     return null;
   }
@@ -58,16 +82,18 @@ export function createStreamingSource(audioBuffer, audioContext) {
     pannerNode,
     start: (when = 0) => source.start(when),
     stop: (when = 0) => source.stop(when),
-    setVolume: (volume) => { gainNode.gain.value = volume; },
-    setPan: (pan) => { pannerNode.pan.value = pan; }
+    setVolume: (volume: number) => { gainNode.gain.value = volume; },
+    setPan: (pan: number) => { pannerNode.pan.value = pan; }
   };
 }
 
-// Load all tracks for a song for streaming playback
-export async function loadSongTracksForStreaming(tracks) {
-  const loadingPromises = tracks.map(async (trackInfo) => {
+/**
+ * Load all tracks for a song for streaming playback
+ */
+export async function loadSongTracksForStreaming(tracks: TrackInfo[]): Promise<Track[]> {
+  const loadingPromises = tracks.map(async (trackInfo): Promise<Track | null> => {
     try {
-      let trackName = trackInfo.track_name || 'Unknown Track';
+      const trackName = trackInfo.track_name || 'Unknown Track';
       
       // For the new streaming approach, each track has its own file path
       const audioBuffer = await loadTrackForStreaming(trackInfo.file_path, trackName);
@@ -78,6 +104,7 @@ export async function loadSongTracksForStreaming(tracks) {
       }
       
       return {
+        id: '', // Will be assigned by service
         name: trackName,
         buffer: audioBuffer,
         filePath: trackInfo.file_path,
@@ -96,20 +123,20 @@ export async function loadSongTracksForStreaming(tracks) {
   });
 
   const results = await Promise.all(loadingPromises);
-  return results.filter(track => track !== null);
+  return results.filter((track): track is Track => track !== null);
 }
 
-// Clear the streaming cache
-export function clearStreamingCache() {
+/**
+ * Clear the streaming cache
+ */
+export function clearStreamingCache(): void {
   audioBufferCache.clear();
   console.log('Streaming audio cache cleared');
 }
 
-// Get cache size for debugging
-export function getStreamingCacheSize() {
+/**
+ * Get cache size for debugging
+ */
+export function getStreamingCacheSize(): number {
   return audioBufferCache.size;
 }
-
-// Import required functions from existing audio.js
-import { getAudioContext } from './audio.js';
-import { core } from './electron-adapter';

@@ -4,15 +4,15 @@
  */
 
 import { core } from '../../electron-adapter';
+import type { CacheStats } from '../../types/audio';
 
 /**
  * Get current cache statistics
- * @returns {Promise<Object>} Cache statistics
  */
-export async function getCacheStats() {
+export async function getCacheStats(): Promise<CacheStats> {
     try {
         const stats = await core.invoke('get_cache_stats_command');
-        return stats;
+        return stats as CacheStats;
     } catch (error) {
         console.error('[Cache] Failed to get stats:', error);
         return {
@@ -29,7 +29,7 @@ export async function getCacheStats() {
  * Clear the entire audio cache
  * Use when importing new song versions or to free memory
  */
-export async function clearCache() {
+export async function clearCache(): Promise<void> {
     try {
         await core.invoke('clear_audio_cache_command');
         console.log('[Cache] Cleared successfully');
@@ -40,9 +40,8 @@ export async function clearCache() {
 
 /**
  * Remove a specific file from cache
- * @param {string} path - File path to remove
  */
-export async function removeFromCache(path) {
+export async function removeFromCache(path: string): Promise<void> {
     try {
         await core.invoke('remove_from_cache_command', { path });
         console.log('[Cache] Removed:', path);
@@ -55,7 +54,7 @@ export async function removeFromCache(path) {
  * Monitor cache usage and log warnings
  * Call periodically to track cache health
  */
-export async function monitorCache() {
+export async function monitorCache(): Promise<CacheStats> {
     const stats = await getCacheStats();
     const usagePercent = (stats.memory_mb / stats.max_cache_mb) * 100;
     
@@ -70,10 +69,8 @@ export async function monitorCache() {
 
 /**
  * Format cache size for display
- * @param {number} bytes - Size in bytes
- * @returns {string} Formatted string (e.g., "123.45 MB")
  */
-export function formatCacheSize(bytes) {
+export function formatCacheSize(bytes: number): string {
     const mb = bytes / (1024 * 1024);
     return `${mb.toFixed(2)} MB`;
 }

@@ -1,13 +1,21 @@
 import { useState, useEffect } from 'react';
 import { getCacheStats } from '../utils/audio/cache';
+import type { CacheStats } from '../types/audio';
+
+/**
+ * Cache statistics with UI-friendly additions
+ */
+interface CacheStatsWithUI extends CacheStats {
+  usagePercent: number;
+  isNearLimit: boolean;
+}
 
 /**
  * React hook for monitoring audio cache
- * @param {number} pollInterval - How often to check cache (ms), default 10000 (10s)
- * @returns {Object} Cache statistics
+ * @param pollInterval - How often to check cache (ms), default 10000 (10s)
  */
-export function useAudioCache(pollInterval = 10000) {
-    const [cacheStats, setCacheStats] = useState({
+export function useAudioCache(pollInterval = 10000): CacheStatsWithUI {
+    const [cacheStats, setCacheStats] = useState<CacheStats>({
         count: 0,
         memory_bytes: 0,
         memory_mb: 0,
