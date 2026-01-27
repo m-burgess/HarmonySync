@@ -1,7 +1,23 @@
 /**
- * Video Service
- * Handles video-related operations including metadata extraction, transcoding,
- * thumbnail generation, frame extraction, and optimization for web streaming.
+ * Video Service (In-Process - Lightweight Operations)
+ * 
+ * NOTE: This service handles LIGHTWEIGHT video operations within the Electron
+ * main process. For CPU-intensive operations like transcoding and batch processing,
+ * use the separate Video Service (harmonysync-video-service/).
+ * 
+ * This service is responsible for:
+ * - Quick video metadata extraction (duration, dimensions, codec)
+ * - Format detection and validation
+ * - Compatibility checks (needsTranscoding)
+ * - Quick thumbnail generation for small videos
+ * 
+ * CPU-intensive operations handled by separate service:
+ * - Video transcoding and format conversion (H.264 encoding)
+ * - Batch video processing
+ * - Frame extraction from large videos
+ * - Video optimization for streaming
+ * 
+ * For intensive operations, delegate to harmonysync-video-service via Socket.io/HTTP.
  */
 
 import ffmpeg from 'fluent-ffmpeg';
