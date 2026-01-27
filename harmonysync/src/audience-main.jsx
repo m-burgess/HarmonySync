@@ -36,7 +36,7 @@ const AudienceApp = () => {
       try {
         // Use a fixed port or dynamically find one
         const port = 3001; // Example port
-        const url = await TauriCore.invoke('start_http_server', { port });
+        const url = await core.invoke('start_http_server', { port });
         httpServerUrl.current = url;
         console.log('Custom HTTP server started at:', url);
       } catch (error) {
@@ -52,13 +52,13 @@ const AudienceApp = () => {
 
 
     // Listen for the display-video-slide event
-    const unlisten = TauriEvent.listen('display-video-slide', async (event) => {
+    const unlisten = event.listen('display-video-slide', async (event) => {
       const videoPath = event.payload; // This is the absolute path to the video file
       console.log('Audience Screen: Received display-video-slide event with path:', videoPath);
 
       if (videoRef.current && httpServerUrl.current) {
         try {
-          const fileName = await TauriPath.basename(videoPath); // Get just the filename
+          const fileName = videoPath.split('/').pop().split('\\').pop(); // Get just the filename (cross-platform)
           const videoUrl = `${httpServerUrl.current}/${fileName}`;
 
           console.log('Audience Screen: Video URL from custom HTTP server:', videoUrl);
@@ -91,7 +91,7 @@ const AudienceApp = () => {
         videoRef.current.removeEventListener('timeupdate', handleVideoTimeUpdate);
       }
       // Stop the HTTP server when component unmounts
-      TauriCore.invoke('stop_http_server').catch(e => console.error('Error stopping HTTP server:', e));
+      core.invoke('stop_http_server').catch(e => console.error('Error stopping HTTP server:', e));
     };
   }, []); // Run once on component mount
 

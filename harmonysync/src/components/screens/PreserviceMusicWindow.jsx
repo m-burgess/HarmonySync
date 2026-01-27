@@ -105,7 +105,7 @@ const PreserviceMusicWindow = () => {
       const configPath = await getConfigPath();
       
       try {
-        const content = await TauriFs.readTextFile(configPath);
+        const content = await fs.readTextFile(configPath);
         const config = JSON.parse(content);
         
         if (config.preservicePlaylistUrl) {
