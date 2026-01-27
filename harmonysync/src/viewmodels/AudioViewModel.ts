@@ -714,7 +714,7 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
       const adapter = await import('../electron-adapter');
       const { core, fs } = adapter;
 
-      // Call the Rust command to transpose files
+      // Call the audio transposition command
       const outputDir = await core.invoke('transpose_audio_files', {
         directory: currentDirectory,
         semitones: semitones,
