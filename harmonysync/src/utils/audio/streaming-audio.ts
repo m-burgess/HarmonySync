@@ -166,7 +166,7 @@ interface PreloadOptions {
  */
 export async function preloadTrack(
   assetUrl: string,
-  { decode = false, timeout = 30000 }: PreloadOptions = {}
+  { decode = false }: PreloadOptions = {}
 ): Promise<void> {
   if (!assetUrl) {
     throw new Error('assetUrl is required for preload');

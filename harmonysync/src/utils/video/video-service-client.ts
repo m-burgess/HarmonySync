@@ -20,15 +20,6 @@ interface VideoProcessingOptions {
 }
 
 /**
- * Queue status response
- */
-interface QueueStatus {
-  pending: number;
-  processing: number;
-  completed: number;
-}
-
-/**
  * Health check response
  */
 interface HealthResponse {

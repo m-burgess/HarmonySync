@@ -265,8 +265,8 @@ export async function loadAudioFile(path: string): Promise<string> {
     const client = await ensureAudioService();
     
     try {
-        const trackId: string = await client.loadTrack(path, name);
-        console.log(`✅ Loaded track: ${name || path}`);
+        const trackId = await client.loadTrack(path);
+        console.log(`✅ Loaded track: ${path}`);
         return trackId;
     } catch (error) {
         console.error(`❌ Failed to load track ${path}:`, error);
@@ -546,7 +546,7 @@ export async function crossfadeToTracks(trackPaths: string[], fadeDuration: numb
         console.log(`🎵 Crossfade call stack:`, new Error().stack);
         console.log(`🎵 Crossfade track paths:`, trackPaths);
         
-        await client.crossfadeToTracks(trackPaths, fadeDuration);
+        await client.crossfadeToTracks(fadeDuration);
         
         console.log('✅ Crossfade initiated successfully');
         
