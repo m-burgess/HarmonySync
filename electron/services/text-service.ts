@@ -11,7 +11,7 @@
  * - Text wrapping and formatting
  * - Simple string manipulation
  * 
- * All operations are purely string-based and complete in < 10ms, making them
+ * All operations are purely string-based and extremely fast, making them
  * suitable for in-process execution without risking UI freezing.
  * 
  * No CPU-intensive operations are performed - just text manipulation and HTML/CSS generation.

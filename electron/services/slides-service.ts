@@ -13,7 +13,7 @@
  * - Metadata management
  * - Text slide creation (lightweight HTML generation)
  * - File system operations (zip extraction, folder scanning)
- * - Service folder structure parsing
+ * - Parsing service metadata from folder structures
  * 
  * Keeps main app responsive by delegating heavy image processing to separate services.
  */

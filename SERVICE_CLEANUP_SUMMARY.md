@@ -87,6 +87,8 @@ Each service now has clear documentation about:
 
 ### Separate Services (Prevent UI Freezing)
 
+**Note**: CPU and memory usage are approximate and vary based on hardware and file sizes.
+
 | Service | CPU Usage | Memory Usage | Operation Time |
 |---------|-----------|--------------|----------------|
 | Audio (multitrack) | High (40-60%) | High (100-500MB) | Continuous |
@@ -110,10 +112,12 @@ Each service now has clear documentation about:
 
 The current service architecture is **well-designed and does not need changes**. The separation of concerns is correct:
 
-- Heavy operations run in separate processes ✅
-- Light operations run in-process for performance ✅
+- Heavy operations run in separate processes (prevent UI freezing) ✅
+- Light operations run in-process for better performance ✅
 - No actual duplicate code exists ✅
-- Clear separation prevents UI freezing ✅
+
+**Decision Guidelines**: Operations taking 500ms-1s or using 10-20% CPU should be evaluated 
+based on frequency and user impact. The thresholds provided are guidelines, not hard rules.
 
 ### Future Enhancements (Optional)
 
