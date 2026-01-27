@@ -1,7 +1,8 @@
 // Client interface for communicating with the Node.js video processing service
 
 import io, { Socket } from 'socket.io-client';
-import type { Job, EventHandler } from '../../types/audio';
+import type { Job } from '../../types/audio';
+import type { EventHandler } from '../../types/events';
 
 /**
  * Video processing options

@@ -3,7 +3,10 @@
  * These types are used across audio utilities and services
  */
 
-import type { MemoryUsage } from './models';
+import type { MemoryUsage as BaseMemoryUsage } from './models';
+
+// Re-export MemoryUsage for convenience
+export type { MemoryUsage } from './models';
 
 /**
  * Cache statistics from audio service
@@ -43,7 +46,7 @@ export interface Track {
  */
 export interface MixerState {
   tracks: Track[];
-  memoryUsage: MemoryUsage;
+  memoryUsage: BaseMemoryUsage;
   masterVolume?: number;
 }
 
@@ -52,7 +55,7 @@ export interface MixerState {
  */
 export interface ServiceStatus {
   isRunning: boolean;
-  memoryUsage?: MemoryUsage;
+  memoryUsage?: BaseMemoryUsage;
   version?: string;
   error?: string;
 }
@@ -78,7 +81,7 @@ export interface Job {
  */
 export interface HealthResponse {
   status: string;
-  memoryUsage: MemoryUsage;
+  memoryUsage: BaseMemoryUsage;
   version: string;
 }
 
@@ -224,11 +227,6 @@ export interface CreateSongRequest {
   name: string;
   trackPaths: string[];
 }
-
-/**
- * Event handler function type
- */
-export type EventHandler<T = unknown> = (data: T) => void;
 
 /**
  * Fade type for transitions

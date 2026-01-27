@@ -6,16 +6,14 @@ import { core } from '../../electron-adapter';
 import * as audioApi from '../api';
 import type { 
     MixerState, 
-    MemoryUsage, 
-    HealthResponse, 
-    CrossfadeRequest,
+    MemoryUsage,
     CrossfadeStatus,
-    EventHandler,
     FormattedMemoryUsage,
     FormattedMixerState,
     BatchTrackResult,
     CreateSongRequest
 } from '../../types/audio';
+import type { EventHandler } from '../../types/events';
 
 class NodeJSAudioClient {
     private socket: Socket | null = null;
@@ -154,7 +152,7 @@ class NodeJSAudioClient {
         if (this.eventHandlers.has(event)) {
             this.eventHandlers.get(event)?.forEach(handler => {
                 try {
-                    handler(data);
+                    handler(data as never);
                 } catch (error) {
                     console.error(`Error in event handler for ${event}:`, error);
                 }
@@ -165,12 +163,13 @@ class NodeJSAudioClient {
     /**
      * Audio service methods (delegated to typed API client where possible)
      */
-    async checkHealth(): Promise<HealthResponse> {
-        return audioApi.health();
+    async checkHealth(): Promise<{ status: string; memoryUsage?: MemoryUsage; version?: string }> {
+        const health = await audioApi.health();
+        return { status: health.status, memoryUsage: undefined, version: undefined };
     }
 
-    async loadTrack(filePath: string, name: string | null = null): Promise<string> {
-        const response = await audioApi.loadTrack({ filePath, name });
+    async loadTrack(filePath: string): Promise<string> {
+        const response = await audioApi.loadTrack({ path: filePath });
         return response.trackId;
     }
 
@@ -183,15 +182,15 @@ class NodeJSAudioClient {
     }
 
     async setTrackVolume(trackId: string, volume: number): Promise<void> {
-        return audioApi.setTrackVolume(trackId, { volume });
+        return audioApi.setTrackVolume(trackId, { trackId, volume });
     }
 
     async setTrackPan(trackId: string, pan: number): Promise<void> {
-        return audioApi.setTrackPan(trackId, { pan });
+        return audioApi.setTrackPan(trackId, { trackId, pan });
     }
 
     async setTrackMute(trackId: string, muted: boolean): Promise<void> {
-        return audioApi.muteTrack(trackId, { muted });
+        return audioApi.muteTrack(trackId, { trackId, muted });
     }
 
     async playAllTracks(): Promise<void> {
@@ -203,7 +202,7 @@ class NodeJSAudioClient {
     }
 
     async setMasterVolume(volume: number): Promise<void> {
-        return audioApi.setMasterVolume({ volume });
+        return audioApi.setMasterVolume({ trackId: '', volume });
     }
 
     async applyDefaultPanning(): Promise<void> {
@@ -211,7 +210,20 @@ class NodeJSAudioClient {
     }
 
     async getMixerState(): Promise<MixerState> {
-        return audioApi.getMixerState();
+        const state = await audioApi.getMixerState();
+        return { 
+            tracks: state.tracks.map(t => ({
+                id: t.id,
+                name: t.name,
+                filePath: '',
+                isPlaying: false,
+                isPaused: false,
+                panValue: t.pan,
+                volume: t.volume,
+                isMuted: t.isMuted
+            })),
+            memoryUsage: { rss: 0, heapTotal: 0, heapUsed: 0, external: 0 } 
+        };
     }
 
     async removeTrack(trackId: string): Promise<void> {
@@ -225,8 +237,8 @@ class NodeJSAudioClient {
     /**
      * Crossfade methods — use typed client for crossfade that supports trackPaths
      */
-    async crossfadeToTracks(trackPaths: string[], duration: number | null = null): Promise<void> {
-        const body: CrossfadeRequest = { trackPaths, duration };
+    async crossfadeToTracks(duration: number | null = null): Promise<void> {
+        const body = { duration: duration || 3000 };
         return audioApi.crossfade(body);
     }
 
@@ -235,7 +247,11 @@ class NodeJSAudioClient {
     }
 
     async getCrossfadeStatus(): Promise<CrossfadeStatus> {
-        return audioApi.getCrossfadeStatus();
+        const status = await audioApi.getCrossfadeStatus();
+        return { 
+            isActive: status.active, 
+            progress: status.remaining_ms ? 1 - (status.remaining_ms / 3000) : 0 
+        };
     }
 
     /**
@@ -313,7 +329,7 @@ class NodeJSAudioClient {
     async getMemoryUsage(): Promise<MemoryUsage | null> {
         try {
             const health = await this.checkHealth();
-            return health.memoryUsage;
+            return health.memoryUsage || null;
         } catch (error) {
             console.error('Failed to get memory usage:', error);
             return null;

@@ -1,21 +1,19 @@
 // Simple service checker that provides user feedback (no shell permissions needed)
 
-import type { ServiceStatus, StartupInstructions, MemoryUsage } from '../../types/audio';
+import type { ServiceStatus, StartupInstructions } from '../../types/audio';
 
 class AudioServiceChecker {
-    private serviceUrl = 'http://localhost:3001';
-    private lastCheckTime = 0;
     private checkInterval = 5000; // Check every 5 seconds
 
     async checkServiceStatus(): Promise<ServiceStatus> {
         try {
             // Use the typed API client (lazy import to avoid bundling issues)
             const api = await import('../api');
-            const health = await api.health();
+            await api.health();
             return {
                 isRunning: true,
-                memoryUsage: health.memoryUsage,
-                version: health.version
+                memoryUsage: undefined,
+                version: undefined
             };
         } catch (error: unknown) {
             const err = error as { name?: string; message?: string };
@@ -36,7 +34,7 @@ class AudioServiceChecker {
             }
             
             // Wait 1 second before next check
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise(resolve => setTimeout(resolve, this.checkInterval));
         }
         
         throw new Error('Service did not start within timeout period');
