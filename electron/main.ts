@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs-extra';
 import { spawn, ChildProcess } from 'child_process';
 
-// Import backend services - using require for .js modules without type definitions
+// Import backend services - using require since they will be compiled to CommonJS at runtime
 const jsonStorage = require('./services/json-storage');
 const ffmpegService = require('./services/ffmpeg');
 const audioService = require('./services/audio-service');
