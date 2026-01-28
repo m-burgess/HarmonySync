@@ -214,11 +214,11 @@ class IPCHandlerManager {
    */
   private registerVideoServiceHandlers(): void {
     this.ipcMain.handle('video:getMetadata', async (_event, videoPath: string) => {
-      return await this.services.videoService.getVideoMetadata(videoPath);
+      return await this.services.videoService.getMetadata(videoPath);
     });
 
     this.ipcMain.handle('video:transcode', async (_event, inputPath: string) => {
-      return await this.services.videoService.transcodeVideo(inputPath, (progress: any) => {
+      return await this.services.videoService.transcode(inputPath, (progress: any) => {
         const win = this.services.mainWindow();
         if (win) win.webContents.send('video-transcode-progress', progress);
       });
@@ -506,7 +506,7 @@ class IPCHandlerManager {
    */
   private registerScriptHandlers(): void {
     this.ipcMain.handle('script:getAll', async () => {
-      return await this.services.scriptService.getAllScripts();
+      return await this.services.scriptService.list();
     });
 
     this.ipcMain.handle('script:get', async (_event, scriptId: string) => {
@@ -514,7 +514,7 @@ class IPCHandlerManager {
     });
 
     this.ipcMain.handle('script:create', async (_event, scriptData: any) => {
-      return await this.services.scriptService.createScript(scriptData);
+      return await this.services.scriptService.save(scriptData);
     });
 
     this.ipcMain.handle('script:update', async (_event, scriptId: string, updates: any) => {
@@ -522,7 +522,7 @@ class IPCHandlerManager {
     });
 
     this.ipcMain.handle('script:delete', async (_event, scriptId: string) => {
-      return await this.services.scriptService.deleteScript(scriptId);
+      return await this.services.scriptService.delete(scriptId);
     });
 
     this.ipcMain.handle('script:validate', async (_event, code: string) => {
@@ -953,7 +953,7 @@ class IPCHandlerManager {
     });
 
     this.ipcMain.handle('display:blackScreen', async () => {
-      return await this.services.displayService.displayBlackScreen(this.services.audienceWindow);
+      return await this.services.displayService.blackScreen(this.services.audienceWindow);
     });
 
     this.ipcMain.handle('display:clearAll', async () => {
@@ -979,7 +979,7 @@ class IPCHandlerManager {
     });
 
     this.ipcMain.handle('display:broadcast', async (_event, channel: string, data: any) => {
-      return await this.services.displayService.broadcastToAllDisplays(
+      return await this.services.displayService.broadcast(
         this.services.audienceWindow,
         this.services.confidenceWindow,
         this.services.lowerThirdsWindow,
@@ -994,27 +994,27 @@ class IPCHandlerManager {
    */
   private registerWindowServiceHandlers(): void {
     this.ipcMain.handle('window:showAudience', async () => {
-      return await this.services.windowService.showAudienceWindow(this.services.audienceWindow);
+      return await this.services.windowService.showAudience(this.services.audienceWindow);
     });
 
     this.ipcMain.handle('window:hideAudience', async () => {
-      return await this.services.windowService.hideAudienceWindow(this.services.audienceWindow);
+      return await this.services.windowService.hideAudience(this.services.audienceWindow);
     });
 
     this.ipcMain.handle('window:showConfidence', async () => {
-      return await this.services.windowService.showConfidenceWindow(this.services.confidenceWindow);
+      return await this.services.windowService.showConfidence(this.services.confidenceWindow);
     });
 
     this.ipcMain.handle('window:hideConfidence', async () => {
-      return await this.services.windowService.hideConfidenceWindow(this.services.confidenceWindow);
+      return await this.services.windowService.hideConfidence(this.services.confidenceWindow);
     });
 
     this.ipcMain.handle('window:showLowerThirds', async () => {
-      return await this.services.windowService.showLowerThirdsWindow(this.services.lowerThirdsWindow);
+      return await this.services.windowService.showLowerThirds(this.services.lowerThirdsWindow);
     });
 
     this.ipcMain.handle('window:hideLowerThirds', async () => {
-      return await this.services.windowService.hideLowerThirdsWindow(this.services.lowerThirdsWindow);
+      return await this.services.windowService.hideLowerThirds(this.services.lowerThirdsWindow);
     });
 
     this.ipcMain.handle('window:toggle', async (_event, windowName: string) => {
@@ -1329,31 +1329,31 @@ class IPCHandlerManager {
    */
   private registerDisplayConfigHandlers(): void {
     this.ipcMain.handle('displayConfig:getAll', async () => {
-      return this.services.displayConfigService.getAllDisplayConfigs();
+      return this.services.displayConfigService.getAll();
     });
 
     this.ipcMain.handle('displayConfig:get', async (_event, id: string) => {
-      return this.services.displayConfigService.getDisplayConfig(id);
+      return this.services.displayConfigService.get(id);
     });
 
     this.ipcMain.handle('displayConfig:create', async (_event, config: any) => {
-      return await this.services.displayConfigService.createDisplayConfig(config);
+      return await this.services.displayConfigService.create(config);
     });
 
     this.ipcMain.handle('displayConfig:update', async (_event, id: string, updates: any) => {
-      return await this.services.displayConfigService.updateDisplayConfig(id, updates);
+      return await this.services.displayConfigService.update(id, updates);
     });
 
     this.ipcMain.handle('displayConfig:delete', async (_event, id: string) => {
-      return await this.services.displayConfigService.deleteDisplayConfig(id);
+      return await this.services.displayConfigService.delete(id);
     });
 
     this.ipcMain.handle('displayConfig:reorder', async (_event, orderedIds: string[]) => {
-      return await this.services.displayConfigService.reorderDisplayConfigs(orderedIds);
+      return await this.services.displayConfigService.reorder(orderedIds);
     });
 
     this.ipcMain.handle('displayConfig:getEnabled', async () => {
-      return this.services.displayConfigService.getEnabledDisplayConfigs();
+      return this.services.displayConfigService.getEnabled();
     });
   }
 

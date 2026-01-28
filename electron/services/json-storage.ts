@@ -49,6 +49,7 @@ export class JSONStorageService extends BaseElectronService implements IStorageS
   private storagePath: string = '';
   private scheduledEvents: ScheduledEvent[] = [];
   private macros: Macro[] = [];
+  private slideMacros: Map<string, string[]> = new Map(); // slideId -> macroIds
   private gdriveSyncConfig: GDriveSyncConfig[] = [];
   private appSettings: Record<string, any> = {};
 
@@ -69,6 +70,7 @@ export class JSONStorageService extends BaseElectronService implements IStorageS
     // Load all data from JSON files
     await this.loadScheduledEvents();
     await this.loadMacros();
+    await this.loadSlideMacros();
     await this.loadGDriveSyncConfig();
     await this.loadAppSettings();
 
@@ -83,6 +85,7 @@ export class JSONStorageService extends BaseElectronService implements IStorageS
     // Clear in-memory data
     this.scheduledEvents = [];
     this.macros = [];
+    this.slideMacros.clear();
     this.gdriveSyncConfig = [];
     this.appSettings = {};
     
@@ -338,6 +341,92 @@ export class JSONStorageService extends BaseElectronService implements IStorageS
     
     this.log('warn', `Macro not found: ${id}`);
     return false;
+  }
+
+  // ==================== Slide-Macro Mappings ====================
+
+  /**
+   * Load slide-macro mappings from JSON file
+   */
+  private async loadSlideMacros(): Promise<void> {
+    const filePath = path.join(this.storagePath, 'slide-macros.json');
+    try {
+      if (await fs.pathExists(filePath)) {
+        const data = await fs.readJson(filePath);
+        this.slideMacros = new Map(Object.entries(data));
+      } else {
+        this.slideMacros = new Map();
+        await this.saveSlideMacros();
+      }
+    } catch (error) {
+      this.log('error', 'Error loading slide-macro mappings:', error);
+      this.slideMacros = new Map();
+    }
+  }
+
+  /**
+   * Save slide-macro mappings to JSON file
+   */
+  private async saveSlideMacros(): Promise<void> {
+    const filePath = path.join(this.storagePath, 'slide-macros.json');
+    const data = Object.fromEntries(this.slideMacros);
+    await fs.writeJson(filePath, data, { spaces: 2 });
+  }
+
+  /**
+   * Get macros for a specific slide
+   */
+  public async getMacrosForSlide(slideId: string): Promise<Macro[]> {
+    this.ensureInitialized();
+    const macroIds = this.slideMacros.get(slideId) || [];
+    const macros = macroIds
+      .map(id => this.macros.find(m => m.id === id))
+      .filter((m): m is Macro => m !== undefined);
+    return macros;
+  }
+
+  /**
+   * Add macro to slide
+   */
+  public async addMacroToSlide(slideId: string, macroId: string): Promise<void> {
+    this.ensureInitialized();
+    
+    // Verify macro exists
+    const macro = this.macros.find(m => m.id === macroId);
+    if (!macro) {
+      throw new Error(`Macro not found: ${macroId}`);
+    }
+    
+    // Get existing macros for slide
+    let macroIds = this.slideMacros.get(slideId) || [];
+    
+    // Add macro if not already present
+    if (!macroIds.includes(macroId)) {
+      macroIds.push(macroId);
+      this.slideMacros.set(slideId, macroIds);
+      await this.saveSlideMacros();
+      this.log('info', `Added macro ${macroId} to slide ${slideId}`);
+    }
+  }
+
+  /**
+   * Remove macro from slide
+   */
+  public async removeMacroFromSlide(slideId: string, macroId: string): Promise<void> {
+    this.ensureInitialized();
+    
+    const macroIds = this.slideMacros.get(slideId) || [];
+    const filteredIds = macroIds.filter(id => id !== macroId);
+    
+    if (filteredIds.length < macroIds.length) {
+      if (filteredIds.length === 0) {
+        this.slideMacros.delete(slideId);
+      } else {
+        this.slideMacros.set(slideId, filteredIds);
+      }
+      await this.saveSlideMacros();
+      this.log('info', `Removed macro ${macroId} from slide ${slideId}`);
+    }
   }
 
   // ==================== Google Drive Sync ====================
