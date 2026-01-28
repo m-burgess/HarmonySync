@@ -193,6 +193,7 @@ jobs:
         with:
           name: project-manager-plans
           path: plans/
+        # Note: Downloaded for reference - Backend Expert reviews the detailed backend plan
 
       - name: Backend Implementation
         id: implement
@@ -261,6 +262,7 @@ jobs:
         with:
           pattern: '*'
           path: plans/
+        # Note: Artifacts downloaded for reference - agents can review previous phase outputs
 
       - name: Frontend Implementation
         id: implement
@@ -330,6 +332,7 @@ jobs:
         with:
           pattern: '*'
           path: plans/
+        # Note: QA Expert reviews all implementation reports to design comprehensive tests
 
       - name: QA Testing
         id: test
@@ -412,6 +415,7 @@ jobs:
         with:
           pattern: '*'
           path: plans/
+        # Note: Project Manager reviews all phase outputs to validate plan adherence
 
       - name: Validate Implementation
         id: validate
@@ -587,7 +591,7 @@ jobs:
           echo "6. ✅ **Project Manager** - Validated adherence to plan" >> summary.md
           echo "7. ✅ **Product Owner** - Final vision approval" >> summary.md
           echo "" >> summary.md
-          echo "### All Available Custom Agents Utilized" >> summary.md
+          echo "### All Custom Agents Utilized in This Workflow" >> summary.md
           echo "" >> summary.md
           echo "- ✅ Backend-Expert.md" >> summary.md
           echo "- ✅ Cross-Platform-Systems-Expert.md" >> summary.md
@@ -600,6 +604,12 @@ jobs:
           echo "- ✅ QA-Testing-Expert.md" >> summary.md
           echo "- ✅ Typescript-Expert.agent.md" >> summary.md
           echo "- ✅ UX-Designer.md" >> summary.md
+          echo "" >> summary.md
+          echo "**Total**: 11 of 13 available agents" >> summary.md
+          echo "" >> summary.md
+          echo "**Not included in this workflow** (available for specialized features):" >> summary.md
+          echo "- Media-Systems-Engineer.md" >> summary.md
+          echo "- GitHub-Workflow-Expert.md" >> summary.md
           echo "" >> summary.md
           echo "### Artifacts Generated" >> summary.md
           echo "" >> summary.md
