@@ -18,14 +18,13 @@ permissions:
   issues: write
   pull-requests: write
 
-# Prevent concurrent runs from racing on the same feature (by request text + branch)
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}-${{ inputs.feature_request }}
   cancel-in-progress: false
 
 jobs:
   # ============================================================================
-  # Phase 1: Product Owner - High-Level Planning + NEW BRANCH + (attempt) NEW PR
+  # Phase 1: Product Owner - High-Level Planning + NEW BRANCH + NEW PR
   # ============================================================================
   product-owner-planning:
     name: "🎯 Product Owner - High-Level Plan (Branch + PR)"
@@ -33,8 +32,8 @@ jobs:
     outputs:
       branch_name: ${{ steps.vars.outputs.branch_name }}
       base_branch: ${{ steps.vars.outputs.base_branch }}
-      pr_number: ${{ steps.pr-outputs.outputs.pr_number }}
-      pr_url: ${{ steps.pr-outputs.outputs.pr_url }}
+      pr_number: ${{ steps.create-pr.outputs.pr_number }}
+      pr_url: ${{ steps.create-pr.outputs.pr_url }}
     steps:
       - name: Checkout default branch
         uses: actions/checkout@v4
@@ -50,198 +49,165 @@ jobs:
           echo "branch_name=$BRANCH" >> "$GITHUB_OUTPUT"
           echo "base_branch=$BASE" >> "$GITHUB_OUTPUT"
 
-      - name: Create High-Level Plan (file content)
-        shell: bash
-        env:
-          FEATURE_REQUEST: ${{ inputs.feature_request }}
-          PROJECT_CONTEXT: ${{ inputs.project_context }}
-        run: |
-          mkdir -p plans artifacts
-          {
-            echo "## Product Owner High-Level Plan"
-            echo
-            echo "**Feature Request**: ${FEATURE_REQUEST}"
-            echo
-            echo "**Context**: ${PROJECT_CONTEXT}"
-            echo
-            echo "### Vision & Scope"
-            echo "- The Product Owner agent (Product-owner.md) should:"
-            echo "  - Review the feature request against HarmonySync product vision"
-            echo "  - Define user value and success criteria"
-            echo "  - Establish scope boundaries (MVP vs Phase 2+)"
-            echo "  - Ensure MVVM architecture compliance"
-            echo "  - Create high-level epics and user stories"
-            echo
-            echo "### Deliverables for Project Manager"
-            echo "- High-level requirements document"
-            echo "- Acceptance criteria"
-            echo "- Scope constraints"
-            echo "- MVVM architecture guidelines for this feature"
-            echo
-            echo "---"
-            echo "**Status**: Ready for Project Manager review"
-          } > plans/01-product-owner-plan.md
-          cp plans/01-product-owner-plan.md artifacts/01-product-owner-plan.md
-
-      - name: Create or update feature branch and push initial plan (rebase-safe)
+      - name: Create feature branch
         shell: bash
         run: |
-          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
           BRANCH="${{ steps.vars.outputs.branch_name }}"
           git fetch --all --prune
-
           if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
-            echo "Remote branch '$BRANCH' exists. Checking out and rebasing..."
+            echo "Branch exists, checking out"
             git checkout "$BRANCH"
-            git pull --rebase origin "$BRANCH"
           else
-            echo "Remote branch '$BRANCH' does not exist. Creating it..."
+            echo "Creating new branch"
             git checkout -b "$BRANCH"
+            git push -u origin "$BRANCH"
           fi
 
-          git add plans/01-product-owner-plan.md
-          if git diff --cached --quiet; then
-            echo "No changes to commit for Product Owner plan."
-          else
-            git commit -m "docs(plan): Product Owner high-level plan for '${{ inputs.feature_request }}'"
-            if ! git push origin "$BRANCH"; then
-              echo "Normal push failed, attempting --force-with-lease."
-              git push --force-with-lease origin "$BRANCH"
-            fi
-          fi
-
-      - name: Build initial PR body with master checklist
-        id: build-pr-body
-        shell: bash
+       - name: Create PR with checklist
+        id: create-pr
+        uses: actions/github-script@v7
         env:
           FEATURE_REQUEST: ${{ inputs.feature_request }}
           PROJECT_CONTEXT: ${{ inputs.project_context }}
-        run: |
-          {
-            echo "${FEATURE_REQUEST}"
-            echo
-            if [ -n "${PROJECT_CONTEXT}" ]; then
-              echo "**Context**: ${PROJECT_CONTEXT}"
-            else
-              echo "**Context**: (none)"
-            fi
-            echo
-            echo "This PR implements the comprehensive multi-agent workflow for the requested feature."
-            echo "As each phase completes, this checklist will be auto-updated by CI."
-            echo
-            echo "### Product Owner Checklist"
-            echo "- [ ] Vision & Scope defined"
-            echo "- [ ] Acceptance criteria documented"
-            echo "- [ ] Scope constraints identified"
-            echo "- [ ] MVVM guidelines provided"
-            echo
-            echo "### Project Manager Checklist"
-            echo "- [ ] Backend plan prepared"
-            echo "- [ ] Frontend plan prepared"
-            echo "- [ ] QA plan prepared"
-            echo
-            echo "### Backend Checklist"
-            echo "- [ ] Models implemented following MVVM"
-            echo "- [ ] ViewModels implemented with observable state"
-            echo "- [ ] Services integrated"
-            echo "- [ ] Cross-platform compatibility verified"
-            echo "- [ ] Integration points documented"
-            echo "- [ ] Code follows TypeScript best practices"
-            echo
-            echo "### Frontend Checklist"
-            echo "- [ ] MVVM View components implemented"
-            echo "- [ ] Components properly bound to ViewModels"
-            echo "- [ ] No business logic in View components"
-            echo "- [ ] Styling complete with TailwindCSS"
-            echo "- [ ] Accessibility requirements met"
-            echo "- [ ] Responsive design verified"
-            echo "- [ ] Backend API integration working"
-            echo
-            echo "### QA Checklist"
-            echo "- [ ] Unit tests"
-            echo "- [ ] Integration tests"
-            echo "- [ ] End-to-End tests"
-            echo "- [ ] Regression tests & Code Coverage reported"
-            echo
-            echo "### Validation (Project Manager)"
-            echo "- [ ] Backend follows detailed backend plan"
-            echo "- [ ] Frontend follows detailed frontend plan"
-            echo "- [ ] QA covered all planned scenarios"
-            echo "- [ ] All dependencies addressed"
-            echo "- [ ] MVVM properly implemented"
-            echo "- [ ] All tests passing"
-            echo "- [ ] Code quality standards met"
-            echo "- [ ] Documentation complete"
-            echo "- [ ] No scope creep"
-            echo "- [ ] Backend and frontend integrated"
-            echo "- [ ] Cross-platform compatibility confirmed"
-            echo "- [ ] Performance requirements met"
-            echo
-            echo "### Final Approval (Product Owner)"
-            echo "- [ ] Feature aligns with product vision"
-            echo "- [ ] User value clearly delivered"
-            echo "- [ ] MVP scope respected"
-            echo "- [ ] MVVM integrity maintained"
-            echo "- [ ] Volunteer-friendly"
-            echo "- [ ] Meets acceptance criteria"
-            echo "- [ ] No hidden automation/surprises"
-            echo "- [ ] Reliability prioritized"
-            echo "- [ ] Production-ready quality"
-            echo "- [ ] Cross-platform confirmed"
-            echo "- [ ] Docs adequate for users/developers"
-          } > pr.md
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const branch = `${{ steps.vars.outputs.branch_name }}`;
+            const base = `${{ steps.vars.outputs.base_branch }}`;
+            const head = `${owner}:${branch}`;
+            
+            // Check if PR already exists
+            const existingPRs = await github.paginate(github.rest.pulls.list, { 
+              owner, repo, state: 'open', head 
+            });
+            
+            if (existingPRs.length > 0) {
+              core.setOutput('pr_number', String(existingPRs[0].number));
+              core.setOutput('pr_url', existingPRs[0].html_url);
+              console.log(`PR already exists: #${existingPRs[0].number}`);
+              return;
+            }
+            
+            // Create PR body with checklist
+            const featureRequest = process.env.FEATURE_REQUEST || '';
+            const projectContext = process.env.PROJECT_CONTEXT || '(none)';
+            
+            const body = featureRequest + '\n\n' +
+              '**Context**: ' + projectContext + '\n\n' +
+              'This PR implements the comprehensive multi-agent workflow for the requested feature.\n' +
+              'As each phase completes, this checklist will be auto-updated by CI.\n\n' +
+              '### Product Owner Checklist\n' +
+              '- [ ] Vision & Scope defined\n' +
+              '- [ ] Acceptance criteria documented\n' +
+              '- [ ] Scope constraints identified\n' +
+              '- [ ] MVVM guidelines provided\n\n' +
+              '### Project Manager Checklist\n' +
+              '- [ ] Backend plan prepared\n' +
+              '- [ ] Frontend plan prepared\n' +
+              '- [ ] QA plan prepared\n\n' +
+              '### Backend Checklist\n' +
+              '- [ ] Models implemented following MVVM\n' +
+              '- [ ] ViewModels implemented with observable state\n' +
+              '- [ ] Services integrated\n' +
+              '- [ ] Cross-platform compatibility verified\n' +
+              '- [ ] Integration points documented\n' +
+              '- [ ] Code follows TypeScript best practices\n\n' +
+              '### Frontend Checklist\n' +
+              '- [ ] MVVM View components implemented\n' +
+              '- [ ] Components properly bound to ViewModels\n' +
+              '- [ ] No business logic in View components\n' +
+              '- [ ] Styling complete with TailwindCSS\n' +
+              '- [ ] Accessibility requirements met\n' +
+              '- [ ] Responsive design verified\n' +
+              '- [ ] Backend API integration working\n\n' +
+              '### QA Checklist\n' +
+              '- [ ] Unit tests\n' +
+              '- [ ] Integration tests\n' +
+              '- [ ] End-to-End tests\n' +
+              '- [ ] Regression tests & Code Coverage reported\n\n' +
+              '### Validation (Project Manager)\n' +
+              '- [ ] Backend follows detailed backend plan\n' +
+              '- [ ] Frontend follows detailed frontend plan\n' +
+              '- [ ] QA covered all planned scenarios\n' +
+              '- [ ] All dependencies addressed\n' +
+              '- [ ] MVVM properly implemented\n' +
+              '- [ ] All tests passing\n' +
+              '- [ ] Code quality standards met\n' +
+              '- [ ] Documentation complete\n' +
+              '- [ ] No scope creep\n' +
+              '- [ ] Backend and frontend integrated\n' +
+              '- [ ] Cross-platform compatibility confirmed\n' +
+              '- [ ] Performance requirements met\n\n' +
+              '### Final Approval (Product Owner)\n' +
+              '- [ ] Feature aligns with product vision\n' +
+              '- [ ] User value clearly delivered\n' +
+              '- [ ] MVP scope respected\n' +
+              '- [ ] MVVM integrity maintained\n' +
+              '- [ ] Volunteer-friendly\n' +
+              '- [ ] Meets acceptance criteria\n' +
+              '- [ ] No hidden automation/surprises\n' +
+              '- [ ] Reliability prioritized\n' +
+              '- [ ] Production-ready quality\n' +
+              '- [ ] Cross-platform confirmed\n' +
+              '- [ ] Docs adequate for users/developers';
 
-      # Attempt to create PR; uses PAT if provided, otherwise GITHUB_TOKEN. Skips gracefully if blocked.
-      - name: Create Pull Request (if permitted)
-        id: cpr
-        uses: peter-evans/create-pull-request@v6
+            const pr = await github.rest.pulls.create({
+              owner,
+              repo,
+              title: 'feat: ' + featureRequest,
+              body,
+              head: branch,
+              base
+            });
+            
+            core.setOutput('pr_number', String(pr.data.number));
+            core.setOutput('pr_url', pr.data.html_url);
+
+      - name: Create Product Owner Plan using Copilot
+        uses: github/github-copilot-cli@v1
         continue-on-error: true
         with:
-          title: "feat: ${{ inputs.feature_request }}"
-          body-path: pr.md
-          branch: ${{ steps.vars.outputs.branch_name }}
-          base: ${{ steps.vars.outputs.base_branch }}
-          draft: false
-          signoff: true
-          token: ${{ secrets.PR_TOKEN || github.token }}
+          prompt: |
+            As the Product Owner, review this feature request and create a high-level plan in plans/01-product-owner-plan.md:
+            
+            Feature: ${{ inputs.feature_request }}
+            Context: ${{ inputs.project_context }}
+            
+            Include:
+            - Vision & Scope
+            - User value and success criteria
+            - Acceptance criteria
+            - Scope boundaries (MVP vs Phase 2+)
+            - MVVM architecture guidelines for this feature
 
-      - name: Set PR outputs (may be empty if blocked)
-        id: pr-outputs
-        shell: bash
-        env:
-          PR_NO: ${{ steps.cpr.outputs.pull-request-number }}
-          PR_URL: ${{ steps.cpr.outputs.pull-request-url }}
-        run: |
-          echo "pr_number=${PR_NO}" >> "$GITHUB_OUTPUT"
-          echo "pr_url=${PR_URL}" >> "$GITHUB_OUTPUT"
-
-      - name: Show manual PR link if PR creation blocked
-        if: ${{ steps.pr-outputs.outputs.pr_number == '' }}
+      - name: Commit and push Product Owner plan
         shell: bash
         run: |
-          echo "::warning title=PR not created::Your org/repo policy blocks PR creation by GitHub Actions."
-          echo "::notice title=Manual action::Open a PR here:"
-          echo "https://github.com/${{ github.repository }}/compare/${{ steps.vars.outputs.base_branch }}...${{ steps.vars.outputs.branch_name }}?expand=1"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          BRANCH="${{ steps.vars.outputs.branch_name }}"
+          git checkout "$BRANCH"
+          git pull --rebase origin "$BRANCH"
+          
+          if [ -f plans/01-product-owner-plan.md ]; then
+            git add plans/01-product-owner-plan.md
+            git reset -- .github/workflows/ || true
+            if ! git diff --cached --quiet; then
+              git commit -m "docs(plan): Product Owner high-level plan"
+              git push origin "$BRANCH"
+            fi
+          fi
 
-      - name: Upload Product Owner Plan (artifact)
-        uses: actions/upload-artifact@v4
-        with:
-          name: product-owner-plan
-          path: artifacts/01-product-owner-plan.md
-
-      # Only mark PO items if PR exists from CI
       - name: Update PR checklist (PO items)
-        if: ${{ steps.pr-outputs.outputs.pr_number != '' }}
         uses: actions/github-script@v7
         with:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const pr_number = Number(`${{ steps.pr-outputs.outputs.pr_number }}`);
+            const pr_number = Number(`${{ steps.create-pr.outputs.pr_number }}`);
 
             function esc(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
             function check(body, items){
@@ -262,10 +228,8 @@ jobs:
             ]);
             await github.rest.pulls.update({ owner, repo, pull_number: pr_number, body });
 
-  # Helper reusable step to resolve PR by head branch exists in each job via inline steps below
-
   # ============================================================================
-  # Phase 2: Project Manager - Detailed Planning (updates PR if exists)
+  # Phase 2: Project Manager - Detailed Planning
   # ============================================================================
   project-manager-planning:
     name: "📋 Project Manager - Detailed Planning"
@@ -277,112 +241,46 @@ jobs:
         with:
           ref: ${{ needs.product-owner-planning.outputs.branch_name }}
 
-      - name: Create Detailed Plans
+      - name: Create Project Manager Plans using Copilot
+        uses: github/github-copilot-cli@v1
+        continue-on-error: true
+        with:
+          prompt: |
+            As the Project Manager, read plans/01-product-owner-plan.md and create detailed implementation plans in plans/02-project-manager-plans.md:
+            
+            Create three detailed plans:
+            1. Backend Expert Plan - API design, data models, MVVM implementation, cross-platform requirements
+            2. Frontend Expert Plan - React component architecture, UI/UX, accessibility, styling with TailwindCSS
+            3. QA Testing Expert Plan - Test strategy, test cases, coverage requirements
+            
+            Be specific and actionable. Reference the codebase structure.
+
+      - name: Commit and push PM plans
         shell: bash
         run: |
-          mkdir -p plans artifacts
-          {
-            echo "## Project Manager - Detailed Implementation Plans"
-            echo
-            echo "**Based on Product Owner Plan**"
-            echo
-            echo "### Backend Expert Plan"
-            echo "**Agent**: Backend-Expert.md"
-            echo "**Helper Agents Available:**"
-            echo "- Cross-Platform-Systems-Expert.md"
-            echo "- Integration-Architect.md"
-            echo "- Node.js Expert.agent.md"
-            echo "- OOP-Design-Expert.md"
-            echo "- Typescript-Expert.agent.md"
-            echo
-            echo "**Tasks:**"
-            echo "- Review backend architecture requirements"
-            echo "- Design API endpoints and data models"
-            echo "- Plan database schema changes"
-            echo "- Implement backend logic following MVVM pattern"
-            echo "- Ensure cross-platform compatibility"
-            echo "- Coordinate with Integration Architect for component communication"
-            echo
-            echo "### Frontend Expert Plan"
-            echo "**Agent**: Frontend-Expert.md"
-            echo "**Helper Agents Available:**"
-            echo "- Node.js Expert.agent.md"
-            echo "- Typescript-Expert.agent.md"
-            echo "- UX-Designer.md"
-            echo
-            echo "**Tasks:**"
-            echo "- Design React component architecture"
-            echo "- Create UI mockups with UX Designer"
-            echo "- Implement Views following MVVM pattern"
-            echo "- Ensure accessibility and responsive design"
-            echo "- Integrate with backend APIs"
-            echo
-            echo "### QA Testing Expert Plan"
-            echo "**Agent**: QA-Testing-Expert.md"
-            echo "**Tasks:**"
-            echo "- Define test strategy (unit, integration, e2e)"
-            echo "- Create test cases for all new functionality"
-            echo "- Validate backend logic and API contracts"
-            echo "- Test frontend components and user workflows"
-            echo "- Verify cross-platform compatibility"
-            echo "- Run regression tests"
-            echo "- Generate test coverage reports"
-            echo
-            echo "---"
-            echo "**Status**: Plans ready for implementation"
-          } > plans/02-project-manager-plans.md
-
-          cp plans/02-project-manager-plans.md artifacts/02-project-manager-plans.md
-
-      - name: Commit and push PM plans (rebase-safe)
-        shell: bash
-        run: |
-          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
           BRANCH="${{ needs.product-owner-planning.outputs.branch_name }}"
-          git fetch --all --prune
           git checkout "$BRANCH"
           git pull --rebase origin "$BRANCH"
-
-          git add plans/02-project-manager-plans.md
-          if git diff --cached --quiet; then
-            echo "No PM plan changes to commit."
-          else
-            git commit -m "docs(plan): Project Manager detailed plans"
-            git push origin "$BRANCH" || git push --force-with-lease origin "$BRANCH"
+          
+          if [ -f plans/02-project-manager-plans.md ]; then
+            git add plans/02-project-manager-plans.md
+            git reset -- .github/workflows/ || true
+            if ! git diff --cached --quiet; then
+              git commit -m "docs(plan): Project Manager detailed plans"
+              git push origin "$BRANCH"
+            fi
           fi
 
-      - name: Upload Project Manager Plans (artifact)
-        uses: actions/upload-artifact@v4
-        with:
-          name: project-manager-plans
-          path: artifacts/02-project-manager-plans.md
-
-      - name: Resolve PR number by head branch (if not provided)
-        id: resolve-pr
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const provided = `${{ needs.product-owner-planning.outputs.pr_number }}`.trim();
-            const branch = `${{ needs.product-owner-planning.outputs.branch_name }}`.trim();
-            if (provided) { core.setOutput('pr_number', provided); return; }
-            const head = `${owner}:${branch}`;
-            const prs = await github.paginate(github.rest.pulls.list, { owner, repo, state: 'open', head });
-            core.setOutput('pr_number', prs.length ? String(prs[0].number) : '');
-
       - name: Update PR checklist (PM items)
-        if: ${{ steps.resolve-pr.outputs.pr_number != '' }}
         uses: actions/github-script@v7
         with:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const pr_number = Number(`${{ steps.resolve-pr.outputs.pr_number }}`);
+            const pr_number = Number(`${{ needs.product-owner-planning.outputs.pr_number }}`);
+            
             function esc(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
             function check(body, items){
               for(const text of items){
@@ -391,6 +289,7 @@ jobs:
               }
               return body;
             }
+            
             const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: pr_number });
             let body = pr.body || "";
             body = check(body, [
@@ -401,99 +300,57 @@ jobs:
             await github.rest.pulls.update({ owner, repo, pull_number: pr_number, body });
 
   # ============================================================================
-  # Phase 3: Backend Expert - Implementation (updates PR if exists)
+  # Phase 3: Backend Expert - Implementation
   # ============================================================================
   backend-implementation:
     name: "🔧 Backend Expert - Implementation"
     runs-on: ubuntu-latest
-    needs: project-manager-planning
+    needs: [product-owner-planning, project-manager-planning]
     steps:
       - name: Checkout feature branch
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.product-owner-planning.outputs.branch_name }}
+          fetch-depth: 0
 
-      - name: Backend Implementation Report
+      - name: Implement Backend using Copilot Coding Agent
+        uses: github/create-pr-with-copilot@v1
+        with:
+          problem_statement: |
+            As the Backend Expert, implement the backend requirements for this feature.
+            
+            Read and follow the detailed backend plan in plans/02-project-manager-plans.md.
+            
+            Tasks to complete:
+            - Implement Models following MVVM architecture
+            - Implement ViewModels with observable state
+            - Integrate necessary services (audio, file processing, etc.)
+            - Ensure cross-platform compatibility (Windows, macOS, Linux)
+            - Document all integration points
+            - Follow TypeScript best practices
+            - Write inline code documentation
+            
+            DO NOT modify workflow files in .github/workflows/
+            
+            Mark each task complete as you finish it. All backend checklist items must be implemented.
+          branch: ${{ needs.product-owner-planning.outputs.branch_name }}
+          update_existing_pr: true
+          pr_number: ${{ needs.product-owner-planning.outputs.pr_number }}
+
+      - name: Verify Backend Implementation
         shell: bash
         run: |
-          mkdir -p reports artifacts
-          {
-            echo "## Backend Expert - Implementation Report"
-            echo
-            echo "**Primary Agent**: Backend-Expert.md"
-            echo
-            echo "### Implementation Steps"
-            echo "1. Review the detailed backend plan from Project Manager"
-            echo "2. Implement backend logic using Node.js/TypeScript"
-            echo "3. Follow MVVM architecture (Model and ViewModel layers)"
-            echo "4. Utilize helper agents as needed"
-            echo "5. Create/Update Models"
-            echo "6. Create/Update ViewModels"
-            echo "7. Implement services (audio, file processing, etc.)"
-            echo "8. Document all new APIs and interfaces"
-            echo
-            echo "### Backend Checklist"
-            echo "- [ ] Models implemented following MVVM"
-            echo "- [ ] ViewModels implemented with observable state"
-            echo "- [ ] Services integrated"
-            echo "- [ ] Cross-platform compatibility verified"
-            echo "- [ ] Integration points documented"
-            echo "- [ ] Code follows TypeScript best practices"
-            echo
-            echo "---"
-            echo "**Status**: Backend implementation ready for Frontend phase"
-          } > reports/03-backend-report.md
-          cp reports/03-backend-report.md artifacts/03-backend-report.md
-
-      - name: Commit and push backend report (rebase-safe)
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
-          BRANCH="${{ needs.product-owner-planning.outputs.branch_name }}"
-          git fetch --all --prune
-          git checkout "$BRANCH"
-          git pull --rebase origin "$BRANCH"
-
-          git add reports/03-backend-report.md
-          if git diff --cached --quiet; then
-            echo "No backend report changes to commit."
-          else
-            git commit -m "docs(report): Backend implementation report"
-            git push origin "$BRANCH" || git push --force-with-lease origin "$BRANCH"
-          fi
-
-      - name: Upload Backend Report (artifact)
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-report
-          path: artifacts/03-backend-report.md
-
-      - name: Resolve PR number by head branch (if not provided)
-        id: resolve-pr
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const provided = `${{ needs.product-owner-planning.outputs.pr_number }}`.trim();
-            const branch = `${{ needs.product-owner-planning.outputs.branch_name }}`.trim();
-            if (provided) { core.setOutput('pr_number', provided); return; }
-            const head = `${owner}:${branch}`;
-            const prs = await github.paginate(github.rest.pulls.list, { owner, repo, state: 'open', head });
-            core.setOutput('pr_number', prs.length ? String(prs[0].number) : '');
+          echo "Checking for backend implementation changes..."
+          git log -5 --oneline
 
       - name: Update PR checklist (Backend items)
-        if: ${{ steps.resolve-pr.outputs.pr_number != '' }}
         uses: actions/github-script@v7
         with:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const pr_number = Number(`${{ steps.resolve-pr.outputs.pr_number }}`);
+            const pr_number = Number(`${{ needs.product-owner-planning.outputs.pr_number }}`);
+            
             function esc(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
             function check(body, items){
               for(const text of items){
@@ -502,6 +359,7 @@ jobs:
               }
               return body;
             }
+            
             const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: pr_number });
             let body = pr.body || "";
             body = check(body, [
@@ -515,101 +373,52 @@ jobs:
             await github.rest.pulls.update({ owner, repo, pull_number: pr_number, body });
 
   # ============================================================================
-  # Phase 4: Frontend Expert - Implementation (updates PR if exists)
+  # Phase 4: Frontend Expert - Implementation
   # ============================================================================
   frontend-implementation:
     name: "🎨 Frontend Expert - Implementation"
     runs-on: ubuntu-latest
-    needs: backend-implementation
+    needs: [product-owner-planning, backend-implementation]
     steps:
       - name: Checkout feature branch
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.product-owner-planning.outputs.branch_name }}
+          fetch-depth: 0
 
-      - name: Frontend Implementation Report
-        shell: bash
-        run: |
-          mkdir -p reports artifacts
-          {
-            echo "## Frontend Expert - Implementation Report"
-            echo
-            echo "**Primary Agent**: Frontend-Expert.md"
-            echo
-            echo "### Implementation Steps"
-            echo "1. Review the detailed frontend plan from Project Manager"
-            echo "2. Review backend implementation for API integration"
-            echo "3. Implement React components following MVVM (View layer)"
-            echo "4. Utilize helper agents as needed"
-            echo "5. Create stateless React components"
-            echo "6. Bind components to ViewModels"
-            echo "7. Implement styling with TailwindCSS"
-            echo "8. Ensure accessibility (ARIA, keyboard navigation)"
-            echo "9. Test responsive design"
-            echo
-            echo "### Frontend Checklist"
-            echo "- [ ] MVVM View components implemented"
-            echo "- [ ] Components properly bound to ViewModels"
-            echo "- [ ] No business logic in View components"
-            echo "- [ ] Styling complete with TailwindCSS"
-            echo "- [ ] Accessibility requirements met"
-            echo "- [ ] Responsive design verified"
-            echo "- [ ] Backend API integration working"
-            echo
-            echo "---"
-            echo "**Status**: Frontend implementation ready for QA phase"
-          } > reports/04-frontend-report.md
-          cp reports/04-frontend-report.md artifacts/04-frontend-report.md
-
-      - name: Commit and push frontend report (rebase-safe)
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
-          BRANCH="${{ needs.product-owner-planning.outputs.branch_name }}"
-          git fetch --all --prune
-          git checkout "$BRANCH"
-          git pull --rebase origin "$BRANCH"
-
-          git add reports/04-frontend-report.md
-          if git diff --cached --quiet; then
-            echo "No frontend report changes to commit."
-          else
-            git commit -m "docs(report): Frontend implementation report"
-            git push origin "$BRANCH" || git push --force-with-lease origin "$BRANCH"
-          fi
-
-      - name: Upload Frontend Report (artifact)
-        uses: actions/upload-artifact@v4
+      - name: Implement Frontend using Copilot Coding Agent
+        uses: github/create-pr-with-copilot@v1
         with:
-          name: frontend-report
-          path: artifacts/04-frontend-report.md
-
-      - name: Resolve PR number by head branch (if not provided)
-        id: resolve-pr
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const provided = `${{ needs.product-owner-planning.outputs.pr_number }}`.trim();
-            const branch = `${{ needs.product-owner-planning.outputs.branch_name }}`.trim();
-            if (provided) { core.setOutput('pr_number', provided); return; }
-            const head = `${owner}:${branch}`;
-            const prs = await github.paginate(github.rest.pulls.list, { owner, repo, state: 'open', head });
-            core.setOutput('pr_number', prs.length ? String(prs[0].number) : '');
+          problem_statement: |
+            As the Frontend Expert, implement the frontend requirements for this feature.
+            
+            Read and follow the detailed frontend plan in plans/02-project-manager-plans.md.
+            Review the backend implementation to understand the APIs and ViewModels available.
+            
+            Tasks to complete:
+            - Implement MVVM View components (stateless React components)
+            - Properly bind components to ViewModels
+            - Keep business logic OUT of View components
+            - Style components with TailwindCSS
+            - Ensure accessibility (ARIA labels, keyboard navigation)
+            - Verify responsive design works on all screen sizes
+            - Integrate with backend APIs
+            
+            DO NOT modify workflow files in .github/workflows/
+            
+            Mark each task complete as you finish it. All frontend checklist items must be implemented.
+          branch: ${{ needs.product-owner-planning.outputs.branch_name }}
+          update_existing_pr: true
+          pr_number: ${{ needs.product-owner-planning.outputs.pr_number }}
 
       - name: Update PR checklist (Frontend items)
-        if: ${{ steps.resolve-pr.outputs.pr_number != '' }}
         uses: actions/github-script@v7
         with:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const pr_number = Number(`${{ steps.resolve-pr.outputs.pr_number }}`);
+            const pr_number = Number(`${{ needs.product-owner-planning.outputs.pr_number }}`);
+            
             function esc(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
             function check(body, items){
               for(const text of items){
@@ -618,6 +427,7 @@ jobs:
               }
               return body;
             }
+            
             const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: pr_number });
             let body = pr.body || "";
             body = check(body, [
@@ -632,111 +442,52 @@ jobs:
             await github.rest.pulls.update({ owner, repo, pull_number: pr_number, body });
 
   # ============================================================================
-  # Phase 5: QA Testing Expert - Testing & Validation (updates PR if exists)
+  # Phase 5: QA Testing Expert - Testing & Validation
   # ============================================================================
   qa-testing:
     name: "✅ QA Testing Expert - Testing & Validation"
     runs-on: ubuntu-latest
-    needs: frontend-implementation
+    needs: [product-owner-planning, frontend-implementation]
     steps:
       - name: Checkout feature branch
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.product-owner-planning.outputs.branch_name }}
+          fetch-depth: 0
 
-      - name: QA Testing Report
-        shell: bash
-        run: |
-          mkdir -p reports artifacts
-          {
-            echo "## QA Testing Expert - Testing Report"
-            echo
-            echo "**Primary Agent**: QA-Testing-Expert.md"
-            echo
-            echo "### Testing Execution"
-            echo
-            echo "#### Unit Tests"
-            echo "- [ ] Backend Model tests"
-            echo "- [ ] Backend ViewModel tests"
-            echo "- [ ] Frontend component tests"
-            echo "- [ ] Service layer tests"
-            echo
-            echo "#### Integration Tests"
-            echo "- [ ] API endpoint tests"
-            echo "- [ ] Component integration tests"
-            echo "- [ ] ViewModel-View binding tests"
-            echo "- [ ] Service integration tests"
-            echo
-            echo "#### End-to-End Tests"
-            echo "- [ ] Complete user workflows"
-            echo "- [ ] Cross-platform functionality"
-            echo "- [ ] Performance benchmarks"
-            echo "- [ ] Accessibility audits"
-            echo
-            echo "#### Regression Tests"
-            echo "- [ ] Existing functionality not broken"
-            echo "- [ ] MVVM boundaries maintained"
-            echo
-            echo "### Test Results Summary"
-            echo "- **Total Tests Run**: [To be filled by QA agent]"
-            echo "- **Tests Passed**: [To be filled by QA agent]"
-            echo "- **Tests Failed**: [To be filled by QA agent]"
-            echo "- **Code Coverage**: [To be filled by QA agent]"
-            echo
-            echo "---"
-            echo "**Status**: Testing complete - ready for Project Manager review"
-          } > reports/05-qa-report.md
-          cp reports/05-qa-report.md artifacts/05-qa-report.md
-
-      - name: Commit and push QA report (rebase-safe)
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
-          BRANCH="${{ needs.product-owner-planning.outputs.branch_name }}"
-          git fetch --all --prune
-          git checkout "$BRANCH"
-          git pull --rebase origin "$BRANCH"
-
-          git add reports/05-qa-report.md
-          if git diff --cached --quiet; then
-            echo "No QA report changes to commit."
-          else
-            git commit -m "docs(report): QA testing report"
-            git push origin "$BRANCH" || git push --force-with-lease origin "$BRANCH"
-          fi
-
-      - name: Upload QA Report (artifact)
-        uses: actions/upload-artifact@v4
+      - name: Implement Tests using Copilot Coding Agent
+        uses: github/create-pr-with-copilot@v1
         with:
-          name: qa-report
-          path: artifacts/05-qa-report.md
-
-      - name: Resolve PR number by head branch (if not provided)
-        id: resolve-pr
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const provided = `${{ needs.product-owner-planning.outputs.pr_number }}`.trim();
-            const branch = `${{ needs.product-owner-planning.outputs.branch_name }}`.trim();
-            if (provided) { core.setOutput('pr_number', provided); return; }
-            const head = `${owner}:${branch}`;
-            const prs = await github.paginate(github.rest.pulls.list, { owner, repo, state: 'open', head });
-            core.setOutput('pr_number', prs.length ? String(prs[0].number) : '');
+          problem_statement: |
+            As the QA Testing Expert, create comprehensive tests for this feature.
+            
+            Read and follow the QA plan in plans/02-project-manager-plans.md.
+            Review the backend and frontend implementation.
+            
+            Tasks to complete:
+            - Write unit tests for backend Models and ViewModels
+            - Write unit tests for frontend components
+            - Write integration tests for API endpoints
+            - Write integration tests for ViewModel-View bindings
+            - Write end-to-end tests for complete user workflows
+            - Run regression tests to ensure existing functionality works
+            - Generate test coverage report
+            
+            DO NOT modify workflow files in .github/workflows/
+            
+            All tests must pass. Achieve minimum 80% code coverage on new code.
+          branch: ${{ needs.product-owner-planning.outputs.branch_name }}
+          update_existing_pr: true
+          pr_number: ${{ needs.product-owner-planning.outputs.pr_number }}
 
       - name: Update PR checklist (QA items)
-        if: ${{ steps.resolve-pr.outputs.pr_number != '' }}
         uses: actions/github-script@v7
         with:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const pr_number = Number(`${{ steps.resolve-pr.outputs.pr_number }}`);
+            const pr_number = Number(`${{ needs.product-owner-planning.outputs.pr_number }}`);
+            
             function esc(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
             function check(body, items){
               for(const text of items){
@@ -745,6 +496,7 @@ jobs:
               }
               return body;
             }
+            
             const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: pr_number });
             let body = pr.body || "";
             body = check(body, [
@@ -756,101 +508,59 @@ jobs:
             await github.rest.pulls.update({ owner, repo, pull_number: pr_number, body });
 
   # ============================================================================
-  # Phase 6: Project Manager - Validation Review (updates PR if exists)
+  # Phase 6: Project Manager - Validation Review
   # ============================================================================
   project-manager-validation:
     name: "📋 Project Manager - Validation Review"
     runs-on: ubuntu-latest
-    needs: qa-testing
+    needs: [product-owner-planning, qa-testing]
     steps:
       - name: Checkout feature branch
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.product-owner-planning.outputs.branch_name }}
+          fetch-depth: 0
 
-      - name: PM Validation Report
-        shell: bash
-        run: |
-          mkdir -p reports artifacts
-          {
-            echo "## Project Manager - Validation Review"
-            echo
-            echo "**Agent**: Project-Manager.md"
-            echo
-            echo "### Validation Checklist"
-            echo
-            echo "#### Plan Adherence"
-            echo "- [ ] Backend implementation follows the detailed backend plan"
-            echo "- [ ] Frontend implementation follows the detailed frontend plan"
-            echo "- [ ] QA testing covered all planned test scenarios"
-            echo "- [ ] All dependencies properly addressed"
-            echo
-            echo "#### Quality Checks"
-            echo "- [ ] MVVM architecture properly implemented"
-            echo "- [ ] All tests passing"
-            echo "- [ ] Code quality standards met"
-            echo "- [ ] Documentation complete"
-            echo "- [ ] No scope creep detected"
-            echo
-            echo "#### Integration Verification"
-            echo "- [ ] Backend and frontend properly integrated"
-            echo "- [ ] Cross-platform compatibility confirmed"
-            echo "- [ ] Performance requirements met"
-            echo
-            echo "---"
-            echo "**Status**: Ready for Product Owner final approval"
-          } > reports/06-pm-validation.md
-          cp reports/06-pm-validation.md artifacts/06-pm-validation.md
-
-      - name: Commit and push PM validation report (rebase-safe)
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
-          BRANCH="${{ needs.product-owner-planning.outputs.branch_name }}"
-          git fetch --all --prune
-          git checkout "$BRANCH"
-          git pull --rebase origin "$BRANCH"
-
-          git add reports/06-pm-validation.md
-          if git diff --cached --quiet; then
-            echo "No PM validation changes to commit."
-          else
-            git commit -m "docs(report): Project Manager validation review"
-            git push origin "$BRANCH" || git push --force-with-lease origin "$BRANCH"
-          fi
-
-      - name: Upload Validation Report (artifact)
-        uses: actions/upload-artifact@v4
+      - name: Validate Implementation using Copilot
+        uses: github/create-pr-with-copilot@v1
         with:
-          name: validation-report
-          path: artifacts/06-pm-validation.md
-
-      - name: Resolve PR number by head branch (if not provided)
-        id: resolve-pr
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const provided = `${{ needs.product-owner-planning.outputs.pr_number }}`.trim();
-            const branch = `${{ needs.product-owner-planning.outputs.branch_name }}`.trim();
-            if (provided) { core.setOutput('pr_number', provided); return; }
-            const head = `${owner}:${branch}`;
-            const prs = await github.paginate(github.rest.pulls.list, { owner, repo, state: 'open', head });
-            core.setOutput('pr_number', prs.length ? String(prs[0].number) : '');
+          problem_statement: |
+            As the Project Manager, validate that the implementation matches the plans.
+            
+            Review:
+            - plans/02-project-manager-plans.md (the original detailed plans)
+            - The backend implementation
+            - The frontend implementation  
+            - The test implementation
+            
+            Create a validation report in reports/validation-report.md that confirms:
+            - Backend follows the detailed backend plan
+            - Frontend follows the detailed frontend plan
+            - QA covered all planned scenarios
+            - All dependencies properly addressed
+            - MVVM architecture properly implemented
+            - All tests passing
+            - Code quality standards met
+            - Documentation complete
+            - No scope creep detected
+            - Backend and frontend properly integrated
+            - Cross-platform compatibility confirmed
+            - Performance requirements met
+            
+            If any items are NOT complete, list them clearly and request fixes.
+            DO NOT modify workflow files in .github/workflows/
+          branch: ${{ needs.product-owner-planning.outputs.branch_name }}
+          update_existing_pr: true
+          pr_number: ${{ needs.product-owner-planning.outputs.pr_number }}
 
       - name: Update PR checklist (Validation items)
-        if: ${{ steps.resolve-pr.outputs.pr_number != '' }}
         uses: actions/github-script@v7
         with:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const pr_number = Number(`${{ steps.resolve-pr.outputs.pr_number }}`);
+            const pr_number = Number(`${{ needs.product-owner-planning.outputs.pr_number }}`);
+            
             function esc(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
             function check(body, items){
               for(const text of items){
@@ -859,6 +569,7 @@ jobs:
               }
               return body;
             }
+            
             const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: pr_number });
             let body = pr.body || "";
             body = check(body, [
@@ -878,105 +589,59 @@ jobs:
             await github.rest.pulls.update({ owner, repo, pull_number: pr_number, body });
 
   # ============================================================================
-  # Phase 7: Product Owner - Final Vision Approval (updates PR if exists)
+  # Phase 7: Product Owner - Final Vision Approval
   # ============================================================================
   product-owner-approval:
     name: "🎯 Product Owner - Final Approval"
     runs-on: ubuntu-latest
-    needs: project-manager-validation
+    needs: [product-owner-planning, project-manager-validation]
     steps:
       - name: Checkout feature branch
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.product-owner-planning.outputs.branch_name }}
+          fetch-depth: 0
 
-      - name: Final Approval Report
-        shell: bash
-        run: |
-          mkdir -p reports artifacts
-          {
-            echo "## Product Owner - Final Vision Approval"
-            echo
-            echo "**Agent**: Product-owner.md"
-            echo
-            echo "### Vision Alignment Review"
-            echo
-            echo "#### Product Vision Alignment"
-            echo "- [ ] Feature aligns with HarmonySync product vision"
-            echo "- [ ] User value clearly delivered"
-            echo "- [ ] Scope boundaries respected (MVP vs Phase 2+)"
-            echo "- [ ] MVVM architecture integrity maintained"
-            echo
-            echo "#### User Experience"
-            echo "- [ ] Volunteer-friendly implementation"
-            echo "- [ ] Meets acceptance criteria from high-level plan"
-            echo "- [ ] No hidden automation or surprises"
-            echo "- [ ] Reliability prioritized over features"
-            echo
-            echo "#### Product Quality"
-            echo "- [ ] Production-ready quality"
-            echo "- [ ] Cross-platform compatibility confirmed"
-            echo "- [ ] Documentation adequate for users/developers"
-            echo
-            echo "### Final Decision"
-            echo
-            echo "- [ ] **YES** - Work complete and approved for release"
-            echo "- [ ] **NO** - Vision misalignment, create plan for Project Manager"
-            echo
-            echo "---"
-            echo "**Status**: Work complete and approved!"
-          } > reports/07-product-owner-approval.md
-          cp reports/07-product-owner-approval.md artifacts/07-product-owner-approval.md
-
-      - name: Commit and push PO approval report (rebase-safe)
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
-          BRANCH="${{ needs.product-owner-planning.outputs.branch_name }}"
-          git fetch --all --prune
-          git checkout "$BRANCH"
-          git pull --rebase origin "$BRANCH"
-
-          git add reports/07-product-owner-approval.md
-          if git diff --cached --quiet; then
-            echo "No PO approval changes to commit."
-          else
-            git commit -m "docs(report): Product Owner final approval"
-            git push origin "$BRANCH" || git push --force-with-lease origin "$BRANCH"
-          fi
-
-      - name: Upload Approval Report (artifact)
-        uses: actions/upload-artifact@v4
+      - name: Final Product Owner Review using Copilot
+        uses: github/create-pr-with-copilot@v1
         with:
-          name: approval-report
-          path: artifacts/07-product-owner-approval.md
-
-      - name: Resolve PR number by head branch (if not provided)
-        id: resolve-pr
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const provided = `${{ needs.product-owner-planning.outputs.pr_number }}`.trim();
-            const branch = `${{ needs.product-owner-planning.outputs.branch_name }}`.trim();
-            if (provided) { core.setOutput('pr_number', provided); return; }
-            const head = `${owner}:${branch}`;
-            const prs = await github.paginate(github.rest.pulls.list, { owner, repo, state: 'open', head });
-            core.setOutput('pr_number', prs.length ? String(prs[0].number) : '');
+          problem_statement: |
+            As the Product Owner, perform final vision alignment review.
+            
+            Review:
+            - plans/01-product-owner-plan.md (the original high-level plan)
+            - reports/validation-report.md (the PM validation)
+            - The complete implementation
+            
+            Create a final approval report in reports/final-approval.md that confirms:
+            - Feature aligns with product vision
+            - User value clearly delivered
+            - MVP scope respected (no scope creep)
+            - MVVM architecture integrity maintained
+            - Implementation is volunteer-friendly
+            - Meets acceptance criteria from high-level plan
+            - No hidden automation or surprises
+            - Reliability prioritized over features
+            - Production-ready quality
+            - Cross-platform confirmed
+            - Documentation adequate for users and developers
+            
+            If approved, clearly state "APPROVED FOR RELEASE" in the report.
+            If not approved, list specific issues and request fixes.
+            
+            DO NOT modify workflow files in .github/workflows/
+          branch: ${{ needs.product-owner-planning.outputs.branch_name }}
+          update_existing_pr: true
+          pr_number: ${{ needs.product-owner-planning.outputs.pr_number }}
 
       - name: Update PR checklist (Final Approval items)
-        if: ${{ steps.resolve-pr.outputs.pr_number != '' }}
         uses: actions/github-script@v7
         with:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const pr_number = Number(`${{ steps.resolve-pr.outputs.pr_number }}`);
+            const pr_number = Number(`${{ needs.product-owner-planning.outputs.pr_number }}`);
+            
             function esc(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
             function check(body, items){
               for(const text of items){
@@ -985,6 +650,7 @@ jobs:
               }
               return body;
             }
+            
             const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: pr_number });
             let body = pr.body || "";
             body = check(body, [
@@ -1000,54 +666,16 @@ jobs:
               "Cross-platform confirmed",
               "Docs adequate for users/developers"
             ]);
-            // Mark YES decision (leave NO unchecked)
-            body = body.replace(/- \[ \] \*\*YES\*\*/, '- [x] **YES**');
             await github.rest.pulls.update({ owner, repo, pull_number: pr_number, body });
 
-  # ============================================================================
-  # Phase 8: Final Run Summary (UI)
-  # ============================================================================
-  workflow-summary:
-    name: "📊 Workflow Summary"
-    runs-on: ubuntu-latest
-    needs: product-owner-approval
-    steps:
-      - name: Resolve PR number (for summary)
-        id: resolve-pr
+      - name: Mark PR as ready for review
         uses: actions/github-script@v7
         with:
           script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const provided = `${{ needs.product-owner-planning.outputs.pr_number }}`.trim();
-            const branch = `${{ needs.product-owner-planning.outputs.branch_name }}`.trim();
-            if (provided) { core.setOutput('pr_number', provided); return; }
-            const head = `${owner}:${branch}`;
-            const prs = await github.paginate(github.rest.pulls.list, { owner, repo, state: 'open', head });
-            core.setOutput('pr_number', prs.length ? String(prs[0].number) : '');
-
-      - name: Fetch PR URL (if exists)
-        id: pr-url
-        if: ${{ steps.resolve-pr.outputs.pr_number != '' }}
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const number = Number(`${{ steps.resolve-pr.outputs.pr_number }}`);
-            const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: number });
-            core.setOutput('url', pr.html_url);
-
-      - name: Display Summary
-        shell: bash
-        run: |
-          echo "## 🎉 Comprehensive Multi-Agent Workflow Complete" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Feature Branch**: \`${{ needs.product-owner-planning.outputs.branch_name }}\`" >> "$GITHUB_STEP_SUMMARY"
-          if [ -n "${{ steps.pr-url.outputs.url }}" ]; then
-            echo "- **PR**: ${{ steps.pr-url.outputs.url }}" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "- **PR**: Not created by CI (policy). Open manually: https://github.com/${{ github.repository }}/compare/${{ needs.product-owner-planning.outputs.base_branch }}...${{ needs.product-owner-planning.outputs.branch_name }}?expand=1" >> "$GITHUB_STEP_SUMMARY"
-          fi
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Review the PR checklist for auto-updated status of each phase (if PR exists)." >> "$GITHUB_STEP_SUMMARY"
+            const pr_number = Number(`${{ needs.product-owner-planning.outputs.pr_number }}`);
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr_number,
+              body: '✅ **All phases complete!** This PR is ready for human review and merge.'
+            });
