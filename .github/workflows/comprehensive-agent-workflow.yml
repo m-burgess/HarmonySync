@@ -18,33 +18,39 @@ permissions:
   issues: write
   pull-requests: write
 
+# Prevent concurrent runs from racing on the same feature (by request text + branch)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}-${{ inputs.feature_request }}
+  cancel-in-progress: false
+
 jobs:
   # ============================================================================
-  # Phase 1: Product Owner - High-Level Planning + NEW BRANCH + NEW PR
+  # Phase 1: Product Owner - High-Level Planning + NEW BRANCH + (attempt) NEW PR
   # ============================================================================
   product-owner-planning:
     name: "🎯 Product Owner - High-Level Plan (Branch + PR)"
     runs-on: ubuntu-latest
     outputs:
       branch_name: ${{ steps.vars.outputs.branch_name }}
-      pr_number: ${{ steps.open_pr.outputs.pr_number }}
-      pr_url: ${{ steps.open_pr.outputs.pr_url }}
+      base_branch: ${{ steps.vars.outputs.base_branch }}
+      pr_number: ${{ steps.pr-outputs.outputs.pr_number }}
+      pr_url: ${{ steps.pr-outputs.outputs.pr_url }}
     steps:
       - name: Checkout default branch
         uses: actions/checkout@v4
 
-      - name: Compute branch variables
+      - name: Compute branch/base variables
         id: vars
         shell: bash
         run: |
           FEATURE="${{ inputs.feature_request }}"
-          # slugify feature to create a safe branch
           SLUG=$(echo "$FEATURE" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g;s/^-+|-+$//g' | cut -c1-60)
           BRANCH="feature/${SLUG:-feature}"
+          BASE="${{ github.event.repository.default_branch }}"
           echo "branch_name=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "base_branch=$BASE" >> "$GITHUB_OUTPUT"
 
       - name: Create High-Level Plan (file content)
-        id: create-plan
         shell: bash
         env:
           FEATURE_REQUEST: ${{ inputs.feature_request }}
@@ -77,17 +83,36 @@ jobs:
           } > plans/01-product-owner-plan.md
           cp plans/01-product-owner-plan.md artifacts/01-product-owner-plan.md
 
-      - name: Create and push feature branch with initial plan
+      - name: Create or update feature branch and push initial plan (rebase-safe)
         shell: bash
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
-          git fetch origin
-          git checkout -b "${{ steps.vars.outputs.branch_name }}"
+          BRANCH="${{ steps.vars.outputs.branch_name }}"
+          git fetch --all --prune
+
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+            echo "Remote branch '$BRANCH' exists. Checking out and rebasing..."
+            git checkout "$BRANCH"
+            git pull --rebase origin "$BRANCH"
+          else
+            echo "Remote branch '$BRANCH' does not exist. Creating it..."
+            git checkout -b "$BRANCH"
+          fi
+
           git add plans/01-product-owner-plan.md
-          git commit -m "docs(plan): Product Owner high-level plan for '${{ inputs.feature_request }}'"
-          git push -u origin "${{ steps.vars.outputs.branch_name }}"
+          if git diff --cached --quiet; then
+            echo "No changes to commit for Product Owner plan."
+          else
+            git commit -m "docs(plan): Product Owner high-level plan for '${{ inputs.feature_request }}'"
+            if ! git push origin "$BRANCH"; then
+              echo "Normal push failed, attempting --force-with-lease."
+              git push --force-with-lease origin "$BRANCH"
+            fi
+          fi
 
       - name: Build initial PR body with master checklist
         id: build-pr-body
@@ -170,40 +195,37 @@ jobs:
             echo "- [ ] Docs adequate for users/developers"
           } > pr.md
 
-      - name: Open PR (idempotent)
-        id: open_pr
-        uses: actions/github-script@v7
+      # Attempt to create PR; uses PAT if provided, otherwise GITHUB_TOKEN. Skips gracefully if blocked.
+      - name: Create Pull Request (if permitted)
+        id: cpr
+        uses: peter-evans/create-pull-request@v6
+        continue-on-error: true
         with:
-          script: |
-            const fs = require('fs');
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const branch = `${{ steps.vars.outputs.branch_name }}`;
-            const head = `${owner}:${branch}`;
-            const base = context.ref.replace('refs/heads/', '');
-            const body = fs.readFileSync('pr.md', 'utf8');
+          title: "feat: ${{ inputs.feature_request }}"
+          body-path: pr.md
+          branch: ${{ steps.vars.outputs.branch_name }}
+          base: ${{ steps.vars.outputs.base_branch }}
+          draft: false
+          signoff: true
+          token: ${{ secrets.PR_TOKEN || github.token }}
 
-            async function openOrGetPR() {
-              try {
-                const { data: pr } = await github.rest.pulls.create({
-                  owner, repo, head, base,
-                  title: `feat: ${{ inputs.feature_request }}`,
-                  body
-                });
-                return pr;
-              } catch (e) {
-                // If PR already exists for this head, fetch it
-                const prs = await github.paginate(github.rest.pulls.list, {
-                  owner, repo, state: 'open', head
-                });
-                if (prs.length > 0) return prs[0];
-                throw e;
-              }
-            }
+      - name: Set PR outputs (may be empty if blocked)
+        id: pr-outputs
+        shell: bash
+        env:
+          PR_NO: ${{ steps.cpr.outputs.pull-request-number }}
+          PR_URL: ${{ steps.cpr.outputs.pull-request-url }}
+        run: |
+          echo "pr_number=${PR_NO}" >> "$GITHUB_OUTPUT"
+          echo "pr_url=${PR_URL}" >> "$GITHUB_OUTPUT"
 
-            const pr = await openOrGetPR();
-            core.setOutput('pr_number', String(pr.number));
-            core.setOutput('pr_url', pr.html_url);
+      - name: Show manual PR link if PR creation blocked
+        if: ${{ steps.pr-outputs.outputs.pr_number == '' }}
+        shell: bash
+        run: |
+          echo "::warning title=PR not created::Your org/repo policy blocks PR creation by GitHub Actions."
+          echo "::notice title=Manual action::Open a PR here:"
+          echo "https://github.com/${{ github.repository }}/compare/${{ steps.vars.outputs.base_branch }}...${{ steps.vars.outputs.branch_name }}?expand=1"
 
       - name: Upload Product Owner Plan (artifact)
         uses: actions/upload-artifact@v4
@@ -211,13 +233,15 @@ jobs:
           name: product-owner-plan
           path: artifacts/01-product-owner-plan.md
 
-      - name: Mark PO checklist items as done in PR
+      # Only mark PO items if PR exists from CI
+      - name: Update PR checklist (PO items)
+        if: ${{ steps.pr-outputs.outputs.pr_number != '' }}
         uses: actions/github-script@v7
         with:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const pr_number = Number("${{ steps.open_pr.outputs.pr_number }}");
+            const pr_number = Number(`${{ steps.pr-outputs.outputs.pr_number }}`);
 
             function esc(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
             function check(body, items){
@@ -230,17 +254,18 @@ jobs:
 
             const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: pr_number });
             let body = pr.body || "";
-            const poChecks = [
+            body = check(body, [
               "Vision & Scope defined",
               "Acceptance criteria documented",
               "Scope constraints identified",
               "MVVM guidelines provided"
-            ];
-            body = check(body, poChecks);
+            ]);
             await github.rest.pulls.update({ owner, repo, pull_number: pr_number, body });
 
+  # Helper reusable step to resolve PR by head branch exists in each job via inline steps below
+
   # ============================================================================
-  # Phase 2: Project Manager - Detailed Planning (updates PR)
+  # Phase 2: Project Manager - Detailed Planning (updates PR if exists)
   # ============================================================================
   project-manager-planning:
     name: "📋 Project Manager - Detailed Planning"
@@ -253,7 +278,6 @@ jobs:
           ref: ${{ needs.product-owner-planning.outputs.branch_name }}
 
       - name: Create Detailed Plans
-        id: create-plans
         shell: bash
         run: |
           mkdir -p plans artifacts
@@ -310,14 +334,26 @@ jobs:
 
           cp plans/02-project-manager-plans.md artifacts/02-project-manager-plans.md
 
-      - name: Commit and push PM plans
+      - name: Commit and push PM plans (rebase-safe)
         shell: bash
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+          BRANCH="${{ needs.product-owner-planning.outputs.branch_name }}"
+          git fetch --all --prune
+          git checkout "$BRANCH"
+          git pull --rebase origin "$BRANCH"
+
           git add plans/02-project-manager-plans.md
-          git commit -m "docs(plan): Project Manager detailed plans"
-          git push
+          if git diff --cached --quiet; then
+            echo "No PM plan changes to commit."
+          else
+            git commit -m "docs(plan): Project Manager detailed plans"
+            git push origin "$BRANCH" || git push --force-with-lease origin "$BRANCH"
+          fi
 
       - name: Upload Project Manager Plans (artifact)
         uses: actions/upload-artifact@v4
@@ -325,13 +361,28 @@ jobs:
           name: project-manager-plans
           path: artifacts/02-project-manager-plans.md
 
-      - name: Update PR checklist (PM items)
+      - name: Resolve PR number by head branch (if not provided)
+        id: resolve-pr
         uses: actions/github-script@v7
         with:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const pr_number = Number("${{ needs.product-owner-planning.outputs.pr_number }}");
+            const provided = `${{ needs.product-owner-planning.outputs.pr_number }}`.trim();
+            const branch = `${{ needs.product-owner-planning.outputs.branch_name }}`.trim();
+            if (provided) { core.setOutput('pr_number', provided); return; }
+            const head = `${owner}:${branch}`;
+            const prs = await github.paginate(github.rest.pulls.list, { owner, repo, state: 'open', head });
+            core.setOutput('pr_number', prs.length ? String(prs[0].number) : '');
+
+      - name: Update PR checklist (PM items)
+        if: ${{ steps.resolve-pr.outputs.pr_number != '' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pr_number = Number(`${{ steps.resolve-pr.outputs.pr_number }}`);
             function esc(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
             function check(body, items){
               for(const text of items){
@@ -350,7 +401,7 @@ jobs:
             await github.rest.pulls.update({ owner, repo, pull_number: pr_number, body });
 
   # ============================================================================
-  # Phase 3: Backend Expert - Implementation (updates PR)
+  # Phase 3: Backend Expert - Implementation (updates PR if exists)
   # ============================================================================
   backend-implementation:
     name: "🔧 Backend Expert - Implementation"
@@ -363,7 +414,6 @@ jobs:
           ref: ${{ needs.product-owner-planning.outputs.branch_name }}
 
       - name: Backend Implementation Report
-        id: implement
         shell: bash
         run: |
           mkdir -p reports artifacts
@@ -395,14 +445,26 @@ jobs:
           } > reports/03-backend-report.md
           cp reports/03-backend-report.md artifacts/03-backend-report.md
 
-      - name: Commit and push backend report
+      - name: Commit and push backend report (rebase-safe)
         shell: bash
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+          BRANCH="${{ needs.product-owner-planning.outputs.branch_name }}"
+          git fetch --all --prune
+          git checkout "$BRANCH"
+          git pull --rebase origin "$BRANCH"
+
           git add reports/03-backend-report.md
-          git commit -m "docs(report): Backend implementation report"
-          git push
+          if git diff --cached --quiet; then
+            echo "No backend report changes to commit."
+          else
+            git commit -m "docs(report): Backend implementation report"
+            git push origin "$BRANCH" || git push --force-with-lease origin "$BRANCH"
+          fi
 
       - name: Upload Backend Report (artifact)
         uses: actions/upload-artifact@v4
@@ -410,13 +472,28 @@ jobs:
           name: backend-report
           path: artifacts/03-backend-report.md
 
-      - name: Update PR checklist (Backend items)
+      - name: Resolve PR number by head branch (if not provided)
+        id: resolve-pr
         uses: actions/github-script@v7
         with:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const pr_number = Number("${{ needs.product-owner-planning.outputs.pr_number }}");
+            const provided = `${{ needs.product-owner-planning.outputs.pr_number }}`.trim();
+            const branch = `${{ needs.product-owner-planning.outputs.branch_name }}`.trim();
+            if (provided) { core.setOutput('pr_number', provided); return; }
+            const head = `${owner}:${branch}`;
+            const prs = await github.paginate(github.rest.pulls.list, { owner, repo, state: 'open', head });
+            core.setOutput('pr_number', prs.length ? String(prs[0].number) : '');
+
+      - name: Update PR checklist (Backend items)
+        if: ${{ steps.resolve-pr.outputs.pr_number != '' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pr_number = Number(`${{ steps.resolve-pr.outputs.pr_number }}`);
             function esc(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
             function check(body, items){
               for(const text of items){
@@ -438,7 +515,7 @@ jobs:
             await github.rest.pulls.update({ owner, repo, pull_number: pr_number, body });
 
   # ============================================================================
-  # Phase 4: Frontend Expert - Implementation (updates PR)
+  # Phase 4: Frontend Expert - Implementation (updates PR if exists)
   # ============================================================================
   frontend-implementation:
     name: "🎨 Frontend Expert - Implementation"
@@ -451,7 +528,6 @@ jobs:
           ref: ${{ needs.product-owner-planning.outputs.branch_name }}
 
       - name: Frontend Implementation Report
-        id: implement
         shell: bash
         run: |
           mkdir -p reports artifacts
@@ -485,14 +561,26 @@ jobs:
           } > reports/04-frontend-report.md
           cp reports/04-frontend-report.md artifacts/04-frontend-report.md
 
-      - name: Commit and push frontend report
+      - name: Commit and push frontend report (rebase-safe)
         shell: bash
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+          BRANCH="${{ needs.product-owner-planning.outputs.branch_name }}"
+          git fetch --all --prune
+          git checkout "$BRANCH"
+          git pull --rebase origin "$BRANCH"
+
           git add reports/04-frontend-report.md
-          git commit -m "docs(report): Frontend implementation report"
-          git push
+          if git diff --cached --quiet; then
+            echo "No frontend report changes to commit."
+          else
+            git commit -m "docs(report): Frontend implementation report"
+            git push origin "$BRANCH" || git push --force-with-lease origin "$BRANCH"
+          fi
 
       - name: Upload Frontend Report (artifact)
         uses: actions/upload-artifact@v4
@@ -500,13 +588,28 @@ jobs:
           name: frontend-report
           path: artifacts/04-frontend-report.md
 
-      - name: Update PR checklist (Frontend items)
+      - name: Resolve PR number by head branch (if not provided)
+        id: resolve-pr
         uses: actions/github-script@v7
         with:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const pr_number = Number("${{ needs.product-owner-planning.outputs.pr_number }}");
+            const provided = `${{ needs.product-owner-planning.outputs.pr_number }}`.trim();
+            const branch = `${{ needs.product-owner-planning.outputs.branch_name }}`.trim();
+            if (provided) { core.setOutput('pr_number', provided); return; }
+            const head = `${owner}:${branch}`;
+            const prs = await github.paginate(github.rest.pulls.list, { owner, repo, state: 'open', head });
+            core.setOutput('pr_number', prs.length ? String(prs[0].number) : '');
+
+      - name: Update PR checklist (Frontend items)
+        if: ${{ steps.resolve-pr.outputs.pr_number != '' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pr_number = Number(`${{ steps.resolve-pr.outputs.pr_number }}`);
             function esc(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
             function check(body, items){
               for(const text of items){
@@ -529,7 +632,7 @@ jobs:
             await github.rest.pulls.update({ owner, repo, pull_number: pr_number, body });
 
   # ============================================================================
-  # Phase 5: QA Testing Expert - Testing & Validation (updates PR)
+  # Phase 5: QA Testing Expert - Testing & Validation (updates PR if exists)
   # ============================================================================
   qa-testing:
     name: "✅ QA Testing Expert - Testing & Validation"
@@ -542,7 +645,6 @@ jobs:
           ref: ${{ needs.product-owner-planning.outputs.branch_name }}
 
       - name: QA Testing Report
-        id: test
         shell: bash
         run: |
           mkdir -p reports artifacts
@@ -586,14 +688,26 @@ jobs:
           } > reports/05-qa-report.md
           cp reports/05-qa-report.md artifacts/05-qa-report.md
 
-      - name: Commit and push QA report
+      - name: Commit and push QA report (rebase-safe)
         shell: bash
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+          BRANCH="${{ needs.product-owner-planning.outputs.branch_name }}"
+          git fetch --all --prune
+          git checkout "$BRANCH"
+          git pull --rebase origin "$BRANCH"
+
           git add reports/05-qa-report.md
-          git commit -m "docs(report): QA testing report"
-          git push
+          if git diff --cached --quiet; then
+            echo "No QA report changes to commit."
+          else
+            git commit -m "docs(report): QA testing report"
+            git push origin "$BRANCH" || git push --force-with-lease origin "$BRANCH"
+          fi
 
       - name: Upload QA Report (artifact)
         uses: actions/upload-artifact@v4
@@ -601,13 +715,28 @@ jobs:
           name: qa-report
           path: artifacts/05-qa-report.md
 
-      - name: Update PR checklist (QA items)
+      - name: Resolve PR number by head branch (if not provided)
+        id: resolve-pr
         uses: actions/github-script@v7
         with:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const pr_number = Number("${{ needs.product-owner-planning.outputs.pr_number }}");
+            const provided = `${{ needs.product-owner-planning.outputs.pr_number }}`.trim();
+            const branch = `${{ needs.product-owner-planning.outputs.branch_name }}`.trim();
+            if (provided) { core.setOutput('pr_number', provided); return; }
+            const head = `${owner}:${branch}`;
+            const prs = await github.paginate(github.rest.pulls.list, { owner, repo, state: 'open', head });
+            core.setOutput('pr_number', prs.length ? String(prs[0].number) : '');
+
+      - name: Update PR checklist (QA items)
+        if: ${{ steps.resolve-pr.outputs.pr_number != '' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pr_number = Number(`${{ steps.resolve-pr.outputs.pr_number }}`);
             function esc(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
             function check(body, items){
               for(const text of items){
@@ -627,7 +756,7 @@ jobs:
             await github.rest.pulls.update({ owner, repo, pull_number: pr_number, body });
 
   # ============================================================================
-  # Phase 6: Project Manager - Validation Review (updates PR)
+  # Phase 6: Project Manager - Validation Review (updates PR if exists)
   # ============================================================================
   project-manager-validation:
     name: "📋 Project Manager - Validation Review"
@@ -640,7 +769,6 @@ jobs:
           ref: ${{ needs.product-owner-planning.outputs.branch_name }}
 
       - name: PM Validation Report
-        id: validate
         shell: bash
         run: |
           mkdir -p reports artifacts
@@ -674,14 +802,26 @@ jobs:
           } > reports/06-pm-validation.md
           cp reports/06-pm-validation.md artifacts/06-pm-validation.md
 
-      - name: Commit and push PM validation report
+      - name: Commit and push PM validation report (rebase-safe)
         shell: bash
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+          BRANCH="${{ needs.product-owner-planning.outputs.branch_name }}"
+          git fetch --all --prune
+          git checkout "$BRANCH"
+          git pull --rebase origin "$BRANCH"
+
           git add reports/06-pm-validation.md
-          git commit -m "docs(report): Project Manager validation review"
-          git push
+          if git diff --cached --quiet; then
+            echo "No PM validation changes to commit."
+          else
+            git commit -m "docs(report): Project Manager validation review"
+            git push origin "$BRANCH" || git push --force-with-lease origin "$BRANCH"
+          fi
 
       - name: Upload Validation Report (artifact)
         uses: actions/upload-artifact@v4
@@ -689,13 +829,28 @@ jobs:
           name: validation-report
           path: artifacts/06-pm-validation.md
 
-      - name: Update PR checklist (Validation items)
+      - name: Resolve PR number by head branch (if not provided)
+        id: resolve-pr
         uses: actions/github-script@v7
         with:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const pr_number = Number("${{ needs.product-owner-planning.outputs.pr_number }}");
+            const provided = `${{ needs.product-owner-planning.outputs.pr_number }}`.trim();
+            const branch = `${{ needs.product-owner-planning.outputs.branch_name }}`.trim();
+            if (provided) { core.setOutput('pr_number', provided); return; }
+            const head = `${owner}:${branch}`;
+            const prs = await github.paginate(github.rest.pulls.list, { owner, repo, state: 'open', head });
+            core.setOutput('pr_number', prs.length ? String(prs[0].number) : '');
+
+      - name: Update PR checklist (Validation items)
+        if: ${{ steps.resolve-pr.outputs.pr_number != '' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pr_number = Number(`${{ steps.resolve-pr.outputs.pr_number }}`);
             function esc(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
             function check(body, items){
               for(const text of items){
@@ -723,7 +878,7 @@ jobs:
             await github.rest.pulls.update({ owner, repo, pull_number: pr_number, body });
 
   # ============================================================================
-  # Phase 7: Product Owner - Final Vision Approval (updates PR)
+  # Phase 7: Product Owner - Final Vision Approval (updates PR if exists)
   # ============================================================================
   product-owner-approval:
     name: "🎯 Product Owner - Final Approval"
@@ -736,7 +891,6 @@ jobs:
           ref: ${{ needs.product-owner-planning.outputs.branch_name }}
 
       - name: Final Approval Report
-        id: approve
         shell: bash
         run: |
           mkdir -p reports artifacts
@@ -774,14 +928,26 @@ jobs:
           } > reports/07-product-owner-approval.md
           cp reports/07-product-owner-approval.md artifacts/07-product-owner-approval.md
 
-      - name: Commit and push PO approval report
+      - name: Commit and push PO approval report (rebase-safe)
         shell: bash
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+          BRANCH="${{ needs.product-owner-planning.outputs.branch_name }}"
+          git fetch --all --prune
+          git checkout "$BRANCH"
+          git pull --rebase origin "$BRANCH"
+
           git add reports/07-product-owner-approval.md
-          git commit -m "docs(report): Product Owner final approval"
-          git push
+          if git diff --cached --quiet; then
+            echo "No PO approval changes to commit."
+          else
+            git commit -m "docs(report): Product Owner final approval"
+            git push origin "$BRANCH" || git push --force-with-lease origin "$BRANCH"
+          fi
 
       - name: Upload Approval Report (artifact)
         uses: actions/upload-artifact@v4
@@ -789,13 +955,28 @@ jobs:
           name: approval-report
           path: artifacts/07-product-owner-approval.md
 
-      - name: Update PR checklist (Final Approval items)
+      - name: Resolve PR number by head branch (if not provided)
+        id: resolve-pr
         uses: actions/github-script@v7
         with:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const pr_number = Number("${{ needs.product-owner-planning.outputs.pr_number }}");
+            const provided = `${{ needs.product-owner-planning.outputs.pr_number }}`.trim();
+            const branch = `${{ needs.product-owner-planning.outputs.branch_name }}`.trim();
+            if (provided) { core.setOutput('pr_number', provided); return; }
+            const head = `${owner}:${branch}`;
+            const prs = await github.paginate(github.rest.pulls.list, { owner, repo, state: 'open', head });
+            core.setOutput('pr_number', prs.length ? String(prs[0].number) : '');
+
+      - name: Update PR checklist (Final Approval items)
+        if: ${{ steps.resolve-pr.outputs.pr_number != '' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pr_number = Number(`${{ steps.resolve-pr.outputs.pr_number }}`);
             function esc(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
             function check(body, items){
               for(const text of items){
@@ -819,7 +1000,7 @@ jobs:
               "Cross-platform confirmed",
               "Docs adequate for users/developers"
             ]);
-            // Optional: Mark YES decision (leave NO unchecked)
+            // Mark YES decision (leave NO unchecked)
             body = body.replace(/- \[ \] \*\*YES\*\*/, '- [x] **YES**');
             await github.rest.pulls.update({ owner, repo, pull_number: pr_number, body });
 
@@ -831,12 +1012,42 @@ jobs:
     runs-on: ubuntu-latest
     needs: product-owner-approval
     steps:
+      - name: Resolve PR number (for summary)
+        id: resolve-pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const provided = `${{ needs.product-owner-planning.outputs.pr_number }}`.trim();
+            const branch = `${{ needs.product-owner-planning.outputs.branch_name }}`.trim();
+            if (provided) { core.setOutput('pr_number', provided); return; }
+            const head = `${owner}:${branch}`;
+            const prs = await github.paginate(github.rest.pulls.list, { owner, repo, state: 'open', head });
+            core.setOutput('pr_number', prs.length ? String(prs[0].number) : '');
+
+      - name: Fetch PR URL (if exists)
+        id: pr-url
+        if: ${{ steps.resolve-pr.outputs.pr_number != '' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const number = Number(`${{ steps.resolve-pr.outputs.pr_number }}`);
+            const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: number });
+            core.setOutput('url', pr.html_url);
+
       - name: Display Summary
         shell: bash
         run: |
           echo "## 🎉 Comprehensive Multi-Agent Workflow Complete" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Feature Branch**: \`${{ needs.product-owner-planning.outputs.branch_name }}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **PR**: ${{ needs.product-owner-planning.outputs.pr_url }}" >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "${{ steps.pr-url.outputs.url }}" ]; then
+            echo "- **PR**: ${{ steps.pr-url.outputs.url }}" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- **PR**: Not created by CI (policy). Open manually: https://github.com/${{ github.repository }}/compare/${{ needs.product-owner-planning.outputs.base_branch }}...${{ needs.product-owner-planning.outputs.branch_name }}?expand=1" >> "$GITHUB_STEP_SUMMARY"
+          fi
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Review the PR checklist for auto-updated status of each phase." >> "$GITHUB_STEP_SUMMARY"
+          echo "Review the PR checklist for auto-updated status of each phase (if PR exists)." >> "$GITHUB_STEP_SUMMARY"
