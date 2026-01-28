@@ -151,18 +151,18 @@ The `comprehensive-agent-workflow.yml` file implements a complete multi-agent co
 - **Purpose**: Generate comprehensive summary
 - **Output**: Complete workflow summary with all artifacts
 
-## All Custom Agents Utilized
+## Custom Agents Utilized
 
-This workflow utilizes ALL custom agents available in the repository:
+This workflow utilizes 11 of the 13 custom agents available in the repository:
 
-### Primary Orchestration Agents
+### Primary Orchestration Agents (5)
 - ✅ **Product-owner.md** - Vision and scope definition
 - ✅ **Project-Manager.md** - Planning and coordination
 - ✅ **Backend-Expert.md** - Backend implementation
 - ✅ **Frontend-Expert.md** - Frontend implementation
 - ✅ **QA-Testing-Expert.md** - Testing and validation
 
-### Helper Agents (Used as Needed)
+### Helper Agents Used (6)
 - ✅ **Cross-Platform-Systems-Expert.md** - Platform-specific concerns
 - ✅ **Integration-Architect.md** - Component integration
 - ✅ **Node.js Expert.agent.md** - Node.js best practices
@@ -170,9 +170,9 @@ This workflow utilizes ALL custom agents available in the repository:
 - ✅ **Typescript-Expert.agent.md** - TypeScript implementation
 - ✅ **UX-Designer.md** - User experience design
 
-### Additional Agents (Available but not in main workflow)
-- **Media-Systems-Engineer.md** - For audio/video/DMX features
-- **GitHub-Workflow-Expert.md** - For CI/CD improvements
+### Additional Agents (Available for specialized workflows)
+- ⚪ **Media-Systems-Engineer.md** - For audio/video/DMX features (can be added to workflow when needed)
+- ⚪ **GitHub-Workflow-Expert.md** - For CI/CD improvements (can be added to workflow when needed)
 
 ## Workflow Artifacts
 

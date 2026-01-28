@@ -207,7 +207,7 @@ Product Owner Approval (Phase 7) → YES → Complete!
 | 6 | Project-Manager.md | None | 7 or Loop |
 | 7 | Product-owner.md | None | Complete or Loop |
 
-## All 11 Custom Agents Utilized
+## Custom Agents Utilized in This Workflow
 
 ✅ **Primary Flow Agents (5)**
 1. Product-owner.md
@@ -228,7 +228,11 @@ Product Owner Approval (Phase 7) → YES → Complete!
 - Typescript-Expert.agent.md (already counted)
 11. UX-Designer.md
 
-**Total Unique Agents**: 11 of 11 available ✅
+⚪ **Additional Agents Available (Not in this workflow)**
+12. Media-Systems-Engineer.md (can be added for audio/video features)
+13. GitHub-Workflow-Expert.md (can be added for CI/CD features)
+
+**Total Unique Agents in Workflow**: 11 of 13 available ✅
 
 ## Workflow Characteristics
 
@@ -245,7 +249,7 @@ Product Owner Approval (Phase 7) → YES → Complete!
 - **Total Phases**: 7
 - **Quality Gates**: 6
 - **Feedback Loops**: 2
-- **Agents Used**: 11 (all available)
+- **Agents Used**: 11 (of 13 available)
 - **Artifacts Generated**: 8
 - **MVVM Layers Covered**: 3 (Model, ViewModel, View)
 - **Test Types**: 4 (Unit, Integration, E2E, Regression)
