@@ -392,7 +392,7 @@ describe('Video Service', () => {
         if (event === 'end') {
           setTimeout(async () => {
             // Create dummy frame files
-            const framesDir = path.dirname((mockFfmpegInstance.screenshots as jest.Mock).mock.calls[0][0].folder);
+            const framesDir = (mockFfmpegInstance.screenshots as jest.Mock).mock.calls[0][0].folder;
             await fs.ensureDir(framesDir);
             await fs.writeFile(path.join(framesDir, 'frame_0.png'), 'frame0');
             await fs.writeFile(path.join(framesDir, 'frame_1.png'), 'frame1');
@@ -599,13 +599,12 @@ describe('Video Service', () => {
       expect(outputPath).toContain('_optimized.mp4');
       expect(mockFfmpegInstance.videoCodec).toHaveBeenCalledWith('libx264');
       expect(mockFfmpegInstance.audioCodec).toHaveBeenCalledWith('aac');
-      expect(mockFfmpegInstance.outputOptions).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.stringContaining('-preset fast'),
-          expect.stringContaining('-crf 22'),
-          expect.stringContaining('-movflags +faststart'),
-        ])
-      );
+      expect(mockFfmpegInstance.outputOptions).toHaveBeenCalledWith([
+        '-preset fast',
+        '-crf 22',
+        '-movflags +faststart',
+        '-pix_fmt yuv420p',
+      ]);
     });
 
     it('should handle optimization errors', async () => {
@@ -653,9 +652,8 @@ describe('Video Service', () => {
         
         expect(parseTimemark(null)).toBe(0);
         expect(parseTimemark(undefined)).toBe(0);
-        // Empty string parseFloat returns NaN, but that's acceptable behavior
-        const result = parseTimemark('');
-        expect(isNaN(result) || result === 0).toBe(true);
+        // Empty string parseFloat returns NaN
+        expect(isNaN(parseTimemark(''))).toBe(true);
       });
     });
 
