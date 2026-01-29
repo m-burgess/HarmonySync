@@ -9,7 +9,7 @@ import type {
   DisplayWindow,
   MemoryUsage,
   Slide,
-  SetlistFolder,
+  ServiceOrderFolder,
   TransposeProgress,
 } from './models';
 
@@ -75,19 +75,19 @@ export interface IAudioViewModel extends IViewModel {
 }
 
 /**
- * Setlist ViewModel interface
+ * Service Order ViewModel interface
  */
-export interface ISetlistViewModel extends IViewModel {
+export interface IServiceOrderViewModel extends IViewModel {
   // Observable state
-  folders: SetlistFolder[];
-  currentSong: any; // SetlistItem internal type
+  folders: ServiceOrderFolder[];
+  currentSong: any; // ServiceItem internal type
   isLoading: boolean;
   error: string | null;
   searchQuery: string;
   filteredSongs: any[];
 
   // Actions
-  loadSetlist(basePath: string): Promise<void>;
+  loadServiceOrder(basePath: string): Promise<void>;
   addFolder(): Promise<void>;
   removeFolder(folderPath: string): Promise<void>;
   selectSong(song: any): Promise<void>;

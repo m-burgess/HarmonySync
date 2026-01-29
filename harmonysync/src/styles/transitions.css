@@ -44,9 +44,9 @@
   color: white;
 }
 
-/* Setlist Item Styling */
+/* Service Order Item Styling */
 
-.setlist-item {
+.service-order-item {
   background: #f8f9fa;
   margin-bottom: 8px;
   padding: 10px;
@@ -55,18 +55,18 @@
   transition: all 0.2s ease;
 }
 
-.setlist-item:hover {
+.service-order-item:hover {
   background: #e9ecef;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.setlist-item .item-header {
+.service-order-item .item-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.setlist-item .item-name {
+.service-order-item .item-name {
   cursor: pointer;
   font-weight: bold;
   flex: 1;
@@ -74,11 +74,11 @@
   font-size: 14px;
 }
 
-.setlist-item .item-name:hover {
+.service-order-item .item-name:hover {
   color: #007bff;
 }
 
-.setlist-item.loaded .item-name::after {
+.service-order-item.loaded .item-name::after {
   content: " \2713";
   color: #28a745;
   font-weight: bold;
@@ -174,12 +174,12 @@
 
 /* Loading States */
 
-.setlist-item.loading {
+.service-order-item.loading {
   opacity: 0.7;
   pointer-events: none;
 }
 
-.setlist-item.transitioning {
+.service-order-item.transitioning {
   background: linear-gradient(90deg, #f8f9fa, #e9ecef, #f8f9fa);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;

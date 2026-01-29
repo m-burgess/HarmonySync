@@ -65,7 +65,7 @@ class IPCHandlerManager {
     this.registerYouTubeServiceHandlers();
     this.registerImageServiceHandlers();
     this.registerTextServiceHandlers();
-    this.registerSetlistHandlers();
+    this.registerServiceOrderHandlers();
     this.registerMIDIHandlers();
     this.registerLyricsHandlers();
     this.registerCloudStorageHandlers();
@@ -376,10 +376,10 @@ class IPCHandlerManager {
   }
 
   /**
-   * Setlist handlers
+   * Service Order handlers
    */
-  private registerSetlistHandlers(): void {
-    this.ipcMain.handle('setlist:loadSongMetadata', async (_event, folderPath: string) => {
+  private registerServiceOrderHandlers(): void {
+    this.ipcMain.handle('service-order:loadSongMetadata', async (_event, folderPath: string) => {
       try {
         const path = require('path');
         const fs = require('fs-extra');
@@ -392,7 +392,7 @@ class IPCHandlerManager {
         try {
           files = await fs.readdir(folderPath);
         } catch (error) {
-          console.error('[setlist:loadSongMetadata] Error reading directory:', error);
+          console.error('[service-order:loadSongMetadata] Error reading directory:', error);
         }
         
         return {
@@ -402,12 +402,12 @@ class IPCHandlerManager {
           id: folderName,
         };
       } catch (error) {
-        console.error('[setlist:loadSongMetadata] Error:', error);
+        console.error('[service-order:loadSongMetadata] Error:', error);
         return { path: folderPath, name: folderPath.split(/[\\/]/).pop() || folderPath, files: [] };
       }
     });
 
-    this.ipcMain.handle('setlist:loadLyrics', async (_event, songPath: string) => {
+    this.ipcMain.handle('service-order:loadLyrics', async (_event, songPath: string) => {
       try {
         const path = require('path');
         const fs = require('fs-extra');
@@ -418,14 +418,14 @@ class IPCHandlerManager {
       }
     });
 
-    this.ipcMain.handle('setlist:openLyricsFile', async (_event, songPath: string) => {
+    this.ipcMain.handle('service-order:openLyricsFile', async (_event, songPath: string) => {
       try {
         const path = require('path');
         const { shell } = require('electron');
         const lyricsPath = path.join(songPath, 'lyrics.txt');
         await shell.openPath(lyricsPath);
       } catch (error) {
-        console.error('[setlist:openLyricsFile] Error:', error);
+        console.error('[service-order:openLyricsFile] Error:', error);
       }
     });
   }
@@ -669,8 +669,8 @@ class IPCHandlerManager {
       return { success: true };
     });
 
-    this.ipcMain.handle('remote:setSetlistDirectory', async (_event, directory: string) => {
-      this.services.remoteControlService.setSetlistDirectory(directory);
+    this.ipcMain.handle('remote:setServiceOrderDirectory', async (_event, directory: string) => {
+      this.services.remoteControlService.setServiceOrderDirectory(directory);
       return { success: true };
     });
   }

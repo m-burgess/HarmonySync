@@ -5,12 +5,12 @@
 
 import { container } from '../di/Container';
 import { AudioViewModel } from './AudioViewModel';
-import { SetlistViewModel } from './SetlistViewModel';
+import { ServiceOrderViewModel } from './ServiceOrderViewModel';
 import { SlideViewModel } from './SlideViewModel';
 import { DisplayViewModel } from './DisplayViewModel';
 import { MixerViewModel } from './MixerViewModel';
 
-export { AudioViewModel, SetlistViewModel, SlideViewModel, DisplayViewModel, MixerViewModel };
+export { AudioViewModel, ServiceOrderViewModel, SlideViewModel, DisplayViewModel, MixerViewModel };
 
 /**
  * Setup all ViewModels in the DI container
@@ -19,8 +19,8 @@ export { AudioViewModel, SetlistViewModel, SlideViewModel, DisplayViewModel, Mix
 export function setupViewModels(): void {
   // Register ViewModels (depend on services)
   container.register('audioViewModel', AudioViewModel, ['audioService'], true);
-  container.register('setlistViewModel', SetlistViewModel, 
-    ['setlistService', 'audioService', 'displayService', 'slideService'], true);
+  container.register('serviceOrderViewModel', ServiceOrderViewModel, 
+    ['serviceOrderService', 'audioService', 'displayService', 'slideService'], true);
   container.register('slideViewModel', SlideViewModel, 
     ['slideService', 'displayService'], true);
   container.register('displayViewModel', DisplayViewModel, 
@@ -42,7 +42,7 @@ export function getViewModel(name: string): any {
 
 export default {
   AudioViewModel,
-  SetlistViewModel,
+  ServiceOrderViewModel,
   SlideViewModel,
   DisplayViewModel,
   MixerViewModel,

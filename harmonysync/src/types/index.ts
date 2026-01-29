@@ -7,7 +7,7 @@ export type {
   AudioTrack,
   Slide,
   Song,
-  SetlistFolder,
+  ServiceOrderFolder,
   Display,
   DisplayWindow,
   MixerConfig,
@@ -71,7 +71,7 @@ export {
   type SongLoadedPayload,
   type SongChangedPayload,
   type FolderAddedPayload,
-  type SetlistUpdatedPayload,
+  type ServiceOrderUpdatedPayload,
   type DisplayConfigChangedPayload,
   type WindowOpenedPayload,
   type WindowClosedPayload,
@@ -87,14 +87,14 @@ export type {
   IFileService,
   IDisplayService,
   ISlideService,
-  ISetlistService,
+  IServiceOrderService,
 } from './services';
 
 // ViewModels
 export type {
   IViewModel,
   IAudioViewModel,
-  ISetlistViewModel,
+  IServiceOrderViewModel,
   ISlideViewModel,
   IDisplayViewModel,
   IMixerViewModel,

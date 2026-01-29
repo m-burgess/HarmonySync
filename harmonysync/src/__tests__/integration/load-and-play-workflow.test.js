@@ -2,7 +2,7 @@
  * Integration Test: Load and Play Song Workflow
  * 
  * Tests the complete workflow of:
- * 1. Adding a folder to setlist
+ * 1. Adding a folder to service order
  * 2. Loading a song with tracks
  * 3. Playing audio
  * 4. Stopping audio
@@ -13,18 +13,18 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import Container from '../../di/Container.js';
 import IpcService from '../../services/IpcService.js';
 import AudioService from '../../services/AudioService.js';
-import SetlistService from '../../services/SetlistService.js';
+import ServiceOrderService from '../../services/ServiceOrderService.js';
 import FileService from '../../services/FileService.js';
 import DisplayService from '../../services/DisplayService.js';
 import SlideService from '../../services/SlideService.js';
 import EventBusService from '../../services/EventBusService.js';
 import AudioViewModel from '../../viewmodels/AudioViewModel.js';
-import SetlistViewModel from '../../viewmodels/SetlistViewModel.js';
+import ServiceOrderViewModel from '../../viewmodels/ServiceOrderViewModel.js';
 
 describe('Integration: Load and Play Song Workflow', () => {
   let container;
   let audioViewModel;
-  let setlistViewModel;
+  let serviceOrderViewModel;
   let eventBus;
   let mockIpcService;
 
@@ -46,16 +46,16 @@ describe('Integration: Load and Play Song Workflow', () => {
     container.register('fileService', FileService, ['ipcService'], true);
     container.register('displayService', DisplayService, ['ipcService'], true);
     container.register('slideService', SlideService, ['ipcService'], true);
-    container.register('setlistService', SetlistService, ['ipcService', 'fileService'], true);
+    container.register('serviceOrderService', ServiceOrderService, ['ipcService', 'fileService'], true);
 
     // Register ViewModels
     container.register('audioViewModel', AudioViewModel, ['audioService'], true);
-    container.register('setlistViewModel', SetlistViewModel, 
-      ['setlistService', 'audioService', 'displayService', 'slideService'], true);
+    container.register('serviceOrderViewModel', ServiceOrderViewModel, 
+      ['serviceOrderService', 'audioService', 'displayService', 'slideService'], true);
 
     // Resolve ViewModels
     audioViewModel = container.resolve('audioViewModel');
-    setlistViewModel = container.resolve('setlistViewModel');
+    serviceOrderViewModel = container.resolve('serviceOrderViewModel');
     eventBus = container.resolve('eventBusService');
   });
 
@@ -91,22 +91,22 @@ describe('Integration: Load and Play Song Workflow', () => {
       }
     });
 
-    // Step 1: Add folder to setlist
-    await setlistViewModel.addFolders();
+    // Step 1: Add folder to service order
+    await serviceOrderViewModel.addFolders();
 
-    expect(setlistViewModel.setlist.length).toBe(1);
-    expect(setlistViewModel.setlist[0].name).toBe('Amazing Grace');
+    expect(serviceOrderViewModel.serviceOrder.length).toBe(1);
+    expect(serviceOrderViewModel.serviceOrder[0].name).toBe('Amazing Grace');
     expect(mockIpcService.invoke).toHaveBeenCalledWith('select_folder');
 
     // Step 2: Load song with tracks
-    const loadedItem = setlistViewModel.setlist[0];
-    await setlistViewModel.loadItem(loadedItem, 0);
+    const loadedItem = serviceOrderViewModel.serviceOrder[0];
+    await serviceOrderViewModel.loadItem(loadedItem, 0);
 
-    expect(setlistViewModel.currentSongIndex).toBe(0);
-    expect(setlistViewModel.currentLoadedFolder).toBe('/path/to/song');
+    expect(serviceOrderViewModel.currentSongIndex).toBe(0);
+    expect(serviceOrderViewModel.currentLoadedFolder).toBe('/path/to/song');
 
     // Verify tracks were loaded (this would normally happen through callbacks)
-    // In real app, SetlistManager calls setAllTracks which updates AudioViewModel
+    // In real app, ServiceOrderManager calls setAllTracks which updates AudioViewModel
     expect(mockIpcService.invoke).toHaveBeenCalledWith('load_audio_tracks', '/path/to/song');
 
     // Step 3: Load tracks into audio ViewModel
@@ -162,28 +162,28 @@ describe('Integration: Load and Play Song Workflow', () => {
       }
     });
 
-    // Add two songs to setlist
-    await setlistViewModel.addFolders();
-    await setlistViewModel.addFolders();
+    // Add two songs to service order
+    await serviceOrderViewModel.addFolders();
+    await serviceOrderViewModel.addFolders();
 
-    expect(setlistViewModel.setlist.length).toBe(2);
+    expect(serviceOrderViewModel.serviceOrder.length).toBe(2);
 
     // Load and play first song
-    await setlistViewModel.loadItem(setlistViewModel.setlist[0], 0);
+    await serviceOrderViewModel.loadItem(serviceOrderViewModel.serviceOrder[0], 0);
     await audioViewModel.loadTracks('/path/to/song1');
     await audioViewModel.play();
 
-    expect(setlistViewModel.currentSongIndex).toBe(0);
+    expect(serviceOrderViewModel.currentSongIndex).toBe(0);
     expect(audioViewModel.tracks[0].name).toBe('track1.mp3');
     expect(audioViewModel.isPlaying).toBe(true);
 
     // Stop and switch to second song
     await audioViewModel.stop();
-    await setlistViewModel.loadItem(setlistViewModel.setlist[1], 1);
+    await serviceOrderViewModel.loadItem(serviceOrderViewModel.serviceOrder[1], 1);
     await audioViewModel.loadTracks('/path/to/song2');
     await audioViewModel.play();
 
-    expect(setlistViewModel.currentSongIndex).toBe(1);
+    expect(serviceOrderViewModel.currentSongIndex).toBe(1);
     expect(audioViewModel.tracks[0].name).toBe('track2.mp3');
     expect(audioViewModel.isPlaying).toBe(true);
   });
@@ -198,10 +198,10 @@ describe('Integration: Load and Play Song Workflow', () => {
     });
 
     // Try to add folder - should handle error
-    await setlistViewModel.addFolders();
+    await serviceOrderViewModel.addFolders();
 
-    expect(setlistViewModel.setlist.length).toBe(0);
-    expect(setlistViewModel.isLoading).toBe(false);
+    expect(serviceOrderViewModel.serviceOrder.length).toBe(0);
+    expect(serviceOrderViewModel.isLoading).toBe(false);
   });
 
   it('should use EventBus for cross-component communication', async () => {

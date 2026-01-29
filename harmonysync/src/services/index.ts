@@ -10,9 +10,9 @@ import { AudioService } from './AudioService';
 import { FileService } from './FileService';
 import { DisplayService } from './DisplayService';
 import { SlideService } from './SlideService';
-import { SetlistService } from './SetlistService';
+import { ServiceOrderService } from './ServiceOrderService';
 
-export { IpcService, EventBusService, AudioService, FileService, DisplayService, SlideService, SetlistService };
+export { IpcService, EventBusService, AudioService, FileService, DisplayService, SlideService, ServiceOrderService };
 export { EVENT_TYPES } from './EventBusService';
 
 // Default exports for backward compatibility
@@ -22,7 +22,7 @@ export { default as AudioServiceDefault } from './AudioService';
 export { default as FileServiceDefault } from './FileService';
 export { default as DisplayServiceDefault } from './DisplayService';
 export { default as SlideServiceDefault } from './SlideService';
-export { default as SetlistServiceDefault } from './SetlistService';
+export { default as ServiceOrderServiceDefault } from './ServiceOrderService';
 
 /**
  * Setup all services in the DI container
@@ -40,7 +40,7 @@ export function setupServices(): void {
   container.register('fileService', FileService, ['ipcService'], true);
   container.register('displayService', DisplayService, ['ipcService'], true);
   container.register('slideService', SlideService, ['ipcService'], true);
-  container.register('setlistService', SetlistService, ['ipcService', 'fileService'], true);
+  container.register('serviceOrderService', ServiceOrderService, ['ipcService', 'fileService'], true);
 
   console.log('[ServiceRegistry] All services registered successfully');
 }
