@@ -57,7 +57,6 @@ export class SlideService extends BaseService implements ISlideService {
       return await this.ipc.invoke('slides:loadFromFolder', folderPath) as { slides: unknown[]; tracks: unknown[] };
     } catch (error) {
       this.handleError('loadFromFolder', error);
-      return { slides: [], tracks: [] };
     }
   }
 
