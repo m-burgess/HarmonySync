@@ -33,7 +33,7 @@ import {
   ActivityBarIcon, 
   VSCodeStatusBar 
 } from './components/VSCodeUI.jsx';
-import SetlistManager from './components/setlist/SetlistManager.jsx';
+import ServiceOrderManager from './components/service-order/ServiceOrderManager.tsx';
 import SlideManager from './components/slides/SlideManager.jsx';
 import LyricsColumn from './components/lyrics/LyricsColumn.jsx';
 import MultitrackPlayer from './components/audio/MultitrackPlayer.jsx';
@@ -47,7 +47,7 @@ import { EVENT_TYPES } from './services/EventBusService.ts';
 
 const App = observer(() => {
   // Get ViewModels from DI container
-  const setlistViewModel = getViewModel('setlistViewModel');
+  const serviceOrderViewModel = getViewModel('serviceOrderViewModel');
   const slideViewModel = getViewModel('slideViewModel');
   const audioViewModel = getViewModel('audioViewModel');
   const eventBusService = getService('eventBusService');
@@ -242,7 +242,7 @@ const App = observer(() => {
   };
 
   const handleSetCurrentLyrics = (lyrics) => {
-    setlistViewModel.setSelectedSongForLyrics(lyrics);
+    serviceOrderViewModel.setSelectedSongForLyrics(lyrics);
   };
 
   const handleSetSelectedSlide = (slide) => {
@@ -301,7 +301,7 @@ const App = observer(() => {
           className="vscode-sidebar bg-gray-800 border-r border-gray-700"
           style={{ width: `${sidebarWidth}px` }}
         >
-          <SetlistManager 
+          <ServiceOrderManager 
             setAllSlides={handleSetAllSlides} 
             setAllTracks={handleSetAllTracks} 
             setIsLoadingTracks={handleSetIsLoadingTracks}
@@ -320,8 +320,8 @@ const App = observer(() => {
         <div className="flex-1 flex bg-gray-900">
           {/* Slide Editor or Lyrics Column */}
           <div className="flex-1 overflow-hidden">
-            {setlistViewModel.selectedSongForLyrics ? (
-              <LyricsColumn lyrics={setlistViewModel.selectedSongForLyrics} />
+            {serviceOrderViewModel.selectedSongForLyrics ? (
+              <LyricsColumn lyrics={serviceOrderViewModel.selectedSongForLyrics} />
             ) : (
               <SlideManager 
                 allSlides={slideViewModel.slides} 

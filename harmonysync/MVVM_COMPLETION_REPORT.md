@@ -117,14 +117,14 @@ Successfully completed the full MVVM architecture implementation for HarmonySync
 |----------|-------|-------|-------------|
 | **ViewModels** | 5 | 1,641 | Business logic layer |
 | - AudioViewModel | 1 | 321 | Multitrack audio management |
-| - SetlistViewModel | 1 | 421 | Setlist orchestration |
+| - ServiceOrderViewModel | 1 | 421 | Service order orchestration |
 | - SlideViewModel | 1 | 304 | Slide presentation |
 | - DisplayViewModel | 1 | 356 | Display configuration |
 | - MixerViewModel | 1 | 239 | Mixer controls |
 | **Registry** | 1 | 45 | DI container setup |
 | **Tests** | 5 | 2,518 | Comprehensive test coverage |
 | - AudioViewModel.test | 1 | 267 | 24 test cases |
-| - SetlistViewModel.test | 1 | 388 | 30+ test cases |
+| - ServiceOrderViewModel.test | 1 | 388 | 30+ test cases |
 | - SlideViewModel.test | 1 | 770 | 45+ test cases |
 | - DisplayViewModel.test | 1 | 558 | 47+ test cases |
 | - MixerViewModel.test | 1 | 535 | 41+ test cases |

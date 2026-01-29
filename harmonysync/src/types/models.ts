@@ -33,7 +33,7 @@ export interface Slide {
 }
 
 /**
- * Song in setlist
+ * Song in service order
  */
 export interface Song {
   id: string;
@@ -51,9 +51,9 @@ export interface Song {
 }
 
 /**
- * Setlist folder
+ * Service order folder
  */
-export interface SetlistFolder {
+export interface ServiceOrderFolder {
   name: string;
   path: string;
   songs: Song[];

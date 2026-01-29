@@ -30,7 +30,7 @@ interface AppState {
   playbackStatus: 'playing' | 'stopped' | 'paused';
   playbackPosition: number;
   loadedTracks: string[];
-  setlistDirectory: string | null;
+  serviceOrderDirectory: string | null;
 }
 
 /**
@@ -74,7 +74,7 @@ export class RemoteControlService extends BaseElectronService implements IRemote
     playbackStatus: 'stopped',
     playbackPosition: 0,
     loadedTracks: [],
-    setlistDirectory: null
+    serviceOrderDirectory: null
   };
 
   constructor(getMainWindow: WindowGetter, port: number = 3000, config?: ServiceConfig) {
@@ -221,10 +221,10 @@ export class RemoteControlService extends BaseElectronService implements IRemote
   }
 
   /**
-   * Set the setlist directory
+   * Set the service order directory
    */
-  public setSetlistDirectory(directory: string): void {
-    this.appState.setlistDirectory = directory;
+  public setServiceOrderDirectory(directory: string): void {
+    this.appState.serviceOrderDirectory = directory;
   }
 
   /**
@@ -777,9 +777,9 @@ export function getState(): AppState {
   return defaultInstance.getState();
 }
 
-export function setSetlistDirectory(directory: string): void {
+export function setServiceOrderDirectory(directory: string): void {
   if (!defaultInstance) {
     throw new Error('Remote control service not initialized.');
   }
-  defaultInstance.setSetlistDirectory(directory);
+  defaultInstance.setServiceOrderDirectory(directory);
 }
