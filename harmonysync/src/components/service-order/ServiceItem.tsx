@@ -90,8 +90,8 @@ const ServiceItem: React.FC<ServiceItemProps> = ({
 
       {item.type === 'song' && (
         <div className="service-item-transitions">
-          <TransitionButton type="crossfade" onClick={() => handleTransition('crossfade')} />
-          <TransitionButton type="preload" onClick={handlePreload} />
+          <TransitionButton type="crossfade" onClick={() => handleTransition('crossfade')} tooltip="Crossfade to song" />
+          <TransitionButton type="preload" onClick={handlePreload} tooltip="Preload song" />
           {item.lyrics && (
             <Button
               size="small"
@@ -108,7 +108,7 @@ const ServiceItem: React.FC<ServiceItemProps> = ({
 
       {item.type === 'presentation' && (
         <div className="service-item-transitions">
-          <TransitionButton type="load" onClick={() => handleTransition('none')} />
+          <TransitionButton type="load" onClick={() => handleTransition('none')} tooltip="Load presentation" />
         </div>
       )}
     </li>

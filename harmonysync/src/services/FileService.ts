@@ -16,7 +16,7 @@
 
 import { BaseService } from '../base/BaseService';
 import type { IFileService, IIpcService } from '../types/services';
-import type { FileSelectionResult, FolderSelectionResult, SetlistFolder } from '../types';
+import type { FileSelectionResult, FolderSelectionResult, ServiceOrderFolder } from '../types';
 
 /**
  * File Service Implementation
@@ -110,11 +110,11 @@ export class FileService extends BaseService implements IFileService {
   /**
    * Get song folders from a base path
    * @param basePath - Base directory path
-   * @returns Array of setlist folders
+   * @returns Array of service order folders
    */
-  public async getSongFolders(basePath: string): Promise<SetlistFolder[]> {
+  public async getSongFolders(basePath: string): Promise<ServiceOrderFolder[]> {
     try {
-      return await this.ipc.invoke('setlist:getSongFolders', basePath) as SetlistFolder[];
+      return await this.ipc.invoke('service-order:getSongFolders', basePath) as ServiceOrderFolder[];
     } catch (error) {
       return this.handleError('getSongFolders', error);
     }

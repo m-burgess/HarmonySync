@@ -57,16 +57,14 @@ interface ServiceOrderViewModel {
 }
 
 interface ServiceOrderManagerProps {
-  setAllSlides?: (slides: unknown[]) => void;
-  setAllTracks?: (tracks: unknown[]) => void;
-  setIsLoadingTracks?: (loading: boolean) => void;
-  setCurrentLyrics?: (lyrics: string) => void;
+  setAllSlides: (slides: unknown[]) => void;
+  setAllTracks: (tracks: unknown[]) => void;
+  setCurrentLyrics: (lyrics: string) => void;
 }
 
 const ServiceOrderManager: React.FC<ServiceOrderManagerProps> = observer(({ 
   setAllSlides, 
   setAllTracks, 
-  setIsLoadingTracks, 
   setCurrentLyrics 
 }) => {
   const viewModel = getViewModel('serviceOrderViewModel') as ServiceOrderViewModel;
@@ -303,7 +301,7 @@ const ServiceOrderManager: React.FC<ServiceOrderManagerProps> = observer(({
       {viewModel.selectedSongForLyrics && (
         <LyricsFetcher 
           songItem={viewModel.selectedSongForLyrics}
-          onLyricsFetched={(item) => viewModel.handleLyricsFetched(item)}
+          onLyricsFetched={(item: ServiceOrderItem) => viewModel.handleLyricsFetched(item)}
         />
       )}
     </div>
