@@ -69,7 +69,7 @@ const ServiceOrderManager: React.FC<ServiceOrderManagerProps> = observer(({
   setIsLoadingTracks, 
   setCurrentLyrics 
 }) => {
-  const viewModel = getViewModel('setlistViewModel') as ServiceOrderViewModel;
+  const viewModel = getViewModel('serviceOrderViewModel') as ServiceOrderViewModel;
 
   // Setup playback completion listener for autoplay
   useEffect(() => {

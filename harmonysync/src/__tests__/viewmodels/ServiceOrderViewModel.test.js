@@ -3,7 +3,6 @@
  * 
  * Tests for the Service Order ViewModel business logic.
  */
-import { vi } from 'vitest';
 import ServiceOrderViewModel from '../../viewmodels/ServiceOrderViewModel';
 
 describe('ServiceOrderViewModel', () => {
