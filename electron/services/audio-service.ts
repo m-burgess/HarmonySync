@@ -31,13 +31,13 @@ import { ConversionProgress } from '../types/models';
 interface FFprobeMetadata {
   format: {
     duration?: number;
-    bit_rate?: string;
-    size?: string;
+    bit_rate?: number | string;
+    size?: number | string;
   };
   streams: Array<{
     codec_type?: string;
     codec_name?: string;
-    sample_rate?: string;
+    sample_rate?: string | number;
     channels?: number;
   }>;
 }
@@ -67,10 +67,10 @@ interface SyncStatus {
 interface AudioServiceMetadata {
   duration: number;
   codec?: string;
-  sample_rate?: string;
+  sample_rate?: string | number;
   channels?: number;
-  bit_rate?: string;
-  size?: string;
+  bit_rate?: number | string;
+  size?: number | string;
 }
 
 type ProgressCallback = (progress: ConversionProgress) => void;
