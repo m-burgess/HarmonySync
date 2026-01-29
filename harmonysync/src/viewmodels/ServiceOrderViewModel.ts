@@ -1,12 +1,12 @@
 /**
- * Setlist ViewModel - Presentation logic for setlist management
+ * Service Order ViewModel - Presentation logic for service order management
  * 
- * This ViewModel manages the state and business logic for the setlist.
- * It uses MobX for reactive state management and delegates IPC calls to SetlistService.
+ * This ViewModel manages the state and business logic for the service order.
+ * It uses MobX for reactive state management and delegates IPC calls to ServiceOrderService.
  * 
  * Key responsibilities:
- * - Manage setlist items (songs/folders)
- * - Handle adding folders to setlist
+ * - Manage service order items (songs/folders)
+ * - Handle adding folders to service order
  * - Load song metadata and tracks
  * - Handle lyrics management
  * - Track currently loaded song
@@ -21,14 +21,14 @@
 
 import { makeObservable, observable, action, computed, runInAction } from 'mobx';
 import { BaseViewModel } from '../base/BaseViewModel';
-import type { ISetlistViewModel } from '../types/viewmodels';
-import type { Song, SetlistFolder } from '../types';
+import type { IServiceOrderViewModel } from '../types/viewmodels';
+import type { Song, ServiceOrderFolder } from '../types';
 
 // Service interfaces (to be imported from actual services)
-interface ISetlistService {
+interface IServiceOrderService {
   selectFolders(): Promise<string[] | null>;
-  pathExistsInSetlist(setlist: SetlistItem[], path: string): boolean;
-  loadSongMetadata(path: string): Promise<SetlistItem>;
+  pathExistsInServiceOrder(serviceOrder: ServiceItem[], path: string): boolean;
+  loadSongMetadata(path: string): Promise<ServiceItem>;
   loadLyrics(path: string): Promise<string>;
   openLyricsFile(path: string): Promise<void>;
 }
@@ -46,7 +46,7 @@ interface ISlideService {
   loadFromFolder(path: string): Promise<{ slides: unknown[]; tracks: unknown[] }>;
 }
 
-interface SetlistItem {
+interface ServiceItem {
   id?: string;
   name: string;
   path: string;
@@ -55,12 +55,12 @@ interface SetlistItem {
   lyrics?: string;
 }
 
-export class SetlistViewModel extends BaseViewModel implements Partial<ISetlistViewModel> {
-  protected readonly viewModelName = 'SetlistViewModel';
+export class ServiceOrderViewModel extends BaseViewModel implements Partial<IServiceOrderViewModel> {
+  protected readonly viewModelName = 'ServiceOrderViewModel';
 
   // Observable state
-  public folders: SetlistFolder[] = [];
-  public setlist: SetlistItem[] = [];
+  public folders: ServiceOrderFolder[] = [];
+  public serviceOrder: ServiceItem[] = [];
   public currentSongIndex: number = -1;
   public currentLoadedFolder: string | null = null;
   public autoplayEnabled: boolean = false;
@@ -69,7 +69,7 @@ export class SetlistViewModel extends BaseViewModel implements Partial<ISetlistV
   public loadingProgress: number = 0;
   public loadingMessage: string = '';
   public error: string | null = null;
-  public selectedSongForLyrics: SetlistItem | null = null;
+  public selectedSongForLyrics: ServiceItem | null = null;
   public currentBackgroundCssContent: string = '';
   public isFirstLoad: boolean = true;
   public crossfadeDuration: number = 3000; // 3 seconds default
@@ -77,26 +77,26 @@ export class SetlistViewModel extends BaseViewModel implements Partial<ISetlistV
   public filteredSongs: Song[] = [];
 
   // Services
-  private setlistService: ISetlistService;
+  private serviceOrderService: IServiceOrderService;
   private audioService: IAudioService;
   private displayService: IDisplayService;
   private slideService: ISlideService;
 
   constructor(
-    setlistService: ISetlistService,
+    serviceOrderService: IServiceOrderService,
     audioService: IAudioService,
     displayService: IDisplayService,
     slideService: ISlideService
   ) {
     super();
-    this.setlistService = setlistService;
+    this.serviceOrderService = serviceOrderService;
     this.audioService = audioService;
     this.displayService = displayService;
     this.slideService = slideService;
 
     makeObservable(this, {
       folders: observable,
-      setlist: observable,
+      serviceOrder: observable,
       currentSongIndex: observable,
       currentLoadedFolder: observable,
       autoplayEnabled: observable,
@@ -131,9 +131,9 @@ export class SetlistViewModel extends BaseViewModel implements Partial<ISetlistV
       handleLyricsFetched: action,
       editLyrics: action,
       handleServiceImported: action,
-      clearSetlist: action,
+      clearServiceOrder: action,
       setSelectedSongForLyrics: action,
-      loadSetlist: action,
+      loadServiceOrder: action,
       addFolder: action,
       removeFolder: action,
       selectSong: action,
@@ -142,14 +142,14 @@ export class SetlistViewModel extends BaseViewModel implements Partial<ISetlistV
   }
 
   // Computed properties
-  public get currentSong(): SetlistItem | null {
-    return this.currentSongIndex >= 0 && this.currentSongIndex < this.setlist.length
-      ? this.setlist[this.currentSongIndex]
+  public get currentSong(): ServiceItem | null {
+    return this.currentSongIndex >= 0 && this.currentSongIndex < this.serviceOrder.length
+      ? this.serviceOrder[this.currentSongIndex]
       : null;
   }
 
   public get hasNextSong(): boolean {
-    return this.currentSongIndex >= 0 && this.currentSongIndex < this.setlist.length - 1;
+    return this.currentSongIndex >= 0 && this.currentSongIndex < this.serviceOrder.length - 1;
   }
 
   public get hasPreviousSong(): boolean {
@@ -161,25 +161,25 @@ export class SetlistViewModel extends BaseViewModel implements Partial<ISetlistV
   }
 
   public get totalSongs(): number {
-    return this.setlist.length;
+    return this.serviceOrder.length;
   }
 
   public get hasSongs(): boolean {
-    return this.setlist.length > 0;
+    return this.serviceOrder.length > 0;
   }
 
   // Check if a song is preloaded
-  public isSongPreloaded(item: SetlistItem): boolean {
+  public isSongPreloaded(item: ServiceItem): boolean {
     return this.preloadedSongs.has(item.id || item.path);
   }
 
-  // Actions: Add folders to setlist
+  // Actions: Add folders to service order
   public async addFolders(): Promise<void> {
     this.isLoading = true;
     this.error = null;
 
     try {
-      const selectedPaths = await this.setlistService.selectFolders();
+      const selectedPaths = await this.serviceOrderService.selectFolders();
 
       if (!selectedPaths || selectedPaths.length === 0) {
         runInAction(() => {
@@ -189,21 +189,21 @@ export class SetlistViewModel extends BaseViewModel implements Partial<ISetlistV
       }
 
       const pathsArray = Array.isArray(selectedPaths) ? selectedPaths : [selectedPaths];
-      this.log('[SetlistViewModel] Selected paths:', pathsArray);
+      this.log('[ServiceOrderViewModel] Selected paths:', pathsArray);
 
       for (const path of pathsArray) {
-        // Check if already in setlist
-        if (this.setlistService.pathExistsInSetlist(this.setlist, path)) {
+        // Check if already in service order
+        if (this.serviceOrderService.pathExistsInServiceOrder(this.serviceOrder, path)) {
           const folderName = path.split('/').pop() || path.split('\\').pop();
-          this.log(`📁 Folder "${folderName}" is already in the setlist, skipping...`);
+          this.log(`📁 Folder "${folderName}" is already in the service order, skipping...`);
           continue;
         }
 
         // Load metadata for the folder
-        const item = await this.setlistService.loadSongMetadata(path);
+        const item = await this.serviceOrderService.loadSongMetadata(path);
 
         runInAction(() => {
-          this.setlist.push(item);
+          this.serviceOrder.push(item);
         });
       }
 
@@ -219,8 +219,8 @@ export class SetlistViewModel extends BaseViewModel implements Partial<ISetlistV
     }
   }
 
-  // Actions: Load a setlist item (song or folder)
-  public async loadItem(item: SetlistItem, index: number = -1): Promise<{ slides: unknown[]; tracks: unknown[] }> {
+  // Actions: Load a service order item (song or folder)
+  public async loadItem(item: ServiceItem, index: number = -1): Promise<{ slides: unknown[]; tracks: unknown[] }> {
     // Set index if provided
     if (index >= 0) {
       runInAction(() => {
@@ -242,7 +242,7 @@ export class SetlistViewModel extends BaseViewModel implements Partial<ISetlistV
       return { slides: [], tracks: [] };
     }
 
-    this.log(`🎵 Loading setlist item: ${item.name}`);
+    this.log(`🎵 Loading service order item: ${item.name}`);
     this.log(`🔍 isFirstLoad: ${this.isFirstLoad}, currentLoadedFolder: ${this.currentLoadedFolder}`);
 
     runInAction(() => {
@@ -290,7 +290,7 @@ export class SetlistViewModel extends BaseViewModel implements Partial<ISetlistV
   }
 
   // Actions: Preload a song
-  public async preloadSong(item: SetlistItem): Promise<void> {
+  public async preloadSong(item: ServiceItem): Promise<void> {
     if (!item || item.type !== 'song') {
       this.logWarn('Preload called for non-song item:', item);
       return;
@@ -360,11 +360,11 @@ export class SetlistViewModel extends BaseViewModel implements Partial<ISetlistV
     }, 2000);
   }
 
-  // Actions: Remove item from setlist
-  public removeItem(item: SetlistItem): void {
-    const index = this.setlist.findIndex(i => i.id === item.id);
+  // Actions: Remove item from service order
+  public removeItem(item: ServiceItem): void {
+    const index = this.serviceOrder.findIndex(i => i.id === item.id);
     if (index !== -1) {
-      this.setlist.splice(index, 1);
+      this.serviceOrder.splice(index, 1);
 
       // Adjust current song index if necessary
       if (this.currentSongIndex >= index) {
@@ -373,13 +373,13 @@ export class SetlistViewModel extends BaseViewModel implements Partial<ISetlistV
     }
   }
 
-  // Actions: Reorder setlist items
+  // Actions: Reorder service order items
   public reorderItems(fromIndex: number, toIndex: number): void {
     if (fromIndex === toIndex) return;
 
-    const item = this.setlist[fromIndex];
-    this.setlist.splice(fromIndex, 1);
-    this.setlist.splice(toIndex, 0, item);
+    const item = this.serviceOrder[fromIndex];
+    this.serviceOrder.splice(fromIndex, 1);
+    this.serviceOrder.splice(toIndex, 0, item);
 
     // Update current song index if needed
     if (this.currentSongIndex === fromIndex) {
@@ -399,9 +399,9 @@ export class SetlistViewModel extends BaseViewModel implements Partial<ISetlistV
     }
 
     const nextIndex = this.currentSongIndex + 1;
-    const nextSong = this.setlist[nextIndex];
+    const nextSong = this.serviceOrder[nextIndex];
 
-    this.log(`🎵 Auto-advancing to next song: ${nextSong.name} (${nextIndex + 1}/${this.setlist.length})`);
+    this.log(`🎵 Auto-advancing to next song: ${nextSong.name} (${nextIndex + 1}/${this.serviceOrder.length})`);
 
     await this.loadItem(nextSong, nextIndex);
     return true;
@@ -412,7 +412,7 @@ export class SetlistViewModel extends BaseViewModel implements Partial<ISetlistV
     this.log('🎵 Playback completed, checking autoplay...', {
       autoplayEnabled: this.autoplayEnabled,
       currentSongIndex: this.currentSongIndex,
-      setlistLength: this.setlist.length,
+      serviceOrderLength: this.serviceOrder.length,
     });
 
     if (this.autoplayEnabled && this.hasNextSong) {
@@ -420,7 +420,7 @@ export class SetlistViewModel extends BaseViewModel implements Partial<ISetlistV
         this.advanceToNextSong();
       }, 1000); // 1 second delay before next song
     } else if (this.autoplayEnabled && !this.hasNextSong) {
-      this.log('🎵 Reached end of setlist, autoplay stopping');
+      this.log('🎵 Reached end of service order, autoplay stopping');
       runInAction(() => {
         this.currentSongIndex = -1;
       });
@@ -439,7 +439,7 @@ export class SetlistViewModel extends BaseViewModel implements Partial<ISetlistV
   }
 
   // Actions: Handle lyrics fetching
-  public async openLyricsFetcher(item: SetlistItem): Promise<void> {
+  public async openLyricsFetcher(item: ServiceItem): Promise<void> {
     this.selectedSongForLyrics = item;
   }
 
@@ -447,7 +447,7 @@ export class SetlistViewModel extends BaseViewModel implements Partial<ISetlistV
     this.selectedSongForLyrics = null;
   }
 
-  public async handleLyricsFetched(item: SetlistItem | null): Promise<void> {
+  public async handleLyricsFetched(item: ServiceItem | null): Promise<void> {
     if (!item) {
       this.selectedSongForLyrics = null;
       return;
@@ -457,13 +457,13 @@ export class SetlistViewModel extends BaseViewModel implements Partial<ISetlistV
 
     try {
       // Reload lyrics
-      const lyrics = await this.setlistService.loadLyrics(item.path);
+      const lyrics = await this.serviceOrderService.loadLyrics(item.path);
 
-      // Update the item in setlist
+      // Update the item in service order
       runInAction(() => {
-        const index = this.setlist.findIndex(si => si.id === item.id);
+        const index = this.serviceOrder.findIndex(si => si.id === item.id);
         if (index !== -1) {
-          this.setlist[index] = { ...this.setlist[index], lyrics };
+          this.serviceOrder[index] = { ...this.serviceOrder[index], lyrics };
         }
         this.selectedSongForLyrics = null;
       });
@@ -476,14 +476,14 @@ export class SetlistViewModel extends BaseViewModel implements Partial<ISetlistV
   }
 
   // Actions: Edit lyrics file
-  public async editLyrics(item: SetlistItem): Promise<void> {
+  public async editLyrics(item: ServiceItem): Promise<void> {
     if (!item || item.type !== 'song') {
       this.logWarn('Edit lyrics called for non-song item:', item);
       return;
     }
 
     try {
-      await this.setlistService.openLyricsFile(item.path);
+      await this.serviceOrderService.openLyricsFile(item.path);
     } catch (error) {
       this.handleError('Open lyrics file', error);
       runInAction(() => {
@@ -494,33 +494,33 @@ export class SetlistViewModel extends BaseViewModel implements Partial<ISetlistV
   }
 
   // Actions: Handle service import event
-  public handleServiceImported(serviceStructure: { songs?: SetlistItem[] }): void {
-    this.log('[SetlistViewModel] Service imported event received:', serviceStructure);
+  public handleServiceImported(serviceStructure: { songs?: ServiceItem[] }): void {
+    this.log('[ServiceOrderViewModel] Service imported event received:', serviceStructure);
 
     if (serviceStructure && serviceStructure.songs && serviceStructure.songs.length > 0) {
       runInAction(() => {
-        this.setlist.push(...(serviceStructure.songs || []));
+        this.serviceOrder.push(...(serviceStructure.songs || []));
       });
-      this.log(`[SetlistViewModel] Added ${serviceStructure.songs.length} songs from service to setlist`);
+      this.log(`[ServiceOrderViewModel] Added ${serviceStructure.songs.length} songs from service to service order`);
     }
   }
 
-  // Actions: Clear setlist
-  public clearSetlist(): void {
-    this.setlist = [];
+  // Actions: Clear service order
+  public clearServiceOrder(): void {
+    this.serviceOrder = [];
     this.currentSongIndex = -1;
     this.currentLoadedFolder = null;
     this.preloadedSongs.clear();
   }
 
   // Direct state setter for App.jsx compatibility (to be phased out)
-  public setSelectedSongForLyrics(lyrics: SetlistItem | null): void {
+  public setSelectedSongForLyrics(lyrics: ServiceItem | null): void {
     this.selectedSongForLyrics = lyrics;
   }
 
   // Interface methods implementation
-  public async loadSetlist(basePath: string): Promise<void> {
-    this.log('Loading setlist from:', basePath);
+  public async loadServiceOrder(basePath: string): Promise<void> {
+    this.log('Loading service order from:', basePath);
     // Implementation here
   }
 
@@ -529,16 +529,16 @@ export class SetlistViewModel extends BaseViewModel implements Partial<ISetlistV
   }
 
   public async removeFolder(folderPath: string): Promise<void> {
-    const item = this.setlist.find(i => i.path === folderPath);
+    const item = this.serviceOrder.find(i => i.path === folderPath);
     if (item) {
       this.removeItem(item);
     }
   }
 
   public async selectSong(song: Song): Promise<void> {
-    const index = this.setlist.findIndex(i => i.path === song.folderPath);
+    const index = this.serviceOrder.findIndex(i => i.path === song.folderPath);
     if (index >= 0) {
-      await this.loadItem(this.setlist[index], index);
+      await this.loadItem(this.serviceOrder[index], index);
     }
   }
 
@@ -555,4 +555,4 @@ export class SetlistViewModel extends BaseViewModel implements Partial<ISetlistV
   }
 }
 
-export default SetlistViewModel;
+export default ServiceOrderViewModel;

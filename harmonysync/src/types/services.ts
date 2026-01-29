@@ -13,7 +13,7 @@ import type {
   MixerConfig,
   Slide,
   Song,
-  SetlistFolder,
+  ServiceOrderFolder,
   TransposeResult,
 } from './models';
 import type { EventType, EventHandler, UnsubscribeFunction } from './events';
@@ -109,7 +109,7 @@ export interface IFileService extends IService {
   readTextFile(filePath: string): Promise<string>;
   writeTextFile(filePath: string, content: string): Promise<void>;
   exists(filePath: string): Promise<boolean>;
-  getSongFolders(basePath: string): Promise<SetlistFolder[]>;
+  getSongFolders(basePath: string): Promise<ServiceOrderFolder[]>;
   getAudioFiles(folderPath: string): Promise<string[]>;
   getSlideFiles(folderPath: string): Promise<string[]>;
 }
@@ -141,18 +141,18 @@ export interface ISlideService extends IService {
 }
 
 /**
- * Setlist Service interface
+ * Service Order Service interface
  */
-export interface ISetlistService extends IService {
-  loadSetlist(basePath: string): Promise<SetlistFolder[]>;
-  addFolder(folderPath: string): Promise<SetlistFolder>;
+export interface IServiceOrderService extends IService {
+  loadServiceOrder(basePath: string): Promise<ServiceOrderFolder[]>;
+  addFolder(folderPath: string): Promise<ServiceOrderFolder>;
   removeFolder(folderPath: string): Promise<void>;
   getSongDetails(songPath: string): Promise<Song>;
   saveSong(song: Song): Promise<void>;
   searchSongs(query: string): Promise<Song[]>;
   selectFolders(): Promise<string[] | null>;
-  pathExistsInSetlist(setlist: SetlistFolder[], path: string): boolean;
-  loadSongMetadata(folderPath: string): Promise<SetlistFolder>;
+  pathExistsInServiceOrder(serviceOrder: ServiceOrderFolder[], path: string): boolean;
+  loadSongMetadata(folderPath: string): Promise<ServiceOrderFolder>;
   loadLyrics(songPath: string): Promise<string | null>;
   openLyricsFile(songPath: string): Promise<void>;
 }
