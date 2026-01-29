@@ -52,11 +52,14 @@ Service Order 01/29/2026/
 │   │   ├── background.mp4
 │   │   ├── vocals.wav             # 2 audio files (acoustic setup)
 │   │   └── acoustic_guitar.wav
-│   └── Song 4/                    # Fourth worship song
+│   ├── Song 4/                    # Fourth worship song
+│   │   ├── lyrics.txt
+│   │   ├── background.mp4
+│   │   └── SPLIT.wav              # 1 stereo split audio file for testing
+│   └── Song 5/                    # Fifth worship song
 │       ├── lyrics.txt
 │       ├── background.mp4
-│       ├── vocals.wav             # 2 audio files (piano/vocal setup)
-│       └── piano.wav
+│       └── Stereo.wav             # 1 stereo audio file for testing
 └── Special Service/                # Folder for special events (weddings, funerals)
     ├── special_slide_1.png        # 5 test images
     ├── special_slide_2.png
@@ -88,17 +91,18 @@ Service Order 01/29/2026/
 
 ### 4. Worship
 - **Folder**: `Worship/`
-- **Contains**: 4 song folders
+- **Contains**: 5 song folders
 - **Each Song Includes**:
   - `lyrics.txt`: Song lyrics formatted with verses and choruses
   - `background.mp4`: Video background for visual display
-  - Multiple `.wav` files: Individual instrument/vocal tracks for multitrack mixing
+  - `.wav` files: Audio tracks for testing different multitrack scenarios
 
 **Song Track Details**:
-- **Song 1**: 12 tracks (full band with backing vocals)
-- **Song 2**: 5 tracks (standard band setup)
-- **Song 3**: 2 tracks (acoustic setup)
-- **Song 4**: 2 tracks (piano and vocals)
+- **Song 1**: 12 tracks (full band with backing vocals) - tests complex multitrack mixing
+- **Song 2**: 5 tracks (standard band setup) - tests moderate multitrack mixing
+- **Song 3**: 2 tracks (acoustic setup) - tests minimal multitrack mixing
+- **Song 4**: 1 track (`SPLIT.wav`) - tests stereo split file handling
+- **Song 5**: 1 track (`Stereo.wav`) - tests standard stereo file handling
 
 ### 5. Special Service
 - **Folder**: `Special Service/`
@@ -110,11 +114,12 @@ Service Order 01/29/2026/
 ## Usage
 
 1. **Extract the Zip File**: Unzip `Service Order 01-29-2026.zip` to access the folder structure
-2. **Test Multitrack Player**: Use the Worship song folders to test the multitrack audio player with various track counts
-3. **Test Slide Management**: Use Announcements and Sermon folders to test image slide displays
-4. **Test Video Playback**: Use the MP4 files in worship songs and special service for video background testing
-5. **Test Lyrics Display**: Use lyrics.txt files to test the lyrics display system
-6. **Test Pre-Service Music**: Use the YouTube link to test pre-service music automation
+2. **Test Multitrack Player**: Use the Worship song folders to test the multitrack audio player with various track counts (1-12 tracks)
+3. **Test Audio File Types**: Songs 4 and 5 test different stereo file scenarios (SPLIT.wav and Stereo.wav)
+4. **Test Slide Management**: Use Announcements and Sermon folders to test image slide displays
+5. **Test Video Playback**: Use the MP4 files in worship songs and special service for video background testing
+6. **Test Lyrics Display**: Use lyrics.txt files to test the lyrics display system
+7. **Test Pre-Service Music**: Use the YouTube link to test pre-service music automation
 
 ## File Formats
 
@@ -129,7 +134,8 @@ All files in this test package are minimal dummy files:
 This test data package provides a realistic service order structure that:
 - Demonstrates the expected folder organization for HarmonySync
 - Allows testing of all major features (audio, video, images, lyrics)
-- Provides examples of varying complexity (2-12 audio tracks per song)
+- Provides examples of varying complexity (1-12 audio tracks per song)
+- Tests different audio file scenarios (multitrack, stereo split, and standard stereo)
 - Includes both worship and special service scenarios
 - Uses minimal file sizes for quick loading and testing
 
