@@ -29,7 +29,7 @@ Service Order 01/29/2026/
 │   │   ├── background.mp4         # Background video for display
 │   │   ├── Click.wav              # Click track for tempo reference
 │   │   ├── Guide.wav              # Guide track for musical reference
-│   │   ├── vocals.wav             # 14 multitrack audio files total
+│   │   ├── vocals.wav             # 12 musical tracks + 2 reference tracks (14 total)
 │   │   ├── lead_guitar.wav
 │   │   ├── rhythm_guitar.wav
 │   │   ├── bass.wav
@@ -46,7 +46,7 @@ Service Order 01/29/2026/
 │   │   ├── background.mp4
 │   │   ├── Click.wav              # Click track for tempo reference
 │   │   ├── Guide.wav              # Guide track for musical reference
-│   │   ├── vocals.wav             # 7 multitrack audio files
+│   │   ├── vocals.wav             # 5 musical tracks + 2 reference tracks (7 total)
 │   │   ├── guitar.wav
 │   │   ├── keys.wav
 │   │   ├── bass.wav
@@ -56,7 +56,7 @@ Service Order 01/29/2026/
 │   │   ├── background.mp4
 │   │   ├── Click.wav              # Click track for tempo reference
 │   │   ├── Guide.wav              # Guide track for musical reference
-│   │   ├── vocals.wav             # 4 audio files (acoustic setup)
+│   │   ├── vocals.wav             # 2 musical tracks + 2 reference tracks (4 total)
 │   │   └── acoustic_guitar.wav
 │   ├── Song 4/                    # Fourth worship song
 │   │   ├── lyrics.txt
@@ -104,9 +104,9 @@ Service Order 01/29/2026/
   - `.wav` files: Audio tracks for testing different multitrack scenarios
 
 **Song Track Details**:
-- **Song 1**: 14 tracks (full band with backing vocals + Click + Guide) - tests complex multitrack mixing
-- **Song 2**: 7 tracks (standard band setup + Click + Guide) - tests moderate multitrack mixing
-- **Song 3**: 4 tracks (acoustic setup + Click + Guide) - tests minimal multitrack mixing
+- **Song 1**: 14 tracks total (12 musical + 2 reference: Click/Guide) - tests complex multitrack mixing
+- **Song 2**: 7 tracks total (5 musical + 2 reference: Click/Guide) - tests moderate multitrack mixing
+- **Song 3**: 4 tracks total (2 musical + 2 reference: Click/Guide) - tests minimal multitrack mixing
 - **Song 4**: 1 track (`SPLIT.wav`) - tests stereo split file handling
 - **Song 5**: 1 track (`Stereo.wav`) - tests standard stereo file handling
 
