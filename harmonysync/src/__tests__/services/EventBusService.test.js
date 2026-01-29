@@ -357,10 +357,10 @@ describe('EventBusService', () => {
       expect(EVENT_TYPES.SLIDES_LOADED).toBe('slide:slides-loaded');
     });
 
-    it('should have all required setlist event types', () => {
-      expect(EVENT_TYPES.SONG_LOADED).toBe('setlist:song-loaded');
-      expect(EVENT_TYPES.SONG_CHANGED).toBe('setlist:song-changed');
-      expect(EVENT_TYPES.FOLDER_ADDED).toBe('setlist:folder-added');
+    it('should have all required service order event types', () => {
+      expect(EVENT_TYPES.SONG_LOADED).toBe('service-order:song-loaded');
+      expect(EVENT_TYPES.SONG_CHANGED).toBe('service-order:song-changed');
+      expect(EVENT_TYPES.FOLDER_ADDED).toBe('service-order:folder-added');
     });
 
     it('should have all required display event types', () => {
