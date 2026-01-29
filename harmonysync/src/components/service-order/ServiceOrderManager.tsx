@@ -1,8 +1,8 @@
 /**
- * SetlistManager - MVVM Refactored View Component
+ * ServiceOrderManager - MVVM Refactored View Component
  * 
  * This component is refactored to use MVVM architecture:
- * - All business logic moved to SetlistViewModel
+ * - All business logic moved to ServiceOrderViewModel
  * - Component wrapped with observer() to react to ViewModel changes
  * - No useState/useEffect for business state
  * - Pure presentation logic only (~130 lines vs original 735 lines)
@@ -14,8 +14,62 @@ import { ArrowDownTrayIcon, CheckCircleIcon, PencilIcon } from '@heroicons/react
 import LyricsFetcher from './LyricsFetcher';
 import { onPlaybackComplete, offPlaybackComplete, setCrossfadeDuration } from '../../utils/audio';
 
-const SetlistManager = observer(({ setAllSlides, setAllTracks, setIsLoadingTracks, setCurrentLyrics }) => {
-  const viewModel = getViewModel('setlistViewModel');
+// Type definitions
+interface ServiceOrderItem {
+  id?: string;
+  name: string;
+  path: string;
+  type: 'song' | 'folder' | 'presentation';
+  tracks?: unknown[];
+  lyrics?: string;
+}
+
+interface ServiceImportedDetail {
+  serviceOrder?: ServiceOrderItem[];
+  // Add other properties as needed
+}
+
+interface LoadItemResult {
+  slides?: unknown[];
+  tracks?: unknown[];
+}
+
+interface ServiceOrderViewModel {
+  serviceOrder: ServiceOrderItem[];
+  currentSongIndex: number;
+  autoplayEnabled: boolean;
+  isLoading: boolean;
+  loadingProgress: number;
+  loadingMessage: string;
+  crossfadeDuration: number;
+  selectedSongForLyrics: ServiceOrderItem | null;
+  handlePlaybackComplete: () => void;
+  handleServiceImported: (detail: ServiceImportedDetail) => void;
+  loadItem: (item: ServiceOrderItem, index: number) => Promise<LoadItemResult | null>;
+  setCrossfadeDuration: (duration: number) => void;
+  toggleAutoplay: () => void;
+  addFolders: () => Promise<void>;
+  isSongPreloaded: (item: ServiceOrderItem) => boolean;
+  openLyricsFetcher: (item: ServiceOrderItem) => void;
+  editLyrics: (item: ServiceOrderItem) => void;
+  preloadSong: (item: ServiceOrderItem) => void;
+  handleLyricsFetched: (item: ServiceOrderItem) => void;
+}
+
+interface ServiceOrderManagerProps {
+  setAllSlides?: (slides: unknown[]) => void;
+  setAllTracks?: (tracks: unknown[]) => void;
+  setIsLoadingTracks?: (loading: boolean) => void;
+  setCurrentLyrics?: (lyrics: string) => void;
+}
+
+const ServiceOrderManager: React.FC<ServiceOrderManagerProps> = observer(({ 
+  setAllSlides, 
+  setAllTracks, 
+  setIsLoadingTracks, 
+  setCurrentLyrics 
+}) => {
+  const viewModel = getViewModel('setlistViewModel') as ServiceOrderViewModel;
 
   // Setup playback completion listener for autoplay
   useEffect(() => {
@@ -31,18 +85,18 @@ const SetlistManager = observer(({ setAllSlides, setAllTracks, setIsLoadingTrack
 
   // Listen for service import events from zip files
   useEffect(() => {
-    const handleServiceImported = (event) => {
+    const handleServiceImported = (event: CustomEvent<ServiceImportedDetail>) => {
       viewModel.handleServiceImported(event.detail);
     };
 
-    window.addEventListener('service-imported', handleServiceImported);
+    window.addEventListener('service-imported', handleServiceImported as EventListener);
     return () => {
-      window.removeEventListener('service-imported', handleServiceImported);
+      window.removeEventListener('service-imported', handleServiceImported as EventListener);
     };
   }, [viewModel]);
 
-  // Handle setlist item click with index
-  const handleSetlistItemClickWithIndex = async (item, index) => {
+  // Handle service order item click with index
+  const handleServiceOrderItemClickWithIndex = async (item: ServiceOrderItem, index: number) => {
     const result = await viewModel.loadItem(item, index);
     if (result && setAllSlides && setAllTracks) {
       setAllSlides(result.slides || []);
@@ -54,7 +108,7 @@ const SetlistManager = observer(({ setAllSlides, setAllTracks, setIsLoadingTrack
   };
 
   // Handle crossfade duration change
-  const handleCrossfadeDurationChange = async (e) => {
+  const handleCrossfadeDurationChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const duration = parseInt(e.target.value);
     viewModel.setCrossfadeDuration(duration);
     try {
@@ -65,7 +119,7 @@ const SetlistManager = observer(({ setAllSlides, setAllTracks, setIsLoadingTrack
   };
 
   return (
-    <div className="col" id="setlist-col">
+    <div className="col" id="service-order-col">
       {/* Crossfade Control */}
       <div className="mb-2 p-2 bg-stage rounded border border-surface">
         <div className="flex items-center gap-2 text-xs">
@@ -103,7 +157,7 @@ const SetlistManager = observer(({ setAllSlides, setAllTracks, setIsLoadingTrack
           </label>
           {viewModel.currentSongIndex >= 0 && (
             <span className="text-muted ml-auto">
-              {viewModel.currentSongIndex + 1}/{viewModel.setlist.length}
+              {viewModel.currentSongIndex + 1}/{viewModel.serviceOrder.length}
             </span>
           )}
         </div>
@@ -134,24 +188,24 @@ const SetlistManager = observer(({ setAllSlides, setAllTracks, setIsLoadingTrack
         </div>
       )}
 
-      {/* Setlist Items */}
-      <ul id="setlist">
-        {viewModel.setlist.map((item, index) => {
+      {/* Service Order Items */}
+      <ul id="service-order">
+        {viewModel.serviceOrder.map((item, index) => {
           const isPreloaded = viewModel.isSongPreloaded(item);
           const isCurrentSong = viewModel.currentSongIndex === index;
           
           return (
             <li 
               key={item.id || `fallback-${index}`} 
-              className={`setlist-item ${isCurrentSong ? 'current-song' : ''}`}
-              onClick={() => handleSetlistItemClickWithIndex(item, index)}
+              className={`service-order-item ${isCurrentSong ? 'current-song' : ''}`}
+              onClick={() => handleServiceOrderItemClickWithIndex(item, index)}
               style={{ 
                 backgroundColor: isCurrentSong ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
                 borderLeft: isCurrentSong ? '3px solid #3b82f6' : '3px solid transparent'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ flex: 1 }} onClick={() => handleSetlistItemClickWithIndex(item, index)}>
+                <span style={{ flex: 1 }} onClick={() => handleServiceOrderItemClickWithIndex(item, index)}>
                   {isCurrentSong && '▶ '}{item.name}
                 </span>
                 {item.type === 'song' && (
@@ -256,4 +310,4 @@ const SetlistManager = observer(({ setAllSlides, setAllTracks, setIsLoadingTrack
   );
 });
 
-export default SetlistManager;
+export default ServiceOrderManager;

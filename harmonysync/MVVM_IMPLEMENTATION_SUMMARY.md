@@ -695,11 +695,11 @@ harmonysync/
 │   │
 │   ├── __tests__/
 │   │   ├── services/                 # Service tests
-│   │   │   └── SetlistService.test.js
+│   │   │   └── ServiceOrderService.test.js
 │   │   │
 │   │   └── viewmodels/               # ViewModel tests
 │   │       ├── AudioViewModel.test.js      (267 lines, 24 tests)
-│   │       ├── SetlistViewModel.test.js    (~400 lines, 30+ tests)
+│   │       ├── ServiceOrderViewModel.test.js    (~400 lines, 30+ tests)
 │   │       ├── SlideViewModel.test.js      (695 lines, 45+ tests)
 │   │       ├── DisplayViewModel.test.js    (592 lines, 47+ tests)
 │   │       └── MixerViewModel.test.js      (526 lines, 41+ tests)

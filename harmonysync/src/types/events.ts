@@ -26,11 +26,11 @@ export const EVENT_TYPES = {
   SLIDE_DISPLAYED: 'slide:displayed',
   SLIDE_CLEARED: 'slide:cleared',
   
-  // Setlist events
-  SONG_LOADED: 'setlist:song-loaded',
-  SONG_CHANGED: 'setlist:song-changed',
-  FOLDER_ADDED: 'setlist:folder-added',
-  SETLIST_UPDATED: 'setlist:updated',
+  // Service Order events
+  SONG_LOADED: 'service-order:song-loaded',
+  SONG_CHANGED: 'service-order:song-changed',
+  FOLDER_ADDED: 'service-order:folder-added',
+  SERVICE_ORDER_UPDATED: 'service-order:updated',
   
   // Display events
   DISPLAY_CONFIG_CHANGED: 'display:config-changed',
@@ -130,7 +130,7 @@ export interface SlideDisplayedPayload {
   displayId: string;
 }
 
-// Setlist event payloads
+// Service Order event payloads
 export interface SongLoadedPayload {
   songId: string;
   title: string;
@@ -147,7 +147,7 @@ export interface FolderAddedPayload {
   songCount: number;
 }
 
-export interface SetlistUpdatedPayload {
+export interface ServiceOrderUpdatedPayload {
   folders: Array<{
     name: string;
     path: string;
@@ -202,7 +202,7 @@ export type EventPayload =
   | SongLoadedPayload
   | SongChangedPayload
   | FolderAddedPayload
-  | SetlistUpdatedPayload
+  | ServiceOrderUpdatedPayload
   | DisplayConfigChangedPayload
   | WindowOpenedPayload
   | WindowClosedPayload

@@ -2,9 +2,31 @@ import React from 'react';
 import Button from '../ui/Button.jsx';
 import TransitionButton from '../audio/TransitionButton.jsx';
 import { PencilIcon } from '@heroicons/react/24/outline';
-import '../../styles/components/SetlistItem.css';
+import '../../styles/components/ServiceItem.css';
 
-const SetlistItem = ({
+// Type definitions
+interface ServiceItemData {
+  id?: string;
+  name: string;
+  path: string;
+  type: 'song' | 'presentation' | 'folder';
+  tracks?: unknown[];
+  lyrics?: string;
+}
+
+interface ServiceItemProps {
+  item: ServiceItemData;
+  index: number;
+  isLoaded?: boolean;
+  onItemClick?: (item: ServiceItemData, index: number) => void;
+  onRemove?: (index: number) => void;
+  onTransition?: (item: ServiceItemData, index: number, transitionType: string) => void;
+  onPreload?: (item: ServiceItemData, index: number) => void;
+  onEditLyrics?: (item: ServiceItemData, index: number) => void;
+  className?: string;
+}
+
+const ServiceItem: React.FC<ServiceItemProps> = ({
   item,
   index,
   isLoaded = false,
@@ -19,12 +41,12 @@ const SetlistItem = ({
     if (onItemClick) onItemClick(item, index);
   };
 
-  const handleRemove = (e) => {
+  const handleRemove = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
     if (onRemove) onRemove(index);
   };
 
-  const handleTransition = (transitionType) => {
+  const handleTransition = (transitionType: string) => {
     if (onTransition) onTransition(item, index, transitionType);
   };
 
@@ -32,19 +54,19 @@ const SetlistItem = ({
     if (onPreload) onPreload(item, index);
   };
 
-  const handleEditLyrics = (e) => {
+  const handleEditLyrics = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
     if (onEditLyrics) onEditLyrics(item, index);
   };
 
-  const itemClass = ['setlist-item', isLoaded && 'setlist-item-loaded', className]
+  const itemClass = ['service-item', isLoaded && 'service-item-loaded', className]
     .filter(Boolean)
     .join(' ');
 
   return (
     <li className={itemClass}>
-      <div className="setlist-item-header">
-        <span onClick={handleItemClick} className="setlist-item-name" title={item.name}>
+      <div className="service-item-header">
+        <span onClick={handleItemClick} className="service-item-name" title={item.name}>
           {item.name}
           {isLoaded && <span className="loaded-indicator">✓</span>}
         </span>
@@ -53,8 +75,8 @@ const SetlistItem = ({
           size="small"
           variant="ghost"
           onClick={handleRemove}
-          className="setlist-item-remove"
-          title="Remove from setlist"
+          className="service-item-remove"
+          title="Remove from service order"
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" width="14" height="14">
             <path
@@ -67,7 +89,7 @@ const SetlistItem = ({
       </div>
 
       {item.type === 'song' && (
-        <div className="setlist-item-transitions">
+        <div className="service-item-transitions">
           <TransitionButton type="crossfade" onClick={() => handleTransition('crossfade')} />
           <TransitionButton type="preload" onClick={handlePreload} />
           {item.lyrics && (
@@ -85,7 +107,7 @@ const SetlistItem = ({
       )}
 
       {item.type === 'presentation' && (
-        <div className="setlist-item-transitions">
+        <div className="service-item-transitions">
           <TransitionButton type="load" onClick={() => handleTransition('none')} />
         </div>
       )}
@@ -93,4 +115,4 @@ const SetlistItem = ({
   );
 };
 
-export default SetlistItem;
+export default ServiceItem;

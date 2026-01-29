@@ -42,12 +42,12 @@ const SlideManager = ({ allSlides, setAllSlides, selectedSlide, setSelectedSlide
     console.log('[SlideManager] Service imported:', serviceStructure);
     
     // Emit event to notify the app that a service was imported
-    // The SetlistManager can listen to this event and add the service to the setlist
+    // The ServiceOrderManager can listen to this event and add the service to the service order
     if (window.electronAPI && window.electronAPI.sendToMain) {
       window.electronAPI.sendToMain('service-imported', serviceStructure);
     }
     
-    // Also emit a custom event for the SetlistManager
+    // Also emit a custom event for the ServiceOrderManager
     const customEvent = new CustomEvent('service-imported', { detail: serviceStructure });
     window.dispatchEvent(customEvent);
   };

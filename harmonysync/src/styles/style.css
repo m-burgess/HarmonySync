@@ -51,8 +51,8 @@ body {
 }
 
 /* Setlist Manager */
-#setlist-col {
-    flex: 0 0 250px; /* Fixed width for setlist */
+#service-order-col {
+    flex: 0 0 250px; /* Fixed width for service order */
     background-color: #282828;
 }
 
@@ -72,13 +72,13 @@ body {
     background-color: #0056b3;
 }
 
-#setlist {
+#service-order {
     list-style: none;
     padding: 0;
     margin: 0;
 }
 
-.setlist-item {
+.service-order-item {
     background-color: #3a3a3a;
     padding: 10px;
     margin-bottom: 8px;
@@ -87,7 +87,7 @@ body {
     transition: background-color 0.2s;
 }
 
-.setlist-item:hover {
+.service-order-item:hover {
     background-color: #4a4a4a;
 }
 
