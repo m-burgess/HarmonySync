@@ -133,6 +133,20 @@ npm run build:mac    # macOS
 npm run build:linux  # Linux
 ```
 
+### Running Tests
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage
+npm run test:coverage
+```
+
+See [TESTING_ABSTRACTIONS_GUIDE.md](TESTING_ABSTRACTIONS_GUIDE.md) for comprehensive testing documentation, including testing patterns, mock implementations, and best practices.
+
 ## 📁 Project Structure
 
 ```
