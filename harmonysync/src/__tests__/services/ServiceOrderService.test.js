@@ -3,7 +3,6 @@
  * 
  * Tests for the Service Order service layer abstraction.
  */
-import { vi } from 'vitest';
 import ServiceOrderService from '../../services/ServiceOrderService';
 
 describe('ServiceOrderService', () => {
@@ -13,12 +12,12 @@ describe('ServiceOrderService', () => {
 
   beforeEach(() => {
     mockIpcService = {
-      invoke: vi.fn()
+      invoke: jest.fn()
     };
     
     mockFileService = {
-      selectFolders: vi.fn(),
-      getSongFolders: vi.fn()
+      selectFolders: jest.fn(),
+      getSongFolders: jest.fn()
     };
     
     serviceOrderService = new ServiceOrderService(mockIpcService, mockFileService);
