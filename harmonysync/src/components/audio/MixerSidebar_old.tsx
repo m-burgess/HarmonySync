@@ -1,23 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { PlayIcon, PauseIcon } from '@heroicons/react/24/solid';
 import { setTrackMute, playAllTracks, stopAllAudio } from '../../utils/audio';
+import type { Track } from '../../types/audio';
 import '../../styles/components/MixerSidebar.css';
 
-const MixerSidebar = ({ allTracks, isLoadingTracks }) => {
-  const [muteStates, setMuteStates] = useState({});
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isOperationInProgress, setIsOperationInProgress] = useState(false);
+interface MixerSidebarProps {
+  allTracks: Track[];
+  isLoadingTracks: boolean;
+}
+
+interface MuteStates {
+  [trackId: string]: boolean;
+}
+
+const MixerSidebar: React.FC<MixerSidebarProps> = ({ allTracks, isLoadingTracks }) => {
+  const [muteStates, setMuteStates] = useState<MuteStates>({});
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [isOperationInProgress, setIsOperationInProgress] = useState<boolean>(false);
 
   // Sync mute states with track data
   useEffect(() => {
-    const newStates = {};
+    const newStates: MuteStates = {};
     allTracks.forEach(track => {
       newStates[track.id] = track.isMuted || false;
     });
     setMuteStates(newStates);
   }, [allTracks]);
 
-  const handleMuteToggle = async (track) => {
+  const handleMuteToggle = async (track: Track): Promise<void> => {
     const newMuteState = !muteStates[track.id];
     
     try {
@@ -34,7 +44,7 @@ const MixerSidebar = ({ allTracks, isLoadingTracks }) => {
     }
   };
 
-  const handlePlayAll = async () => {
+  const handlePlayAll = async (): Promise<void> => {
     if (isOperationInProgress || allTracks.length === 0) return;
     setIsOperationInProgress(true);
     try {
@@ -47,7 +57,7 @@ const MixerSidebar = ({ allTracks, isLoadingTracks }) => {
     }
   };
 
-  const handleStopAll = async () => {
+  const handleStopAll = async (): Promise<void> => {
     if (isOperationInProgress) return;
     setIsOperationInProgress(true);
     try {
@@ -60,7 +70,7 @@ const MixerSidebar = ({ allTracks, isLoadingTracks }) => {
     }
   };
 
-  const sortTracks = (a, b) => {
+  const sortTracks = (a: Track, b: Track): number => {
     const aName = a.name.toLowerCase();
     const bName = b.name.toLowerCase();
     const customOrder = ['click', 'guide'];

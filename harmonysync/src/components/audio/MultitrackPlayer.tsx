@@ -1,12 +1,18 @@
 import React, { useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
 import { getViewModel } from '../../viewmodels';
-import TrackControl from './TrackControl.jsx';
-import TransposeModal from './TransposeModal.jsx';
+import TrackControl from './TrackControl';
+import TransposeModal from './TransposeModal';
 import { PlayIcon, PauseIcon, BackwardIcon, RocketLaunchIcon, ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/solid';
+import type { Track } from '../../types/audio';
+
+interface MultitrackPlayerProps {
+  allTracks: Track[];
+  isLoadingTracks: boolean;
+}
 
 // Helper functions
-const sortTracks = (a, b) => {
+const sortTracks = (a: Track, b: Track): number => {
   const aName = a.name.toLowerCase();
   const bName = b.name.toLowerCase();
   const customOrder = ['click', 'guide'];
@@ -18,14 +24,14 @@ const sortTracks = (a, b) => {
   return aName.localeCompare(bName);
 };
 
-const MultitrackPlayer = observer(({ allTracks, isLoadingTracks }) => {
+const MultitrackPlayer = observer(({ allTracks, isLoadingTracks }: MultitrackPlayerProps) => {
   const viewModel = getViewModel('audioViewModel');
 
   useEffect(() => {
     viewModel.updateCurrentDirectoryFromTracks(allTracks);
     viewModel.setupTransposeProgressListener();
     return () => viewModel.cleanupTransposeListener();
-  }, [allTracks, viewModel]);
+  }, [allTracks]);
 
   return (
     <div id="multitrack-player" className="bg-stage text-primary h-full flex flex-col">
@@ -153,7 +159,7 @@ const MultitrackPlayer = observer(({ allTracks, isLoadingTracks }) => {
             max="1"
             step="0.01"
             value={viewModel.globalVolume}
-            onChange={(e) => viewModel.setGlobalVolume(parseFloat(e.target.value))}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => viewModel.setGlobalVolume(parseFloat(e.target.value))}
             className="w-24 sm:w-28 md:w-32 h-1.5 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-green-600"
           />
           <span className="text-xs text-gray-400 w-6 text-right font-medium">{Math.round(viewModel.globalVolume * 100)}%</span>
@@ -199,12 +205,12 @@ const MultitrackPlayer = observer(({ allTracks, isLoadingTracks }) => {
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-2 sm:gap-3 md:gap-4 overflow-y-auto flex-1 min-h-0" id="track-controls">
-            {allTracks.sort(sortTracks).map((track, index) => (
+            {allTracks.sort(sortTracks).map((track) => (
               <TrackControl 
-                key={index} 
+                key={track.id} 
                 track={track} 
                 // TrackControl handles mute internally via setTrackMute from audio utils
-                onMuteToggle={(track, newMuteState) => {
+                onMuteToggle={(track: Track, newMuteState: boolean) => {
                   console.log(`🔇 Mute updated for track ${track.name}: ${newMuteState}`);
                 }}
               />
