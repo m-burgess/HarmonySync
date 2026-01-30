@@ -1,13 +1,31 @@
 import React from 'react';
-import Slide from './Slide.jsx';
+import Slide from './Slide';
+import type { SlideData, SlideSize } from './types';
 
-const SlideItem = ({
+interface SlideItemProps {
+  slide: SlideData;
+  index: number;
+  selectedSlide?: number | SlideData | null;
+  setSelectedSlide?: (index: number) => void;
+  isSelected?: boolean; // Legacy prop from SlideManager
+  onSelect?: (index: number) => void; // Legacy prop from SlideManager
+  onDragStart?: (e: React.DragEvent, position: number) => void;
+  onDragEnter?: (e: React.DragEvent, position: number) => void;
+  onDrop?: (e: React.DragEvent, position: number) => void;
+  onDragEnd?: () => void;
+  onVideoTranscoded?: (index: number, transcodedPath: string) => void;
+  thumbnailSize?: number; // Size from slider
+  size?: SlideSize;
+  showActions?: boolean;
+}
+
+const SlideItem: React.FC<SlideItemProps> = ({
   slide,
   index,
   selectedSlide,
   setSelectedSlide,
   isSelected, // Legacy prop from SlideManager
-  onSelect,   // Legacy prop from SlideManager
+  onSelect, // Legacy prop from SlideManager
   onDragStart,
   onDragEnter,
   onDrop,
@@ -17,7 +35,7 @@ const SlideItem = ({
   size = 'medium',
   showActions = true
 }) => {
-  const handleSelect = (slideIndex) => {
+  const handleSelect = (slideIndex: number) => {
     // Handle both new and legacy prop patterns
     if (setSelectedSlide && typeof setSelectedSlide === 'function') {
       setSelectedSlide(slideIndex);
@@ -27,7 +45,7 @@ const SlideItem = ({
   };
 
   // Convert thumbnailSize to size variant, or use the size prop
-  const getSlideSize = () => {
+  const getSlideSize = (): SlideSize => {
     if (thumbnailSize) {
       if (thumbnailSize <= 120) return 'small';
       if (thumbnailSize <= 200) return 'medium';

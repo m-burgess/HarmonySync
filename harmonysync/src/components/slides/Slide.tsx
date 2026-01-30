@@ -3,6 +3,7 @@ import { ArrowTopRightOnSquareIcon, PlayIcon, PhotoIcon, FilmIcon, GlobeAltIcon,
 import { event, core } from '../../electron-adapter';
 import { Card, Button } from '../ui';
 import '../../styles/components/Slide.css';
+import type { SlideData, SlideSize, SlidePosition } from './types';
 
 // Constants for lyrics display
 // LYRICS_FONT_SIZE_THRESHOLD: Sections with more than 6 lines use smaller font to fit more content
@@ -14,7 +15,24 @@ const LYRICS_FONT_SIZE_SMALL = '0.7rem';
 // Sections longer than 12 lines are truncated with an indicator; full lyrics still display on audience screen
 const LYRICS_MAX_LINES = 12;
 
-const Slide = ({
+interface SlideProps {
+  slide: SlideData;
+  index: number;
+  isSelected?: boolean;
+  onSelect?: (index: number) => void;
+  onDragStart?: (e: React.DragEvent, position: number) => void;
+  onDragEnter?: (e: React.DragEvent, position: number) => void;
+  onDrop?: (e: React.DragEvent, position: number) => void;
+  onDragEnd?: () => void;
+  onVideoTranscoded?: (index: number, transcodedPath: string) => void;
+  size?: SlideSize;
+  thumbnailSize?: number; // Direct size override
+  showActions?: boolean;
+  showTypeIcon?: boolean;
+  className?: string;
+}
+
+const Slide: React.FC<SlideProps> = ({
   slide,
   index,
   isSelected = false,
@@ -34,18 +52,18 @@ const Slide = ({
   const [isHover, setIsHover] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showEnlargedPreview, setShowEnlargedPreview] = useState(false);
-  const [slidePosition, setSlidePosition] = useState({ x: 0, y: 0 });
-  const hoverTimeoutRef = React.useRef(null);
-  const slideRef = React.useRef(null);
+  const [slidePosition, setSlidePosition] = useState<SlidePosition>({ x: 0, y: 0 });
+  const hoverTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const slideRef = React.useRef<HTMLDivElement>(null);
 
-  const handleDragStart = (e) => {
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
     e.dataTransfer.setDragImage(new Image(), 0, 0); // Disable default drag image
     if (onDragStart) {
       onDragStart(e, index);
     }
   };
 
-  const handleDragEnter = (e) => {
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragOver(true);
     if (onDragEnter) {
@@ -53,7 +71,7 @@ const Slide = ({
     }
   };
 
-  const handleDrop = (e) => {
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     setIsDragOver(false);
     if (onDrop) {
       onDrop(e, index);
@@ -95,6 +113,8 @@ const Slide = ({
   };
 
   const handleVideoClick = async () => {
+    if (slide.type !== 'video') return;
+
     const isAlreadyTranscoded = slide.path.includes('/harmonysync/cache/') && slide.path.endsWith('_youtube.mp4');
 
     if (isAlreadyTranscoded) {
@@ -104,7 +124,7 @@ const Slide = ({
       console.log('Transcoding video:', slide.path);
       setIsLoading(true);
       try {
-        const transcodedPath = await core.invoke('transcode_video', { inputPath: slide.path });
+        const transcodedPath = await core.invoke('transcode_video', { inputPath: slide.path }) as string;
         console.log('Transcoded video path:', transcodedPath);
         if (onVideoTranscoded) {
           onVideoTranscoded(index, transcodedPath);
@@ -131,7 +151,7 @@ const Slide = ({
     }
   };
 
-  const getDuration = () => {
+  const getDuration = (): string | null => {
     if (slide.type === 'video' && slide.duration) {
       const minutes = Math.floor(slide.duration / 60);
       const seconds = Math.floor(slide.duration % 60);
@@ -199,7 +219,7 @@ const Slide = ({
     };
   }, []);
 
-  const getPreviewImageSrc = () => {
+  const getPreviewImageSrc = (): string | null => {
     if (slide.type === 'image') {
       return core.convertFileSrc ? core.convertFileSrc(slide.path) : slide.path;
     } else if (slide.type === 'video' && slide.thumbnail_path) {
@@ -221,8 +241,12 @@ const Slide = ({
               className="slide-image"
               loading="lazy"
               onError={(e) => {
-                e.target.style.display = 'none';
-                e.target.nextSibling.style.display = 'flex';
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                const nextSibling = target.nextSibling as HTMLElement;
+                if (nextSibling) {
+                  nextSibling.style.display = 'flex';
+                }
               }}
             />
             <div className="slide-image-fallback" style={{ display: 'none' }}>
@@ -285,7 +309,7 @@ const Slide = ({
             <div 
               className="slide-lyrics-text" 
               data-line-count={lineCount}
-              style={{ '--lyrics-font-size': fontSize }}
+              style={{ '--lyrics-font-size': fontSize } as React.CSSProperties}
               role="region"
               aria-label={`Lyrics for ${slide.section || 'section'}`}
             >
@@ -313,13 +337,14 @@ const Slide = ({
   ].filter(Boolean).join(' ');
 
   // Calculate custom dimensions when thumbnailSize is provided
-  const customStyle = thumbnailSize ? {
+  const customStyle: React.CSSProperties = thumbnailSize ? {
     width: `${thumbnailSize}px`,
     height: `${Math.round(thumbnailSize * 0.56)}px`, // 16:9 aspect ratio
     '--slide-width': `${thumbnailSize}px`
-  } : {};
+  } as React.CSSProperties : {};
 
   return (
+    // @ts-expect-error - Card component is still JSX and lacks proper type definitions
     <Card
       ref={slideRef}
       className={slideClass}
@@ -328,7 +353,7 @@ const Slide = ({
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      onKeyDown={(e) => {
+      onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           handleClick();
@@ -336,12 +361,12 @@ const Slide = ({
       }}
       data-slide-index={index}
       data-slide-type={slide.type || 'lyric'}
-      data-slide-path={slide.path}
+      data-slide-path={'path' in slide ? slide.path : undefined}
       data-slide-name={slide.name}
-      data-slide-video-id={slide.videoId}
+      data-slide-video-id={'videoId' in slide ? slide.videoId : undefined}
       draggable
       onDragStart={handleDragStart}
-      onDragOver={(e) => e.preventDefault()}
+      onDragOver={(e: React.DragEvent) => e.preventDefault()}
       onDragEnter={handleDragEnter}
       onDragLeave={() => setIsDragOver(false)}
       onDrop={handleDrop}
@@ -376,24 +401,28 @@ const Slide = ({
             <Button
               size="small"
               variant="primary"
-              onClick={(e) => {
+              onClick={(e: React.MouseEvent) => {
                 e.stopPropagation();
                 handleClick();
               }}
-              icon={<ArrowTopRightOnSquareIcon />}
+              icon={<ArrowTopRightOnSquareIcon /> as unknown as null}
               title="Open slide"
-            />
+            >
+              {null}
+            </Button>
             {slide.type === 'video' && (
               <Button
                 size="small"
                 variant="success"
-                onClick={(e) => {
+                onClick={(e: React.MouseEvent) => {
                   e.stopPropagation();
                   handleVideoClick();
                 }}
-                icon={<PlayIcon />}
+                icon={<PlayIcon /> as unknown as null}
                 title="Play video"
-              />
+              >
+                {null}
+              </Button>
             )}
           </div>
         </div>
@@ -414,11 +443,12 @@ const Slide = ({
         >
           <div className="slide-enlarged-preview-container">
             <img 
-              src={getPreviewImageSrc()} 
+              src={getPreviewImageSrc()!} 
               alt={`Enlarged preview of ${slide.name}`}
               className="slide-enlarged-preview-image"
               onError={(e) => {
-                e.target.style.display = 'none';
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
               }}
             />
             <div className="slide-enlarged-preview-info">
