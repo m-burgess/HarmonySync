@@ -35,7 +35,7 @@ import {
 } from './components/VSCodeUI.jsx';
 import ServiceOrderManager from './components/service-order/ServiceOrderManager.tsx';
 import SlideManager from './components/slides/SlideManager.jsx';
-import LyricsColumn from './components/lyrics/LyricsColumn.jsx';
+import LyricsColumn from './components/lyrics/LyricsColumn.tsx';
 import MultitrackPlayer from './components/audio/MultitrackPlayer.jsx';
 import MixerSidebar from './components/audio/MixerSidebar.jsx';
 import DisplaySettings from './components/screens/DisplaySettings.jsx';
