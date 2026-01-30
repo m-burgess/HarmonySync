@@ -3,6 +3,55 @@ import { event } from '../../electron-adapter';
 import './LyricsColumn.css';
 
 /**
+ * Interface for component props
+ */
+interface LyricsColumnProps {
+  lyrics: string | null;
+  onSelectionChange?: (data: SelectionChangeData) => void;
+}
+
+/**
+ * Interface for parsed line objects
+ */
+interface ParsedLine {
+  type: 'section' | 'lyric';
+  text: string;
+  originalIndex: number;
+  section?: string; // Only present for lyric type
+}
+
+/**
+ * Interface for selection change callback data
+ */
+interface SelectionChangeData {
+  lines: string[];
+  section: string;
+  index: number;
+}
+
+/**
+ * Display payload for lyric slides
+ */
+interface DisplayLyricSlidePayload {
+  text: string[];
+  section: string;
+}
+
+/**
+ * Display payload for confidence monitor
+ */
+interface ConfidenceSlideContent {
+  type: 'lyrics';
+  text: string[];
+  section?: string;
+}
+
+interface DisplayConfidenceSlidePayload {
+  current: ConfidenceSlideContent;
+  next: ConfidenceSlideContent | null;
+}
+
+/**
  * LyricsColumn Component
  * 
  * Displays the entire song lyrics in a scrollable column.
@@ -14,17 +63,17 @@ import './LyricsColumn.css';
  * - Auto-scroll to keep selection visible
  * - Section labels clearly visible
  */
-const LyricsColumn = ({ lyrics, onSelectionChange }) => {
-  const [selectedIndex, setSelectedIndex] = useState(0); // Index of first line in 2-line selection
-  const [hoveredIndex, setHoveredIndex] = useState(null);
-  const columnRef = useRef(null);
-  const selectedRef = useRef(null);
+const LyricsColumn: React.FC<LyricsColumnProps> = ({ lyrics, onSelectionChange }) => {
+  const [selectedIndex, setSelectedIndex] = useState<number>(0); // Index of first line in 2-line selection
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const columnRef = useRef<HTMLDivElement>(null);
+  const selectedRef = useRef<HTMLDivElement>(null);
 
   // Parse lyrics into an array of lines with section metadata
-  const parsedLines = React.useMemo(() => {
+  const parsedLines = React.useMemo<ParsedLine[]>(() => {
     if (!lyrics) return [];
     
-    const lines = [];
+    const lines: ParsedLine[] = [];
     let currentSection = 'Intro';
     
     const rawLines = lyrics.split(/\r?\n/);
@@ -55,11 +104,15 @@ const LyricsColumn = ({ lyrics, onSelectionChange }) => {
   }, [lyrics]);
 
   // Get only lyric lines (not section headers) for selection
-  const lyricLines = parsedLines.filter(line => line.type === 'lyric');
+  // Type guard ensures that all lyric lines have a required 'section' property
+  // (currentSection is always initialized to 'Intro', so section is never undefined for lyric lines)
+  const lyricLines = parsedLines.filter((line): line is ParsedLine & { section: string } => 
+    line.type === 'lyric' && line.section !== undefined
+  );
 
   // Handle keyboard navigation
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
         setSelectedIndex(prev => {
@@ -88,17 +141,18 @@ const LyricsColumn = ({ lyrics, onSelectionChange }) => {
       ].filter(t => t.length > 0);
       
       // Emit to audience screen
-      event.emit('display-lyric-slide', {
+      const displayPayload: DisplayLyricSlidePayload = {
         text: selectedText,
-        section: line1?.section || 'Intro'
-      });
+        section: line1.section // Type guard ensures section is always defined
+      };
+      event.emit('display-lyric-slide', displayPayload);
 
       // Also emit to confidence monitor
-      event.emit('display-confidence-slide', {
+      const confidencePayload: DisplayConfidenceSlidePayload = {
         current: {
           type: 'lyrics',
           text: selectedText,
-          section: line1?.section
+          section: line1.section
         },
         next: selectedIndex + 2 < lyricLines.length ? {
           type: 'lyrics',
@@ -106,15 +160,16 @@ const LyricsColumn = ({ lyrics, onSelectionChange }) => {
             lyricLines[selectedIndex + 2]?.text || '',
             lyricLines[selectedIndex + 3]?.text || ''
           ].filter(t => t.length > 0),
-          section: lyricLines[selectedIndex + 2]?.section
+          section: lyricLines[selectedIndex + 2].section
         } : null
-      });
+      };
+      event.emit('display-confidence-slide', confidencePayload);
 
       // Notify parent component
       if (onSelectionChange) {
         onSelectionChange({
           lines: selectedText,
-          section: line1?.section,
+          section: line1.section,
           index: selectedIndex
         });
       }
@@ -138,14 +193,14 @@ const LyricsColumn = ({ lyrics, onSelectionChange }) => {
   }, [selectedIndex]);
 
   // Handle click on a 2-line pair
-  const handleLineClick = (lyricIndex) => {
+  const handleLineClick = (lyricIndex: number): void => {
     // Ensure we select pairs (round down to even number)
     const pairIndex = Math.floor(lyricIndex / 2) * 2;
     setSelectedIndex(pairIndex);
   };
 
   // Handle hover on a 2-line pair
-  const handleLineHover = (lyricIndex) => {
+  const handleLineHover = (lyricIndex: number): void => {
     const pairIndex = Math.floor(lyricIndex / 2) * 2;
     setHoveredIndex(pairIndex);
   };
