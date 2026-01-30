@@ -60,6 +60,7 @@ export interface IAudioViewModel extends IViewModel {
   setTrackPan(trackIndex: number, pan: number): Promise<void>;
   muteTrack(trackIndex: number): Promise<void>;
   unmuteTrack(trackIndex: number): Promise<void>;
+  toggleTrackMute(trackIndex: number): Promise<void>;
   setGlobalVolume(volume: number): Promise<void>;
   openTransposeModal(): void;
   closeTransposeModal(): void;
@@ -69,6 +70,7 @@ export interface IAudioViewModel extends IViewModel {
   startAudioService(): Promise<void>;
 
   // Computed
+  hasTracksLoaded: boolean;
   formattedPosition: string;
   formattedDuration: string;
   progressPercentage: number;
