@@ -3,7 +3,7 @@ import { PlusIcon, TrashIcon, CalendarIcon } from '@heroicons/react/24/solid';
 import { core } from '../../electron-adapter';
 import Button from '../ui/Button.jsx';
 import Input from '../ui/Input.jsx';
-import AddEventModal from '../modals/AddEventModal.jsx';
+import AddEventModal from '../modals/AddEventModal.tsx';
 import commonMacros from '../../data/common_macros.json';
 
 const SchedulerWindow = () => {
