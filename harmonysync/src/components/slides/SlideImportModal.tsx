@@ -175,10 +175,11 @@ const SlideImportModal: React.FC<SlideImportModalProps> = ({
     if (!window.electronAPI) return;
     
     try {
-      const folders = await window.electronAPI.openDirectory({ multiple: false });
+      const result = await window.electronAPI.openDirectory({ multiple: false });
       
-      if (folders && folders.length > 0) {
-        setSelectedFolder(folders[0]);
+      if (result) {
+        const folder = Array.isArray(result) ? result[0] : result;
+        setSelectedFolder(folder);
         setError(null);
       }
     } catch (err) {

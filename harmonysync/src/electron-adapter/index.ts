@@ -116,13 +116,13 @@ export interface ElectronAPI {
   displayConfigGetEnabled: () => Promise<DisplayConfig[]>;
   
   // Slide Import
-  onSlidesImportProgress?: (callback: (data: unknown) => void) => (() => void) | undefined;
+  onSlidesImportProgress?: (callback: (data: { message?: string; current?: number; total?: number }) => void) => (() => void) | undefined;
   validateSlideFile?: (path: string) => Promise<{ valid: boolean; message?: string }>;
-  importSlidesFromFolder?: (folder: string, options: unknown) => Promise<unknown[]>;
-  importPdfSlides?: (file: string, options: unknown) => Promise<unknown[]>;
-  importPowerpointSlides?: (file: string, options: unknown) => Promise<unknown[]>;
-  importSlidesFromZip?: (file: string, options: unknown) => Promise<unknown>;
-  scanServiceFolder?: (path: string) => Promise<unknown>;
+  importSlidesFromFolder?: (folder: string, options: { dpi: number; format: 'png' | 'jpeg' }) => Promise<Array<{ name: string; type: string; path: string }>>;
+  importPdfSlides?: (file: string, options: { dpi: number; format: 'png' | 'jpeg' }) => Promise<Array<{ name: string; type: string; path: string }>>;
+  importPowerpointSlides?: (file: string, options: { dpi: number; format: 'png' | 'jpeg' }) => Promise<Array<{ name: string; type: string; path: string }>>;
+  importSlidesFromZip?: (file: string, options: { dpi: number; format: 'png' | 'jpeg'; deleteZip?: boolean; importSlidesOnly?: boolean }) => Promise<{ slides?: unknown[]; servicePath?: string }>;
+  scanServiceFolder?: (path: string) => Promise<{ servicePath?: string; slides?: unknown[]; songs?: unknown[] }>;
   sendToMain?: (channel: string, data: unknown) => void;
 }
 
