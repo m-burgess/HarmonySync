@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { event } from '../../electron-adapter';
 import '../../styles/lowerthirds.css';
 
@@ -7,7 +7,7 @@ const LowerThirdsScreen = () => {
   const [line2, setLine2] = useState('Line 2');
 
   useEffect(() => {
-    const unlisten = event.listen('set-lower-thirds-text', (e) => {
+    const unlisten = event.listen('set-lower-thirds-text', (e: { payload: { line1: string; line2: string } }) => {
       const { line1, line2 } = e.payload;
       setLine1(line1);
       setLine2(line2);

@@ -1,16 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { core, fs } from '../../electron-adapter';
-import Modal from '../ui/Modal.jsx';
-import Button from '../ui/Button.jsx';
+import Modal from '../ui/Modal.tsx';
+import Button from '../ui/Button.tsx';
 import '../../styles/components/SettingsModal.css';
 
-const AudioSettings = ({ isOpen, onClose }) => {
+interface AudioDevice {
+  id: string;
+  name: string;
+}
+
+interface AudioSettingsProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const AudioSettings = ({ isOpen, onClose }: AudioSettingsProps) => {
   const [audioOutputDevice, setAudioOutputDevice] = useState('');
   const [midiInputDevice, setMidiInputDevice] = useState('');
   const [midiOutputDevice, setMidiOutputDevice] = useState('');
-  const [availableAudioDevices, setAvailableAudioDevices] = useState([]);
-  const [availableMidiInputDevices, setAvailableMidiInputDevices] = useState([]);
-  const [availableMidiOutputDevices, setAvailableMidiOutputDevices] = useState([]);
+  const [availableAudioDevices, setAvailableAudioDevices] = useState<AudioDevice[]>([]);
+  const [availableMidiInputDevices, setAvailableMidiInputDevices] = useState<AudioDevice[]>([]);
+  const [availableMidiOutputDevices, setAvailableMidiOutputDevices] = useState<AudioDevice[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -50,7 +60,7 @@ const AudioSettings = ({ isOpen, onClose }) => {
     try {
       // Call Electron IPC to get available audio and MIDI devices
       try {
-        const audioDevices = await core.invoke('settings:getAudioDevices');
+        const audioDevices = await core.invoke('settings:getAudioDevices') as AudioDevice[];
         setAvailableAudioDevices(audioDevices);
       } catch (error) {
         console.error('Error loading audio devices:', error);
@@ -61,7 +71,7 @@ const AudioSettings = ({ isOpen, onClose }) => {
 
       // MIDI devices are handled separately if available
       try {
-        const midiInputs = [];
+        const midiInputs: AudioDevice[] = [];
         setAvailableMidiInputDevices(midiInputs);
       } catch (error) {
         console.error('Error loading MIDI input devices:', error);
@@ -69,7 +79,7 @@ const AudioSettings = ({ isOpen, onClose }) => {
       }
 
       try {
-        const midiOutputs = [];
+        const midiOutputs: AudioDevice[] = [];
         setAvailableMidiOutputDevices(midiOutputs);
       } catch (error) {
         console.error('Error loading MIDI output devices:', error);

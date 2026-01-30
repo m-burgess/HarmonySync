@@ -1,14 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
-import AudienceScreen from './components/screens/AudienceScreen.jsx';
+import AudienceScreen from './components/screens/AudienceScreen.tsx';
 import './styles/audience.css'; // Import audience.css
 import './styles/lyric-transitions.css'; // Import transition effects
 import { core, event } from './electron-adapter';
 
 const AudienceApp = () => {
-  const [dynamicBackgroundCss, setDynamicBackgroundCss] = useState('');
-  const videoRef = useRef(null); // Create a ref for the video element
-  const httpServerUrl = useRef(null); // Ref to store the HTTP server URL
+  const videoRef = useRef<HTMLVideoElement | null>(null); // Create a ref for the video element
+  const httpServerUrl = useRef<string | null>(null); // Ref to store the HTTP server URL
 
   console.log('AudienceApp component loading...');
 
@@ -36,7 +35,7 @@ const AudienceApp = () => {
       try {
         // Use a fixed port or dynamically find one
         const port = 3001; // Example port
-        const url = await core.invoke('start_http_server', { port });
+        const url = await core.invoke('start_http_server', { port }) as string;
         httpServerUrl.current = url;
         console.log('Custom HTTP server started at:', url);
       } catch (error) {
@@ -53,7 +52,7 @@ const AudienceApp = () => {
 
     // Listen for the display-video-slide event
     const unlisten = event.listen('display-video-slide', async (event) => {
-      const videoPath = event.payload; // This is the absolute path to the video file
+      const videoPath = event.payload as string; // This is the absolute path to the video file
       console.log('Audience Screen: Received display-video-slide event with path:', videoPath);
 
       if (videoRef.current && httpServerUrl.current) {
@@ -103,13 +102,15 @@ const AudienceApp = () => {
 
   return (
     <div style={{ width: '100%', height: '100vh', backgroundColor: 'black' }}>
-      {dynamicBackgroundCss && <style>{dynamicBackgroundCss}</style>}
-      <video id="audience-video" ref={videoRef} autoPlay muted playsInline type="video/mp4" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'none' }}></video> {/* Removed controls, added autoPlay, muted, playsInline */}
+      <video id="audience-video" ref={videoRef} autoPlay muted playsInline style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'none' }}></video> {/* Removed controls, added autoPlay, muted, playsInline */}
       <AudienceScreen />
     </div>
   );
 };
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <AudienceApp />
-);
+const rootElement = document.getElementById('root');
+if (rootElement) {
+  ReactDOM.createRoot(rootElement).render(
+    <AudienceApp />
+  );
+}

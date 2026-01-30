@@ -13,15 +13,12 @@
  * - Cleaner separation of concerns
  * - Focus on layout and routing
  */
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { observer } from 'mobx-react-lite';
 import { core, event } from './electron-adapter';
 import { 
   PresentationChartBarIcon, 
   CogIcon,
-  SpeakerWaveIcon,
-  ClipboardDocumentListIcon,
-  BoltIcon,
   PlayIcon,
   CalendarIcon,
   MusicalNoteIcon
@@ -30,19 +27,14 @@ import {
 import './styles/App.css';
 import './styles/vscode-theme.css';
 import { 
-  ActivityBarIcon, 
-  VSCodeStatusBar 
+  ActivityBarIcon
 } from './components/VSCodeUI.tsx';
 import ServiceOrderManager from './components/service-order/ServiceOrderManager.tsx';
-import SlideManager from './components/slides/SlideManager';
-import LyricsColumn from './components/lyrics/LyricsColumn.jsx';
-import MultitrackPlayer from './components/audio/MultitrackPlayer';
-import MixerSidebar from './components/audio/MixerSidebar';
+import SlideManager from './components/slides/SlideManager.tsx';
 import LyricsColumn from './components/lyrics/LyricsColumn.tsx';
-import MultitrackPlayer from './components/audio/MultitrackPlayer.jsx';
-import MixerSidebar from './components/audio/MixerSidebar.jsx';
-import DisplaySettings from './components/screens/DisplaySettings.jsx';
-import AudioSettings from './components/screens/AudioSettings.jsx';
+import MixerSidebar from './components/audio/MixerSidebar.tsx';
+import DisplaySettings from './components/screens/DisplaySettings.tsx';
+import AudioSettings from './components/screens/AudioSettings.tsx';
 
 import { getViewModel } from './viewmodels';
 import { getService } from './services';
@@ -64,19 +56,20 @@ const App = observer(() => {
   const DEFAULT_SIDEBAR_WIDTH = 300;
   
   const [sidebarWidth, setSidebarWidth] = useState(() => {
-    const v = parseInt(localStorage.getItem('rp_sidebarWidth'), 10);
+    const stored = localStorage.getItem('rp_sidebarWidth');
+    const v = stored ? parseInt(stored, 10) : NaN;
     return isNaN(v) ? DEFAULT_SIDEBAR_WIDTH : v;
   });
   
-  const draggingRef = useRef(null);
-  const rafRef = useRef(null);
+  const draggingRef = useRef<{ type: string; startX: number; startWidth: number } | null>(null);
+  const rafRef = useRef<number | null>(null);
 
   // Listen to EventBus for cross-component events
   useEffect(() => {
     // Subscribe to tracks-updated event from transpose
     const unsubscribeTracks = eventBusService.subscribe(
       EVENT_TYPES.TRACKS_UPDATED,
-      (payload) => {
+      (payload: unknown) => {
         console.log('[App] Tracks updated via EventBus:', payload);
         // AudioViewModel handles this internally now
       }
@@ -141,18 +134,18 @@ const App = observer(() => {
   }, []);
 
   // VS Code style sidebar resizing
-  const startSidebarResize = (e) => {
+  const startSidebarResize = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
-    const startX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
+    const startX = e.type.startsWith('touch') ? (e as React.TouchEvent).touches[0].clientX : (e as React.MouseEvent).clientX;
     const startWidth = sidebarWidth;
     
     draggingRef.current = { type: 'sidebar', startX, startWidth };
     document.body.style.userSelect = 'none';
     document.body.style.cursor = 'ew-resize';
 
-    const onMove = (ev) => {
+    const onMove = (ev: MouseEvent | TouchEvent) => {
       if (!draggingRef.current || draggingRef.current.type !== 'sidebar') return;
-      const clientX = ev.type.startsWith('touch') ? ev.touches[0].clientX : ev.clientX;
+      const clientX = ev.type.startsWith('touch') ? (ev as TouchEvent).touches[0].clientX : (ev as MouseEvent).clientX;
       const { startX, startWidth } = draggingRef.current;
       const dx = clientX - startX;
       const minWidth = 200;
@@ -232,23 +225,23 @@ const App = observer(() => {
   }, []);
 
   // Callbacks for child components (temporary - will be removed when all components are refactored)
-  const handleSetAllSlides = (slides) => {
+  const handleSetAllSlides = (slides: unknown[]) => {
     slideViewModel.setSlides(slides);
   };
 
-  const handleSetAllTracks = (tracks) => {
+  const handleSetAllTracks = (tracks: unknown[]) => {
     audioViewModel.setTracks(tracks);
   };
 
-  const handleSetIsLoadingTracks = (isLoading) => {
+  const handleSetIsLoadingTracks = (isLoading: boolean) => {
     audioViewModel.setIsLoading(isLoading);
   };
 
-  const handleSetCurrentLyrics = (lyrics) => {
+  const handleSetCurrentLyrics = (lyrics: string) => {
     serviceOrderViewModel.setSelectedSongForLyrics(lyrics);
   };
 
-  const handleSetSelectedSlide = (slide) => {
+  const handleSetSelectedSlide = (slide: unknown) => {
     slideViewModel.setSelectedSlide(slide);
   };
 
