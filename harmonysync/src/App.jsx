@@ -38,6 +38,9 @@ import SlideManager from './components/slides/SlideManager.jsx';
 import LyricsColumn from './components/lyrics/LyricsColumn.jsx';
 import MultitrackPlayer from './components/audio/MultitrackPlayer';
 import MixerSidebar from './components/audio/MixerSidebar';
+import LyricsColumn from './components/lyrics/LyricsColumn.tsx';
+import MultitrackPlayer from './components/audio/MultitrackPlayer.jsx';
+import MixerSidebar from './components/audio/MixerSidebar.jsx';
 import DisplaySettings from './components/screens/DisplaySettings.jsx';
 import AudioSettings from './components/screens/AudioSettings.jsx';
 
