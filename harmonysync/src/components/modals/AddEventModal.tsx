@@ -1,19 +1,58 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, ChangeEvent } from 'react';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import { core } from '../../electron-adapter';
 import commonMacros from '../../data/common_macros.json';
 import '../../styles/components/SettingsModal.css';
 
-const AddEventModal = ({ isOpen, onClose, onSave }) => {
-  const [eventName, setEventName] = useState('');
-  const [selectedDate, setSelectedDate] = useState('');
-  const [selectedTime, setSelectedTime] = useState('16:30');
-  const [recurrenceType, setRecurrenceType] = useState('one-time');
-  const [actionType, setActionType] = useState('macro');
-  const [selectedMacro, setSelectedMacro] = useState('');
-  const [selectedScript, setSelectedScript] = useState('');
-  const [scripts, setScripts] = useState([]);
+// Type definitions
+interface Script {
+  id: string;
+  name: string;
+  language?: string;
+  content?: string;
+}
+
+interface Macro {
+  id: string;
+  name: string;
+  action: string;
+  midiNote?: number;
+  noteName?: string;
+  description?: string;
+}
+
+type RecurrenceType = 'one-time' | 'daily' | 'weekly' | 'monthly';
+type ActionType = 'macro' | 'script';
+
+interface EventData {
+  name: string;
+  date: string;
+  time: string;
+  recurrenceType: RecurrenceType;
+  actionType: ActionType;
+  macroId: string | null;
+  scriptId: string | null;
+}
+
+interface AddEventModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (eventData: EventData) => void;
+}
+
+const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave }) => {
+  const [eventName, setEventName] = useState<string>('');
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [selectedTime, setSelectedTime] = useState<string>('16:30');
+  const [recurrenceType, setRecurrenceType] = useState<RecurrenceType>('one-time');
+  const [actionType, setActionType] = useState<ActionType>('macro');
+  const [selectedMacro, setSelectedMacro] = useState<string | null>(null);
+  const [selectedScript, setSelectedScript] = useState<string | null>(null);
+  const [scripts, setScripts] = useState<Script[]>([]);
+
+  // Type the imported JSON as an array of Macros
+  const typedCommonMacros = commonMacros as Macro[];
 
   // Initialize with today's date
   useEffect(() => {
@@ -28,7 +67,7 @@ const AddEventModal = ({ isOpen, onClose, onSave }) => {
   useEffect(() => {
     const loadScripts = async () => {
       try {
-        const allScripts = await core.invoke('script:getAll');
+        const allScripts = await core.invoke('script:getAll') as Script[];
         setScripts(allScripts);
       } catch (error) {
         console.error('Failed to load scripts:', error);
@@ -64,7 +103,7 @@ const AddEventModal = ({ isOpen, onClose, onSave }) => {
     }
 
     // Prepare event data
-    const eventData = {
+    const eventData: EventData = {
       name: eventName.trim(),
       date: selectedDate,
       time: selectedTime,
@@ -85,9 +124,39 @@ const AddEventModal = ({ isOpen, onClose, onSave }) => {
     setSelectedTime('16:30');
     setRecurrenceType('one-time');
     setActionType('macro');
-    setSelectedMacro('');
-    setSelectedScript('');
+    setSelectedMacro(null);
+    setSelectedScript(null);
     onClose();
+  };
+
+  const handleEventNameChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setEventName(e.target.value);
+  };
+
+  const handleDateChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setSelectedDate(e.target.value);
+  };
+
+  const handleTimeChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setSelectedTime(e.target.value);
+  };
+
+  const handleRecurrenceChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setRecurrenceType(e.target.value as RecurrenceType);
+  };
+
+  const handleActionTypeChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    setActionType(e.target.value as ActionType);
+    setSelectedMacro(null);
+    setSelectedScript(null);
+  };
+
+  const handleMacroChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    setSelectedMacro(e.target.value || null);
+  };
+
+  const handleScriptChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    setSelectedScript(e.target.value || null);
   };
 
   return (
@@ -107,7 +176,7 @@ const AddEventModal = ({ isOpen, onClose, onSave }) => {
             <input
               type="text"
               value={eventName}
-              onChange={(e) => setEventName(e.target.value)}
+              onChange={handleEventNameChange}
               placeholder="Enter event name"
               autoFocus
             />
@@ -119,7 +188,7 @@ const AddEventModal = ({ isOpen, onClose, onSave }) => {
             <input
               type="date"
               value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
+              onChange={handleDateChange}
             />
           </div>
 
@@ -129,7 +198,7 @@ const AddEventModal = ({ isOpen, onClose, onSave }) => {
             <input
               type="time"
               value={selectedTime}
-              onChange={(e) => setSelectedTime(e.target.value)}
+              onChange={handleTimeChange}
             />
           </div>
 
@@ -143,7 +212,7 @@ const AddEventModal = ({ isOpen, onClose, onSave }) => {
                   name="recurrence"
                   value="one-time"
                   checked={recurrenceType === 'one-time'}
-                  onChange={(e) => setRecurrenceType(e.target.value)}
+                  onChange={handleRecurrenceChange}
                 />
                 One Time
               </label>
@@ -153,7 +222,7 @@ const AddEventModal = ({ isOpen, onClose, onSave }) => {
                   name="recurrence"
                   value="daily"
                   checked={recurrenceType === 'daily'}
-                  onChange={(e) => setRecurrenceType(e.target.value)}
+                  onChange={handleRecurrenceChange}
                 />
                 Repeat Daily
               </label>
@@ -163,7 +232,7 @@ const AddEventModal = ({ isOpen, onClose, onSave }) => {
                   name="recurrence"
                   value="weekly"
                   checked={recurrenceType === 'weekly'}
-                  onChange={(e) => setRecurrenceType(e.target.value)}
+                  onChange={handleRecurrenceChange}
                 />
                 Repeat Weekly
               </label>
@@ -173,7 +242,7 @@ const AddEventModal = ({ isOpen, onClose, onSave }) => {
                   name="recurrence"
                   value="monthly"
                   checked={recurrenceType === 'monthly'}
-                  onChange={(e) => setRecurrenceType(e.target.value)}
+                  onChange={handleRecurrenceChange}
                 />
                 Repeat Monthly
               </label>
@@ -185,11 +254,7 @@ const AddEventModal = ({ isOpen, onClose, onSave }) => {
             <label>Action Type</label>
             <select
               value={actionType}
-              onChange={(e) => {
-                setActionType(e.target.value);
-                setSelectedMacro('');
-                setSelectedScript('');
-              }}
+              onChange={handleActionTypeChange}
             >
               <option value="macro">Macro</option>
               <option value="script">Custom Script</option>
@@ -201,12 +266,12 @@ const AddEventModal = ({ isOpen, onClose, onSave }) => {
             <div className="setting-row">
               <label>Select Macro</label>
               <select
-                value={selectedMacro}
-                onChange={(e) => setSelectedMacro(e.target.value)}
+                value={selectedMacro || ''}
+                onChange={handleMacroChange}
               >
                 <option value="">-- Select a macro --</option>
                 <optgroup label="Pre-service Music">
-                  {commonMacros
+                  {typedCommonMacros
                     .filter(m => m.action.includes('preservice'))
                     .map(macro => (
                       <option key={macro.id} value={macro.id}>
@@ -215,7 +280,7 @@ const AddEventModal = ({ isOpen, onClose, onSave }) => {
                     ))}
                 </optgroup>
                 <optgroup label="MIDI Notes">
-                  {commonMacros
+                  {typedCommonMacros
                     .filter(m => m.action === 'send_midi_note')
                     .map(macro => (
                       <option key={macro.id} value={macro.id}>
@@ -232,8 +297,8 @@ const AddEventModal = ({ isOpen, onClose, onSave }) => {
             <div className="setting-row">
               <label>Select Script</label>
               <select
-                value={selectedScript}
-                onChange={(e) => setSelectedScript(e.target.value)}
+                value={selectedScript || ''}
+                onChange={handleScriptChange}
               >
                 <option value="">-- Select a script --</option>
                 {scripts.map(script => (
