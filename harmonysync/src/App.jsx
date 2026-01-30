@@ -36,8 +36,8 @@ import {
 import ServiceOrderManager from './components/service-order/ServiceOrderManager.tsx';
 import SlideManager from './components/slides/SlideManager.jsx';
 import LyricsColumn from './components/lyrics/LyricsColumn.jsx';
-import MultitrackPlayer from './components/audio/MultitrackPlayer.jsx';
-import MixerSidebar from './components/audio/MixerSidebar.jsx';
+import MultitrackPlayer from './components/audio/MultitrackPlayer';
+import MixerSidebar from './components/audio/MixerSidebar';
 import DisplaySettings from './components/screens/DisplaySettings.jsx';
 import AudioSettings from './components/screens/AudioSettings.jsx';
 

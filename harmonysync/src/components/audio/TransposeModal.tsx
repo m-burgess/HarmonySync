@@ -1,9 +1,25 @@
 import React from 'react';
-import Modal from '../ui/Modal.jsx';
-import Button from '../ui/Button.jsx';
+import Modal from '../ui/Modal';
+import Button from '../ui/Button';
 import '../../styles/components/TransposeModal.css';
 
-const TransposeModal = ({ isOpen, currentFile, totalFiles, completedFiles, message, onClose }) => {
+interface TransposeModalProps {
+  isOpen: boolean;
+  currentFile: string;
+  totalFiles: number;
+  completedFiles: number;
+  message: string;
+  onClose: () => void;
+}
+
+const TransposeModal: React.FC<TransposeModalProps> = ({ 
+  isOpen, 
+  currentFile, 
+  totalFiles, 
+  completedFiles, 
+  message, 
+  onClose 
+}) => {
   const progress = totalFiles > 0 ? Math.round((completedFiles / totalFiles) * 100) : 0;
   const isComplete = completedFiles === totalFiles && totalFiles > 0;
 
@@ -16,6 +32,7 @@ const TransposeModal = ({ isOpen, currentFile, totalFiles, completedFiles, messa
       closeOnOverlayClick={false}
       closeOnEscape={isComplete}
       showCloseButton={isComplete}
+      footer={null}
     >
       <div className="transpose-modal-content">
         {/* Progress Bar */}
@@ -60,6 +77,7 @@ const TransposeModal = ({ isOpen, currentFile, totalFiles, completedFiles, messa
             <Button
               onClick={onClose}
               variant="secondary"
+              title="Close modal"
             >
               Close
             </Button>

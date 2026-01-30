@@ -7,13 +7,19 @@
  * - No useState for business state
  * - Pure presentation logic only (~80 lines vs original 144 lines)
  */
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
 import { getViewModel } from '../../viewmodels';
 import { PlayIcon, PauseIcon } from '@heroicons/react/24/solid';
+import type { Track } from '../../types/audio';
 import '../../styles/components/MixerSidebar.css';
 
-const MixerSidebar = observer(({ allTracks, isLoadingTracks }) => {
+interface MixerSidebarProps {
+  allTracks: Track[];
+  isLoadingTracks: boolean;
+}
+
+const MixerSidebar = observer(({ allTracks, isLoadingTracks }: MixerSidebarProps) => {
   const viewModel = getViewModel('mixerViewModel');
 
   // Sync tracks from parent component (bridge until full MVVM refactor)
@@ -21,12 +27,12 @@ const MixerSidebar = observer(({ allTracks, isLoadingTracks }) => {
     if (allTracks) {
       viewModel.setTracks(allTracks);
     }
-  }, [allTracks, viewModel]);
+  }, [allTracks]);
 
   // Sync loading state
   useEffect(() => {
     viewModel.isLoadingTracks = isLoadingTracks;
-  }, [isLoadingTracks, viewModel]);
+  }, [isLoadingTracks]);
 
   return (
     <div className="mixer-sidebar h-full flex flex-col bg-gray-800 border-l border-gray-700 overflow-hidden">
@@ -69,7 +75,7 @@ const MixerSidebar = observer(({ allTracks, isLoadingTracks }) => {
           </div>
         ) : (
           <div className="space-y-1">
-            {viewModel.sortedTracks.map((track) => (
+            {viewModel.sortedTracks.map((track: Track) => (
               <button
                 key={track.id}
                 onClick={() => viewModel.toggleMute(track)}

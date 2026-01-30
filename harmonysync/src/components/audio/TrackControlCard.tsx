@@ -1,14 +1,22 @@
 import React from 'react';
 import '../../styles/components/TrackControlCard.css';
 
-const TrackControlCard = ({
+interface TrackControlCardProps {
+  trackId: string;
+  trackName: string;
+  isMuted?: boolean;
+  onMuteToggle?: (trackId: string, newMuteState: boolean) => void;
+  className?: string;
+}
+
+const TrackControlCard: React.FC<TrackControlCardProps> = ({
   trackId,
   trackName,
   isMuted = false,
   onMuteToggle,
   className = ''
 }) => {
-  const handleMuteToggle = () => {
+  const handleMuteToggle = (): void => {
     if (onMuteToggle) {
       onMuteToggle(trackId, !isMuted);
     }
