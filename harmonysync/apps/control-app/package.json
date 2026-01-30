@@ -1,0 +1,11 @@
+{
+  "name": "@harmonysync/control-app",
+  "description": "Remote control interface for HarmonySync",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "dev": "echo \"Serve static files from ./public\"",
+    "build": "echo \"No build configured for control-app\""
+  }
+}

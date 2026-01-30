@@ -1,0 +1,11 @@
+{
+  "extends": "../../apps/electron-app/tsconfig.json",
+  "compilerOptions": {
+    "jsx": "react",
+    "composite": true,
+    "declaration": true,
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": ["src/**/*"]
+}
