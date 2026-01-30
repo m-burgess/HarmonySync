@@ -344,7 +344,6 @@ const Slide: React.FC<SlideProps> = ({
   } as React.CSSProperties : {};
 
   return (
-    // @ts-expect-error - Card component is still JSX and lacks proper type definitions
     <Card
       ref={slideRef}
       className={slideClass}

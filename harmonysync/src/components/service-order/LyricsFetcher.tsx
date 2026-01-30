@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { core, dialog } from '../../electron-adapter';
-import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { useState, useEffect } from 'react';
+import { core } from '../../electron-adapter';
 
 /**
  * LyricsFetcher Component
- * 
+ *
  * Provides UI for fetching lyrics from Genius API and saving to song folders
  */
 const LyricsFetcher = ({ songItem, onLyricsFetched }) => {

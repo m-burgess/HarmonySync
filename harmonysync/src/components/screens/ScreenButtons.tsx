@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { event } from '../../electron-adapter';
 import { ComputerDesktopIcon, TvIcon, WindowIcon } from '@heroicons/react/24/solid';
 import Button from '../ui/Button.jsx';
 
 const ScreenButtons = () => {
-  const [audienceWindow, setAudienceWindow] = useState(null);
-  const [confidenceWindow, setConfidenceWindow] = useState(null);
-  const [lowerThirdsWindow, setLowerThirdsWindow] = useState(null);
+  const [_audienceWindow, _setAudienceWindow] = useState(null);
+  const [_confidenceWindow, _setConfidenceWindow] = useState(null);
+  const [_lowerThirdsWindow, _setLowerThirdsWindow] = useState(null);
 
   const openAudienceScreen = async () => {
     // TODO: Implement window management for Electron

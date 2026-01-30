@@ -1,8 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { core, fs } from '../../electron-adapter';
+import { useState, useEffect, useRef } from 'react';
+import { core } from '../../electron-adapter';
 import { XMarkIcon } from '@heroicons/react/24/solid';
 import Button from '../ui/Button.jsx';
 import Input from '../ui/Input.jsx';
+
+// YouTube API type declarations
+declare global {
+  interface Window {
+    YT: any;
+    onYouTubeIframeAPIReady: () => void;
+  }
+}
 
 const PreserviceMusicWindow = () => {
   const [playlistUrl, setPlaylistUrl] = useState('');
@@ -150,7 +158,7 @@ const PreserviceMusicWindow = () => {
       console.log('Playlist URL saved successfully');
     } catch (error) {
       console.error('Error saving playlist URL:', error);
-      alert('Failed to save playlist URL: ' + error.message);
+      alert('Failed to save playlist URL: ' + (error as Error).message);
     } finally {
       setIsLoading(false);
     }
@@ -162,8 +170,8 @@ const PreserviceMusicWindow = () => {
   };
 
   const handleClose = async () => {
-    const window = getCurrentWindow();
-    await window.close();
+    // Window management is handled by Electron main process
+    console.log('Close window requested');
   };
 
   return (

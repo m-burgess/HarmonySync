@@ -388,7 +388,7 @@ export class RemoteControlService extends BaseElectronService implements IRemote
    */
   private async handleGetFolders(_req: Request, res: Response): Promise<void> {
     try {
-      const setlistDir = this.appState.setlistDirectory;
+      const setlistDir = this.appState.serviceOrderDirectory;
 
       if (!setlistDir || !await fs.pathExists(setlistDir)) {
         res.json({

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
 
 /**
@@ -6,16 +6,16 @@ import Editor from '@monaco-editor/react';
  * Monaco-based editor for creating and editing user scripts
  */
 const ScriptEditor = () => {
-  const [scripts, setScripts] = useState([]);
-  const [currentScript, setCurrentScript] = useState(null);
-  const [code, setCode] = useState('');
-  const [scriptName, setScriptName] = useState('');
-  const [scriptDescription, setScriptDescription] = useState('');
-  const [scriptAuthor, setScriptAuthor] = useState('');
-  const [validationResult, setValidationResult] = useState(null);
-  const [executionResult, setExecutionResult] = useState(null);
-  const [isExecuting, setIsExecuting] = useState(false);
-  const [showApiDocs, setShowApiDocs] = useState(false);
+  const [scripts, setScripts] = useState<any[]>([]);
+  const [currentScript, setCurrentScript] = useState<any>(null);
+  const [code, setCode] = useState<string>('');
+  const [scriptName, setScriptName] = useState<string>('');
+  const [scriptDescription, setScriptDescription] = useState<string>('');
+  const [scriptAuthor, setScriptAuthor] = useState<string>('');
+  const [validationResult, setValidationResult] = useState<any>(null);
+  const [executionResult, setExecutionResult] = useState<any>(null);
+  const [isExecuting, setIsExecuting] = useState<boolean>(false);
+  const [showApiDocs, setShowApiDocs] = useState<boolean>(false);
 
   // Load scripts on mount
   useEffect(() => {
@@ -63,7 +63,7 @@ main();`);
     setExecutionResult(null);
   };
 
-  const handleLoadScript = async (scriptId) => {
+  const handleLoadScript = async (scriptId: any) => {
     try {
       const script = await window.electron.invoke('script:get', scriptId);
       setCurrentScript(script);
@@ -75,7 +75,7 @@ main();`);
       setExecutionResult(null);
     } catch (error) {
       console.error('Failed to load script:', error);
-      alert(`Failed to load script: ${error.message}`);
+      alert(`Failed to load script: ${(error as Error).message}`);
     }
   };
 
@@ -112,7 +112,7 @@ main();`);
       setValidationResult(result);
     } catch (error) {
       console.error('Validation error:', error);
-      setValidationResult({ valid: false, errors: [{ message: error.message }] });
+      setValidationResult({ valid: false, errors: [{ message: (error as Error).message }] });
     }
   };
 
@@ -139,7 +139,7 @@ main();`);
       console.error('Execution error:', error);
       setExecutionResult({
         success: false,
-        error: { message: error.message }
+        error: { message: (error as Error).message }
       });
     } finally {
       setIsExecuting(false);
@@ -158,7 +158,7 @@ main();`);
       await loadScripts();
     } catch (error) {
       console.error('Failed to delete script:', error);
-      alert(`Failed to delete script: ${error.message}`);
+      alert(`Failed to delete script: ${(error as Error).message}`);
     }
   };
 
@@ -178,7 +178,7 @@ main();`);
       }
     } catch (error) {
       console.error('Failed to export script:', error);
-      alert(`Failed to export script: ${error.message}`);
+      alert(`Failed to export script: ${(error as Error).message}`);
     }
   };
 
@@ -197,7 +197,7 @@ main();`);
       }
     } catch (error) {
       console.error('Failed to import script:', error);
-      alert(`Failed to import script: ${error.message}`);
+      alert(`Failed to import script: ${(error as Error).message}`);
     }
   };
 
@@ -269,7 +269,7 @@ main();`);
               defaultLanguage="javascript"
               theme="vs-dark"
               value={code}
-              onChange={(value) => setCode(value || '')}
+              onChange={(value: string | undefined) => setCode(value || '')}
               options={{
                 minimap: { enabled: true },
                 fontSize: 14,
@@ -290,7 +290,7 @@ main();`);
                 <div>
                   <p>✗ Validation Errors:</p>
                   <ul>
-                    {validationResult.errors.map((error, index) => (
+                    {validationResult.errors.map((error: any, index: number) => (
                       <li key={index}>
                         Line {error.line}: {error.message}
                       </li>
@@ -361,7 +361,7 @@ main();`);
         )}
       </div>
 
-      <style jsx>{`
+      <style>{`
         .script-editor-container {
           height: 100%;
           display: flex;
