@@ -3,7 +3,7 @@ import '../../styles/components/Button.css';
 
 interface ButtonProps {
   children?: React.ReactNode;
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'success';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'success' | 'warning' | 'info';
   size?: 'small' | 'medium' | 'large';
   disabled?: boolean;
   loading?: boolean;

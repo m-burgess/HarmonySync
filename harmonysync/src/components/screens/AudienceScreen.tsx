@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { event, core } from '../../electron-adapter';
+import { event } from '../../electron-adapter';
 import { lyricTransitionManager } from '../../utils/lyrics';
 
 interface LyricContent {
@@ -20,15 +20,10 @@ interface VideoContent {
 
 type Content = LyricContent | ImageContent | VideoContent | null;
 
-interface BackgroundVideo {
-  src: string;
-  // Add other properties as needed
-}
-
 const AudienceScreen: React.FC = () => {
   const [content, setContent] = useState<Content>(null);
-  const [backgroundVideo, setBackgroundVideo] = useState<BackgroundVideo | null>(null);
-  const playerRef = useRef<HTMLVideoElement | null>(null);
+  const [backgroundVideo, setBackgroundVideo] = useState<string | null>(null);
+  const playerRef = useRef<any | null>(null);
   const lyricDisplayRef = useRef<HTMLDivElement | null>(null);
   const backgroundVideoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -101,7 +96,7 @@ const AudienceScreen: React.FC = () => {
       setContent({ type: 'video', videoId: event.payload.videoId });
     });
 
-    const unlistenStartBackgroundVideo = event.listen('start-background-video', (event) => {
+    const unlistenStartBackgroundVideo = event.listen('start-background-video', (event: any) => {
       console.log('Audience: start-background-video event received:', event.payload);
       setBackgroundVideo(event.payload.path);
     });
@@ -112,15 +107,15 @@ const AudienceScreen: React.FC = () => {
     });
 
     if (content && content.type === 'video') {
-      if (playerRef.current) {
+      if (playerRef.current && typeof playerRef.current.destroy === 'function') {
         playerRef.current.destroy();
       }
 
-      const onPlayerReady = (event) => {
+      const onPlayerReady = (event: any) => {
         event.target.playVideo();
       };
 
-      const onPlayerStateChange = (event) => {
+      const onPlayerStateChange = (event: any) => {
         console.log('YouTube player state changed:', event.data);
         if (event.data === window.YT.PlayerState.PLAYING) {
           const intervalId = setInterval(() => {
@@ -128,15 +123,16 @@ const AudienceScreen: React.FC = () => {
             const duration = event.target.getDuration();
             event.emit('video-progress', { currentTime, duration });
 
+            const el = document.getElementById('youtube-player');
             if (duration - currentTime <= 3) {
-              document.getElementById('youtube-player').classList.add('fade-out');
+              el?.classList.add('fade-out');
             } else {
-              document.getElementById('youtube-player').classList.remove('fade-out');
+              el?.classList.remove('fade-out');
             }
           }, 1000);
-          playerRef.current.intervalId = intervalId;        } else if (event.data === window.YT.PlayerState.ENDED) {
+          playerRef.current.intervalId = intervalId;        } else if (event.data === (window as any).YT.PlayerState.ENDED) {
           event.emit('video-ended', 'YouTube video finished');
-          document.getElementById('youtube-player').classList.remove('fade-out'); // Remove fade-out class
+          document.getElementById('youtube-player')?.classList.remove('fade-out'); // Remove fade-out class
         } else {
           // If the video is not playing, clear the interval
           if (playerRef.current && playerRef.current.intervalId) {
@@ -163,13 +159,15 @@ const AudienceScreen: React.FC = () => {
         });
       };
 
-      if (window.YT && window.YT.Player) {
+      if ((window as any).YT && (window as any).YT.Player) {
         setTimeout(createPlayer, 0);
       } else {
         const tag = document.createElement('script');
         tag.src = "https://www.youtube.com/iframe_api";
         const firstScriptTag = document.getElementsByTagName('script')[0];
-        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        if (firstScriptTag && firstScriptTag.parentNode) {
+          firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        }
 
         window.onYouTubeIframeAPIReady = () => {
           setTimeout(createPlayer, 0);
@@ -188,9 +186,9 @@ const AudienceScreen: React.FC = () => {
 
       if (playerRef.current) {
         if (playerRef.current.intervalId) {
-          clearInterval(playerRef.current.intervalId);
+          clearInterval(playerRef.current.intervalId as any);
         }
-        playerRef.current.destroy();
+        if (typeof playerRef.current.destroy === 'function') playerRef.current.destroy();
         playerRef.current = null;
       }
     };

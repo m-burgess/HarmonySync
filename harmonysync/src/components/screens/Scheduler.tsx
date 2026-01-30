@@ -1,18 +1,42 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { PlusIcon, TrashIcon } from '@heroicons/react/24/solid';
-import { core } from '../../electron-adapter';
+import { core, preserviceWindow } from '../../electron-adapter';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
-import Input from '../ui/Input.jsx';
 import commonMacros from '../../data/common_macros.json';
 import '../../styles/components/SettingsModal.css';
 
-const Scheduler = ({ isOpen, onClose }) => {
-  const [scheduledEvents, setScheduledEvents] = useState([]);
-  const [selectedMacro, setSelectedMacro] = useState('');
-  const [selectedDay, setSelectedDay] = useState('Saturday');
-  const [selectedTime, setSelectedTime] = useState('16:30');
-  const [isRecurring, setIsRecurring] = useState(true);
+type RecurrenceType = 'one-time' | 'daily' | 'weekly' | 'monthly';
+
+type ScheduledEvent = {
+  id: number;
+  name?: string;
+  type?: string;
+  macroId?: string;
+  macroName?: string;
+  day?: string;
+  date?: string;
+  time?: string;
+  recurring?: boolean;
+  enabled?: boolean;
+  recurrenceType?: RecurrenceType;
+  actionType?: 'macro' | 'script';
+  scriptId?: string;
+  [key: string]: unknown;
+};
+
+interface SchedulerProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const Scheduler = ({ isOpen, onClose }: SchedulerProps) => {
+  const [scheduledEvents, setScheduledEvents] = useState<ScheduledEvent[]>([]);
+  const [selectedMacro, setSelectedMacro] = useState<string>('');
+  const [selectedEventType, setSelectedEventType] = useState<'macro' | 'script'>('macro');
+  const [selectedDay, setSelectedDay] = useState<string>('Saturday');
+  const [selectedTime, setSelectedTime] = useState<string>('16:30');
+  const [isRecurring, setIsRecurring] = useState<boolean>(true);
 
   const daysOfWeek = [
     'Sunday',
@@ -28,7 +52,7 @@ const Scheduler = ({ isOpen, onClose }) => {
   useEffect(() => {
     const loadEvents = async () => {
       try {
-        const events = await core.invoke('scheduler:getAllEvents');
+        const events = (await core.invoke('scheduler:getAllEvents')) as ScheduledEvent[] | undefined;
         setScheduledEvents(events || []);
       } catch (error) {
         console.error('Failed to load scheduled events:', error);
@@ -42,10 +66,7 @@ const Scheduler = ({ isOpen, onClose }) => {
   }, [isOpen]);
 
   // Save scheduled events to JSON storage
-  const saveEvents = async (events) => {
-    setScheduledEvents(events);
-    // Note: Individual operations (create/update/delete) handle persistence
-  };
+  // Local state persistence handled by individual operations
 
   const addScheduledEvent = async () => {
     if (!selectedMacro) {
@@ -55,11 +76,11 @@ const Scheduler = ({ isOpen, onClose }) => {
 
     try {
       const macro = commonMacros.find(m => m.id === selectedMacro);
-      const newEvent = {
+      const newEvent: ScheduledEvent = {
         id: Date.now(),
         type: 'macro',
         macroId: selectedMacro,
-        macroName: macro.name,
+        macroName: macro?.name,
         day: selectedDay,
         time: selectedTime,
         recurring: isRecurring,
@@ -78,9 +99,9 @@ const Scheduler = ({ isOpen, onClose }) => {
     }
   };
 
-  const deleteEvent = async (eventId) => {
+  const deleteEvent = async (eventId: number) => {
     try {
-      await core.invoke('scheduler:delete', eventId);
+      await core.invoke('scheduler:delete', { id: eventId });
       const updatedEvents = scheduledEvents.filter(e => e.id !== eventId);
       setScheduledEvents(updatedEvents);
     } catch (error) {
@@ -89,12 +110,12 @@ const Scheduler = ({ isOpen, onClose }) => {
     }
   };
 
-  const toggleEventEnabled = async (eventId) => {
+  const toggleEventEnabled = async (eventId: number) => {
     try {
       const event = scheduledEvents.find(e => e.id === eventId);
       if (!event) return;
       
-      const updatedEvent = { ...event, enabled: !event.enabled };
+      const updatedEvent = { ...event, enabled: !event.enabled } as ScheduledEvent;
       await core.invoke('scheduler:update', updatedEvent);
       
       const updatedEvents = scheduledEvents.map(e =>
@@ -118,7 +139,7 @@ const Scheduler = ({ isOpen, onClose }) => {
 
       scheduledEvents.forEach(event => {
         if (event.enabled && event.day === currentDay && event.time === currentTime) {
-          executeMacro(event.macroId);
+          executeMacro(event.macroId as string);
         }
       });
     };
@@ -130,13 +151,36 @@ const Scheduler = ({ isOpen, onClose }) => {
     return () => clearInterval(interval);
   }, [scheduledEvents, isOpen]);
 
-  const executeMacro = async (macroId) => {
+  const executeMacro = async (macroId: string) => {
     const macro = commonMacros.find(m => m.id === macroId);
     if (!macro) return;
 
     console.log(`Executing scheduled macro: ${macro.name}`);
     
     try {
+      // Handle preservice music macros locally to avoid unnecessary backend round-trips
+      if (macro.action === 'start_preservice_music') {
+        await preserviceWindow.open();
+        console.log(`Opened preservice music window for macro: ${macro.name}`);
+        return;
+      }
+
+      if (macro.action === 'stop_preservice_music') {
+        await preserviceWindow.close();
+        console.log(`Closed preservice music window for macro: ${macro.name}`);
+        return;
+      }
+      // Handle preservice macros locally
+      if (macro.action === 'start_preservice_music') {
+        await preserviceWindow.open();
+        return;
+      }
+
+      if (macro.action === 'stop_preservice_music') {
+        await preserviceWindow.close();
+        return;
+      }
+
       // Call backend command to execute macro
       await core.invoke('execute_macro', {
         macroId: macro.id,
@@ -171,7 +215,7 @@ const Scheduler = ({ isOpen, onClose }) => {
             <select
               value={selectedEventType}
               onChange={(e) => {
-                setSelectedEventType(e.target.value);
+                setSelectedEventType(e.target.value as 'macro' | 'script');
                 setSelectedMacro('');
               }}
             >

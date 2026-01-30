@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
+import { core } from '../../electron-adapter';
 
 /**
  * Script Editor Component
  * Monaco-based editor for creating and editing user scripts
  */
 const ScriptEditor = () => {
-  const [scripts, setScripts] = useState<any[]>([]);
-  const [currentScript, setCurrentScript] = useState<any>(null);
+  type Script = { id: string; name: string; description?: string; author?: string; code?: string };
+  const [scripts, setScripts] = useState<Script[]>([]);
+  const [currentScript, setCurrentScript] = useState<Script | null>(null);
   const [code, setCode] = useState<string>('');
   const [scriptName, setScriptName] = useState<string>('');
   const [scriptDescription, setScriptDescription] = useState<string>('');
@@ -24,8 +26,8 @@ const ScriptEditor = () => {
 
   const loadScripts = async () => {
     try {
-      const result = await window.electron.invoke('script:getAll');
-      setScripts(result);
+      const result = await core.invoke('script:getAll') as Script[] | undefined;
+      setScripts(result || []);
     } catch (error) {
       console.error('Failed to load scripts:', error);
     }
@@ -65,12 +67,12 @@ main();`);
 
   const handleLoadScript = async (scriptId: any) => {
     try {
-      const script = await window.electron.invoke('script:get', scriptId);
+      const script = await core.invoke('script:get', scriptId) as Script;
       setCurrentScript(script);
-      setCode(script.code);
-      setScriptName(script.name);
-      setScriptDescription(script.description);
-      setScriptAuthor(script.author);
+      setCode(script.code || '');
+      setScriptName(script.name || '');
+      setScriptDescription(script.description || '');
+      setScriptAuthor(script.author || '');
       setValidationResult(null);
       setExecutionResult(null);
     } catch (error) {
@@ -90,11 +92,11 @@ main();`);
 
       if (currentScript) {
         // Update existing script
-        await window.electron.invoke('script:update', currentScript.id, scriptData);
+        await core.invoke('script:update', currentScript.id, scriptData);
         alert('Script updated successfully!');
       } else {
         // Create new script
-        const newScript = await window.electron.invoke('script:create', scriptData);
+        const newScript = await core.invoke('script:create', scriptData) as Script;
         setCurrentScript(newScript);
         alert('Script created successfully!');
       }
@@ -102,13 +104,13 @@ main();`);
       await loadScripts();
     } catch (error) {
       console.error('Failed to save script:', error);
-      alert(`Failed to save script: ${error.message}`);
+      alert(`Failed to save script: ${(error as any).message}`);
     }
   };
 
   const handleValidateScript = async () => {
     try {
-      const result = await window.electron.invoke('script:validate', code);
+      const result = await core.invoke('script:validate', code) as any;
       setValidationResult(result);
     } catch (error) {
       console.error('Validation error:', error);
@@ -122,7 +124,7 @@ main();`);
 
     try {
       // Validate first
-      const validation = await window.electron.invoke('script:validate', code);
+      const validation = await core.invoke('script:validate', code) as any;
       if (!validation.valid) {
         setExecutionResult({
           success: false,
@@ -133,7 +135,7 @@ main();`);
       }
 
       // Execute script
-      const result = await window.electron.invoke('script:execute', code, { timeout: 10000 });
+      const result = await core.invoke('script:execute', code, { timeout: 10000 }) as any;
       setExecutionResult(result);
     } catch (error) {
       console.error('Execution error:', error);
@@ -152,7 +154,7 @@ main();`);
     if (!confirm(`Delete script "${currentScript.name}"?`)) return;
 
     try {
-      await window.electron.invoke('script:delete', currentScript.id);
+      await core.invoke('script:delete', currentScript.id);
       alert('Script deleted successfully!');
       handleNewScript();
       await loadScripts();
@@ -166,14 +168,14 @@ main();`);
     if (!currentScript) return;
 
     try {
-      const exportPath = await window.electron.invoke('dialog:saveFile', {
+      const exportPath = await core.invoke('dialog:saveFile', {
         title: 'Export Script',
         defaultPath: `${currentScript.id}.js`,
         filters: [{ name: 'JavaScript', extensions: ['js'] }]
       });
 
       if (exportPath) {
-        await window.electron.invoke('script:export', currentScript.id, exportPath);
+        await core.invoke('script:export', currentScript.id, exportPath);
         alert('Script exported successfully!');
       }
     } catch (error) {
@@ -184,13 +186,13 @@ main();`);
 
   const handleImportScript = async () => {
     try {
-      const importPath = await window.electron.invoke('dialog:openFile', {
+      const importPath = await core.invoke('dialog:openFile', {
         title: 'Import Script',
         filters: [{ name: 'JavaScript', extensions: ['js'] }]
       });
 
-      if (importPath && importPath.length > 0) {
-        const script = await window.electron.invoke('script:import', importPath[0]);
+        if (importPath && (importPath as string[]).length > 0) {
+        const script = await core.invoke('script:import', (importPath as string[])[0]) as any;
         alert('Script imported successfully!');
         await loadScripts();
         await handleLoadScript(script.id);

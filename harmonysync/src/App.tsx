@@ -15,7 +15,7 @@
  */
 import { useState, useEffect, useRef } from 'react';
 import { observer } from 'mobx-react-lite';
-import { core, event } from './electron-adapter';
+import { core, event, preserviceWindow } from './electron-adapter';
 import { 
   PresentationChartBarIcon, 
   CogIcon,
@@ -204,7 +204,7 @@ const App = observer(() => {
   useEffect(() => {
     const unlistenStart = event.listen('start-preservice-music', async () => {
       try {
-        await core.invoke('open_preservice_music_window');
+        await preserviceWindow.open();
       } catch (error) {
         console.error('Failed to open pre-service music window:', error);
       }
@@ -212,7 +212,7 @@ const App = observer(() => {
 
     const unlistenStop = event.listen('stop-preservice-music', async () => {
       try {
-        await core.invoke('close_preservice_music_window');
+        await preserviceWindow.close();
       } catch (error) {
         console.error('Failed to close pre-service music window:', error);
       }
@@ -270,7 +270,7 @@ const App = observer(() => {
           label="Pre-Service Music" 
           onClick={async () => {
             try {
-              await core.invoke('open_preservice_music_window');
+              await preserviceWindow.open();
             } catch (error) {
               console.error('Failed to open pre-service music window:', error);
             }

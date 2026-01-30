@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowTopRightOnSquareIcon, PlayIcon, PhotoIcon, FilmIcon, GlobeAltIcon, DocumentTextIcon } from '@heroicons/react/24/solid';
 import { event, core } from '../../electron-adapter';
 import { Card, Button } from '../ui';
+const CardAny: any = Card;
 import '../../styles/components/Slide.css';
 import type { SlideData, SlideSize, SlidePosition } from './types';
 
@@ -343,8 +344,15 @@ const Slide: React.FC<SlideProps> = ({
     '--slide-width': `${thumbnailSize}px`
   } as React.CSSProperties : {};
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleClick();
+    }
+  };
+
   return (
-    <Card
+    <CardAny
       ref={slideRef}
       className={slideClass}
       style={customStyle}
@@ -352,18 +360,13 @@ const Slide: React.FC<SlideProps> = ({
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          handleClick();
-        }
-      }}
+      {...({ onKeyDown: handleKeyDown } as React.HTMLAttributes<HTMLDivElement>)}
       data-slide-index={index}
       data-slide-type={slide.type || 'lyric'}
       data-slide-path={'path' in slide ? slide.path : undefined}
       data-slide-name={slide.name}
       data-slide-video-id={'videoId' in slide ? slide.videoId : undefined}
-      draggable
+      draggable={true}
       onDragStart={handleDragStart}
       onDragOver={(e: React.DragEvent) => e.preventDefault()}
       onDragEnter={handleDragEnter}
@@ -462,7 +465,7 @@ const Slide: React.FC<SlideProps> = ({
           </div>
         </div>
       )}
-    </Card>
+    </CardAny>
   );
 };
 
