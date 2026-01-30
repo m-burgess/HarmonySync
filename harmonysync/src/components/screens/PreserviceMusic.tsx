@@ -1,10 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { core, fs } from '../../electron-adapter';
+import { useState, useEffect, useRef } from 'react';
+import { core } from '../../electron-adapter';
 import { XMarkIcon } from '@heroicons/react/24/solid';
 import Button from '../ui/Button.jsx';
 import Input from '../ui/Input.jsx';
 
-const PreserviceMusic = ({ isOpen, onClose }) => {
+// YouTube API type declarations
+declare global {
+  interface Window {
+    YT: any;
+    onYouTubeIframeAPIReady: () => void;
+  }
+}
+
+const PreserviceMusic = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
   const [playlistUrl, setPlaylistUrl] = useState('');
   const [savedUrl, setSavedUrl] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -152,7 +160,7 @@ const PreserviceMusic = ({ isOpen, onClose }) => {
       console.log('Playlist URL saved successfully');
     } catch (error) {
       console.error('Error saving playlist URL:', error);
-      alert('Failed to save playlist URL: ' + error.message);
+      alert('Failed to save playlist URL: ' + (error as Error).message);
     } finally {
       setIsLoading(false);
     }

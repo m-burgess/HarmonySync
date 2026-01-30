@@ -1,11 +1,22 @@
 /**
- * HarmonySync Remote Control - Mobile Interface JavaScript
+ * HarmonySync Remote Control - Mobile Interface JavaScript with JSDoc Type Annotations
  */
 
 // API base URL - will use current host
 const API_BASE = window.location.origin;
 
+// Current state interface
+/**
+ * @typedef {Object} AppState
+ * @property {string|null} currentFolder
+ * @property {number} currentSlideIndex
+ * @property {number} totalSlides
+ * @property {'stopped'|'playing'|'paused'} playbackStatus
+ * @property {any[]} loadedTracks
+ */
+
 // Current state
+/** @type {AppState} */
 let currentState = {
   currentFolder: null,
   currentSlideIndex: 0,
@@ -15,38 +26,59 @@ let currentState = {
 };
 
 // Auto-refresh interval
+/** @type {number|null} */
 let refreshInterval = null;
+
+// API response interfaces
+/**
+ * @template T
+ * @typedef {Object} ApiResponse
+ * @property {boolean} success
+ * @property {T} [data]
+ * @property {string} [message]
+ * @property {string} [error]
+ */
+
+/**
+ * @typedef {Object} FolderInfo
+ * @property {string} path
+ * @property {string} name
+ * @property {boolean} hasAudio
+ */
 
 /**
  * Initialize the app when page loads
  */
 window.addEventListener('DOMContentLoaded', () => {
   console.log('[RemoteControl] Mobile interface loaded');
-  
+
   // Load initial data
   loadFolders();
   updateStatus();
-  
+
   // Setup folder select change handler
-  document.getElementById('folderSelect').addEventListener('change', (e) => {
-    const loadBtn = document.getElementById('loadFolderBtn');
-    loadBtn.disabled = !e.target.value;
+  const folderSelect = /** @type {HTMLSelectElement} */ (document.getElementById('folderSelect'));
+  folderSelect.addEventListener('change', (e) => {
+    const target = /** @type {HTMLSelectElement} */ (e.target);
+    const loadBtn = /** @type {HTMLButtonElement} */ (document.getElementById('loadFolderBtn'));
+    loadBtn.disabled = !target.value;
   });
-  
+
   // Start auto-refresh
-  refreshInterval = setInterval(updateStatus, 2000);
-  
+  refreshInterval = window.setInterval(updateStatus, 2000);
+
   // Update connection status
   updateConnectionStatus(true);
 });
 
 /**
  * Update connection status indicator
+ * @param {boolean} connected
  */
 function updateConnectionStatus(connected) {
-  const indicator = document.getElementById('statusIndicator');
-  const statusText = document.getElementById('statusText');
-  
+  const indicator = /** @type {HTMLElement} */ (document.getElementById('statusIndicator'));
+  const statusText = /** @type {HTMLElement} */ (document.getElementById('statusText'));
+
   if (connected) {
     indicator.className = 'status-indicator connected';
     statusText.textContent = 'Connected';
@@ -58,15 +90,17 @@ function updateConnectionStatus(connected) {
 
 /**
  * Show a temporary message
+ * @param {string} message
+ * @param {'info'|'success'|'warning'|'error'} [type='info']
  */
 function showMessage(message, type = 'info') {
-  const container = document.getElementById('messageContainer');
+  const container = /** @type {HTMLElement} */ (document.getElementById('messageContainer'));
   const messageEl = document.createElement('div');
   messageEl.className = `message message-${type}`;
   messageEl.textContent = message;
-  
+
   container.appendChild(messageEl);
-  
+
   // Auto-remove after 3 seconds
   setTimeout(() => {
     messageEl.classList.add('fade-out');
@@ -76,6 +110,11 @@ function showMessage(message, type = 'info') {
 
 /**
  * Make API request
+ * @template T
+ * @param {string} endpoint
+ * @param {'GET'|'POST'} [method='GET']
+ * @param {any} [body=null]
+ * @returns {Promise<T>}
  */
 async function apiRequest(endpoint, method = 'GET', body = null) {
   try {
@@ -85,14 +124,14 @@ async function apiRequest(endpoint, method = 'GET', body = null) {
         'Content-Type': 'application/json'
       }
     };
-    
+
     if (body) {
       options.body = JSON.stringify(body);
     }
-    
+
     const response = await fetch(`${API_BASE}/api${endpoint}`, options);
     const data = await response.json();
-    
+
     updateConnectionStatus(true);
     return data;
   } catch (error) {
@@ -108,7 +147,7 @@ async function apiRequest(endpoint, method = 'GET', body = null) {
 async function updateStatus() {
   try {
     const result = await apiRequest('/status');
-    
+
     if (result.success) {
       currentState = result.data;
       updateUI();
@@ -124,37 +163,48 @@ async function updateStatus() {
 function updateUI() {
   // Update status display
   // Handle both forward and backward slashes for cross-platform path support
-  const folderName = currentState.currentFolder 
-    ? currentState.currentFolder.split(/[/\\]/).pop() 
+  const folderName = currentState.currentFolder
+    ? currentState.currentFolder.split(/[/\\]/).pop()
     : 'None';
-  document.getElementById('currentFolder').textContent = folderName;
-  
-  document.getElementById('currentSlide').textContent = 
+  const currentFolderEl = /** @type {HTMLElement} */ (document.getElementById('currentFolder'));
+  currentFolderEl.textContent = folderName;
+
+  const currentSlideEl = /** @type {HTMLElement} */ (document.getElementById('currentSlide'));
+  currentSlideEl.textContent =
     `${currentState.currentSlideIndex + 1} / ${currentState.totalSlides}`;
-  
-  document.getElementById('playbackStatus').textContent = 
+
+  const playbackStatusEl = /** @type {HTMLElement} */ (document.getElementById('playbackStatus'));
+  playbackStatusEl.textContent =
     currentState.playbackStatus.charAt(0).toUpperCase() + currentState.playbackStatus.slice(1);
-  
-  document.getElementById('trackCount').textContent = 
-    currentState.loadedTracks.length;
-  
+
+  const trackCountEl = /** @type {HTMLElement} */ (document.getElementById('trackCount'));
+  trackCountEl.textContent =
+    currentState.loadedTracks.length.toString();
+
   // Enable/disable controls based on state
   const hasFolder = currentState.currentFolder !== null;
   const hasTracks = currentState.loadedTracks.length > 0;
   const isPlaying = currentState.playbackStatus === 'playing';
   const isPaused = currentState.playbackStatus === 'paused';
-  
+
   // Slide navigation
-  document.getElementById('prevBtn').disabled = !hasFolder || currentState.currentSlideIndex === 0;
-  document.getElementById('nextBtn').disabled = !hasFolder || currentState.currentSlideIndex >= currentState.totalSlides - 1;
-  
+  const prevBtn = /** @type {HTMLButtonElement} */ (document.getElementById('prevBtn'));
+  prevBtn.disabled = !hasFolder || currentState.currentSlideIndex === 0;
+
+  const nextBtn = /** @type {HTMLButtonElement} */ (document.getElementById('nextBtn'));
+  nextBtn.disabled = !hasFolder || currentState.currentSlideIndex >= currentState.totalSlides - 1;
+
   // Playback controls
-  document.getElementById('playBtn').disabled = !hasTracks || isPlaying;
-  document.getElementById('pauseBtn').disabled = !isPlaying;
-  document.getElementById('stopBtn').disabled = currentState.playbackStatus === 'stopped';
-  
+  const playBtn = /** @type {HTMLButtonElement} */ (document.getElementById('playBtn'));
+  playBtn.disabled = !hasTracks || isPlaying;
+
+  const pauseBtn = /** @type {HTMLButtonElement} */ (document.getElementById('pauseBtn'));
+  pauseBtn.disabled = !isPlaying;
+
+  const stopBtn = /** @type {HTMLButtonElement} */ (document.getElementById('stopBtn'));
+  stopBtn.disabled = currentState.playbackStatus === 'stopped';
+
   // Update playback button text based on state
-  const playBtn = document.getElementById('playBtn');
   if (isPaused) {
     playBtn.textContent = '▶ Resume';
   } else {
@@ -168,13 +218,13 @@ function updateUI() {
 async function loadFolders() {
   try {
     const result = await apiRequest('/folders');
-    
+
     if (result.success) {
-      const select = document.getElementById('folderSelect');
-      
+      const select = /** @type {HTMLSelectElement} */ (document.getElementById('folderSelect'));
+
       // Clear existing options except first
       select.innerHTML = '<option value="">-- Select a folder --</option>';
-      
+
       // Add folder options
       result.data.forEach(folder => {
         const option = document.createElement('option');
@@ -182,7 +232,7 @@ async function loadFolders() {
         option.textContent = `${folder.name}${folder.hasAudio ? ' 🎵' : ''}`;
         select.appendChild(option);
       });
-      
+
       showMessage(`Loaded ${result.data.length} folders`, 'success');
     } else {
       showMessage(result.message || 'No folders found', 'warning');
@@ -196,17 +246,17 @@ async function loadFolders() {
  * Load selected folder
  */
 async function loadSelectedFolder() {
-  const select = document.getElementById('folderSelect');
+  const select = /** @type {HTMLSelectElement} */ (document.getElementById('folderSelect'));
   const folderPath = select.value;
-  
+
   if (!folderPath) {
     showMessage('Please select a folder', 'warning');
     return;
   }
-  
+
   try {
     const result = await apiRequest('/folder/select', 'POST', { folderPath });
-    
+
     if (result.success) {
       showMessage('Folder loaded successfully', 'success');
       await updateStatus();
@@ -224,7 +274,7 @@ async function loadSelectedFolder() {
 async function nextSlide() {
   try {
     const result = await apiRequest('/slide/next', 'POST');
-    
+
     if (result.success) {
       await updateStatus();
     } else {
@@ -241,7 +291,7 @@ async function nextSlide() {
 async function previousSlide() {
   try {
     const result = await apiRequest('/slide/previous', 'POST');
-    
+
     if (result.success) {
       await updateStatus();
     } else {
@@ -258,7 +308,7 @@ async function previousSlide() {
 async function playAudio() {
   try {
     const result = await apiRequest('/playback/play', 'POST');
-    
+
     if (result.success) {
       showMessage('Playback started', 'success');
       await updateStatus();
@@ -276,7 +326,7 @@ async function playAudio() {
 async function pauseAudio() {
   try {
     const result = await apiRequest('/playback/pause', 'POST');
-    
+
     if (result.success) {
       showMessage('Playback paused', 'info');
       await updateStatus();
@@ -294,7 +344,7 @@ async function pauseAudio() {
 async function stopAudio() {
   try {
     const result = await apiRequest('/playback/stop', 'POST');
-    
+
     if (result.success) {
       showMessage('Playback stopped', 'info');
       await updateStatus();
@@ -312,3 +362,11 @@ window.addEventListener('beforeunload', () => {
     clearInterval(refreshInterval);
   }
 });
+
+// Export functions for potential use in other scripts
+window.loadSelectedFolder = loadSelectedFolder;
+window.nextSlide = nextSlide;
+window.previousSlide = previousSlide;
+window.playAudio = playAudio;
+window.pauseAudio = pauseAudio;
+window.stopAudio = stopAudio;

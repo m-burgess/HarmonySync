@@ -8,8 +8,11 @@ interface CardProps {
   padding?: 'small' | 'medium' | 'large';
   hover?: boolean;
   onClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onMouseEnter?: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onMouseLeave?: (e: React.MouseEvent<HTMLDivElement>) => void;
   header?: React.ReactNode;
   footer?: React.ReactNode;
+  style?: React.CSSProperties;
 }
 
 const Card = React.forwardRef<HTMLDivElement, CardProps>(({

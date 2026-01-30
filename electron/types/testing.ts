@@ -1,12 +1,11 @@
 /**
  * Testing Abstractions and Interfaces
- * 
+ *
  * This file provides abstractions for external dependencies to enable effective unit testing.
  * These interfaces allow services to be tested without requiring actual Electron runtime,
  * FFmpeg installation, or file system operations.
  */
 
-import { BrowserWindow } from 'electron';
 import { EventEmitter } from 'events';
 
 // ==================== File System Abstraction ====================
@@ -326,7 +325,7 @@ export class MockFileSystem implements IFileSystem {
     };
   }
 
-  async mkdir(path: string, options?: { recursive?: boolean }): Promise<void> {
+  async mkdir(path: string, _options?: { recursive?: boolean }): Promise<void> {
     this.directories.add(path);
   }
 
@@ -468,19 +467,19 @@ export class MockEventBus extends EventEmitter implements IEventBus {
 export class MockHttpClient implements IHttpClient {
   private responses: Map<string, IHttpResponse> = new Map();
 
-  async get<T = any>(url: string, config?: any): Promise<IHttpResponse<T>> {
+  async get<T = any>(url: string, _config?: any): Promise<IHttpResponse<T>> {
     return this.getResponse(url) as IHttpResponse<T>;
   }
 
-  async post<T = any>(url: string, data?: any, config?: any): Promise<IHttpResponse<T>> {
+  async post<T = any>(url: string, _data?: any, _config?: any): Promise<IHttpResponse<T>> {
     return this.getResponse(url) as IHttpResponse<T>;
   }
 
-  async put<T = any>(url: string, data?: any, config?: any): Promise<IHttpResponse<T>> {
+  async put<T = any>(url: string, _data?: any, _config?: any): Promise<IHttpResponse<T>> {
     return this.getResponse(url) as IHttpResponse<T>;
   }
 
-  async delete<T = any>(url: string, config?: any): Promise<IHttpResponse<T>> {
+  async delete<T = any>(url: string, _config?: any): Promise<IHttpResponse<T>> {
     return this.getResponse(url) as IHttpResponse<T>;
   }
 

@@ -3,7 +3,7 @@ import '../../styles/components/Button.css';
 
 interface ButtonProps {
   children?: React.ReactNode;
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'success';
   size?: 'small' | 'medium' | 'large';
   disabled?: boolean;
   loading?: boolean;
@@ -12,6 +12,7 @@ interface ButtonProps {
   onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
   type?: 'button' | 'submit' | 'reset';
   title?: string;
+  style?: React.CSSProperties;
 }
 
 const Button: React.FC<ButtonProps> = ({

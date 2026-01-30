@@ -1,6 +1,13 @@
 /**
  * Test Helper Utilities
- * 
+ *
+ * Provides common utilities and factories for creating test fixtures,
+ * mock objects, and test data.
+ */
+
+/**
+ * Test Helper Utilities
+ *
  * Provides common utilities and factories for creating test fixtures,
  * mock objects, and test data.
  */
@@ -15,6 +22,7 @@ import {
   MockDatabase
 } from '../types/testing';
 import { ServiceConfig } from '../types/services';
+import { jest } from '@jest/globals';
 
 // ==================== Test Context Factory ====================
 
