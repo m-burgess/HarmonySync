@@ -34,7 +34,7 @@ import {
   VSCodeStatusBar 
 } from './components/VSCodeUI.jsx';
 import ServiceOrderManager from './components/service-order/ServiceOrderManager.tsx';
-import SlideManager from './components/slides/SlideManager.jsx';
+import SlideManager from './components/slides/SlideManager';
 import LyricsColumn from './components/lyrics/LyricsColumn.jsx';
 import MultitrackPlayer from './components/audio/MultitrackPlayer';
 import MixerSidebar from './components/audio/MixerSidebar';

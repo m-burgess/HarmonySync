@@ -5,6 +5,7 @@
 // Type definitions for ElectronAPI
 interface DialogOpenOptions {
   directory?: boolean;
+  multiple?: boolean;
   filters?: Array<{ name: string; extensions: string[] }>;
 }
 
@@ -40,7 +41,7 @@ export interface ElectronAPI {
   receive: (channel: string, callback: (data: unknown) => void) => (() => void) | undefined;
   
   // Dialog
-  openDirectory: (options: DialogOpenOptions) => Promise<string | null>;
+  openDirectory: (options?: { multiple?: boolean }) => Promise<string[] | string | null>;
   openFile: (filters?: Array<{ name: string; extensions: string[] }>) => Promise<string | null>;
   
   // File system
@@ -113,6 +114,16 @@ export interface ElectronAPI {
   displayConfigDelete: (id: string) => Promise<void>;
   displayConfigReorder: (orderedIds: string[]) => Promise<void>;
   displayConfigGetEnabled: () => Promise<DisplayConfig[]>;
+  
+  // Slide Import
+  onSlidesImportProgress?: (callback: (data: { message?: string; current?: number; total?: number }) => void) => (() => void) | undefined;
+  validateSlideFile?: (path: string) => Promise<{ valid: boolean; message?: string }>;
+  importSlidesFromFolder?: (folder: string, options: { dpi: number; format: 'png' | 'jpeg' }) => Promise<Array<{ name: string; type: string; path: string }>>;
+  importPdfSlides?: (file: string, options: { dpi: number; format: 'png' | 'jpeg' }) => Promise<Array<{ name: string; type: string; path: string }>>;
+  importPowerpointSlides?: (file: string, options: { dpi: number; format: 'png' | 'jpeg' }) => Promise<Array<{ name: string; type: string; path: string }>>;
+  importSlidesFromZip?: (file: string, options: { dpi: number; format: 'png' | 'jpeg'; deleteZip?: boolean; importSlidesOnly?: boolean }) => Promise<{ slides?: unknown[]; servicePath?: string }>;
+  scanServiceFolder?: (path: string) => Promise<{ servicePath?: string; slides?: unknown[]; songs?: unknown[] }>;
+  sendToMain?: (channel: string, data: unknown) => void;
 }
 
 // Global window type augmentation
@@ -305,12 +316,12 @@ export const event = {
 
 // Dialog
 export const dialog = {
-  open: async (options: DialogOpenOptions): Promise<string | null> => {
+  open: async (options: DialogOpenOptions): Promise<string | string[] | null> => {
     try {
       const api = await getElectronAPI();
       console.log('[electron-adapter] dialog.open invoked with options:', options);
       if (options.directory) {
-        const res = await api.openDirectory(options);
+        const res = await api.openDirectory({ multiple: options.multiple });
         console.log('[electron-adapter] dialog.open directory result:', res);
         return res;
       }

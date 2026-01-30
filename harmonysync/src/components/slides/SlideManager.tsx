@@ -11,13 +11,21 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { observer } from 'mobx-react-lite';
 import { getViewModel } from '../../viewmodels';
 import { ArrowPathIcon, ArrowUpTrayIcon } from '@heroicons/react/24/solid';
-import SlideItem from './SlideItem.jsx';
+import SlideItem from './SlideItem';
 import ScreenButtons from '../screens/ScreenButtons.jsx';
-import SlideImportModal from './SlideImportModal.jsx';
+import SlideImportModal from './SlideImportModal';
 import { event } from '../../electron-adapter';
-import { FixedSizeGrid as Grid } from 'react-window';
+import { FixedSizeGrid as Grid, GridChildComponentProps } from 'react-window';
+import type { SlideData, SlideGridItemData } from './types';
 
-const SlideManager = observer(({ allSlides, setAllSlides, selectedSlide, setSelectedSlide }) => {
+interface SlideManagerProps {
+  allSlides: SlideData[];
+  setAllSlides: (slides: SlideData[]) => void;
+  selectedSlide: number | SlideData | null;
+  setSelectedSlide: (slide: number | SlideData | null) => void;
+}
+
+const SlideManager: React.FC<SlideManagerProps> = observer(({ allSlides, setAllSlides, selectedSlide, setSelectedSlide }) => {
   const viewModel = getViewModel('slideViewModel');
   
   // UI-only state (for grid rendering - not business logic)
@@ -25,11 +33,11 @@ const SlideManager = observer(({ allSlides, setAllSlides, selectedSlide, setSele
   const [gridHeight, setGridHeight] = useState(400);
   const [gridKey, setGridKey] = useState(0);
   
-  const gridRef = useRef(null);
-  const dragItem = useRef(null);
-  const dragOverItem = useRef(null);
-  const slideColRef = useRef(null);
-  const gridContainerRef = useRef(null);
+  const gridRef = useRef<Grid>(null);
+  const dragItem = useRef<number | null>(null);
+  const dragOverItem = useRef<number | null>(null);
+  const slideColRef = useRef<HTMLDivElement>(null);
+  const gridContainerRef = useRef<HTMLDivElement>(null);
 
   // Sync ViewModel state with parent component props
   // This is a temporary bridge until we fully refactor parent components
@@ -41,7 +49,11 @@ const SlideManager = observer(({ allSlides, setAllSlides, selectedSlide, setSele
 
   useEffect(() => {
     if (selectedSlide !== undefined) {
-      viewModel.selectedSlide = selectedSlide;
+      if (typeof selectedSlide === 'number') {
+        viewModel.selectedSlide = viewModel.slides[selectedSlide] || null;
+      } else {
+        viewModel.selectedSlide = selectedSlide;
+      }
     }
   }, [selectedSlide, viewModel]);
 
@@ -74,7 +86,7 @@ const SlideManager = observer(({ allSlides, setAllSlides, selectedSlide, setSele
 
   // Keyboard navigation
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
         viewModel.navigateDown();
@@ -93,7 +105,7 @@ const SlideManager = observer(({ allSlides, setAllSlides, selectedSlide, setSele
 
   // Recalculate columns on resize
   useEffect(() => {
-    let ro;
+    let ro: ResizeObserver | null = null;
     const handleResize = () => {
       const width = slideColRef.current ? slideColRef.current.clientWidth : 800;
       const col = Math.max(2, Math.floor(width / (viewModel.thumbnailSize + 16)));
@@ -109,8 +121,11 @@ const SlideManager = observer(({ allSlides, setAllSlides, selectedSlide, setSele
     }
 
     return () => {
-      if (ro && slideColRef.current) ro.unobserve(slideColRef.current);
-      else window.removeEventListener('resize', handleResize);
+      if (ro && slideColRef.current) {
+        ro.unobserve(slideColRef.current);
+      } else {
+        window.removeEventListener('resize', handleResize);
+      }
     };
   }, [viewModel.thumbnailSize]);
 
@@ -130,7 +145,7 @@ const SlideManager = observer(({ allSlides, setAllSlides, selectedSlide, setSele
   }, [viewModel.selectedSlide, columns, viewModel.thumbnailSize]);
 
   // Handle slide click
-  const handleSlideClick = (index) => {
+  const handleSlideClick = (index: number) => {
     const slide = viewModel.slides[index];
     viewModel.selectSlide(slide);
 
@@ -143,18 +158,18 @@ const SlideManager = observer(({ allSlides, setAllSlides, selectedSlide, setSele
   };
 
   // Drag and drop handlers
-  const handleDragStart = (e, position) => {
+  const handleDragStart = (e: React.DragEvent, position: number) => {
     dragItem.current = position;
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', position);
+    e.dataTransfer.setData('text/plain', position.toString());
   };
 
-  const handleDragEnter = (e, position) => {
+  const handleDragEnter = (e: React.DragEvent, position: number) => {
     e.preventDefault();
     dragOverItem.current = position;
   };
 
-  const handleDrop = (e, position) => {
+  const handleDrop = (e: React.DragEvent, position: number) => {
     e.preventDefault();
     if (dragItem.current !== null) {
       viewModel.reorderSlides(dragItem.current, position);
@@ -168,8 +183,44 @@ const SlideManager = observer(({ allSlides, setAllSlides, selectedSlide, setSele
     dragOverItem.current = null;
   };
 
-  const handleDragOver = (e) => {
+  const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+  };
+
+  // Grid cell renderer
+  const Cell: React.FC<GridChildComponentProps<SlideGridItemData>> = ({ columnIndex, rowIndex, style, data }) => {
+    const index = rowIndex * data.columns + columnIndex;
+    if (index >= data.allSlides.length) return null;
+    const slide = data.allSlides[index];
+    return (
+      <div style={style} className="p-1">
+        <SlideItem
+          slide={slide}
+          index={index}
+          isSelected={slide === data.selectedSlide}
+          onSelect={data.handleSlideClick}
+          onDragStart={data.handleDragStart}
+          onDragEnter={data.handleDragEnter}
+          onDrop={data.handleDrop}
+          onDragEnd={data.handleDragEnd}
+          thumbnailSize={data.thumbnailSize}
+          onVideoTranscoded={data.handleVideoTranscoded}
+        />
+      </div>
+    );
+  };
+
+  const gridItemData: SlideGridItemData = { 
+    allSlides: viewModel.slides, 
+    columns, 
+    thumbnailSize: viewModel.thumbnailSize, 
+    selectedSlide: viewModel.selectedSlide, 
+    handleSlideClick, 
+    handleDragStart, 
+    handleDragEnter, 
+    handleDrop, 
+    handleDragEnd,
+    handleVideoTranscoded: viewModel.handleVideoTranscoded.bind(viewModel)
   };
 
   return (
@@ -224,40 +275,9 @@ const SlideManager = observer(({ allSlides, setAllSlides, selectedSlide, setSele
           rowCount={Math.ceil(viewModel.slides.length / columns)}
           rowHeight={Math.round(viewModel.thumbnailSize * 0.56) + 12}
           width={slideColRef.current ? slideColRef.current.clientWidth : 800}
-          itemData={{ 
-            allSlides: viewModel.slides, 
-            columns, 
-            thumbnailSize: viewModel.thumbnailSize, 
-            selectedSlide: viewModel.selectedSlide, 
-            handleSlideClick, 
-            handleDragStart, 
-            handleDragEnter, 
-            handleDrop, 
-            handleDragEnd,
-            handleVideoTranscoded: viewModel.handleVideoTranscoded.bind(viewModel)
-          }}
+          itemData={gridItemData}
         >
-          {({ columnIndex, rowIndex, style, data }) => {
-            const index = rowIndex * data.columns + columnIndex;
-            if (index >= data.allSlides.length) return null;
-            const slide = data.allSlides[index];
-            return (
-              <div style={style} className="p-1">
-                <SlideItem
-                  slide={slide}
-                  index={index}
-                  isSelected={slide === data.selectedSlide}
-                  onSelect={data.handleSlideClick}
-                  onDragStart={data.handleDragStart}
-                  onDragEnter={data.handleDragEnter}
-                  onDrop={data.handleDrop}
-                  onDragEnd={data.handleDragEnd}
-                  thumbnailSize={data.thumbnailSize}
-                  onVideoTranscoded={data.handleVideoTranscoded}
-                />
-              </div>
-            );
-          }}
+          {Cell}
         </Grid>
       </div>
 
