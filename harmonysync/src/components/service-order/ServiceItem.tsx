@@ -1,6 +1,6 @@
 import React from 'react';
 import Button from '../ui/Button.jsx';
-import TransitionButton from '../audio/TransitionButton.jsx';
+import TransitionButton from '../audio/TransitionButton';
 import { PencilIcon } from '@heroicons/react/24/outline';
 import '../../styles/components/ServiceItem.css';
 

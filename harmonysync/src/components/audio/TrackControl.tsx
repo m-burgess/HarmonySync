@@ -1,16 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { setTrackMute } from '../../utils/audio';
-import TrackControlCard from './TrackControlCard.jsx';
+import TrackControlCard from './TrackControlCard';
+import type { Track } from '../../types/audio';
 
-const TrackControl = ({ track, onMuteToggle }) => {
-  const [isMuted, setIsMuted] = useState(track.isMuted || false);
+interface TrackControlProps {
+  track: Track;
+  onMuteToggle?: (track: Track, newMuteState: boolean) => void;
+}
+
+const TrackControl: React.FC<TrackControlProps> = ({ track, onMuteToggle }) => {
+  const [isMuted, setIsMuted] = useState<boolean>(track.isMuted || false);
 
   // Sync with track prop changes
   useEffect(() => {
     setIsMuted(track.isMuted || false);
   }, [track.isMuted]);
 
-  const handleMuteToggle = async (trackId, newMuteState) => {
+  const handleMuteToggle = async (_trackId: string, newMuteState: boolean): Promise<void> => {
     console.log(`🔇 [TrackControl] Toggle mute for track ${track.name}: ${newMuteState}`);
     console.log(`🔍 [TrackControl] Track object:`, track);
     console.log(`🔍 [TrackControl] Track ID: ${track.id}, New mute state: ${newMuteState}`);

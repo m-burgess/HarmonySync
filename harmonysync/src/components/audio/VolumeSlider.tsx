@@ -1,7 +1,22 @@
 import React from 'react';
 import '../../styles/components/VolumeSlider.css';
 
-const VolumeSlider = ({
+type Orientation = 'vertical' | 'horizontal';
+
+interface VolumeSliderProps {
+  value?: number;
+  onChange?: (value: number) => void;
+  min?: number;
+  max?: number;
+  step?: number;
+  orientation?: Orientation;
+  disabled?: boolean;
+  label?: string;
+  showValue?: boolean;
+  className?: string;
+}
+
+const VolumeSlider: React.FC<VolumeSliderProps> = ({
   value = 0.5,
   onChange,
   min = 0,
@@ -13,7 +28,7 @@ const VolumeSlider = ({
   showValue = true,
   className = ''
 }) => {
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     if (onChange && !disabled) {
       onChange(parseFloat(e.target.value));
     }
