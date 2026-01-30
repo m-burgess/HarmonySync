@@ -1,9 +1,0 @@
-[Desktop Entry]
-Name=HarmonySync (No Sandbox)
-Comment=Church presentation software with YouTube support
-Exec=/path/to/harmonysync/scripts/launch-harmonysync.sh
-Icon=harmonysync
-Terminal=false
-Type=Application
-Categories=AudioVideo;Presentation;
-StartupWMClass=harmonysync

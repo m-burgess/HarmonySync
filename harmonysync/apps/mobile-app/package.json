@@ -1,0 +1,11 @@
+{
+  "name": "@harmonysync/mobile-app",
+  "description": "Mobile companion app for HarmonySync",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "dev": "echo \"No runtime configured for mobile-app (add your dev server)\"",
+    "build": "echo \"No build configured for mobile-app\""
+  }
+}
