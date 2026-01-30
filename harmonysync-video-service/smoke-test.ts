@@ -1,14 +1,23 @@
-const http = require('http');
+import http from 'http';
+
+interface HealthResponse {
+    status: string;
+    service: string;
+    version: string;
+    uptime: number;
+    memory: NodeJS.MemoryUsage;
+    activeJobs: number;
+}
 
 // Simple smoke test for the video service
-async function testHealth() {
+async function testHealth(): Promise<HealthResponse> {
     return new Promise((resolve, reject) => {
         const req = http.get('http://127.0.0.1:3002/api/health', (res) => {
             let data = '';
             res.on('data', (chunk) => data += chunk);
             res.on('end', () => {
                 if (res.statusCode === 200) {
-                    const health = JSON.parse(data);
+                    const health: HealthResponse = JSON.parse(data);
                     console.log('✅ Health check passed:', health);
                     resolve(health);
                 } else {
@@ -25,7 +34,7 @@ async function testHealth() {
     });
 }
 
-async function testShutdown() {
+async function testShutdown(): Promise<void> {
     return new Promise((resolve, reject) => {
         const shutdownToken = process.env.SHUTDOWN_TOKEN;
         if (!shutdownToken) {
@@ -35,7 +44,7 @@ async function testShutdown() {
         }
 
         const postData = JSON.stringify({});
-        const options = {
+        const options: http.RequestOptions = {
             hostname: '127.0.0.1',
             port: 3002,
             path: '/api/shutdown',
@@ -68,7 +77,7 @@ async function testShutdown() {
     });
 }
 
-async function runTests() {
+async function runTests(): Promise<void> {
     try {
         console.log('🧪 Running smoke tests...\n');
         
@@ -82,7 +91,8 @@ async function runTests() {
         console.log('\n✅ All tests passed!');
         process.exit(0);
     } catch (error) {
-        console.error('\n❌ Test failed:', error.message);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error('\n❌ Test failed:', errorMessage);
         process.exit(1);
     }
 }

@@ -2,6 +2,8 @@
 
 Standalone Node.js video processing service for HarmonySync. Handles CPU and memory-intensive video operations without blocking the main Electron process.
 
+**Note:** This service has been converted to TypeScript. See the build instructions below.
+
 ## Features
 
 - Video transcoding and format conversion
@@ -9,6 +11,20 @@ Standalone Node.js video processing service for HarmonySync. Handles CPU and mem
 - Video metadata extraction
 - Progress tracking via Socket.io
 - Memory-efficient streaming processing
+
+## Development
+
+### Prerequisites
+- Node.js >= 16.0.0
+- TypeScript 5.3+
+- FFmpeg (for video processing)
+
+### Build
+```bash
+cd harmonysync-video-service
+npm install
+npm run build
+```
 
 ## Environment Variables
 
@@ -18,12 +34,25 @@ Standalone Node.js video processing service for HarmonySync. Handles CPU and mem
 
 ## Quick Start
 
-Install dependencies and start the service:
+Build and start the service:
 
 ```bash
 cd harmonysync-video-service
 npm install
+npm run build
 npm start
+```
+
+For development with auto-reload:
+
+```bash
+npm run dev
+```
+
+Run smoke tests:
+
+```bash
+npm run smoke-test
 ```
 
 With custom configuration:

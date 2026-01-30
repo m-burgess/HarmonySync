@@ -1,27 +1,86 @@
-const express = require('express');
-const http = require('http');
-const socketIo = require('socket.io');
-const cors = require('cors');
-const ffmpeg = require('fluent-ffmpeg');
-const fs = require('fs-extra');
-const path = require('path');
-const { v4: uuidv4 } = require('uuid');
+import express, { Request, Response, Application } from 'express';
+import http from 'http';
+import { Server as SocketIOServer, Socket } from 'socket.io';
+import cors from 'cors';
+import ffmpeg, { FfmpegCommand } from 'fluent-ffmpeg';
+import fs from 'fs-extra';
+import path from 'path';
+import { v4 as uuidv4 } from 'uuid';
 
 // Configuration
-const HOST = process.env.HOST || '127.0.0.1';
-const PORT = process.env.PORT || 3002;
-const SHUTDOWN_TOKEN = process.env.SHUTDOWN_TOKEN || null;
+const HOST: string = process.env.HOST || '127.0.0.1';
+const PORT: number = parseInt(process.env.PORT || '3002', 10);
+const SHUTDOWN_TOKEN: string | null = process.env.SHUTDOWN_TOKEN || null;
 
 // Job management
-const jobs = new Map();
+const jobs = new Map<string, VideoJob>();
+
+// Type definitions
+type JobType = 'transcode' | 'thumbnail' | 'metadata';
+type JobStatus = 'pending' | 'processing' | 'completed' | 'error' | 'cancelled';
+
+interface TranscodeOptions {
+    outputDir?: string;
+    videoCodec?: string;
+    audioCodec?: string;
+    audioBitrate?: string;
+    preset?: string;
+    crf?: number;
+    force?: boolean;
+}
+
+interface ThumbnailOptions {
+    outputDir?: string;
+    timestamp?: number;
+    size?: string;
+    filename?: string;
+}
+
+interface VideoMetadata {
+    duration: number;
+    width?: number;
+    height?: number;
+    videoCodec?: string;
+    audioCodec?: string;
+    format?: string;
+    bitRate?: number;
+    size?: number;
+    fps?: string;
+}
+
+interface ProgressInfo {
+    frames?: number;
+    currentFps?: number;
+    currentKbps?: number;
+    targetSize?: number;
+    timemark?: string;
+    percent?: number;
+}
 
 class VideoJob {
-    constructor(id, type, inputPath, options = {}) {
+    public id: string;
+    public type: JobType;
+    public inputPath: string;
+    public options: TranscodeOptions | ThumbnailOptions | Record<string, never>;
+    public status: JobStatus;
+    public progress: number;
+    public result: any;
+    public error: string | null;
+    public startTime: number;
+    public endTime: number | null;
+    public ffmpegCommand: FfmpegCommand | null;
+
+    constructor(
+        id: string,
+        type: JobType,
+        inputPath: string,
+        options: TranscodeOptions | ThumbnailOptions | Record<string, never> = {}
+    ) {
         this.id = id;
-        this.type = type; // 'transcode', 'thumbnail', 'metadata'
+        this.type = type;
         this.inputPath = inputPath;
         this.options = options;
-        this.status = 'pending'; // pending, processing, completed, error, cancelled
+        this.status = 'pending';
         this.progress = 0;
         this.result = null;
         this.error = null;
@@ -30,7 +89,7 @@ class VideoJob {
         this.ffmpegCommand = null;
     }
 
-    cancel() {
+    cancel(): void {
         if (this.ffmpegCommand) {
             this.ffmpegCommand.kill('SIGKILL');
         }
@@ -38,7 +97,7 @@ class VideoJob {
         this.endTime = Date.now();
     }
 
-    toJSON() {
+    toJSON(): object {
         return {
             id: this.id,
             type: this.type,
@@ -52,7 +111,7 @@ class VideoJob {
 }
 
 // Helper function to parse FFmpeg timemark to seconds
-function parseTimemark(timemark) {
+function parseTimemark(timemark: string | number | undefined): number {
     if (typeof timemark === 'number') return timemark;
     if (typeof timemark !== 'string') return 0;
     
@@ -71,15 +130,16 @@ function parseTimemark(timemark) {
 }
 
 // Video processing functions
-async function transcodeVideo(job, io) {
+async function transcodeVideo(job: VideoJob, io: SocketIOServer): Promise<string | null> {
     return new Promise((resolve, reject) => {
         const { inputPath, options = {} } = job;
-        const outputDir = options.outputDir || path.dirname(inputPath);
+        const transcodeOptions = options as TranscodeOptions;
+        const outputDir = transcodeOptions.outputDir || path.dirname(inputPath);
         const fileName = path.basename(inputPath, path.extname(inputPath));
         const outputPath = path.join(outputDir, `${fileName}_transcoded.mp4`);
 
         // Check if output already exists
-        if (fs.existsSync(outputPath) && !options.force) {
+        if (fs.existsSync(outputPath) && !transcodeOptions.force) {
             job.status = 'completed';
             job.result = { outputPath };
             job.endTime = Date.now();
@@ -104,16 +164,16 @@ async function transcodeVideo(job, io) {
             job.status = 'processing';
 
             const command = ffmpeg(inputPath)
-                .videoCodec(options.videoCodec || 'libx264')
-                .audioCodec(options.audioCodec || 'aac')
-                .audioBitrate(options.audioBitrate || '128k')
+                .videoCodec(transcodeOptions.videoCodec || 'libx264')
+                .audioCodec(transcodeOptions.audioCodec || 'aac')
+                .audioBitrate(transcodeOptions.audioBitrate || '128k')
                 .videoFilters('format=yuv420p')
                 .outputOptions([
-                    `-preset ${options.preset || 'medium'}`,
-                    `-crf ${options.crf || 23}`,
+                    `-preset ${transcodeOptions.preset || 'medium'}`,
+                    `-crf ${transcodeOptions.crf || 23}`,
                     '-movflags +faststart'
                 ])
-                .on('progress', (progress) => {
+                .on('progress', (progress: ProgressInfo) => {
                     if (totalDuration > 0) {
                         const currentTime = parseTimemark(progress.timemark);
                         job.progress = Math.min(100, Math.round((currentTime / totalDuration) * 100));
@@ -129,7 +189,7 @@ async function transcodeVideo(job, io) {
                     console.log(`✅ Transcoding complete: ${outputPath}`);
                     resolve(outputPath);
                 })
-                .on('error', (err) => {
+                .on('error', (err: Error) => {
                     if (job.status === 'cancelled') {
                         console.log(`🛑 Job cancelled: ${job.id}`);
                         resolve(null);
@@ -149,13 +209,14 @@ async function transcodeVideo(job, io) {
     });
 }
 
-async function generateThumbnail(job, io) {
+async function generateThumbnail(job: VideoJob, io: SocketIOServer): Promise<string | null> {
     return new Promise((resolve, reject) => {
         const { inputPath, options = {} } = job;
-        const outputDir = options.outputDir || path.dirname(inputPath);
-        const timestamp = options.timestamp || 3;
-        const size = options.size || '320x240';
-        const thumbnailName = options.filename || `${uuidv4()}.png`;
+        const thumbnailOptions = options as ThumbnailOptions;
+        const outputDir = thumbnailOptions.outputDir || path.dirname(inputPath);
+        const timestamp = thumbnailOptions.timestamp || 3;
+        const size = thumbnailOptions.size || '320x240';
+        const thumbnailName = thumbnailOptions.filename || `${uuidv4()}.png`;
         const thumbnailPath = path.join(outputDir, thumbnailName);
 
         fs.ensureDirSync(outputDir);
@@ -178,7 +239,7 @@ async function generateThumbnail(job, io) {
                 console.log(`✅ Thumbnail generated: ${thumbnailPath}`);
                 resolve(thumbnailPath);
             })
-            .on('error', (err) => {
+            .on('error', (err: Error) => {
                 if (job.status === 'cancelled') {
                     console.log(`🛑 Job cancelled: ${job.id}`);
                     resolve(null);
@@ -196,7 +257,7 @@ async function generateThumbnail(job, io) {
     });
 }
 
-async function extractMetadata(job, io) {
+async function extractMetadata(job: VideoJob, io: SocketIOServer): Promise<VideoMetadata> {
     return new Promise((resolve, reject) => {
         const { inputPath } = job;
         
@@ -215,7 +276,7 @@ async function extractMetadata(job, io) {
             const videoStream = metadata.streams.find(s => s.codec_type === 'video');
             const audioStream = metadata.streams.find(s => s.codec_type === 'audio');
 
-            const result = {
+            const result: VideoMetadata = {
                 duration: Math.round(metadata.format.duration || 0),
                 width: videoStream?.width,
                 height: videoStream?.height,
@@ -239,9 +300,9 @@ async function extractMetadata(job, io) {
 }
 
 // Initialize Express app
-const app = express();
+const app: Application = express();
 const server = http.createServer(app);
-const io = socketIo(server, {
+const io = new SocketIOServer(server, {
     cors: {
         origin: '*',
         methods: ['GET', 'POST']
@@ -252,7 +313,7 @@ app.use(cors());
 app.use(express.json());
 
 // REST API endpoints
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (req: Request, res: Response) => {
     res.json({
         status: 'ok',
         service: 'harmonysync-video-service',
@@ -263,28 +324,32 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-app.get('/api/jobs/:id', (req, res) => {
+app.get('/api/jobs/:id', (req: Request, res: Response): void => {
     const job = jobs.get(req.params.id);
     if (!job) {
-        return res.status(404).json({ error: 'Job not found' });
+        res.status(404).json({ error: 'Job not found' });
+        return;
     }
     res.json(job.toJSON());
 });
 
-app.delete('/api/jobs/:id', (req, res) => {
+app.delete('/api/jobs/:id', (req: Request, res: Response): void => {
     const job = jobs.get(req.params.id);
     if (!job) {
-        return res.status(404).json({ error: 'Job not found' });
+        res.status(404).json({ error: 'Job not found' });
+        return;
     }
     job.cancel();
     res.json({ message: 'Job cancelled', job: job.toJSON() });
 });
 
-app.post('/api/shutdown', (req, res) => {
-    const token = req.headers['x-shutdown-token'] || req.headers.authorization?.replace('Bearer ', '');
+app.post('/api/shutdown', (req: Request, res: Response): void => {
+    const token = req.headers['x-shutdown-token'] as string | undefined || 
+                  (req.headers.authorization as string | undefined)?.replace('Bearer ', '');
     
     if (SHUTDOWN_TOKEN && token !== SHUTDOWN_TOKEN) {
-        return res.status(403).json({ error: 'Invalid shutdown token' });
+        res.status(403).json({ error: 'Invalid shutdown token' });
+        return;
     }
 
     console.log('🛑 Shutdown requested');
@@ -303,10 +368,10 @@ app.post('/api/shutdown', (req, res) => {
 });
 
 // Socket.io event handlers
-io.on('connection', (socket) => {
+io.on('connection', (socket: Socket) => {
     console.log(`🔌 Client connected: ${socket.id}`);
 
-    socket.on('video:transcode', async (data) => {
+    socket.on('video:transcode', async (data: { inputPath: string; options?: TranscodeOptions }) => {
         const jobId = uuidv4();
         const job = new VideoJob(jobId, 'transcode', data.inputPath, data.options);
         jobs.set(jobId, job);
@@ -323,7 +388,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('video:thumbnail', async (data) => {
+    socket.on('video:thumbnail', async (data: { inputPath: string; options?: ThumbnailOptions }) => {
         const jobId = uuidv4();
         const job = new VideoJob(jobId, 'thumbnail', data.inputPath, data.options);
         jobs.set(jobId, job);
@@ -339,7 +404,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('video:metadata', async (data) => {
+    socket.on('video:metadata', async (data: { inputPath: string }) => {
         const jobId = uuidv4();
         const job = new VideoJob(jobId, 'metadata', data.inputPath);
         jobs.set(jobId, job);
