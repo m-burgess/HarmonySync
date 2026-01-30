@@ -1,8 +1,28 @@
 import React from 'react';
-import Button from '../ui/Button.jsx';
+import Button from '../ui/Button';
 import '../../styles/components/TransitionButton.css';
 
-const TransitionButton = ({
+type TransitionType = 'crossfade' | 'cut' | 'fadeout-fadein' | 'fade' | 'preload' | 'load' | 'none';
+type ButtonVariant = 'success' | 'warning' | 'info' | 'secondary' | 'primary' | 'danger';
+type ButtonSize = 'small' | 'medium' | 'large';
+
+interface ButtonConfig {
+  label: string;
+  variant: ButtonVariant;
+  title: string;
+}
+
+interface TransitionButtonProps {
+  type: TransitionType;
+  onClick?: () => void;
+  disabled?: boolean;
+  loading?: boolean;
+  tooltip?: string;
+  size?: ButtonSize;
+  className?: string;
+}
+
+const TransitionButton: React.FC<TransitionButtonProps> = ({
   type,
   onClick,
   disabled = false,
@@ -11,7 +31,7 @@ const TransitionButton = ({
   size = 'small',
   className = ''
 }) => {
-  const buttonConfig = {
+  const buttonConfig: Record<TransitionType, ButtonConfig> = {
     crossfade: {
       label: 'Crossfade',
       variant: 'success',

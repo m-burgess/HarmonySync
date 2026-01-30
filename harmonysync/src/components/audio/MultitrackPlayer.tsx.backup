@@ -15,23 +15,64 @@ import {
   clearTracks,
   addTracks
 } from '../../utils/audio';
-import TrackControl from './TrackControl.jsx';
-import TransposeModal from './TransposeModal.jsx';
+import TrackControl from './TrackControl';
+import TransposeModal from './TransposeModal';
 import { PlayIcon, PauseIcon, BackwardIcon, RocketLaunchIcon, ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/solid';
 import { core, event, fs } from '../../electron-adapter';
+import { Track } from '../../types/audio';
 
-const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
-  const [globalVolume, setGlobalVolumeState] = useState(1);
-  const [audioServiceStatus, setAudioServiceStatus] = useState('connecting');
-  const [memoryUsage, setMemoryUsage] = useState(null);
-  const [serviceError, setServiceError] = useState(null);
-  const [isStartingService, setIsStartingService] = useState(false);
-  const [currentDirectory, setCurrentDirectory] = useState(null);
-  const [isOperationInProgress, setIsOperationInProgress] = useState(false);
+interface MultitrackPlayerProps {
+  allTracks: Track[];
+  isLoadingTracks: boolean;
+}
+
+type AudioServiceStatus = 'connecting' | 'connected' | 'error';
+
+interface MemoryUsage {
+  rss: number;
+  heapTotal: number;
+  heapUsed: number;
+  external: number;
+}
+
+interface TransposeProgress {
+  currentFile: string;
+  totalFiles: number;
+  completedFiles: number;
+  message: string;
+}
+
+interface TransposePayload {
+  current_file?: string;
+  total_files?: number;
+  completed_files?: number;
+  message?: string;
+}
+
+interface FileEntry {
+  name: string;
+  children?: FileEntry[];
+}
+
+interface AddTrackResult {
+  success: boolean;
+  trackId: string;
+  path: string;
+  name?: string;
+}
+
+const MultitrackPlayer: React.FC<MultitrackPlayerProps> = ({ allTracks, isLoadingTracks }) => {
+  const [globalVolume, setGlobalVolumeState] = useState<number>(1);
+  const [audioServiceStatus, setAudioServiceStatus] = useState<AudioServiceStatus>('connecting');
+  const [memoryUsage, setMemoryUsage] = useState<MemoryUsage | null>(null);
+  const [serviceError, setServiceError] = useState<string | null>(null);
+  const [isStartingService, setIsStartingService] = useState<boolean>(false);
+  const [currentDirectory, setCurrentDirectory] = useState<string | null>(null);
+  const [isOperationInProgress, setIsOperationInProgress] = useState<boolean>(false);
   
   // Transpose modal state
-  const [isTransposeModalOpen, setIsTransposeModalOpen] = useState(false);
-  const [transposeProgress, setTransposeProgress] = useState({
+  const [isTransposeModalOpen, setIsTransposeModalOpen] = useState<boolean>(false);
+  const [transposeProgress, setTransposeProgress] = useState<TransposeProgress>({
     currentFile: '',
     totalFiles: 0,
     completedFiles: 0,
@@ -39,7 +80,7 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
   });
 
   // Wrapper functions to prevent multiple rapid operations
-  const handlePlayAll = async () => {
+  const handlePlayAll = async (): Promise<void> => {
     if (isOperationInProgress) {
       console.log('⚠️ Operation already in progress, ignoring playAll');
       return;
@@ -59,7 +100,7 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
     }
   };
 
-  const handleStopAll = async () => {
+  const handleStopAll = async (): Promise<void> => {
     if (isOperationInProgress) {
       console.log('⚠️ Operation already in progress, ignoring stopAll');
       return;
@@ -79,7 +120,7 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
     }
   };
 
-  const handleGoToBeginning = async () => {
+  const handleGoToBeginning = async (): Promise<void> => {
     if (isOperationInProgress) {
       console.log('⚠️ Operation already in progress, ignoring goToBeginning');
       return;
@@ -111,7 +152,7 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
       console.log('[MultitrackPlayer] Current directory:', dirPath);
     }
     
-    const initAudio = async () => {
+    const initAudio = async (): Promise<void> => {
       try {
         setAudioServiceStatus('connecting');
         setServiceError(null);
@@ -129,7 +170,7 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
       } catch (error) {
         console.error('Failed to initialize audio service:', error);
         setAudioServiceStatus('error');
-        setServiceError(error.message);
+        setServiceError((error as Error).message);
       }
     };
 
@@ -143,7 +184,7 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
 
   // Update memory usage periodically
   useEffect(() => {
-    const updateMemory = async () => {
+    const updateMemory = async (): Promise<void> => {
       try {
         const usage = await getMemoryUsage();
         setMemoryUsage(usage);
@@ -162,10 +203,10 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
 
   // Listen for transpose progress events
   useEffect(() => {
-    let unlisten;
+    let unlisten: (() => void) | undefined;
     
-    const setupListener = async () => {
-      unlisten = await event.listen('transpose-progress', (e) => {
+    const setupListener = async (): Promise<void> => {
+      unlisten = await event.listen('transpose-progress', (e: { payload: TransposePayload }) => {
         console.log('Transpose progress:', e.payload);
         setTransposeProgress({
           currentFile: e.payload.current_file || '',
@@ -185,13 +226,13 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
     };
   }, []);
 
-  const handleVolumeChange = (e) => {
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const newVolume = parseFloat(e.target.value);
     setGlobalVolumeState(newVolume);
     setGlobalVolume(newVolume); // Assuming setGlobalVolume exists in audio.js
   };
 
-  const handleMuteToggle = (track, newMuteState) => {
+  const handleMuteToggle = (track: Track, newMuteState: boolean): void => {
     console.log(`🔇 Mute updated for track ${track.name}: ${newMuteState}`);
     // Update track in allTracks state
     const updatedTracks = allTracks.map(t => 
@@ -201,7 +242,7 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
     // The audio service call is handled in TrackControl
   };
 
-  const sortTracks = (a, b) => {
+  const sortTracks = (a: Track, b: Track): number => {
     const aName = a.name.toLowerCase();
     const bName = b.name.toLowerCase();
     const customOrder = ['click', 'guide'];
@@ -213,7 +254,7 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
     return aName.localeCompare(bName);
   };
 
-  const handleStartAudioService = async () => {
+  const handleStartAudioService = async (): Promise<void> => {
     setIsStartingService(true);
     setServiceError(null);
     
@@ -237,13 +278,13 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
     } catch (error) {
       console.error('❌ Failed to start audio service:', error);
       setAudioServiceStatus('error');
-      setServiceError(error.message);
+      setServiceError((error as Error).message);
     } finally {
       setIsStartingService(false);
     }
   };
 
-  const handleTranspose = async (semitones) => {
+  const handleTranspose = async (semitones: number): Promise<void> => {
     if (!currentDirectory) {
       console.error('No directory loaded to transpose');
       alert('Please load audio files first before transposing');
@@ -270,7 +311,7 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
       const outputDir = await core.invoke('transpose_audio_files', {
         directory: currentDirectory,
         semitones: semitones,
-      });
+      }) as string;
 
       console.log('✅ Transposition complete! Output directory:', outputDir);
       
@@ -282,7 +323,7 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
       console.log('🔄 Loading transposed tracks from:', outputDir);
       
       // Read the new directory to get track paths
-      const entries = await fs.readDir(outputDir, { recursive: false });
+      const entries = await fs.readDir(outputDir, { recursive: false }) as FileEntry[];
       const audioFiles = entries
         .filter(e => e.children === undefined && (
           e.name.endsWith('.mp3') || 
@@ -296,14 +337,14 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
       const trackPaths = audioFiles.map(f => `${outputDir}/${f.name}`);
       
       // Add the new tracks as a song
-      const results = await addTracks(trackPaths);
+      const results = await addTracks(trackPaths) as AddTrackResult[];
       
       // Update the tracks in the UI
-      const loadedTracks = results
+      const loadedTracks: Track[] = results
         .filter(result => result.success)
         .map((result, index) => {
           // Use the track name from the backend response
-          const trackName = result.name || path.basename(result.path, path.extname(result.path));
+          const trackName = result.name || result.path.substring(result.path.lastIndexOf('/') + 1);
           return {
             id: result.trackId,
             path: result.path,
@@ -336,10 +377,10 @@ const MultitrackPlayer = ({ allTracks, isLoadingTracks }) => {
     }
   };
 
-  const handleTransposeUp = () => handleTranspose(1);
-  const handleTransposeDown = () => handleTranspose(-1);
+  const handleTransposeUp = (): void => handleTranspose(1);
+  const handleTransposeDown = (): void => handleTranspose(-1);
 
-  const handleCloseTransposeModal = () => {
+  const handleCloseTransposeModal = (): void => {
     setIsTransposeModalOpen(false);
     setTransposeProgress({
       currentFile: '',
