@@ -398,135 +398,31 @@ export const fs = {
   }
 };
 
-// Command argument types
-interface DbQueryArgs {
-  query: string;
-  params?: unknown[];
-}
-
-interface ConvertToOggArgs {
-  input_path: string;
-  output_dir: string;
-}
-
-interface TransposeAudioArgs {
-  song_path: string;
-  semitones: number;
-}
-
-interface VideoMetadataArgs {
-  path: string;
-}
-
-interface TranscodeVideoArgs {
-  input_path: string;
-}
-
-interface GenerateThumbnailArgs {
-  video_path: string;
-}
-
-interface DisplayVideoSlideArgs {
-  path: string;
-  duration: number;
-}
-
-interface DisplaySlideArgs {
-  content: unknown;
-}
-
-interface SendMidiNoteArgs {
-  device: string;
-  note: number;
-  velocity: number;
-  duration: number;
-}
-
-interface SearchLyricsArgs {
-  title: string;
-  artist: string;
-}
-
-interface FetchLyricsArgs {
-  song_id: string;
-}
-
-interface GDriveListFilesArgs {
-  folder_id: string;
-}
-
-interface GDriveDownloadFileArgs {
-  file_id: string;
-  destination: string;
-}
-
-interface GDriveSyncFolderArgs {
-  folder_id: string;
-  local_path: string;
-}
-
-interface GenerateBackgroundCssArgs {
-  path: string;
-}
-
-interface DisplayConfigGetArgs {
-  id: string;
-}
-
-interface DisplayConfigCreateArgs {
-  config: Omit<DisplayConfig, 'id'>;
-}
-
-interface DisplayConfigUpdateArgs {
-  id: string;
-  updates: Partial<DisplayConfig>;
-}
-
-interface DisplayConfigDeleteArgs {
-  id: string;
-}
-
-interface DisplayConfigReorderArgs {
-  orderedIds: string[];
-}
-
-// Union type for all command args
-type CommandArgs = 
-  | DbQueryArgs
-  | ConvertToOggArgs
-  | TransposeAudioArgs
-  | VideoMetadataArgs
-  | TranscodeVideoArgs
-  | GenerateThumbnailArgs
-  | DisplayVideoSlideArgs
-  | DisplaySlideArgs
-  | SendMidiNoteArgs
-  | SearchLyricsArgs
-  | FetchLyricsArgs
-  | GDriveListFilesArgs
-  | GDriveDownloadFileArgs
-  | GDriveSyncFolderArgs
-  | GenerateBackgroundCssArgs
-  | DisplayConfigGetArgs
-  | DisplayConfigCreateArgs
-  | DisplayConfigUpdateArgs
-  | DisplayConfigDeleteArgs
-  | DisplayConfigReorderArgs
-  | Record<string, unknown>;
+// Adapter normalizes args at runtime; specific command-arg interfaces were removed.
 
 // Core - invoke commands
 export const core = {
-  invoke: async (command: string, args: CommandArgs = {}): Promise<unknown> => {
+  invoke: async (command: string, ...args: unknown[]): Promise<unknown> => {
     try {
       const api = await getElectronAPI();
-      // Map Tauri commands to Electron IPC handlers
-      return await invokeElectronCommand(command, args, api);
+      // Try adapter mapping first, otherwise fallback to preload invoke
+      try {
+        return await invokeElectronCommand(command, args, api);
+      } catch (err) {
+        // If mapping didn't handle it, forward to the preload's invoke handler
+        if (api && typeof api.invoke === 'function') {
+          // Preserve original behavior: pass channel and args through
+          // @ts-ignore - dynamic invoke signature
+          return await (api.invoke as (...a: unknown[]) => Promise<unknown>)(command, ...args);
+        }
+        throw err;
+      }
     } catch (error) {
       console.error('[electron-adapter] Failed to invoke command:', command, error);
       throw error;
     }
   },
-  
+
   // Convert file paths to proper URLs for Electron
   convertFileSrc: (filePath: string): string => {
     // In Electron, local files can be accessed directly
@@ -542,40 +438,55 @@ export const core = {
   }
 };
 
+// Convenience helpers for window operations (typed wrappers)
+// These provide a clear, programmatic interface for macros and other callers
+export const preserviceWindow = {
+  open: async (): Promise<void> => {
+    await core.invoke('open_preservice_music_window');
+  },
+
+  close: async (): Promise<void> => {
+    await core.invoke('close_preservice_music_window');
+  }
+};
+
 // Map Tauri commands to Electron IPC calls
-async function invokeElectronCommand(command: string, args: CommandArgs, api?: ElectronAPI): Promise<unknown> {
+async function invokeElectronCommand(command: string, args: unknown[], api?: ElectronAPI): Promise<unknown> {
   if (!api) {
     api = await getElectronAPI();
   }
-  
+
+  // Normalize args array
+  const a = Array.isArray(args) ? args : [args];
+
   switch (command) {
     // Database operations
     case 'db_query':
-      return await api.dbQuery((args as DbQueryArgs).query, (args as DbQueryArgs).params);
+      return await api.dbQuery(a[0] as string, a[1] as unknown[] | undefined);
     case 'db_run':
-      return await api.dbRun((args as DbQueryArgs).query, (args as DbQueryArgs).params);
+      return await api.dbRun(a[0] as string, a[1] as unknown[] | undefined);
     case 'db_get':
-      return await api.dbGet((args as DbQueryArgs).query, (args as DbQueryArgs).params);
+      return await api.dbGet(a[0] as string, a[1] as unknown[] | undefined);
     case 'db_all':
-      return await api.dbAll((args as DbQueryArgs).query, (args as DbQueryArgs).params);
+      return await api.dbAll(a[0] as string, a[1] as unknown[] | undefined);
     
     // FFmpeg operations
     case 'convert_to_ogg':
-      return await api.convertToOgg((args as ConvertToOggArgs).input_path, (args as ConvertToOggArgs).output_dir);
+      return await api.convertToOgg(a[0] as string, a[1] as string);
     case 'transpose_audio':
-      return await api.transposeAudio((args as TransposeAudioArgs).song_path, (args as TransposeAudioArgs).semitones);
+      return await api.transposeAudio(a[0] as string, a[1] as number);
     case 'get_video_metadata':
-      return await api.getVideoMetadata((args as VideoMetadataArgs).path);
+      return await api.getVideoMetadata(a[0] as string);
     case 'transcode_video':
-      return await api.transcodeVideo((args as TranscodeVideoArgs).input_path);
+      return await api.transcodeVideo(a[0] as string);
     case 'generate_thumbnail':
-      return await api.generateThumbnail((args as GenerateThumbnailArgs).video_path);
+      return await api.generateThumbnail(a[0] as string);
     
     // Display operations
     case 'display_video_slide':
-      return await api.displayVideoSlide((args as DisplayVideoSlideArgs).path, (args as DisplayVideoSlideArgs).duration);
+      return await api.displayVideoSlide(a[0] as string, a[1] as number);
     case 'display_slide':
-      return await api.displaySlide((args as DisplaySlideArgs).content);
+      return await api.displaySlide(a[0]);
     case 'display_black_screen':
       return await api.displayBlackScreen();
     
@@ -603,28 +514,23 @@ async function invokeElectronCommand(command: string, args: CommandArgs, api?: E
     case 'get_midi_devices':
       return await api.getMidiDevices();
     case 'send_midi_note':
-      return await api.sendMidiNote(
-        (args as SendMidiNoteArgs).device,
-        (args as SendMidiNoteArgs).note,
-        (args as SendMidiNoteArgs).velocity,
-        (args as SendMidiNoteArgs).duration
-      );
+      return await api.sendMidiNote(a[0] as string, a[1] as number, a[2] as number, a[3] as number);
     
     // Lyrics
     case 'search_lyrics':
-      return await api.searchLyrics((args as SearchLyricsArgs).title, (args as SearchLyricsArgs).artist);
+      return await api.searchLyrics(a[0] as string, a[1] as string);
     case 'fetch_lyrics':
-      return await api.fetchLyrics((args as FetchLyricsArgs).song_id);
+      return await api.fetchLyrics(a[0] as string);
     
     // Google Drive
     case 'gdrive_auth':
       return await api.googleDriveAuth();
     case 'gdrive_list_files':
-      return await api.googleDriveListFiles((args as GDriveListFilesArgs).folder_id);
+      return await api.googleDriveListFiles(a[0] as string);
     case 'gdrive_download_file':
-      return await api.googleDriveDownloadFile((args as GDriveDownloadFileArgs).file_id, (args as GDriveDownloadFileArgs).destination);
+      return await api.googleDriveDownloadFile(a[0] as string, a[1] as string);
     case 'gdrive_sync_folder':
-      return await api.googleDriveSyncFolder((args as GDriveSyncFolderArgs).folder_id, (args as GDriveSyncFolderArgs).local_path);
+      return await api.googleDriveSyncFolder(a[0] as string, a[1] as string);
     
     // HTTP Server
     case 'get_http_server_url':
@@ -632,7 +538,7 @@ async function invokeElectronCommand(command: string, args: CommandArgs, api?: E
     
     // CSS generation
     case 'generate_background_css':
-      return await api.generateBackgroundCss((args as GenerateBackgroundCssArgs).path);
+      return await api.generateBackgroundCss(a[0] as string);
     
     // Settings
     case 'settings:getDisplays':
@@ -646,15 +552,15 @@ async function invokeElectronCommand(command: string, args: CommandArgs, api?: E
     case 'displayConfig:getAll':
       return await api.displayConfigGetAll();
     case 'displayConfig:get':
-      return await api.displayConfigGet((args as DisplayConfigGetArgs).id);
+      return await api.displayConfigGet(a[0] as string);
     case 'displayConfig:create':
-      return await api.displayConfigCreate((args as DisplayConfigCreateArgs).config);
+      return await api.displayConfigCreate(a[0] as Omit<DisplayConfig, 'id'>);
     case 'displayConfig:update':
-      return await api.displayConfigUpdate((args as DisplayConfigUpdateArgs).id, (args as DisplayConfigUpdateArgs).updates);
+      return await api.displayConfigUpdate(a[0] as string, a[1] as Partial<DisplayConfig>);
     case 'displayConfig:delete':
-      return await api.displayConfigDelete((args as DisplayConfigDeleteArgs).id);
+      return await api.displayConfigDelete(a[0] as string);
     case 'displayConfig:reorder':
-      return await api.displayConfigReorder((args as DisplayConfigReorderArgs).orderedIds);
+      return await api.displayConfigReorder(a[0] as string[]);
     case 'displayConfig:getEnabled':
       return await api.displayConfigGetEnabled();
     

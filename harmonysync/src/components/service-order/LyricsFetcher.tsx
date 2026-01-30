@@ -6,16 +6,25 @@ import { core } from '../../electron-adapter';
  *
  * Provides UI for fetching lyrics from Genius API and saving to song folders
  */
-const LyricsFetcher = ({ songItem, onLyricsFetched }) => {
-  const [isFetching, setIsFetching] = useState(false);
+type SongItem = { name?: string; path?: string };
+
+interface LyricsFetcherProps {
+  songItem?: SongItem | null;
+  // Accept any callback shape to maintain compatibility with various parent handlers
+  onLyricsFetched?: (song: any) => void;
+}
+
+const LyricsFetcher = ({ songItem, onLyricsFetched }: LyricsFetcherProps) => {
+  const [isFetching, setIsFetching] = useState<boolean>(false);
   const [showForm, setShowForm] = useState(false);
   const [songTitle, setSongTitle] = useState(songItem?.name || '');
   const [artistName, setArtistName] = useState('');
 
   // Handle escape key to close modal
   useEffect(() => {
-    const handleEscape = (e) => {
-      if (e.key === 'Escape' && showForm && !isFetching) {
+    const handleEscape = (e: KeyboardEvent) => {
+      const k = e as KeyboardEvent;
+      if (k.key === 'Escape' && showForm && !isFetching) {
         closeForm();
       }
     };
@@ -71,7 +80,7 @@ const LyricsFetcher = ({ songItem, onLyricsFetched }) => {
 
     } catch (error) {
       console.error('Failed to fetch lyrics:', error);
-      alert(`Failed to fetch lyrics: ${error}`);
+      alert(`Failed to fetch lyrics: ${(error as any).message || String(error)}`);
     } finally {
       setIsFetching(false);
     }

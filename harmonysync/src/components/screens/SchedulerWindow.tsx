@@ -1,20 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { PlusIcon, TrashIcon, CalendarIcon } from '@heroicons/react/24/solid';
-import { core } from '../../electron-adapter';
+import { core, preserviceWindow } from '../../electron-adapter';
 import Button from '../ui/Button.jsx';
-import Input from '../ui/Input.jsx';
 import AddEventModal from '../modals/AddEventModal.tsx';
 import commonMacros from '../../data/common_macros.json';
 
+type RecurrenceType = 'one-time' | 'daily' | 'weekly' | 'monthly';
+
+type ScheduledEvent = {
+  id: number;
+  name?: string;
+  type?: string;
+  macroId?: string | null;
+  macroName?: string;
+  day?: string;
+  date?: string;
+  time?: string;
+  recurring?: boolean;
+  enabled?: boolean;
+  recurrenceType?: RecurrenceType;
+  actionType?: 'macro' | 'script';
+  scriptId?: string | null;
+  [key: string]: unknown;
+};
+
 const SchedulerWindow = () => {
-  const [scheduledEvents, setScheduledEvents] = useState([]);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [scheduledEvents, setScheduledEvents] = useState<ScheduledEvent[]>([]);
+  const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
 
   // Load scheduled events from JSON storage
   useEffect(() => {
     const loadEvents = async () => {
       try {
-        const events = await core.invoke('scheduler:getAllEvents');
+        const events = (await core.invoke('scheduler:getAllEvents')) as ScheduledEvent[] | undefined;
         setScheduledEvents(events || []);
       } catch (error) {
         console.error('Failed to load scheduled events:', error);
@@ -26,12 +44,9 @@ const SchedulerWindow = () => {
   }, []);
 
   // Save scheduled events to JSON storage
-  const saveEvents = async (events) => {
-    setScheduledEvents(events);
-    // Note: Individual operations (create/update/delete) handle persistence
-  };
+  // Local state persistence handled by individual operations
 
-  const handleAddEvent = async (eventData) => {
+  const handleAddEvent = async (eventData: any) => {
     try {
       // Get macro or script name
       let actionName = '';
@@ -42,15 +57,15 @@ const SchedulerWindow = () => {
         actionName = 'Custom Script';
       }
 
-      const newEvent = {
+        const newEvent: ScheduledEvent = {
         id: Date.now(),
-        name: eventData.name,
-        date: eventData.date,
-        time: eventData.time,
-        recurrenceType: eventData.recurrenceType,
-        actionType: eventData.actionType,
-        macroId: eventData.macroId,
-        scriptId: eventData.scriptId,
+        name: eventData.name as string | undefined,
+        date: eventData.date as string | undefined,
+        time: eventData.time as string | undefined,
+        recurrenceType: eventData.recurrenceType as RecurrenceType | undefined,
+        actionType: eventData.actionType as 'macro' | 'script' | undefined,
+        macroId: (eventData.macroId ?? null) as string | null,
+        scriptId: (eventData.scriptId ?? null) as string | null,
         actionName: actionName,
         enabled: true
       };
@@ -67,9 +82,9 @@ const SchedulerWindow = () => {
     }
   };
 
-  const deleteEvent = async (eventId) => {
+  const deleteEvent = async (eventId: number) => {
     try {
-      await core.invoke('scheduler:delete', eventId);
+      await core.invoke('scheduler:delete', { id: eventId });
       const updatedEvents = scheduledEvents.filter(e => e.id !== eventId);
       setScheduledEvents(updatedEvents);
     } catch (error) {
@@ -78,12 +93,12 @@ const SchedulerWindow = () => {
     }
   };
 
-  const toggleEventEnabled = async (eventId) => {
+  const toggleEventEnabled = async (eventId: number) => {
     try {
       const event = scheduledEvents.find(e => e.id === eventId);
       if (!event) return;
       
-      const updatedEvent = { ...event, enabled: !event.enabled };
+      const updatedEvent = { ...event, enabled: !event.enabled } as ScheduledEvent;
       await core.invoke('scheduler:update', updatedEvent);
       
       const updatedEvents = scheduledEvents.map(e =>
@@ -122,7 +137,7 @@ const SchedulerWindow = () => {
   }, [scheduledEvents]);
 
   // Check if event should execute at current time
-  const shouldEventExecute = (event, now) => {
+  const shouldEventExecute = (event: ScheduledEvent, now: Date) => {
     const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
     // Check if time matches
@@ -141,12 +156,14 @@ const SchedulerWindow = () => {
 
       case 'weekly':
         // Execute if the day of week matches
+        if (!event.date) return false;
         const eventDay = new Date(event.date).getDay();
         const currentDay = now.getDay();
         return eventDay === currentDay;
 
       case 'monthly':
         // Execute if the day of month matches
+        if (!event.date) return false;
         const eventDayOfMonth = new Date(event.date).getDate();
         const currentDayOfMonth = now.getDate();
         return eventDayOfMonth === currentDayOfMonth;
@@ -156,13 +173,25 @@ const SchedulerWindow = () => {
     }
   };
 
-  const executeMacro = async (macroId) => {
+  const executeMacro = async (macroId: string) => {
     const macro = commonMacros.find(m => m.id === macroId);
     if (!macro) return;
 
     console.log(`Executing scheduled macro: ${macro.name}`);
     
     try {
+      // Handle preservice music macros directly via renderer helpers
+      if (macro.action === 'start_preservice_music') {
+        await preserviceWindow.open();
+        console.log(`Opened preservice music window for macro: ${macro.name}`);
+        return;
+      }
+
+      if (macro.action === 'stop_preservice_music') {
+        await preserviceWindow.close();
+        console.log(`Closed preservice music window for macro: ${macro.name}`);
+        return;
+      }
       // Call backend command to execute macro
       await core.invoke('execute_macro', {
         macroId: macro.id,
@@ -176,7 +205,7 @@ const SchedulerWindow = () => {
     }
   };
 
-  const executeScript = async (scriptId) => {
+  const executeScript = async (scriptId: string) => {
     console.log(`Executing scheduled script: ${scriptId}`);
     
     try {
@@ -188,7 +217,8 @@ const SchedulerWindow = () => {
   };
 
   // Format recurrence type for display
-  const formatRecurrence = (event) => {
+  const formatRecurrence = (event: ScheduledEvent) => {
+    if (!event.date) return 'No date';
     const eventDate = new Date(event.date);
     const dateStr = eventDate.toLocaleDateString();
     

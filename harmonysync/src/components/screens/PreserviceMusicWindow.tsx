@@ -1,106 +1,14 @@
-import { useState, useEffect, useRef } from 'react';
-import { core } from '../../electron-adapter';
-import { XMarkIcon } from '@heroicons/react/24/solid';
+import { useState, useEffect } from 'react';
+import { fs } from '../../electron-adapter';
+import { XMarkIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/solid';
 import Button from '../ui/Button.jsx';
 import Input from '../ui/Input.jsx';
-
-// YouTube API type declarations
-declare global {
-  interface Window {
-    YT: any;
-    onYouTubeIframeAPIReady: () => void;
-  }
-}
 
 const PreserviceMusicWindow = () => {
   const [playlistUrl, setPlaylistUrl] = useState('');
   const [savedUrl, setSavedUrl] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [hasUrl, setHasUrl] = useState(false);
-  const iframeRef = useRef(null);
-  const playerRef = useRef(null);
-
-  // Load YouTube IFrame API
-  useEffect(() => {
-    if (!window.YT) {
-      const tag = document.createElement('script');
-      tag.src = 'https://www.youtube.com/iframe_api';
-      const firstScriptTag = document.getElementsByTagName('script')[0];
-      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-
-      window.onYouTubeIframeAPIReady = () => {
-        console.log('YouTube IFrame API Ready');
-      };
-    }
-  }, []);
-
-  // Initialize YouTube Player with shuffle when URL is available
-  useEffect(() => {
-    if (!hasUrl || !savedUrl || !window.YT || !window.YT.Player) {
-      return;
-    }
-
-    // Wait a bit for DOM to be ready
-    const timer = setTimeout(() => {
-      try {
-        const listMatch = savedUrl.match(/[?&]list=([^&]+)/);
-        if (!listMatch) {
-          console.log('No playlist ID found in URL');
-          return;
-        }
-
-        const playlistId = listMatch[1];
-        console.log('Initializing player with playlist:', playlistId);
-        
-        // Create player from scratch (replaces div content)
-        playerRef.current = new window.YT.Player('youtube-player-container', {
-          height: '100%',
-          width: '100%',
-          playerVars: {
-            listType: 'playlist',
-            list: playlistId,
-            autoplay: 1,
-            loop: 1,
-            enablejsapi: 1,
-            origin: window.location.origin
-          },
-          events: {
-            onReady: (event) => {
-              console.log('YouTube Player Ready');
-              // Enable shuffle
-              event.target.setShuffle(true);
-              event.target.setLoop(true);
-              console.log('Shuffle and loop enabled');
-            },
-            onError: (event) => {
-              console.error('YouTube Player Error:', event.data);
-              // Error codes: 2=invalid ID, 5=HTML5 error, 100=not found, 101/150=not embeddable
-              if (event.data === 150 || event.data === 101) {
-                console.warn('Video cannot be embedded, but playlist should continue...');
-              }
-            },
-            onStateChange: (event) => {
-              console.log('Player state:', event.data);
-            }
-          }
-        });
-      } catch (error) {
-        console.error('Error initializing YouTube Player:', error);
-      }
-    }, 1500);
-
-    return () => {
-      clearTimeout(timer);
-      if (playerRef.current && playerRef.current.destroy) {
-        try {
-          playerRef.current.destroy();
-          playerRef.current = null;
-        } catch (e) {
-          console.error('Error destroying player:', e);
-        }
-      }
-    };
-  }, [hasUrl, savedUrl]);
 
   // Load saved playlist URL on mount
   useEffect(() => {
@@ -156,11 +64,20 @@ const PreserviceMusicWindow = () => {
       setSavedUrl(playlistUrl.trim());
       setHasUrl(true);
       console.log('Playlist URL saved successfully');
+      
+      // Open the URL in external browser
+      handleOpenPlaylist();
     } catch (error) {
       console.error('Error saving playlist URL:', error);
       alert('Failed to save playlist URL: ' + (error as Error).message);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleOpenPlaylist = () => {
+    if (savedUrl) {
+      window.open(savedUrl, '_blank');
     }
   };
 
@@ -240,28 +157,38 @@ const PreserviceMusicWindow = () => {
             </div>
           </div>
         ) : (
-          // Music Player
-          <div className="flex flex-col h-full">
-            <div className="mb-4 flex items-center justify-between">
-              <p className="text-sm text-gray-400">
-                Playing playlist with shuffle and loop enabled
+          // Saved Playlist
+          <div className="flex flex-col items-center justify-center h-full space-y-6">
+            <div className="text-center mb-4">
+              <h3 className="text-lg font-medium text-gray-200 mb-2">
+                Playlist Saved
+              </h3>
+              <p className="text-sm text-gray-400 mb-4">
+                Your pre-service music playlist has been saved.
               </p>
+              <p className="text-xs text-gray-500 break-all max-w-2xl">
+                {savedUrl}
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                onClick={handleOpenPlaylist}
+                variant="primary"
+                icon={<ArrowTopRightOnSquareIcon className="w-4 h-4" />}
+              >
+                Open Playlist in Browser
+              </Button>
               <Button
                 onClick={handleChangeUrl}
                 variant="secondary"
-                size="small"
               >
                 Change Playlist
               </Button>
             </div>
 
-            <div className="flex-1 bg-black rounded-lg overflow-hidden">
-              {/* YouTube Player API will replace this div with an iframe */}
-              <div
-                id="youtube-player-container"
-                ref={iframeRef}
-                className="w-full h-full"
-              />
+            <div className="text-xs text-gray-500 text-center max-w-md">
+              <p>The playlist will open in your default browser where you can control playback.</p>
             </div>
           </div>
         )}
