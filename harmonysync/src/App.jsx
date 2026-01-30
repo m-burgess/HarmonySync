@@ -32,7 +32,7 @@ import './styles/vscode-theme.css';
 import { 
   ActivityBarIcon, 
   VSCodeStatusBar 
-} from './components/VSCodeUI.jsx';
+} from './components/VSCodeUI.tsx';
 import ServiceOrderManager from './components/service-order/ServiceOrderManager.tsx';
 import SlideManager from './components/slides/SlideManager.jsx';
 import LyricsColumn from './components/lyrics/LyricsColumn.jsx';
