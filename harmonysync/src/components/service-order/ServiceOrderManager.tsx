@@ -59,6 +59,7 @@ interface ServiceOrderViewModel {
 interface ServiceOrderManagerProps {
   setAllSlides: (slides: unknown[]) => void;
   setAllTracks: (tracks: unknown[]) => void;
+  setIsLoadingTracks: (isLoading: boolean) => void;
   setCurrentLyrics: (lyrics: string) => void;
 }
 

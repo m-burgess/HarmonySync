@@ -2,12 +2,35 @@ import React, { useState, useEffect, useRef } from 'react';
 import { event, core } from '../../electron-adapter';
 import { lyricTransitionManager } from '../../utils/lyrics';
 
-const AudienceScreen = () => {
-  const [content, setContent] = useState(null); // { type: 'lyrics', text: [] }, { type: 'image', path: '', name: '' }, { type: 'video', videoId: '' }
-  const [backgroundVideo, setBackgroundVideo] = useState(null); // Background video for lyrics
-  const playerRef = useRef(null);
-  const lyricDisplayRef = useRef(null);
-  const backgroundVideoRef = useRef(null);
+interface LyricContent {
+  type: 'lyrics';
+  text: string[];
+}
+
+interface ImageContent {
+  type: 'image';
+  path: string;
+  name: string;
+}
+
+interface VideoContent {
+  type: 'video';
+  videoId: string;
+}
+
+type Content = LyricContent | ImageContent | VideoContent | null;
+
+interface BackgroundVideo {
+  src: string;
+  // Add other properties as needed
+}
+
+const AudienceScreen: React.FC = () => {
+  const [content, setContent] = useState<Content>(null);
+  const [backgroundVideo, setBackgroundVideo] = useState<BackgroundVideo | null>(null);
+  const playerRef = useRef<HTMLVideoElement | null>(null);
+  const lyricDisplayRef = useRef<HTMLDivElement | null>(null);
+  const backgroundVideoRef = useRef<HTMLVideoElement | null>(null);
 
   // Initialize lyric display when component mounts
   useEffect(() => {
@@ -27,7 +50,7 @@ const AudienceScreen = () => {
   console.log('AudienceScreen component loaded, content:', content);
 
   useEffect(() => {
-    const unlistenBackground = event.listen('set-background', (event) => {
+    const unlistenBackground = event.listen('set-background', (event: any) => {
       console.log('Audience: set-background event received:', event.payload);
       const head = document.getElementsByTagName('head')[0];
       let oldStyle = document.getElementById('song-background-style');
@@ -41,9 +64,9 @@ const AudienceScreen = () => {
       head.appendChild(style);
     });
 
-    const unlistenLyric = event.listen('display-lyric-slide', async (event) => {
+    const unlistenLyric = event.listen('display-lyric-slide', async (event: any) => {
       console.log('Audience: display-lyric-slide event received:', event.payload);
-      const newContent = { type: 'lyrics', text: event.payload.text };
+      const newContent: LyricContent = { type: 'lyrics', text: event.payload.text };
       
       // Use smooth transition for lyrics
       if (lyricDisplayRef.current) {
@@ -52,9 +75,9 @@ const AudienceScreen = () => {
       setContent(newContent);
     });
 
-    const unlistenImage = event.listen('display-image-slide', async (event) => {
+    const unlistenImage = event.listen('display-image-slide', async (event: any) => {
       console.log('Audience: display-image-slide event received:', event.payload);
-      const newContent = { type: 'image', path: event.payload.path, name: event.payload.name };
+      const newContent: ImageContent = { type: 'image', path: event.payload.path, name: event.payload.name };
       
       // Use smooth transition for images
       if (lyricDisplayRef.current) {
@@ -73,7 +96,7 @@ const AudienceScreen = () => {
       setContent(null);
     });
 
-    const unlistenNavigate = event.listen('navigate', (event) => {
+    const unlistenNavigate = event.listen('navigate', (event: any) => {
       console.log('Audience: navigate event received:', event.payload);
       setContent({ type: 'video', videoId: event.payload.videoId });
     });

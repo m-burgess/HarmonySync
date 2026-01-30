@@ -1,7 +1,23 @@
 import React from 'react';
 import '../../styles/components/Input.css';
 
-const Input = ({
+interface InputProps {
+  type?: string;
+  value?: string | number;
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  placeholder?: string;
+  disabled?: boolean;
+  error?: boolean;
+  errorMessage?: string;
+  label?: string;
+  required?: boolean;
+  className?: string;
+  icon?: React.ReactNode;
+  size?: 'small' | 'medium' | 'large';
+  variant?: 'default' | 'filled' | 'outlined';
+}
+
+const Input: React.FC<InputProps> = ({
   type = 'text',
   value,
   onChange,

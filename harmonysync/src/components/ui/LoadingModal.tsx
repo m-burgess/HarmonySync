@@ -1,8 +1,13 @@
 import React from 'react';
-import Modal from './Modal.jsx';
+import Modal from './Modal.tsx';
 import '../../styles/LoadingModal.css';
 
-const LoadingModal = ({ progress, message }) => {
+interface LoadingModalProps {
+  progress: number;
+  message: string;
+}
+
+const LoadingModal: React.FC<LoadingModalProps> = ({ progress, message }) => {
   const isLoading = progress > 0 && progress < 100;
 
   return (

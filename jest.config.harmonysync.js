@@ -6,7 +6,7 @@ export default {
     '**/harmonysync/src/__tests__/**/*.test.js'
   ],
   transform: {
-    '^.+\\.tsx?$': 'ts-jest'
+    '^.+\\.tsx?$': ['ts-jest', { useESM: true }]
   },
   moduleNameMapper: {
     '\\.(css|less|scss|sass)$': '<rootDir>/__mocks__/styleMock.js',
@@ -20,9 +20,4 @@ export default {
   ],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
   extensionsToTreatAsEsm: ['.jsx', '.tsx'],
-  globals: {
-    'ts-jest': {
-      useESM: true
-    }
-  }
 };

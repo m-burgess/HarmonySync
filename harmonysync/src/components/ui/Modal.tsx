@@ -1,8 +1,21 @@
 import React, { useEffect } from 'react';
-import Button from './Button.jsx';
+import Button from './Button.tsx';
 import '../../styles/components/Modal.css';
 
-const Modal = ({
+interface ModalProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+  title?: string;
+  children?: React.ReactNode;
+  footer?: React.ReactNode;
+  size?: 'small' | 'medium' | 'large';
+  closeOnOverlayClick?: boolean;
+  closeOnEscape?: boolean;
+  showCloseButton?: boolean;
+  className?: string;
+}
+
+const Modal: React.FC<ModalProps> = ({
   isOpen = false,
   onClose,
   title,
@@ -15,7 +28,7 @@ const Modal = ({
   className = ''
 }) => {
   useEffect(() => {
-    const handleEscape = (e) => {
+    const handleEscape = (e: KeyboardEvent) => {
       if (closeOnEscape && e.key === 'Escape' && isOpen && onClose) {
         onClose();
       }
@@ -34,7 +47,7 @@ const Modal = ({
 
   if (!isOpen) return null;
 
-  const handleOverlayClick = (e) => {
+  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (closeOnOverlayClick && e.target === e.currentTarget && onClose) {
       onClose();
     }

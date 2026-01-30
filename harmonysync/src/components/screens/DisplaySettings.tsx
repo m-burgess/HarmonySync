@@ -10,11 +10,16 @@
 import React, { useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
 import { getViewModel } from '../../viewmodels';
-import Modal from '../ui/Modal.jsx';
-import Button from '../ui/Button.jsx';
+import Modal from '../ui/Modal.tsx';
+import Button from '../ui/Button.tsx';
 import '../../styles/components/SettingsModal.css';
 
-const DisplaySettings = observer(({ isOpen, onClose }) => {
+interface DisplaySettingsProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const DisplaySettings = observer(({ isOpen, onClose }: DisplaySettingsProps) => {
   const viewModel = getViewModel('displayViewModel');
 
   // Load settings when modal opens
@@ -74,7 +79,7 @@ const DisplaySettings = observer(({ isOpen, onClose }) => {
               </div>
             ) : (
               <div className="display-configs-list">
-                {viewModel.sortedDisplays.map((config) => (
+                {viewModel.sortedDisplays.map((config: any) => (
                   <div key={config.id} className="display-config-item">
                     <div className="config-info">
                       <h4>{config.name}</h4>
@@ -116,9 +121,9 @@ const DisplaySettings = observer(({ isOpen, onClose }) => {
                 <select 
                   id="audience-font-family"
                   value={viewModel.audienceFontFamily} 
-                  onChange={(e) => viewModel.setAudienceFontSettings(viewModel.audienceFontSize, e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => viewModel.setAudienceFontSettings(viewModel.audienceFontSize, e.target.value)}
                 >
-                  {viewModel.fontOptions.map(font => (
+                  {viewModel.fontOptions.map((font: string) => (
                     <option key={font} value={font}>{font}</option>
                   ))}
                 </select>
@@ -132,7 +137,7 @@ const DisplaySettings = observer(({ isOpen, onClose }) => {
                   min="24" 
                   max="200" 
                   value={viewModel.audienceFontSize}
-                  onChange={(e) => viewModel.setAudienceFontSettings(e.target.value, viewModel.audienceFontFamily)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => viewModel.setAudienceFontSettings(e.target.value, viewModel.audienceFontFamily)}
                 />
               </div>
             </div>
@@ -145,9 +150,9 @@ const DisplaySettings = observer(({ isOpen, onClose }) => {
                 <select 
                   id="confidence-font-family"
                   value={viewModel.confidenceFontFamily} 
-                  onChange={(e) => viewModel.setConfidenceFontSettings(viewModel.confidenceFontSize, e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => viewModel.setConfidenceFontSettings(viewModel.confidenceFontSize, e.target.value)}
                 >
-                  {viewModel.fontOptions.map(font => (
+                  {viewModel.fontOptions.map((font: string) => (
                     <option key={font} value={font}>{font}</option>
                   ))}
                 </select>
@@ -161,7 +166,7 @@ const DisplaySettings = observer(({ isOpen, onClose }) => {
                   min="24" 
                   max="200" 
                   value={viewModel.confidenceFontSize}
-                  onChange={(e) => viewModel.setConfidenceFontSettings(e.target.value, viewModel.confidenceFontFamily)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => viewModel.setConfidenceFontSettings(e.target.value, viewModel.confidenceFontFamily)}
                 />
               </div>
             </div>
@@ -228,7 +233,14 @@ const DisplaySettings = observer(({ isOpen, onClose }) => {
 });
 
 // Display Form Modal Component - Minimal refactor needed
-const DisplayFormModal = ({ display, availableDisplays, onSave, onCancel }) => {
+interface DisplayFormModalProps {
+  display: any;
+  availableDisplays: any[];
+  onSave: (data: any) => void;
+  onCancel: () => void;
+}
+
+const DisplayFormModal = ({ display, availableDisplays, onSave, onCancel }: DisplayFormModalProps) => {
   // This component could also be refactored to use ViewModel in future
   // For now, keeping minimal local state for form inputs
   const [name, setName] = React.useState(display?.name || '');
@@ -237,7 +249,7 @@ const DisplayFormModal = ({ display, availableDisplays, onSave, onCancel }) => {
   const [ndiOutput, setNdiOutput] = React.useState(display?.ndiOutput || '');
   const [outputType, setOutputType] = React.useState(display?.deviceId ? 'device' : display?.ndiOutput ? 'ndi' : 'auto');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const data = {
       name,
@@ -258,7 +270,7 @@ const DisplayFormModal = ({ display, availableDisplays, onSave, onCancel }) => {
       footer={
         <>
           <Button onClick={onCancel} variant="secondary">Cancel</Button>
-          <Button onClick={handleSubmit} variant="primary">
+          <Button type="submit" variant="primary">
             {display ? 'Update' : 'Add'}
           </Button>
         </>
@@ -274,7 +286,7 @@ const DisplayFormModal = ({ display, availableDisplays, onSave, onCancel }) => {
               type="text"
               id="display-name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
               required
               placeholder="e.g., LED Wall, Side Screen"
             />
@@ -282,7 +294,7 @@ const DisplayFormModal = ({ display, availableDisplays, onSave, onCancel }) => {
 
           <div className="setting-row">
             <label htmlFor="display-type">Display Type:</label>
-            <select id="display-type" value={type} onChange={(e) => setType(e.target.value)} required>
+            <select id="display-type" value={type} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setType(e.target.value)} required>
               <option value="audience">Audience</option>
               <option value="confidence">Confidence Monitor</option>
               <option value="lower-thirds">Lower Thirds</option>
@@ -295,7 +307,7 @@ const DisplayFormModal = ({ display, availableDisplays, onSave, onCancel }) => {
 
           <div className="setting-row">
             <label htmlFor="output-type">Output Type:</label>
-            <select id="output-type" value={outputType} onChange={(e) => setOutputType(e.target.value)}>
+            <select id="output-type" value={outputType} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setOutputType(e.target.value)}>
               <option value="auto">Auto (Default)</option>
               <option value="device">Physical Display</option>
               <option value="ndi">NDI Output</option>
@@ -305,7 +317,7 @@ const DisplayFormModal = ({ display, availableDisplays, onSave, onCancel }) => {
           {outputType === 'device' && (
             <div className="setting-row">
               <label htmlFor="device-id">Physical Display:</label>
-              <select id="device-id" value={deviceId} onChange={(e) => setDeviceId(e.target.value)} required>
+              <select id="device-id" value={deviceId} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setDeviceId(e.target.value)} required>
                 <option value="">Select Display...</option>
                 {availableDisplays.map(display => (
                   <option key={display.id} value={display.id}>{display.name}</option>
@@ -321,7 +333,7 @@ const DisplayFormModal = ({ display, availableDisplays, onSave, onCancel }) => {
                 type="text"
                 id="ndi-output"
                 value={ndiOutput}
-                onChange={(e) => setNdiOutput(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNdiOutput(e.target.value)}
                 required
                 placeholder="e.g., HarmonySync-Output1"
               />
