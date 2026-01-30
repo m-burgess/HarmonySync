@@ -12,12 +12,13 @@
  * 6. No direct IPC calls
  * 7. Simple and testable
  */
-import React from 'react';
+import React, { type ChangeEvent } from 'react';
 import { observer } from 'mobx-react-lite';
 import { getViewModel } from '../viewmodels';
+import type { IAudioViewModel } from '../types/viewmodels';
 
-const AudioPlayerView = observer(() => {
-  const audioVM = getViewModel('audioViewModel');
+const AudioPlayerView: React.FC = observer(() => {
+  const audioVM = getViewModel('audioViewModel') as IAudioViewModel;
 
   return (
     <div className="audio-player-view">
@@ -85,7 +86,7 @@ const AudioPlayerView = observer(() => {
                   max="1"
                   step="0.01"
                   value={track.volume}
-                  onChange={(e) => audioVM.setTrackVolume(index, parseFloat(e.target.value))}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => audioVM.setTrackVolume(index, parseFloat(e.target.value))}
                 />
                 <span>{Math.round(track.volume * 100)}%</span>
               </label>
