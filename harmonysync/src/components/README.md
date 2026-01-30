@@ -8,7 +8,6 @@ This folder contains reusable React components organized by functionality. The c
 components/
 ├── ui/           # Basic UI components
 ├── audio/        # Audio-related components
-├── library/      # Library management components
 ├── setlist/      # Setlist management components
 └── displays/     # Display screen components (future)
 ```
@@ -23,7 +22,7 @@ import { Button, Input, Card } from '../components/ui';
 import { TransitionButton, VolumeSlider } from '../components/audio';
 
 // Or import everything
-import { Button, TransitionButton, LibraryItem } from '../components';
+import { Button, TransitionButton } from '../components';
 ```
 
 ## UI Components
@@ -143,20 +142,6 @@ Complete track control interface combining volume, pan, mute, and solo.
   onVolumeChange={handleVolumeChange}
   onPanChange={handlePanChange}
   onMuteToggle={handleMuteToggle}
-/>
-```
-
-## Library Components
-
-### LibraryItem
-Displays a library item (song/presentation) with add button.
-
-```jsx
-<LibraryItem
-  item={song}
-  onAdd={addToSetlist}
-  onSelect={selectSong}
-  isSelected={selectedSong?.id === song.id}
 />
 ```
 
