@@ -393,7 +393,7 @@ class ElectronApplication {
     // Start video service
     await this.serviceManager.startService(
       'Video Service',
-      path.join(__dirname, '../../harmonysync-video-service/server.js'),
+      path.join(__dirname, '../../harmonysync-video-service/dist/server.js'),
       { PORT: '3002', HOST: '127.0.0.1' }
     );
 
