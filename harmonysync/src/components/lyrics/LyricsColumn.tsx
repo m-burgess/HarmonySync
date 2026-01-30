@@ -41,7 +41,7 @@ interface DisplayLyricSlidePayload {
  * Display payload for confidence monitor
  */
 interface ConfidenceSlideContent {
-  type: string;
+  type: 'lyrics';
   text: string[];
   section?: string;
 }
@@ -104,8 +104,10 @@ const LyricsColumn: React.FC<LyricsColumnProps> = ({ lyrics, onSelectionChange }
   }, [lyrics]);
 
   // Get only lyric lines (not section headers) for selection
+  // Type guard ensures that all lyric lines have a required 'section' property
+  // (currentSection is always initialized to 'Intro', so section is never undefined for lyric lines)
   const lyricLines = parsedLines.filter((line): line is ParsedLine & { section: string } => 
-    line.type === 'lyric'
+    line.type === 'lyric' && line.section !== undefined
   );
 
   // Handle keyboard navigation
@@ -141,7 +143,7 @@ const LyricsColumn: React.FC<LyricsColumnProps> = ({ lyrics, onSelectionChange }
       // Emit to audience screen
       const displayPayload: DisplayLyricSlidePayload = {
         text: selectedText,
-        section: line1?.section || 'Intro'
+        section: line1.section // Type guard ensures section is always defined
       };
       event.emit('display-lyric-slide', displayPayload);
 
@@ -150,7 +152,7 @@ const LyricsColumn: React.FC<LyricsColumnProps> = ({ lyrics, onSelectionChange }
         current: {
           type: 'lyrics',
           text: selectedText,
-          section: line1?.section
+          section: line1.section
         },
         next: selectedIndex + 2 < lyricLines.length ? {
           type: 'lyrics',
@@ -158,7 +160,7 @@ const LyricsColumn: React.FC<LyricsColumnProps> = ({ lyrics, onSelectionChange }
             lyricLines[selectedIndex + 2]?.text || '',
             lyricLines[selectedIndex + 3]?.text || ''
           ].filter(t => t.length > 0),
-          section: lyricLines[selectedIndex + 2]?.section
+          section: lyricLines[selectedIndex + 2].section
         } : null
       };
       event.emit('display-confidence-slide', confidencePayload);
@@ -167,7 +169,7 @@ const LyricsColumn: React.FC<LyricsColumnProps> = ({ lyrics, onSelectionChange }
       if (onSelectionChange) {
         onSelectionChange({
           lines: selectedText,
-          section: line1?.section,
+          section: line1.section,
           index: selectedIndex
         });
       }
