@@ -1,13 +1,18 @@
 import React from 'react';
+import type { SlideData } from './types';
 
-const SlideInfo = ({ selectedSlide }) => {
+interface SlideInfoProps {
+  selectedSlide: SlideData | null;
+}
+
+const SlideInfo: React.FC<SlideInfoProps> = ({ selectedSlide }) => {
   if (!selectedSlide) {
     return <div className="slide-info"></div>;
   }
 
   const renderSlideInfo = () => {
     switch (selectedSlide.type) {
-      case 'lyrics':
+      case 'lyric':
         return (
           <div>
             <h4>Lyrics</h4>

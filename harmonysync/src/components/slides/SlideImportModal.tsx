@@ -7,6 +7,26 @@ import {
   ArchiveBoxIcon,
   ArrowUpTrayIcon 
 } from '@heroicons/react/24/outline';
+import type { 
+  SlideData, 
+  SlideImportOptions, 
+  SlideImportProgress,
+  ServiceStructure,
+  ZipImportResult,
+  FileFilter
+} from './types';
+
+/**
+ * Import type options
+ */
+type ImportType = 'pdf' | 'powerpoint' | 'folder' | 'zip';
+
+interface SlideImportModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSlidesImported: (slides: SlideData[]) => void;
+  onServiceImported?: (serviceStructure: ServiceStructure) => void;
+}
 
 /**
  * SlideImportModal - Modal for importing slides from various sources
@@ -17,16 +37,21 @@ import {
  * - Folder import (batch)
  * - Zip files (automatic extraction and import)
  */
-const SlideImportModal = ({ isOpen, onClose, onSlidesImported, onServiceImported }) => {
-  const [importType, setImportType] = useState('pdf'); // 'pdf', 'powerpoint', 'folder', 'zip'
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [selectedFolder, setSelectedFolder] = useState(null);
+const SlideImportModal: React.FC<SlideImportModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onSlidesImported, 
+  onServiceImported 
+}) => {
+  const [importType, setImportType] = useState<ImportType>('pdf');
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
-  const [progress, setProgress] = useState(null);
-  const [error, setError] = useState(null);
+  const [progress, setProgress] = useState<SlideImportProgress | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const dropZoneRef = useRef(null);
-  const [importOptions, setImportOptions] = useState({
+  const dropZoneRef = useRef<HTMLDivElement>(null);
+  const [importOptions, setImportOptions] = useState<SlideImportOptions>({
     dpi: 150,
     format: 'png',
     deleteZip: true, // Auto-delete zip after extraction
@@ -51,8 +76,8 @@ const SlideImportModal = ({ isOpen, onClose, onSlidesImported, onServiceImported
       return;
     }
 
-    const unsubscribe = window.electronAPI.onSlidesImportProgress((data) => {
-      setProgress(data);
+    const unsubscribe = window.electronAPI.onSlidesImportProgress((data: unknown) => {
+      setProgress(data as SlideImportProgress);
     });
 
     return () => {
@@ -61,13 +86,13 @@ const SlideImportModal = ({ isOpen, onClose, onSlidesImported, onServiceImported
   }, []);
 
   // Drag and drop handlers
-  const handleDragEnter = (e) => {
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(true);
   };
 
-  const handleDragLeave = (e) => {
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     if (e.target === dropZoneRef.current) {
@@ -75,12 +100,12 @@ const SlideImportModal = ({ isOpen, onClose, onSlidesImported, onServiceImported
     }
   };
 
-  const handleDragOver = (e) => {
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
   };
 
-  const handleDrop = async (e) => {
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
@@ -89,7 +114,9 @@ const SlideImportModal = ({ isOpen, onClose, onSlidesImported, onServiceImported
     if (files.length === 0) return;
 
     const file = files[0];
-    const filePath = file.path;
+    const filePath = (file as File & { path?: string }).path;
+    if (!filePath) return;
+
     const ext = filePath.toLowerCase().split('.').pop();
 
     // Auto-detect file type and set import mode
@@ -111,8 +138,10 @@ const SlideImportModal = ({ isOpen, onClose, onSlidesImported, onServiceImported
   };
 
   const handleSelectFile = async () => {
+    if (!window.electronAPI) return;
+    
     try {
-      let filters;
+      let filters: FileFilter[];
       if (importType === 'pdf') {
         filters = [{ name: 'PDF Files', extensions: ['pdf'] }];
       } else if (importType === 'zip') {
@@ -128,20 +157,23 @@ const SlideImportModal = ({ isOpen, onClose, onSlidesImported, onServiceImported
         setError(null);
         
         // Validate the file (skip for zip files)
-        if (importType !== 'zip') {
+        if (importType !== 'zip' && window.electronAPI.validateSlideFile) {
           const validation = await window.electronAPI.validateSlideFile(filePath);
           if (!validation.valid) {
-            setError(validation.message);
+            setError(validation.message || 'Invalid file');
             setSelectedFile(null);
           }
         }
       }
     } catch (err) {
-      setError(`Failed to select file: ${err.message}`);
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setError(`Failed to select file: ${errorMessage}`);
     }
   };
 
   const handleSelectFolder = async () => {
+    if (!window.electronAPI) return;
+    
     try {
       const folders = await window.electronAPI.openDirectory({ multiple: false });
       
@@ -150,7 +182,8 @@ const SlideImportModal = ({ isOpen, onClose, onSlidesImported, onServiceImported
         setError(null);
       }
     } catch (err) {
-      setError(`Failed to select folder: ${err.message}`);
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setError(`Failed to select folder: ${errorMessage}`);
     }
   };
 
@@ -166,24 +199,24 @@ const SlideImportModal = ({ isOpen, onClose, onSlidesImported, onServiceImported
     setProgress(null);
 
     try {
-      let slides = [];
-      let result;
+      let slides: SlideData[] = [];
+      let result: ZipImportResult | undefined;
 
-      if (importType === 'folder' && selectedFolder) {
-        slides = await window.electronAPI.importSlidesFromFolder(selectedFolder, importOptions);
-      } else if (importType === 'pdf' && selectedFile) {
-        slides = await window.electronAPI.importPdfSlides(selectedFile, importOptions);
-      } else if (importType === 'powerpoint' && selectedFile) {
-        slides = await window.electronAPI.importPowerpointSlides(selectedFile, importOptions);
-      } else if (importType === 'zip' && selectedFile) {
-        result = await window.electronAPI.importSlidesFromZip(selectedFile, importOptions);
+      if (importType === 'folder' && selectedFolder && window.electronAPI.importSlidesFromFolder) {
+        slides = await window.electronAPI.importSlidesFromFolder(selectedFolder, importOptions) as SlideData[];
+      } else if (importType === 'pdf' && selectedFile && window.electronAPI.importPdfSlides) {
+        slides = await window.electronAPI.importPdfSlides(selectedFile, importOptions) as SlideData[];
+      } else if (importType === 'powerpoint' && selectedFile && window.electronAPI.importPowerpointSlides) {
+        slides = await window.electronAPI.importPowerpointSlides(selectedFile, importOptions) as SlideData[];
+      } else if (importType === 'zip' && selectedFile && window.electronAPI.importSlidesFromZip) {
+        result = await window.electronAPI.importSlidesFromZip(selectedFile, importOptions) as ZipImportResult;
         slides = result.slides || [];
         
         // If full service import, notify parent and close
         if (!importOptions.importSlidesOnly && result.servicePath) {
-          if (onServiceImported) {
+          if (onServiceImported && window.electronAPI.scanServiceFolder) {
             // Scan the service folder to get its structure
-            const serviceStructure = await window.electronAPI.scanServiceFolder(result.servicePath);
+            const serviceStructure = await window.electronAPI.scanServiceFolder(result.servicePath) as ServiceStructure;
             onServiceImported(serviceStructure);
           }
           onClose();
@@ -200,7 +233,8 @@ const SlideImportModal = ({ isOpen, onClose, onSlidesImported, onServiceImported
         setError('No slides were imported. Please check the file or folder.');
       }
     } catch (err) {
-      setError(`Import failed: ${err.message}`);
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setError(`Import failed: ${errorMessage}`);
     } finally {
       setIsImporting(false);
       setProgress(null);
@@ -378,7 +412,7 @@ const SlideImportModal = ({ isOpen, onClose, onSlidesImported, onServiceImported
               </label>
               <select
                 value={importOptions.format}
-                onChange={(e) => setImportOptions({ ...importOptions, format: e.target.value })}
+                onChange={(e) => setImportOptions({ ...importOptions, format: e.target.value as 'png' | 'jpeg' })}
                 className="w-full px-3 py-2 bg-background border border-border rounded-md text-primary"
                 disabled={isImporting}
               >
