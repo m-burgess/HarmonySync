@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+dist/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Build outputs
+build/
+*.js.map
+*.d.ts.map
+
+# Test coverage
+coverage/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
