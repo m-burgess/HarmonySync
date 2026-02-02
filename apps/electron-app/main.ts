@@ -4,32 +4,32 @@ import * as fs from 'fs-extra';
 import { spawn, ChildProcess } from 'child_process';
 
 // Import backend services - using require since they will be compiled to CommonJS at runtime
-const jsonStorage = require('./services/json-storage');
-const ffmpegService = require('./services/ffmpeg');
-const audioService = require('./services/audio-service');
-const videoService = require('./services/video-service');
-const youtubeService = require('./services/youtube-service');
-const imageService = require('./services/image-service');
-const textService = require('./services/text-service');
-const displayService = require('./services/display-service');
-const windowService = require('./services/window-service');
-const macroService = require('./services/macro-service');
-const schedulerService = require('./services/scheduler-service');
-const httpServer = require('./services/http-server');
-const remoteControlService = require('./services/remote-control-service');
-const lyricsFetcher = require('./services/lyrics-fetcher');
-const fileManager = require('./services/file-manager');
-const googleDriveService = require('../apps/electron-app/services/google-drive');
-const dropboxService = require('./services/dropbox-service');
-const scriptService = require('./services/script-service');
-const scriptingAPI = require('./services/scripting-api');
-const slidesService = require('./services/slides-service');
-const displayConfigService = require('./services/display-config-service');
+const jsonStorage = require('./electron/services/json-storage');
+const ffmpegService = require('./electron/services/ffmpeg');
+const audioService = require('./electron/services/audio-service');
+const videoService = require('./electron/services/video-service');
+const youtubeService = require('./electron/services/youtube-service');
+const imageService = require('./electron/services/image-service');
+const textService = require('./electron/services/text-service');
+const displayService = require('./electron/services/display-service');
+const windowService = require('./electron/services/window-service');
+const macroService = require('./electron/services/macro-service');
+const schedulerService = require('./electron/services/scheduler-service');
+const httpServer = require('./electron/services/http-server');
+const remoteControlService = require('./electron/services/remote-control-service');
+const lyricsFetcher = require('./electron/services/lyrics-fetcher');
+const fileManager = require('./electron/services/file-manager');
+const googleDriveService = require('./electron/services/google-drive');
+const dropboxService = require('./electron/services/dropbox-service');
+const scriptService = require('./electron/services/script-service');
+const scriptingAPI = require('./electron/services/scripting-api');
+const slidesService = require('./electron/services/slides-service');
+const displayConfigService = require('./electron/services/display-config-service');
 
 // MIDI manager with optional loading
 let midiManager: any = null;
 try {
-  midiManager = require('./services/midi-manager');
+  midiManager = require('./electron/services/midi-manager');
 } catch (e: unknown) {
   const error = e as Error;
   console.warn('MIDI manager failed to load:', error?.message || String(e));

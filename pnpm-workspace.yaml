@@ -1,3 +1,11 @@
 packages:
-  - 'apps/*'
-  - 'packages/*'
+  - apps/*
+  - packages/*
+
+ignoredBuiltDependencies:
+  - electron
+
+onlyBuiltDependencies:
+  - esbuild
+  - sharp
+  - vlc-static
