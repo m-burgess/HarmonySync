@@ -2,17 +2,17 @@
 project_summary.md
 
 # Build outputs
-harmonysync/dist/
-harmonysync/target/
-harmonysync/src-tauri/target/
-dist-electron/
 dist/
 dist-ssr/
+dist-electron/
+target/
+apps/*/dist/
+packages/*/dist/
 
 # Dependencies
 node_modules/
-harmonysync/node_modules/
-harmonysync-audio-service/node_modules/
+apps/*/node_modules/
+packages/*/node_modules/
 
 # Logs
 logs
@@ -45,10 +45,10 @@ gdrive-token.json
 
 # TypeScript
 *.tsbuildinfo
-electron/dist/
-electron/**/*.js.map
-electron/**/*.d.ts
-!electron/**/*.test.js
+apps/electron-app/dist/
+apps/*/electron/**/*.js.map
+apps/*/electron/**/*.d.ts
+!apps/*/electron/**/*.test.js
 
 # Test coverage
 coverage/

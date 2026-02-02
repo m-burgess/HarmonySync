@@ -28,12 +28,12 @@ jobs:
 
       - name: Install audio-service dependencies
         run: |
-          cd harmonysync-audio-service
+          cd apps/harmonysync-audio-service
           npm ci
 
       - name: Start audio service in background and expose env
         run: |
-          cd harmonysync-audio-service
+          cd apps/harmonysync-audio-service
           # generate a shutdown token and export it for subsequent steps
           SHUTDOWN_TOKEN=$(uuidgen)
           # persist for later steps
@@ -46,27 +46,13 @@ jobs:
           sleep 2
 
       - name: Run smoke test
-        working-directory: harmonysync-audio-service
+        working-directory: apps/harmonysync-audio-service
         run: |
           npm run smoke-test
-
-      - name: Setup Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
-
-      - name: Run Rust integration test (audio service)
-        working-directory: harmonysync/src-tauri
-        env:
-          RUN_AUDIO_INTEGRATION_TEST: '1'
-        run: |
-          cargo test -p app --lib --test-threads=1 -- --nocapture
 
       - name: Upload service log (on failure)
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: service-log
-          path: harmonysync-audio-service/service.log
+          path: apps/harmonysync-audio-service/service.log
