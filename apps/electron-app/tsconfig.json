@@ -23,6 +23,6 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["electron/**/*", "types/**/*"],
+  "include": ["electron/**/*", "types/**/*", "main.ts", "preload.ts", "ipc-handlers.ts"],
   "references": []
 }
