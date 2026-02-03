@@ -35,6 +35,8 @@ interface Services {
   slidesService: any;
   displayConfigService: any;
   eventTriggerService: any;
+  serviceOrderImporter: any;
+  appSettingsService: any;
 }
 
 interface DialogOpenDirectoryOptions {
@@ -87,6 +89,7 @@ class IPCHandlerManager {
     this.registerSettingsHandlers();
     this.registerDisplayConfigHandlers();
     this.registerRemoteControlEventHandlers();
+    this.registerAppSettingsHandlers();
   }
 
   /**
@@ -427,6 +430,274 @@ class IPCHandlerManager {
         await shell.openPath(lyricsPath);
       } catch (error) {
         console.error('[service-order:openLyricsFile] Error:', error);
+      }
+    });
+
+    // ==================== Service Order Import Handlers ====================
+
+    /**
+     * Scan a folder for zipped service orders
+     */
+    this.ipcMain.handle('service-order:scanForZips', async (_event, folderPath: string) => {
+      try {
+        if (!this.services.serviceOrderImporter) {
+          return { success: false, zips: [], error: 'Service order importer not initialized' };
+        }
+
+        const zips = await this.services.serviceOrderImporter.scanFolderForZips(folderPath);
+        return {
+          success: true,
+          zips,
+          count: zips.length
+        };
+      } catch (error) {
+        console.error('[service-order:scanForZips] Error:', error);
+        return {
+          success: false,
+          zips: [],
+          error: error instanceof Error ? error.message : 'Unknown error'
+        };
+      }
+    });
+
+    /**
+     * Import a zipped service order
+     */
+    this.ipcMain.handle('service-order:importZip', async (_event, zipPath: string) => {
+      try {
+        if (!this.services.serviceOrderImporter) {
+          return { success: false, error: 'Service order importer not initialized' };
+        }
+
+        // Extract zip
+        const extractPath = await this.services.serviceOrderImporter.extractZip(zipPath);
+
+        // Parse service order
+        const metadata = await this.services.serviceOrderImporter.parseServiceOrder(extractPath);
+
+        // Validate
+        const validation = this.services.serviceOrderImporter.validateServiceOrder(metadata);
+
+        return {
+          success: validation.valid,
+          metadata,
+          validation,
+          error: validation.errors.length > 0 ? validation.errors.join(', ') : undefined
+        };
+      } catch (error) {
+        console.error('[service-order:importZip] Error:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        };
+      }
+    });
+
+    /**
+     * Get all imported service orders
+     */
+    this.ipcMain.handle('service-order:listImported', async () => {
+      try {
+        if (!this.services.serviceOrderImporter) {
+          return { success: false, services: [], error: 'Service order importer not initialized' };
+        }
+
+        const services = await this.services.serviceOrderImporter.listImportedServices();
+        return {
+          success: true,
+          services,
+          count: services.length
+        };
+      } catch (error) {
+        console.error('[service-order:listImported] Error:', error);
+        return {
+          success: false,
+          services: [],
+          error: error instanceof Error ? error.message : 'Unknown error'
+        };
+      }
+    });
+
+    /**
+     * Get a specific service order
+     */
+    this.ipcMain.handle('service-order:getService', async (_event, serviceId: string) => {
+      try {
+        if (!this.services.serviceOrderImporter) {
+          return { success: false, service: null, error: 'Service order importer not initialized' };
+        }
+
+        const service = await this.services.serviceOrderImporter.getServiceOrder(serviceId);
+        return {
+          success: service !== null,
+          service,
+          error: service === null ? 'Service not found' : undefined
+        };
+      } catch (error) {
+        console.error('[service-order:getService] Error:', error);
+        return {
+          success: false,
+          service: null,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        };
+      }
+    });
+
+    /**
+     * Delete a service order
+     */
+    this.ipcMain.handle('service-order:deleteService', async (_event, serviceId: string) => {
+      try {
+        if (!this.services.serviceOrderImporter) {
+          return { success: false, error: 'Service order importer not initialized' };
+        }
+
+        await this.services.serviceOrderImporter.deleteServiceOrder(serviceId);
+        return { success: true };
+      } catch (error) {
+        console.error('[service-order:deleteService] Error:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        };
+      }
+    });
+
+    /**
+     * Cleanup old service orders
+     */
+    this.ipcMain.handle('service-order:cleanup', async (_event, maxAgeDays: number = 7) => {
+      try {
+        if (!this.services.serviceOrderImporter) {
+          return { success: false, deleted: 0, error: 'Service order importer not initialized' };
+        }
+
+        const maxAge = maxAgeDays * 24 * 60 * 60 * 1000;
+        const deleted = await this.services.serviceOrderImporter.cleanupOldServices(maxAge);
+        return {
+          success: true,
+          deleted
+        };
+      } catch (error) {
+        console.error('[service-order:cleanup] Error:', error);
+        return {
+          success: false,
+          deleted: 0,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        };
+      }
+    });
+  }
+
+  /**
+   * App Settings handlers
+   */
+  private registerAppSettingsHandlers(): void {
+    /**
+     * Get all app settings
+     */
+    this.ipcMain.handle('settings:get', async () => {
+      try {
+        if (!this.services.appSettingsService) {
+          return { success: false, settings: null, error: 'Settings service not initialized' };
+        }
+
+        const settings = this.services.appSettingsService.get();
+        return {
+          success: true,
+          settings
+        };
+      } catch (error) {
+        console.error('[settings:get] Error:', error);
+        return {
+          success: false,
+          settings: null,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        };
+      }
+    });
+
+    /**
+     * Save app settings
+     */
+    this.ipcMain.handle('settings:save', async (_event, settings: any) => {
+      try {
+        if (!this.services.appSettingsService) {
+          return { success: false, error: 'Settings service not initialized' };
+        }
+
+        await this.services.appSettingsService.save(settings);
+        return { success: true };
+      } catch (error) {
+        console.error('[settings:save] Error:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        };
+      }
+    });
+
+    /**
+     * Get service order settings
+     */
+    this.ipcMain.handle('settings:getServiceOrder', async () => {
+      try {
+        if (!this.services.appSettingsService) {
+          return { success: false, settings: null, error: 'Settings service not initialized' };
+        }
+
+        const settings = this.services.appSettingsService.getServiceOrderSettings();
+        return {
+          success: true,
+          settings
+        };
+      } catch (error) {
+        console.error('[settings:getServiceOrder] Error:', error);
+        return {
+          success: false,
+          settings: null,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        };
+      }
+    });
+
+    /**
+     * Update service order settings
+     */
+    this.ipcMain.handle('settings:updateServiceOrder', async (_event, updates: any) => {
+      try {
+        if (!this.services.appSettingsService) {
+          return { success: false, error: 'Settings service not initialized' };
+        }
+
+        await this.services.appSettingsService.updateServiceOrderSettings(updates);
+        return { success: true };
+      } catch (error) {
+        console.error('[settings:updateServiceOrder] Error:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        };
+      }
+    });
+
+    /**
+     * Reset settings to defaults
+     */
+    this.ipcMain.handle('settings:reset', async () => {
+      try {
+        if (!this.services.appSettingsService) {
+          return { success: false, error: 'Settings service not initialized' };
+        }
+
+        await this.services.appSettingsService.reset();
+        return { success: true };
+      } catch (error) {
+        console.error('[settings:reset] Error:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        };
       }
     });
   }

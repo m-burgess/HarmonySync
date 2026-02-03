@@ -106,6 +106,21 @@ interface ElectronAPI {
   onVideoEnded: (callback: () => void) => () => void;
   onSlidesImportProgress: (callback: (data: any) => void) => () => void;
 
+  // Service Order Import
+  serviceOrderScanForZips: (folderPath: string) => Promise<any>;
+  serviceOrderImportZip: (zipPath: string) => Promise<any>;
+  serviceOrderListImported: () => Promise<any>;
+  serviceOrderGetService: (serviceId: string) => Promise<any>;
+  serviceOrderDeleteService: (serviceId: string) => Promise<any>;
+  serviceOrderCleanup: (maxAgeDays?: number) => Promise<any>;
+
+  // App Settings
+  settingsGet: () => Promise<any>;
+  settingsSave: (settings: any) => Promise<any>;
+  settingsGetServiceOrder: () => Promise<any>;
+  settingsUpdateServiceOrder: (updates: any) => Promise<any>;
+  settingsReset: () => Promise<any>;
+
   // Send to specific window
   sendToAudience: (channel: string, data: any) => Promise<void>;
   sendToConfidence: (channel: string, data: any) => Promise<void>;
@@ -238,6 +253,32 @@ class ElectronAPIBuilder {
       displayConfigReorder: (orderedIds: string[]) =>
         ipcRenderer.invoke('displayConfig:reorder', orderedIds),
       displayConfigGetEnabled: () => ipcRenderer.invoke('displayConfig:getEnabled'),
+
+      // Service Order Import
+      serviceOrderScanForZips: (folderPath: string) =>
+        ipcRenderer.invoke('service-order:scanForZips', folderPath),
+      serviceOrderImportZip: (zipPath: string) =>
+        ipcRenderer.invoke('service-order:importZip', zipPath),
+      serviceOrderListImported: () =>
+        ipcRenderer.invoke('service-order:listImported'),
+      serviceOrderGetService: (serviceId: string) =>
+        ipcRenderer.invoke('service-order:getService', serviceId),
+      serviceOrderDeleteService: (serviceId: string) =>
+        ipcRenderer.invoke('service-order:deleteService', serviceId),
+      serviceOrderCleanup: (maxAgeDays: number = 7) =>
+        ipcRenderer.invoke('service-order:cleanup', maxAgeDays),
+
+      // App Settings
+      settingsGet: () =>
+        ipcRenderer.invoke('settings:get'),
+      settingsSave: (settings: any) =>
+        ipcRenderer.invoke('settings:save', settings),
+      settingsGetServiceOrder: () =>
+        ipcRenderer.invoke('settings:getServiceOrder'),
+      settingsUpdateServiceOrder: (updates: any) =>
+        ipcRenderer.invoke('settings:updateServiceOrder', updates),
+      settingsReset: () =>
+        ipcRenderer.invoke('settings:reset'),
 
       // Event listeners
       onDisplaySettingsClicked: (callback: () => void) => {

@@ -26,6 +26,8 @@ const scriptingAPI = require('./electron/services/scripting-api');
 const slidesService = require('./electron/services/slides-service');
 const displayConfigService = require('./electron/services/display-config-service');
 const eventTriggerService = require('./electron/services/event-trigger-service');
+const { ServiceOrderImporter } = require('./electron/services/service-order-importer');
+const { appSettingsService } = require('./electron/services/app-settings-service');
 
 // MIDI manager with optional loading
 let midiManager: any = null;
@@ -35,6 +37,14 @@ try {
   const error = e as Error;
   console.warn('MIDI manager failed to load:', error?.message || String(e));
 }
+
+// Initialize service order importer
+const serviceOrderImporter = new ServiceOrderImporter();
+
+// Initialize and load app settings
+appSettingsService.load().catch((err: Error) => {
+  console.error('Failed to load app settings:', err);
+});
 
 const isDev = process.env.NODE_ENV === 'development';
 const VITE_DEV_SERVER_URL = 'http://localhost:5174';
@@ -447,6 +457,8 @@ class ElectronApplication {
       slidesService,
       displayConfigService,
       eventTriggerService,
+      serviceOrderImporter,
+      appSettingsService,
     });
   }
 
