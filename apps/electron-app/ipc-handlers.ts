@@ -499,10 +499,13 @@ class IPCHandlerManager {
     this.ipcMain.handle('service-order:listImported', async () => {
       try {
         if (!this.services.serviceOrderImporter) {
+          console.error('[service-order:listImported] Service order importer not initialized');
           return { success: false, services: [], error: 'Service order importer not initialized' };
         }
 
         const services = await this.services.serviceOrderImporter.listImportedServices();
+        console.log(`[service-order:listImported] Found ${services.length} imported services:`, 
+          services.map((s: any) => ({ id: s.id, name: s.name, itemCount: s.items.length })));
         return {
           success: true,
           services,
@@ -604,6 +607,50 @@ class IPCHandlerManager {
         };
       } catch (error) {
         console.error('[service-order:createConfigTemplate] Error:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        };
+      }
+    });
+
+    /**
+     * Load a service order into the active presentation
+     */
+    this.ipcMain.handle('service-order:load', async (_event, serviceId: string) => {
+      try {
+        if (!this.services.serviceOrderImporter) {
+          return { success: false, error: 'Service order importer not initialized' };
+        }
+
+        const serviceOrder = await this.services.serviceOrderImporter.getServiceOrder(serviceId);
+        if (!serviceOrder) {
+          return { success: false, error: 'Service order not found' };
+        }
+
+        console.log(`[service-order:load] Loaded service order: ${serviceOrder.name} with ${serviceOrder.items.length} items`);
+        
+        // Send event to main window to populate the service order
+        const mainWindow = this.services.mainWindow?.();
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('service-order-loaded', {
+            serviceOrder: serviceOrder.items.map((item: any) => ({
+              id: item.id,
+              name: item.name,
+              path: item.path,
+              type: item.type,
+              config: item.config
+            }))
+          });
+        }
+        
+        return {
+          success: true,
+          itemCount: serviceOrder.items.length,
+          service: serviceOrder
+        };
+      } catch (error) {
+        console.error('[service-order:load] Error:', error);
         return {
           success: false,
           error: error instanceof Error ? error.message : 'Unknown error'
@@ -1069,15 +1116,85 @@ class IPCHandlerManager {
     // Playback control handlers (proxy to audio service on port 3001)
     this.ipcMain.handle('audio:loadTracks', async (_event, folderPath: string) => {
       try {
-        const response = await fetch('http://127.0.0.1:3001/api/tracks/load', {
+        console.log('[audio:loadTracks] Loading tracks from:', folderPath);
+        const response = await fetch(`http://127.0.0.1:3001/api/tracks/load?filePath=${encodeURIComponent(folderPath)}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ folderPath }),
         });
-        return await response.json();
+        
+        if (!response.ok) {
+          console.error('[audio:loadTracks] HTTP Error:', response.status, response.statusText);
+          return { error: `HTTP ${response.status}: ${response.statusText}` };
+        }
+        
+        const data = await response.json();
+        console.log('[audio:loadTracks] Response:', data);
+        return data;
       } catch (error) {
         console.error('[audio:loadTracks] Error:', error);
-        return [];
+        return { error: error instanceof Error ? error.message : String(error) };
+      }
+    });
+
+    this.ipcMain.handle('audio:loadTrack', async (_event, filePath: string) => {
+      try {
+        console.log('[audio:loadTrack] Loading track:', filePath);
+        const response = await fetch(`http://127.0.0.1:3001/api/tracks/load?filePath=${encodeURIComponent(filePath)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        
+        if (!response.ok) {
+          console.error('[audio:loadTrack] HTTP Error:', response.status, response.statusText);
+          return { error: `HTTP ${response.status}: ${response.statusText}` };
+        }
+        
+        const data = await response.json();
+        console.log('[audio:loadTrack] Response:', data);
+        return data;
+      } catch (error) {
+        console.error('[audio:loadTrack] Error:', error);
+        return { error: error instanceof Error ? error.message : String(error) };
+      }
+    });
+
+    this.ipcMain.handle('audio:loadMultipleTracks', async (_event, filePaths: string[]) => {
+      try {
+        console.log('[audio:loadMultipleTracks] Loading', filePaths.length, 'tracks');
+        const results = [];
+        
+        for (const filePath of filePaths) {
+          try {
+            // Convert Windows backslashes to forward slashes
+            const normalizedPath = filePath.replace(/\\/g, '/');
+            console.log('[audio:loadMultipleTracks] Loading:', normalizedPath);
+            
+            const response = await fetch('http://127.0.0.1:3001/api/tracks/load', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ filePath: normalizedPath, songPath: normalizedPath }),
+            });
+            
+            if (response.ok) {
+              const data = await response.json();
+              results.push({ filePath, success: true, data });
+              console.log('[audio:loadMultipleTracks] Loaded:', filePath);
+            } else {
+              const errorText = await response.text();
+              results.push({ filePath, success: false, error: `HTTP ${response.status}` });
+              console.error('[audio:loadMultipleTracks] Failed to load', filePath, ':', response.status, errorText);
+            }
+          } catch (error) {
+            results.push({ filePath, success: false, error: error instanceof Error ? error.message : String(error) });
+            console.error('[audio:loadMultipleTracks] Error loading', filePath, ':', error);
+          }
+        }
+        
+        console.log('[audio:loadMultipleTracks] Complete - loaded', results.filter(r => r.success).length, 'of', filePaths.length);
+        return { total: filePaths.length, loaded: results.filter(r => r.success).length, results };
+      } catch (error) {
+        console.error('[audio:loadMultipleTracks] Error:', error);
+        return { error: error instanceof Error ? error.message : String(error) };
       }
     });
 
@@ -1097,7 +1214,16 @@ class IPCHandlerManager {
 
     this.ipcMain.handle('audio:play', async (_event) => {
       try {
-        await fetch('http://127.0.0.1:3001/api/playback/play', { method: 'POST' });
+        console.log('[audio:play] Sending play request to audio service...');
+        const response = await fetch('http://127.0.0.1:3001/api/mixer/play-all', { method: 'POST' });
+        
+        if (!response.ok) {
+          console.error('[audio:play] HTTP Error:', response.status, response.statusText);
+          return;
+        }
+        
+        const data = await response.json();
+        console.log('[audio:play] Response:', data);
       } catch (error) {
         console.error('[audio:play] Error:', error);
       }
@@ -1182,9 +1308,13 @@ class IPCHandlerManager {
     this.ipcMain.handle('audio:loadMixerConfig', async (_event, songPath: string) => {
       try {
         const response = await fetch(`http://127.0.0.1:3001/api/mixer/load?songPath=${encodeURIComponent(songPath)}`);
+        if (!response.ok) {
+          // Silently return null if audio service isn't available - this is optional config loading
+          return null;
+        }
         return await response.json();
       } catch (error) {
-        console.error('[audio:loadMixerConfig] Error:', error);
+        // Audio service may not be running - this is OK
         return null;
       }
     });
@@ -1192,6 +1322,10 @@ class IPCHandlerManager {
     this.ipcMain.handle('audio:getMemoryUsage', async (_event) => {
       try {
         const response = await fetch('http://127.0.0.1:3001/api/health');
+        if (!response.ok) {
+          console.error('[audio:getMemoryUsage] HTTP Error:', response.status, response.statusText);
+          return { rss: 0, heapUsed: 0, heapTotal: 0 };
+        }
         const data = await response.json() as any;
         return { rss: (data as any)?.memory?.rss || 0, heapUsed: (data as any)?.memory?.heapUsed || 0, heapTotal: (data as any)?.memory?.heapTotal || 0 };
       } catch (error) {
@@ -1546,28 +1680,113 @@ class IPCHandlerManager {
   private registerSlidesHandlers(): void {
     this.ipcMain.handle('slides:loadFromFolder', async (_event, folderPath: string) => {
       try {
-        // Load slides from the folder
+        console.log('[ipc-handlers] slides:loadFromFolder called with path:', folderPath);
         let slides: unknown[] = [];
         let tracks: unknown[] = [];
 
-        // Try to load slides if slidesService is available
-        if (this.services.slidesService && typeof this.services.slidesService.importFromFolder === 'function') {
-          try {
-            slides = await this.services.slidesService.importFromFolder(folderPath);
-          } catch (error) {
-            console.warn('[ipc-handlers] Failed to load slides from folder:', error);
+        // Check if folder exists
+        const fs = require('fs-extra');
+        const path = require('path');
+        
+        if (!(await fs.pathExists(folderPath))) {
+          console.warn('[ipc-handlers] Folder does not exist:', folderPath);
+          return { slides: [], tracks: [] };
+        }
+
+        // Read folder contents
+        const files = await fs.readdir(folderPath);
+        console.log('[ipc-handlers] Found', files.length, 'files in folder');
+
+        // Detect file types
+        const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg'];
+        const videoExts = ['.mp4', '.mov', '.avi', '.mkv', '.webm'];
+        const presentationExts = ['.pdf', '.pptx', '.ppt', '.odp'];
+        const audioExts = ['.mp3', '.wav', '.ogg', '.flac', '.m4a', '.aac'];
+
+        const imageFiles: string[] = [];
+        const videoFiles: string[] = [];
+        const presentationFiles: string[] = [];
+        const audioFiles: string[] = [];
+
+        for (const file of files) {
+          const lower = file.toLowerCase();
+          const fullPath = path.join(folderPath, file);
+          
+          if (imageExts.some(ext => lower.endsWith(ext))) {
+            imageFiles.push(fullPath);
+          } else if (videoExts.some(ext => lower.endsWith(ext))) {
+            videoFiles.push(fullPath);
+          } else if (presentationExts.some(ext => lower.endsWith(ext))) {
+            presentationFiles.push(fullPath);
+          } else if (audioExts.some(ext => lower.endsWith(ext))) {
+            audioFiles.push(fullPath);
           }
         }
 
-        // Try to load audio tracks if audioService is available
-        if (this.services.audioService && typeof this.services.audioService.loadTracks === 'function') {
+        console.log('[ipc-handlers] File types - Images:', imageFiles.length, 'Videos:', videoFiles.length, 'Presentations:', presentationFiles.length, 'Audio:', audioFiles.length);
+
+        // Load images as slides
+        if (imageFiles.length > 0) {
+          slides = imageFiles.map((filePath, index) => ({
+            id: `img-${index}`,
+            type: 'image',
+            path: filePath,
+            name: path.basename(filePath),
+            url: `file://${filePath}`
+          }));
+          console.log('[ipc-handlers] Loaded', slides.length, 'image slides');
+        }
+
+        // Load videos as slides
+        if (videoFiles.length > 0) {
+          const videoSlides = videoFiles.map((filePath, index) => ({
+            id: `video-${index}`,
+            type: 'video',
+            path: filePath,
+            name: path.basename(filePath),
+            url: `file://${filePath}`
+          }));
+          slides.push(...videoSlides);
+          console.log('[ipc-handlers] Loaded', videoFiles.length, 'video slides');
+        }
+
+        // Load presentations using slidesService
+        if (presentationFiles.length > 0 && this.services.slidesService && typeof this.services.slidesService.importFromFolder === 'function') {
           try {
-            tracks = await this.services.audioService.loadTracks(folderPath);
+            console.log('[ipc-handlers] Loading', presentationFiles.length, 'presentation files...');
+            const presentationSlides = await this.services.slidesService.importFromFolder(folderPath, {
+              extensions: presentationExts
+            });
+            slides.push(...presentationSlides);
+            console.log('[ipc-handlers] Loaded', presentationSlides.length, 'presentation slides');
           } catch (error) {
-            console.warn('[ipc-handlers] Failed to load tracks from folder:', error);
+            console.warn('[ipc-handlers] Failed to load presentation slides:', error);
           }
         }
 
+        // Load audio tracks
+        if (audioFiles.length > 0) {
+          if (this.services.audioService && typeof this.services.audioService.loadTracks === 'function') {
+            try {
+              console.log('[ipc-handlers] Loading', audioFiles.length, 'audio tracks...');
+              tracks = await this.services.audioService.loadTracks(folderPath);
+              console.log('[ipc-handlers] Loaded', tracks.length, 'tracks from audioService');
+            } catch (error) {
+              console.warn('[ipc-handlers] Failed to load tracks from audioService:', error);
+            }
+          } else {
+            // Fallback: create track objects manually
+            tracks = audioFiles.map((filePath, index) => ({
+              id: `track-${index}`,
+              track_name: path.basename(filePath, path.extname(filePath)),
+              file_path: filePath,
+              type: 'audio'
+            }));
+            console.log('[ipc-handlers] Created', tracks.length, 'track objects manually');
+          }
+        }
+
+        console.log('[ipc-handlers] Returning', slides.length, 'slides and', tracks.length, 'tracks');
         return { slides, tracks };
       } catch (error) {
         console.error('[ipc-handlers] Error in slides:loadFromFolder:', error);

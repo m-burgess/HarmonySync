@@ -301,16 +301,18 @@ export class SlideViewModel extends BaseViewModel implements ISlideViewModel {
       this.slides.splice(index, 1);
 
       // Update selection
-      if (this.selectedSlide === slide) {
-        // Select next slide or previous if at end
-        if (index < this.slides.length) {
-          this.selectedSlide = this.slides[index];
-        } else if (this.slides.length > 0) {
-          this.selectedSlide = this.slides[this.slides.length - 1];
-        } else {
-          this.selectedSlide = null;
+      runInAction(() => {
+        if (this.selectedSlide === slide) {
+          // Select next slide or previous if at end
+          if (index < this.slides.length) {
+            this.selectedSlide = this.slides[index];
+          } else if (this.slides.length > 0) {
+            this.selectedSlide = this.slides[this.slides.length - 1];
+          } else {
+            this.selectedSlide = null;
+          }
         }
-      }
+      });
     }
   }
 
@@ -323,8 +325,10 @@ export class SlideViewModel extends BaseViewModel implements ISlideViewModel {
 
   // Actions: Clear all slides
   public clearSlides(): void {
-    this.slides = [];
-    this.selectedSlide = null;
+    runInAction(() => {
+      this.slides = [];
+      this.selectedSlide = null;
+    });
   }
 
   // Actions: Reorder slides (drag and drop)
@@ -400,8 +404,10 @@ export class SlideViewModel extends BaseViewModel implements ISlideViewModel {
 
   // Actions: Replace all slides (used when loading from setlist)
   public setSlides(slides: Slide[]): void {
-    this.slides = slides || [];
-    this.selectedSlide = slides && slides.length > 0 ? slides[0] : null;
+    runInAction(() => {
+      this.slides = slides || [];
+      this.selectedSlide = slides && slides.length > 0 ? slides[0] : null;
+    });
   }
 
   // Actions: Add slides (used when importing)
@@ -473,7 +479,9 @@ export class SlideViewModel extends BaseViewModel implements ISlideViewModel {
 
   // Direct state setter for App.jsx compatibility (to be phased out)
   public setSelectedSlide(slide: Slide | null): void {
-    this.selectedSlide = slide;
+    runInAction(() => {
+      this.selectedSlide = slide;
+    });
   }
 
   /**

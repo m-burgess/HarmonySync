@@ -9,6 +9,7 @@
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { observer } from 'mobx-react-lite';
+import { runInAction } from 'mobx';
 import { getViewModel } from '../../viewmodels';
 import { ArrowPathIcon, ArrowUpTrayIcon } from '@heroicons/react/24/solid';
 import SlideItem from './SlideItem';
@@ -49,11 +50,13 @@ const SlideManager: React.FC<SlideManagerProps> = observer(({ allSlides, setAllS
 
   useEffect(() => {
     if (selectedSlide !== undefined) {
-      if (typeof selectedSlide === 'number') {
-        viewModel.selectedSlide = viewModel.slides[selectedSlide] || null;
-      } else {
-        viewModel.selectedSlide = selectedSlide;
-      }
+      runInAction(() => {
+        if (typeof selectedSlide === 'number') {
+          viewModel.selectedSlide = viewModel.slides[selectedSlide] || null;
+        } else {
+          viewModel.selectedSlide = selectedSlide;
+        }
+      });
     }
   }, [selectedSlide, viewModel]);
 

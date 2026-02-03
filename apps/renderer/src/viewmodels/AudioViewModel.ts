@@ -208,10 +208,12 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
     this.error = null;
 
     try {
-      const tracks = await this.audioService.loadTracks(folderPath);
+      const response = await this.audioService.loadTracks(folderPath);
+      // Handle both array response and {tracks: []} object response
+      const tracksArray = Array.isArray(response) ? response : (response?.tracks || []);
 
       runInAction(() => {
-        this.tracks = tracks.map((track, index) => ({
+        this.tracks = tracksArray.map((track, index) => ({
           ...track,
           index,
           volume: 1.0,

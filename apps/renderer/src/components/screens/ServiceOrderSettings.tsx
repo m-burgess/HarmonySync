@@ -107,9 +107,45 @@ const ServiceOrderSettings: React.FC = () => {
       const result = await (window as any).electronAPI.serviceOrderScanForZips(settings.watchFolder);
 
       if (result.success && result.zips.length > 0) {
-        showMessage('success', `Found ${result.zips.length} service order(s)`);
+        showMessage('success', `Found ${result.zips.length} service order(s), importing...`);
         console.log('Found zips:', result.zips);
-        // TODO: Show import dialog with found zips
+        
+        // Import each zip file
+        let importedCount = 0;
+        let failedCount = 0;
+        const errors: string[] = [];
+        
+        for (const zipPath of result.zips) {
+          try {
+            console.log('Importing zip:', zipPath);
+            const importResult = await (window as any).electronAPI.serviceOrderImportZip(zipPath);
+            console.log('Import result:', importResult);
+            
+            if (importResult.success) {
+              importedCount++;
+              console.log('✅ Imported:', importResult.metadata.name);
+            } else {
+              failedCount++;
+              const errorMsg = importResult.error || 'Unknown error';
+              errors.push(errorMsg);
+              console.error('❌ Failed to import:', zipPath, errorMsg);
+            }
+          } catch (error) {
+            failedCount++;
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            errors.push(errorMsg);
+            console.error('❌ Error importing:', zipPath, error);
+          }
+        }
+        
+        // Reload imported services list
+        await loadImportedServices();
+        
+        if (failedCount === 0) {
+          showMessage('success', `Successfully imported ${importedCount} service order(s)`);
+        } else {
+          showMessage('error', `Imported ${importedCount}, failed ${failedCount}. Errors: ${errors.join(', ')}`);
+        }
       } else {
         showMessage('success', 'No service orders found in watch folder');
       }
@@ -172,6 +208,27 @@ const ServiceOrderSettings: React.FC = () => {
     } catch (error) {
       console.error('Failed to cleanup:', error);
       showMessage('error', 'Failed to cleanup old services');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLoadService = async (serviceId: string) => {
+    try {
+      setLoading(true);
+      const result = await (window as any).electronAPI.serviceOrderLoad(serviceId);
+      if (result.success) {
+        showMessage('success', `Loaded service order with ${result.itemCount} items`);
+        // Refresh after a brief delay to show the message
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } else {
+        showMessage('error', result.error || 'Failed to load service');
+      }
+    } catch (error) {
+      console.error('Failed to load service:', error);
+      showMessage('error', 'Failed to load service order');
     } finally {
       setLoading(false);
     }
@@ -270,14 +327,24 @@ const ServiceOrderSettings: React.FC = () => {
                       {new Date(service.extractedAt).toLocaleDateString()}
                     </div>
                   </div>
-                  <Button
-                    onClick={() => handleDeleteService(service.id)}
-                    disabled={loading}
-                    variant="secondary"
-                    size="small"
-                  >
-                    Delete
-                  </Button>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <Button
+                      onClick={() => handleLoadService(service.id)}
+                      disabled={loading}
+                      variant="primary"
+                      size="small"
+                    >
+                      Load
+                    </Button>
+                    <Button
+                      onClick={() => handleDeleteService(service.id)}
+                      disabled={loading}
+                      variant="secondary"
+                      size="small"
+                    >
+                      Delete
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
