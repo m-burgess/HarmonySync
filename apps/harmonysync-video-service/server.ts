@@ -13,7 +13,7 @@ const PORT: number = parseInt(process.env.PORT || '3002', 10);
 const SHUTDOWN_TOKEN: string | null = process.env.SHUTDOWN_TOKEN || null;
 
 // Job management
-const jobs = new Map<string, VideoJob>();
+export const jobs = new Map<string, VideoJob>();
 
 // Type definitions
 type JobType = 'transcode' | 'thumbnail' | 'metadata' | 'playback';
@@ -117,6 +117,9 @@ class VideoJob {
     }
 }
 
+// Export VideoJob for tests
+export { VideoJob };
+
 // Helper function to parse FFmpeg timemark to seconds
 function parseTimemark(timemark: string | number | undefined): number {
     if (typeof timemark === 'number') return timemark;
@@ -135,6 +138,9 @@ function parseTimemark(timemark: string | number | undefined): number {
     
     return seconds;
 }
+
+// Export for testing
+export { parseTimemark };
 
 // Video processing functions
 async function transcodeVideo(job: VideoJob, io: SocketIOServer): Promise<string | null> {
@@ -215,6 +221,9 @@ async function transcodeVideo(job: VideoJob, io: SocketIOServer): Promise<string
         });
     });
 }
+
+// Export processing functions for testing
+export { transcodeVideo, generateThumbnail, extractMetadata };
 
 async function generateThumbnail(job: VideoJob, io: SocketIOServer): Promise<string | null> {
     return new Promise((resolve, reject) => {
