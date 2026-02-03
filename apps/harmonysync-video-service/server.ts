@@ -16,8 +16,8 @@ const SHUTDOWN_TOKEN: string | null = process.env.SHUTDOWN_TOKEN || null;
 const jobs = new Map<string, VideoJob>();
 
 // Type definitions
-type JobType = 'transcode' | 'thumbnail' | 'metadata';
-type JobStatus = 'pending' | 'processing' | 'completed' | 'error' | 'cancelled';
+type JobType = 'transcode' | 'thumbnail' | 'metadata' | 'playback';
+type JobStatus = 'pending' | 'processing' | 'completed' | 'error' | 'cancelled' | 'playing';
 
 interface TranscodeOptions {
     outputDir?: string;
@@ -69,6 +69,8 @@ class VideoJob {
     public startTime: number;
     public endTime: number | null;
     public ffmpegCommand: FfmpegCommand | null;
+    public loop: boolean;
+    public playbackInterval: NodeJS.Timeout | null;
 
     constructor(
         id: string,
@@ -87,11 +89,16 @@ class VideoJob {
         this.startTime = Date.now();
         this.endTime = null;
         this.ffmpegCommand = null;
+        this.loop = false;
+        this.playbackInterval = null;
     }
 
     cancel(): void {
         if (this.ffmpegCommand) {
             this.ffmpegCommand.kill('SIGKILL');
+        }
+        if (this.playbackInterval) {
+            clearInterval(this.playbackInterval);
         }
         this.status = 'cancelled';
         this.endTime = Date.now();
@@ -300,9 +307,9 @@ async function extractMetadata(job: VideoJob, io: SocketIOServer): Promise<Video
 }
 
 // Initialize Express app
-const app: Application = express();
-const server = http.createServer(app);
-const io = new SocketIOServer(server, {
+export const app: Application = express();
+export const server = http.createServer(app);
+export const io = new SocketIOServer(server, {
     cors: {
         origin: '*',
         methods: ['GET', 'POST']
@@ -354,7 +361,7 @@ app.post('/api/shutdown', (req: Request, res: Response): void => {
 
     console.log('🛑 Shutdown requested');
     res.json({ message: 'Shutting down...' });
-    
+
     // Cancel all active jobs
     for (const job of jobs.values()) {
         if (job.status === 'processing') {
@@ -362,9 +369,159 @@ app.post('/api/shutdown', (req: Request, res: Response): void => {
         }
     }
 
-    setTimeout(() => {
-        process.exit(0);
-    }, 1000);
+    // Only exit the process when running as the main module.
+    if (require.main === module) {
+        setTimeout(() => {
+            process.exit(0);
+        }, 1000);
+    }
+});
+
+// Playback control - only one playback at a time
+let currentPlaybackId: string | null = null;
+
+app.post('/api/play', async (req: Request, res: Response) => {
+    if (currentPlaybackId) {
+        res.status(409).json({ error: 'Another video is already playing' });
+        return;
+    }
+
+    const { inputPath, loop = false } = req.body as { inputPath: string; loop?: boolean };
+    if (!inputPath || typeof inputPath !== 'string') {
+        res.status(400).json({ error: 'inputPath required' });
+        return;
+    }
+
+    // validate file exists
+    if (!fs.existsSync(inputPath)) {
+        res.status(404).json({ error: 'Input file not found' });
+        return;
+    }
+
+    const jobId = uuidv4();
+    const job = new VideoJob(jobId, 'playback', inputPath, {});
+    job.loop = !!loop;
+    jobs.set(jobId, job);
+    currentPlaybackId = jobId;
+
+    // probe for duration
+    ffmpeg.ffprobe(inputPath, (err, metadata) => {
+        if (err) {
+            job.status = 'error';
+            job.error = `Failed to probe video: ${err.message}`;
+            job.endTime = Date.now();
+            io.emit('playback:error', job.toJSON());
+            return;
+        }
+
+        const duration = Math.round(metadata.format.duration || 0);
+        job.result = { duration };
+        job.status = 'playing';
+        job.startTime = Date.now();
+
+        // emit initial created/started events
+        io.emit('playback:created', job.toJSON());
+
+        // start per-second progress emitter
+        const interval = setInterval(() => {
+            const elapsed = Math.floor((Date.now() - job.startTime) / 1000);
+            let remaining = Math.max(0, (job.result?.duration || 0) - elapsed);
+            const mm = String(Math.floor(remaining / 60)).padStart(2, '0');
+            const ss = String(remaining % 60).padStart(2, '0');
+            io.emit('playback:progress', { id: job.id, remaining, timecode: `${mm}:${ss}` });
+
+            if (remaining <= 0) {
+                if (job.loop) {
+                    job.startTime = Date.now();
+                } else {
+                    job.status = 'completed';
+                    job.endTime = Date.now();
+                    io.emit('playback:complete', job.toJSON());
+                    clearInterval(interval);
+                    if (typeof (interval as any).unref === 'function') (interval as any).unref();
+                    jobs.delete(job.id);
+                    currentPlaybackId = null;
+                }
+            }
+        }, 1000);
+
+        job.playbackInterval = interval;
+        if (typeof interval.unref === 'function') interval.unref();
+    });
+
+    res.json({ id: jobId, streamUrl: `/stream/${jobId}` });
+});
+
+app.post('/api/stop', (req: Request, res: Response) => {
+    const { id } = req.body as { id?: string };
+    const jobId = id || currentPlaybackId;
+    if (!jobId) {
+        res.status(400).json({ error: 'No playback to stop' });
+        return;
+    }
+
+    const job = jobs.get(jobId);
+    if (!job) {
+        res.status(404).json({ error: 'Playback not found' });
+        return;
+    }
+
+    job.cancel();
+    io.emit('playback:stopped', job.toJSON());
+    jobs.delete(jobId);
+    if (currentPlaybackId === jobId) currentPlaybackId = null;
+    res.json({ message: 'Stopped', id: jobId });
+});
+
+app.get('/api/now-playing', (req: Request, res: Response) => {
+    if (!currentPlaybackId) {
+        res.json({ playing: false });
+        return;
+    }
+    const job = jobs.get(currentPlaybackId!);
+    res.json({ playing: !!job, job: job ? job.toJSON() : null });
+});
+
+// Stream endpoint - serves the original file for the playback job with Range support
+app.get('/stream/:id', (req: Request, res: Response) => {
+    const job = jobs.get(req.params.id);
+    if (!job) {
+        res.status(404).send('Not found');
+        return;
+    }
+
+    const filePath = job.inputPath;
+    if (!fs.existsSync(filePath)) {
+        res.status(404).send('File not found');
+        return;
+    }
+
+    const stat = fs.statSync(filePath);
+    const total = stat.size;
+    const range = req.headers.range;
+    const contentType = 'video/mp4';
+
+    if (range) {
+        const parts = range.replace(/bytes=/, '').split('-');
+        const start = parseInt(parts[0], 10);
+        const end = parts[1] ? parseInt(parts[1], 10) : total - 1;
+        const chunkSize = (end - start) + 1;
+        const stream = fs.createReadStream(filePath, { start, end });
+        res.writeHead(206, {
+            'Content-Range': `bytes ${start}-${end}/${total}`,
+            'Accept-Ranges': 'bytes',
+            'Content-Length': chunkSize,
+            'Content-Type': contentType
+        });
+        stream.pipe(res);
+    } else {
+        res.writeHead(200, {
+            'Content-Length': total,
+            'Content-Type': contentType,
+            'Accept-Ranges': 'bytes'
+        });
+        fs.createReadStream(filePath).pipe(res);
+    }
 });
 
 // Socket.io event handlers
@@ -383,8 +540,9 @@ io.on('connection', (socket: Socket) => {
         } catch (error) {
             console.error('Transcode error:', error);
         } finally {
-            // Clean up job after 5 minutes
-            setTimeout(() => jobs.delete(jobId), 5 * 60 * 1000);
+            // Clean up job after 5 minutes. Use unref so timer doesn't keep process alive in tests.
+            const cleanupTimer = setTimeout(() => jobs.delete(jobId), 5 * 60 * 1000);
+            if (typeof cleanupTimer.unref === 'function') cleanupTimer.unref();
         }
     });
 
@@ -400,7 +558,8 @@ io.on('connection', (socket: Socket) => {
         } catch (error) {
             console.error('Thumbnail error:', error);
         } finally {
-            setTimeout(() => jobs.delete(jobId), 5 * 60 * 1000);
+            const cleanupTimer = setTimeout(() => jobs.delete(jobId), 5 * 60 * 1000);
+            if (typeof cleanupTimer.unref === 'function') cleanupTimer.unref();
         }
     });
 
@@ -416,7 +575,8 @@ io.on('connection', (socket: Socket) => {
         } catch (error) {
             console.error('Metadata error:', error);
         } finally {
-            setTimeout(() => jobs.delete(jobId), 5 * 60 * 1000);
+            const cleanupTimer = setTimeout(() => jobs.delete(jobId), 5 * 60 * 1000);
+            if (typeof cleanupTimer.unref === 'function') cleanupTimer.unref();
         }
     });
 
@@ -425,26 +585,28 @@ io.on('connection', (socket: Socket) => {
     });
 });
 
-// Start server
-server.listen(PORT, HOST, () => {
-    console.log(`🎬 HarmonySync Video Service listening on ${HOST}:${PORT}`);
-    console.log(`📊 Process ID: ${process.pid}`);
-    console.log(`💾 Memory: ${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`);
-});
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-    console.log('🛑 SIGTERM received, shutting down gracefully');
-    server.close(() => {
-        console.log('✅ Server closed');
-        process.exit(0);
+// Start server when run directly
+if (require.main === module) {
+    server.listen(PORT, HOST, () => {
+        console.log(`🎬 HarmonySync Video Service listening on ${HOST}:${PORT}`);
+        console.log(`📊 Process ID: ${process.pid}`);
+        console.log(`💾 Memory: ${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`);
     });
-});
 
-process.on('SIGINT', () => {
-    console.log('🛑 SIGINT received, shutting down gracefully');
-    server.close(() => {
-        console.log('✅ Server closed');
-        process.exit(0);
+    // Graceful shutdown when running as main
+    process.on('SIGTERM', () => {
+        console.log('🛑 SIGTERM received, shutting down gracefully');
+        server.close(() => {
+            console.log('✅ Server closed');
+            process.exit(0);
+        });
     });
-});
+
+    process.on('SIGINT', () => {
+        console.log('🛑 SIGINT received, shutting down gracefully');
+        server.close(() => {
+            console.log('✅ Server closed');
+            process.exit(0);
+        });
+    });
+}
