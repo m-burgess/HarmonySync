@@ -7,7 +7,7 @@
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import { app } from 'electron';
-import { BaseElectronService, ServiceConfig } from '../types/services';
+import { BaseElectronService, ServiceConfig } from '@harmonysync/core';
 
 // Import script service for execution
 // Note: Dynamic import to avoid circular dependencies

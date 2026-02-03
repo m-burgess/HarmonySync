@@ -6,7 +6,7 @@
 import axios, { AxiosResponse } from 'axios';
 import * as fs from 'fs-extra';
 import * as path from 'path';
-import { BaseElectronService, ILyricsFetcher, ServiceConfig } from '../types/services';
+import { BaseElectronService, ILyricsFetcher, ServiceConfig } from '@harmonysync/core';
 
 /**
  * Genius API response structures

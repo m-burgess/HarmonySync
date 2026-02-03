@@ -7,8 +7,8 @@ import { Dropbox, files } from 'dropbox';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import { app } from 'electron';
-import { BaseElectronService, ICloudStorageService, ServiceConfig } from '../types/services';
-import { CloudFile } from '../types/models';
+import { BaseElectronService, ICloudStorageService, ServiceConfig } from '@harmonysync/core';
+import { CloudFile } from '@harmonysync/core';
 
 // ==================== Type Definitions ====================
 

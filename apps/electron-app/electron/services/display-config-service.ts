@@ -6,9 +6,9 @@
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import { app } from 'electron';
-import { BaseElectronService } from '../types/services';
-import { IDisplayConfigService, ServiceConfig } from '../types/services';
-import { DisplayConfig } from '../types/models';
+import { BaseElectronService } from '@harmonysync/core';
+import { IDisplayConfigService, ServiceConfig } from '@harmonysync/core';
+import { DisplayConfig } from '@harmonysync/core';
 
 /**
  * Default display configurations

@@ -5,9 +5,9 @@
 
 import * as fs from 'fs-extra';
 import * as path from 'path';
-import { BaseElectronService } from '../types/services';
-import { IFileManager, ServiceConfig } from '../types/services';
-import { DirectoryEntry } from '../types/models';
+import { BaseElectronService } from '@harmonysync/core';
+import { IFileManager, ServiceConfig } from '@harmonysync/core';
+import { DirectoryEntry } from '@harmonysync/core';
 
 /**
  * Background CSS generation options

@@ -7,8 +7,8 @@ import { google, drive_v3 } from 'googleapis';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import { app } from 'electron';
-import { BaseElectronService, ICloudStorageService, ServiceConfig } from '../types/services';
-import { CloudFile } from '../types/models';
+import { BaseElectronService, ICloudStorageService, ServiceConfig } from '@harmonysync/core';
+import { CloudFile } from '@harmonysync/core';
 import { Readable } from 'stream';
 
 // ==================== Type Definitions ====================

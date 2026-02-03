@@ -8,7 +8,7 @@ import ffmpeg from 'fluent-ffmpeg';
 import * as path from 'path';
 import * as fs from 'fs-extra';
 import { app } from 'electron';
-import { BaseElectronService, IYouTubeService, ServiceConfig } from '../types/services';
+import { BaseElectronService, IYouTubeService, ServiceConfig } from '@harmonysync/core';
 
 /**
  * YouTube video metadata interface

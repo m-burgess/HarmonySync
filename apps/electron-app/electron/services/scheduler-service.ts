@@ -7,7 +7,7 @@
  * Only validateScheduledEvent() and execution logic are actively used.
  */
 
-import { BaseElectronService, ISchedulerService, ServiceConfig } from '../types/services';
+import { BaseElectronService, ISchedulerService, ServiceConfig } from '@harmonysync/core';
 
 // ==================== Type Definitions ====================
 

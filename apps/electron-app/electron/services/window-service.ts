@@ -5,8 +5,8 @@
  */
 
 import { BrowserWindow } from 'electron';
-import { BaseElectronService, IWindowService, ServiceConfig } from '../types/services';
-import { WindowState } from '../types/models';
+import { BaseElectronService, IWindowService, ServiceConfig } from '@harmonysync/core';
+import { WindowState } from '@harmonysync/core';
 
 /**
  * Window getter function type

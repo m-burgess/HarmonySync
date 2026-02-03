@@ -8,8 +8,8 @@ import ffmpeg from 'fluent-ffmpeg';
 import * as path from 'path';
 import * as fs from 'fs-extra';
 import { app } from 'electron';
-import { BaseElectronService } from '../types/services';
-import { ConversionProgress } from '../types/models';
+import { BaseElectronService } from '@harmonysync/core';
+import { ConversionProgress } from '@harmonysync/core';
 
 // ==================== Type Definitions ====================
 

@@ -5,9 +5,9 @@
  */
 
 import { BrowserWindow } from 'electron';
-import { BaseElectronService } from '../types/services';
-import { IDisplayService, ServiceConfig } from '../types/services';
-import { SlideContent, LowerThirdsData } from '../types/models';
+import { BaseElectronService } from '@harmonysync/core';
+import { IDisplayService, ServiceConfig } from '@harmonysync/core';
+import { SlideContent, LowerThirdsData } from '@harmonysync/core';
 
 /**
  * Window getter function type

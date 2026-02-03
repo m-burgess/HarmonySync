@@ -8,7 +8,7 @@
  */
 
 import { EventEmitter } from 'events';
-import { BaseElectronService, IMacroService, ServiceConfig } from '../types/services';
+import { BaseElectronService, IMacroService, ServiceConfig } from '@harmonysync/core';
 
 // ==================== Type Definitions ====================
 

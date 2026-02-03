@@ -4,8 +4,8 @@
  */
 
 import { BrowserWindow } from 'electron';
-import { BaseElectronService } from '../types/services';
-import { SlideContent } from '../types/models';
+import { BaseElectronService } from '@harmonysync/core';
+import { SlideContent } from '@harmonysync/core';
 
 // ==================== Type Definitions ====================
 

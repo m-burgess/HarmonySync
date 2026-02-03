@@ -9,7 +9,7 @@ import * as path from 'path';
 import * as fs from 'fs-extra';
 import { app } from 'electron';
 import { v4 as uuidv4 } from 'uuid';
-import { BaseElectronService, IFFmpegService, ServiceConfig } from '../types/services';
+import { BaseElectronService, IFFmpegService, ServiceConfig } from '@harmonysync/core';
 
 /**
  * Audio sync check result

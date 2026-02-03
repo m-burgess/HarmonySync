@@ -9,8 +9,8 @@ import * as path from 'path';
 import * as fs from 'fs-extra';
 import { app } from 'electron';
 import { v4 as uuidv4 } from 'uuid';
-import { BaseElectronService, IVideoService, ServiceConfig } from '../types/services';
-import { VideoMetadata } from '../types/models';
+import { BaseElectronService, IVideoService, ServiceConfig } from '@harmonysync/core';
+import { VideoMetadata } from '@harmonysync/core';
 
 /**
  * Video metadata extended with additional properties

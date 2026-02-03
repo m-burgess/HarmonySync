@@ -8,7 +8,7 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 import { app } from 'electron';
 import { VM } from 'vm2';
-import { BaseElectronService, IScriptService, ServiceConfig } from '../types/services';
+import { BaseElectronService, IScriptService, ServiceConfig } from '@harmonysync/core';
 
 // ==================== Type Definitions ====================
 

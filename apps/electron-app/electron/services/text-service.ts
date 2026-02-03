@@ -6,7 +6,7 @@
 
 import * as path from 'path';
 import * as fs from 'fs-extra';
-import { BaseElectronService, ITextService, ServiceConfig } from '../types/services';
+import { BaseElectronService, ITextService, ServiceConfig } from '@harmonysync/core';
 
 /**
  * RGB color object

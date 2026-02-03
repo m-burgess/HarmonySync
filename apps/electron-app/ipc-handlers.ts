@@ -34,6 +34,7 @@ interface Services {
   scriptingAPI: any;
   slidesService: any;
   displayConfigService: any;
+  eventTriggerService: any;
 }
 
 interface DialogOpenDirectoryOptions {
@@ -547,7 +548,7 @@ class IPCHandlerManager {
    * Event Trigger handlers
    */
   private registerEventTriggerHandlers(): void {
-    const eventTriggerService = require('./services/event-trigger-service');
+    const eventTriggerService = this.services.eventTriggerService;
 
     this.ipcMain.handle('trigger:register', async (_event, eventType: string, scriptId: string, options?: any) => {
       return await eventTriggerService.registerTrigger(eventType, scriptId, options);
