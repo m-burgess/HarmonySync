@@ -4,6 +4,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { DisplayConfig } from './models';
 
 // ==================== Base Service Interface ====================
 
@@ -174,11 +175,11 @@ export interface ISlidesService extends IService {
 }
 
 export interface IDisplayConfigService extends IService {
-  getAll(): Promise<any[]>;
-  get(id: string): Promise<any>;
-  getEnabled(): Promise<any[]>;
-  create(config: any): Promise<string>;
-  update(id: string, config: any): Promise<void>;
+  getAll(): Promise<DisplayConfig[]>;
+  get(id: string): Promise<DisplayConfig | null>;
+  getEnabled(): Promise<DisplayConfig[]>;
+  create(config: Partial<DisplayConfig>): Promise<string>;
+  update(id: string, config: Partial<DisplayConfig>): Promise<void>;
   delete(id: string): Promise<void>;
   reorder(ids: string[]): Promise<void>;
 }

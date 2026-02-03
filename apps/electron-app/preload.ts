@@ -113,6 +113,8 @@ interface ElectronAPI {
   serviceOrderGetService: (serviceId: string) => Promise<any>;
   serviceOrderDeleteService: (serviceId: string) => Promise<any>;
   serviceOrderCleanup: (maxAgeDays?: number) => Promise<any>;
+  serviceOrderCreateConfigTemplate: (itemPath: string, overwrite?: boolean) => Promise<any>;
+  serviceOrderGetConfigTemplate: () => Promise<any>;
 
   // App Settings
   settingsGet: () => Promise<any>;
@@ -267,6 +269,10 @@ class ElectronAPIBuilder {
         ipcRenderer.invoke('service-order:deleteService', serviceId),
       serviceOrderCleanup: (maxAgeDays: number = 7) =>
         ipcRenderer.invoke('service-order:cleanup', maxAgeDays),
+      serviceOrderCreateConfigTemplate: (itemPath: string, overwrite: boolean = false) =>
+        ipcRenderer.invoke('service-order:createConfigTemplate', itemPath, overwrite),
+      serviceOrderGetConfigTemplate: () =>
+        ipcRenderer.invoke('service-order:getConfigTemplate'),
 
       // App Settings
       settingsGet: () =>

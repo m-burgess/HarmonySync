@@ -587,6 +587,49 @@ class IPCHandlerManager {
         };
       }
     });
+
+    /**
+     * Create a config.json template in a service item folder
+     */
+    this.ipcMain.handle('service-order:createConfigTemplate', async (_event, itemPath: string, overwrite: boolean = false) => {
+      try {
+        if (!this.services.serviceOrderImporter) {
+          return { success: false, error: 'Service order importer not initialized' };
+        }
+
+        const configPath = await this.services.serviceOrderImporter.createConfigTemplate(itemPath, overwrite);
+        return {
+          success: true,
+          configPath
+        };
+      } catch (error) {
+        console.error('[service-order:createConfigTemplate] Error:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        };
+      }
+    });
+
+    /**
+     * Get the default config template structure
+     */
+    this.ipcMain.handle('service-order:getConfigTemplate', async () => {
+      try {
+        const { ServiceOrderImporter } = require('./electron/services/service-order-importer');
+        const template = ServiceOrderImporter.getDefaultConfigTemplate();
+        return {
+          success: true,
+          template
+        };
+      } catch (error) {
+        console.error('[service-order:getConfigTemplate] Error:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        };
+      }
+    });
   }
 
   /**
@@ -919,6 +962,17 @@ class IPCHandlerManager {
    * HTTP Server handlers
    */
   private registerHTTPServerHandlers(): void {
+    this.ipcMain.handle('start_http_server', async (_event, options?: { port?: number }) => {
+      try {
+        const port = options?.port || 8080;
+        await this.services.httpServer.start(port);
+        return this.services.httpServer.getUrl();
+      } catch (error) {
+        console.error('[ipc-handlers] Failed to start HTTP server:', error);
+        throw error;
+      }
+    });
+
     this.ipcMain.handle('http:getServerUrl', async () => {
       return this.services.httpServer.getUrl();
     });

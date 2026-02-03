@@ -19,12 +19,55 @@ import os from 'os';
 
 // ==================== Type Definitions ====================
 
+/**
+ * Item Configuration
+ * Each service item can have a config.json file with settings
+ */
+export interface ItemConfig {
+  /**
+   * YouTube links to be loaded as slides
+   * Array of URLs or single URL
+   */
+  youtubeLinks?: string[] | string;
+
+  /**
+   * Lyrics link for the lyric fetcher
+   * Used if lyrics.txt file is not present in the item folder
+   */
+  lyricsLink?: string;
+
+  /**
+   * Loop background images
+   * If true, images will cycle through continuously
+   */
+  loopImages?: boolean;
+
+  /**
+   * Autoplay background video
+   * If true, video will start playing automatically
+   */
+  autoplayBackgroundVideo?: boolean;
+
+  /**
+   * MIDI note to send when item is activated
+   * Format: "NOTE-OCTAVE" (e.g., "C-4", "G#-2", "Bb-3")
+   * Leave undefined to skip MIDI
+   */
+  sendMidiNote?: string;
+
+  /**
+   * Additional custom settings (extensible)
+   */
+  [key: string]: any;
+}
+
 export interface ServiceItem {
   id: string;
   name: string;
   path: string;
   type: 'folder' | 'song' | 'presentation' | 'video' | 'image';
   sortOrder: number;
+  config?: ItemConfig;
   children?: ServiceItem[];
 }
 
@@ -176,13 +219,15 @@ export class ServiceOrderImporter {
         const sortOrder = this.extractSortOrder(entry.name);
         const cleanName = this.cleanItemName(entry.name);
         const itemType = await this.detectItemType(fullPath);
+        const config = await this.loadItemConfig(fullPath);
 
         const item: ServiceItem = {
           id: uuidv4(),
           name: cleanName,
           path: fullPath,
           type: itemType,
-          sortOrder: sortOrder
+          sortOrder: sortOrder,
+          config: config
         };
 
         items.push(item);
@@ -389,6 +434,92 @@ export class ServiceOrderImporter {
       console.error('Error getting service:', error);
       return null;
     }
+  }
+
+  /**
+   * Load config.json from an item folder if it exists
+   * @param itemPath - Path to item folder
+   * @returns Item configuration or undefined
+   */
+  private async loadItemConfig(itemPath: string): Promise<ItemConfig | undefined> {
+    try {
+      const configPath = path.join(itemPath, 'config.json');
+      
+      if (!fs.existsSync(configPath)) {
+        return undefined;
+      }
+
+      const configContent = await fs.readFile(configPath, 'utf-8');
+      const config = JSON.parse(configContent) as ItemConfig;
+      
+      console.log(`✅ Loaded config for item: ${path.basename(itemPath)}`);
+      return config;
+    } catch (error) {
+      console.warn(`⚠️  Failed to load config for ${path.basename(itemPath)}:`, error instanceof Error ? error.message : 'Unknown error');
+      return undefined;
+    }
+  }
+
+  /**
+   * Create a config.json template in an item folder
+   * @param itemPath - Path to item folder
+   * @param overwrite - Whether to overwrite existing config
+   * @returns Path to created config file
+   */
+  async createConfigTemplate(itemPath: string, overwrite: boolean = false): Promise<string> {
+    try {
+      const configPath = path.join(itemPath, 'config.json');
+
+      if (fs.existsSync(configPath) && !overwrite) {
+        console.warn(`⚠️  Config already exists at ${configPath}`);
+        return configPath;
+      }
+
+      const template: ItemConfig = {
+        // YouTube links to be loaded as slides (optional)
+        youtubeLinks: [
+          // "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        ],
+
+        // Lyrics link for the lyric fetcher (optional)
+        // Used if lyrics.txt file is not present in the item folder
+        lyricsLink: undefined,
+
+        // Loop background images (default: false)
+        loopImages: false,
+
+        // Autoplay background video (default: false)
+        autoplayBackgroundVideo: false,
+
+        // MIDI note to send when item is activated (optional)
+        // Format: "NOTE-OCTAVE" (e.g., "C-4", "G#-2", "Bb-3")
+        sendMidiNote: undefined,
+
+        // You can add additional custom settings here
+      };
+
+      await fs.writeFile(configPath, JSON.stringify(template, null, 2), 'utf-8');
+      console.log(`✅ Created config template at ${configPath}`);
+      
+      return configPath;
+    } catch (error) {
+      console.error('Error creating config template:', error);
+      throw new Error(`Failed to create config template: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Get default config template (for reference)
+   * @returns Default ItemConfig template
+   */
+  static getDefaultConfigTemplate(): ItemConfig {
+    return {
+      youtubeLinks: [],
+      lyricsLink: undefined,
+      loopImages: false,
+      autoplayBackgroundVideo: false,
+      sendMidiNote: undefined,
+    };
   }
 
   /**

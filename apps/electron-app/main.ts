@@ -468,8 +468,18 @@ class ElectronApplication {
   public async shutdown(): Promise<void> {
     console.log('[Application] Shutting down services...');
     await this.serviceManager.stopAllServices();
-    await httpServer.stop();
-    await remoteControlService.stop();
+    
+    try {
+      await httpServer.stop();
+    } catch (error) {
+      console.error('[Application] Error stopping HTTP server:', error);
+    }
+    
+    try {
+      await remoteControlService.stop();
+    } catch (error) {
+      console.error('[Application] Error stopping remote control service:', error);
+    }
   }
 
   /**
