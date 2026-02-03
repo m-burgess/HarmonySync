@@ -8,13 +8,13 @@
   "scripts": {
     "dev": "concurrently -k \"pnpm run dev:build\" \"pnpm run dev:electron\"",
     "dev:build": "tsc -b --watch",
-    "dev:electron": "wait-on tcp:5174 && electron dist/main.js",
+    "dev:electron": "wait-on tcp:5174 && cross-env NODE_ENV=development electron dist/main.js",
     "build": "tsc -b",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@harmonysync/shared-logic": "workspace:*",
     "@harmonysync/core": "workspace:*",
+    "@harmonysync/shared-logic": "workspace:*",
     "adm-zip": "^0.5.10",
     "axios": "^1.12.2",
     "cors": "^2.8.5",
@@ -39,6 +39,7 @@
     "@types/node": "^20.10.6",
     "@types/uuid": "^9.0.3",
     "concurrently": "^9.1.0",
+    "cross-env": "^10.1.0",
     "typescript": "^5.3.3",
     "wait-on": "^7.2.0"
   }

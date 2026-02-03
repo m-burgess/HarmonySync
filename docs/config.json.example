@@ -1,0 +1,9 @@
+{
+  "youtubeLinks": [
+    "https://www.youtube.com/watch?v=VIDEO_ID_HERE"
+  ],
+  "lyricsLink": null,
+  "loopImages": false,
+  "autoplayBackgroundVideo": false,
+  "sendMidiNote": "G#-2"
+}

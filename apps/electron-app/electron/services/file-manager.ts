@@ -288,5 +288,38 @@ export function getFileManagerService(config?: ServiceConfig): FileManagerServic
   return fileManagerInstance;
 }
 
+// Initialize singleton for module-level exports
+const defaultInstance = getFileManagerService();
+
+// Auto-initialize the default instance
+defaultInstance.initialize().catch(err => {
+  console.error('[FileManagerService] Auto-initialization failed:', err);
+});
+
+// Export module-level functions for backward compatibility with require()
+export async function readFile(filePath: string): Promise<string> {
+  return defaultInstance.readFile(filePath);
+}
+
+export async function writeFile(filePath: string, content: string): Promise<void> {
+  return defaultInstance.writeFile(filePath, content);
+}
+
+export async function readDir(dirPath: string): Promise<string[]> {
+  return defaultInstance.readDir(dirPath);
+}
+
+export async function exists(path: string): Promise<boolean> {
+  return defaultInstance.exists(path);
+}
+
+export async function mkdir(dirPath: string): Promise<void> {
+  return defaultInstance.mkdir(dirPath);
+}
+
+export async function copyFile(src: string, dest: string): Promise<void> {
+  return defaultInstance.copyFile(src, dest);
+}
+
 // Export for backward compatibility
 export default FileManagerService;

@@ -97,6 +97,8 @@ export class HTTPServerService extends BaseElectronService implements IHTTPServe
         });
       });
     }
+    // Server not running, nothing to stop
+    return Promise.resolve();
   }
 
   /**

@@ -177,6 +177,8 @@ export class RemoteControlService extends BaseElectronService implements IRemote
         });
       });
     }
+    // Server not running, nothing to stop
+    return Promise.resolve();
   }
 
   /**
@@ -744,7 +746,8 @@ export async function start(port?: number): Promise<void> {
 
 export async function stop(): Promise<void> {
   if (!defaultInstance) {
-    throw new Error('Remote control service not initialized.');
+    // Service was never initialized, nothing to stop
+    return Promise.resolve();
   }
   return defaultInstance.stop();
 }

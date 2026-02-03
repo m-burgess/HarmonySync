@@ -139,7 +139,9 @@ export class DisplayViewModel extends BaseViewModel implements IDisplayViewModel
       toggleDisplayEnabled: action,
       openAddForm: action,
       closeAddForm: action,
+      setShowAddForm: action,
       startEditing: action,
+      setEditingDisplay: action,
       cancelEditing: action,
       setAudienceFontSize: action,
       setConfidenceFontSize: action,
@@ -400,7 +402,15 @@ export class DisplayViewModel extends BaseViewModel implements IDisplayViewModel
     this.showAddForm = false;
   }
 
+  public setShowAddForm(show: boolean): void {
+    this.showAddForm = show;
+  }
+
   public startEditing(display: DisplayConfig): void {
+    this.editingDisplay = display;
+  }
+
+  public setEditingDisplay(display: DisplayConfig | null): void {
     this.editingDisplay = display;
   }
 

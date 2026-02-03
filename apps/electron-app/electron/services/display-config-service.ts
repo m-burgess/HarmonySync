@@ -348,5 +348,45 @@ export function getDisplayConfigService(config?: ServiceConfig): DisplayConfigSe
   return displayConfigInstance;
 }
 
+// Initialize singleton for module-level exports
+const defaultInstance = getDisplayConfigService();
+
+// Auto-initialize the default instance
+defaultInstance.initialize().catch(err => {
+  console.error('[DisplayConfigService] Auto-initialization failed:', err);
+});
+
+// Export module-level functions for backward compatibility with require()
+export async function getAll(): Promise<DisplayConfig[]> {
+  return defaultInstance.getAll();
+}
+
+export async function get(id: string): Promise<DisplayConfig | null> {
+  return defaultInstance.get(id);
+}
+
+export async function create(config: Partial<DisplayConfig>): Promise<string> {
+  return defaultInstance.create(config);
+}
+
+export async function update(id: string, updates: Partial<DisplayConfig>): Promise<void> {
+  return defaultInstance.update(id, updates);
+}
+
+export async function deleteConfig(id: string): Promise<void> {
+  return defaultInstance.delete(id);
+}
+
+// Named export for delete to avoid reserved word
+export { deleteConfig as delete };
+
+export async function reorder(orderedIds: string[]): Promise<void> {
+  return defaultInstance.reorder(orderedIds);
+}
+
+export async function getEnabled(): Promise<DisplayConfig[]> {
+  return defaultInstance.getEnabled();
+}
+
 // Export for backward compatibility
 export default DisplayConfigService;
