@@ -255,7 +255,8 @@ export class ServiceOrderViewModel extends BaseViewModel implements Partial<ISer
 
     try {
       // Determine if we should use crossfade
-      const shouldUseCrossfade = !this.isFirstLoad && this.currentLoadedFolder;
+      // NOTE: Crossfade is not reliably implemented yet, so always do a clean stop/cleanup.
+      const shouldUseCrossfade = false;
 
       if (!shouldUseCrossfade) {
         // First load or no previous tracks - clear everything

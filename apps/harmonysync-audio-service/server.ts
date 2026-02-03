@@ -739,20 +739,9 @@ class AudioMixer {
         
         console.log(`▶️  Playing ${activeTracks.length} tracks in sync with master clock`);
         
-        // Use click track as master clock if available
-        const clickTrack = activeTracks.find(track => 
-            track.name.toLowerCase().includes('click') || 
-            track.name.toLowerCase().includes('metronome') ||
-            track.name.toLowerCase().includes('guide')
-        );
-        
-        if (clickTrack) {
-            console.log(`🎯 Using ${clickTrack.name} as master clock`);
-            await this.startMasterClockPlayback(activeTracks, clickTrack);
-        } else {
-            console.log('🎵 Using synchronized simultaneous playback');
-            await this.startSynchronizedSimultaneousPlayback(activeTracks);
-        }
+        // Always use synchronized simultaneous playback
+        console.log('🎵 Using synchronized simultaneous playback');
+        await this.startSynchronizedSimultaneousPlayback(activeTracks);
         
         this.isPlaying = true;
     }
@@ -762,21 +751,22 @@ class AudioMixer {
             console.log(`🎯 Master clock designated: ${masterTrack.name}`);
             console.log(`🔍 Master track path: ${masterTrack.filePath}`);
             console.log(`🎵 Starting ALL tracks simultaneously (including master clock)...`);
-            
-            // CRITICAL FIX: Start ALL tracks at exactly the same time
-            // Professional multitrack players like multitracks.com start all tracks simultaneously,
-            // not sequentially with delays. The master clock concept is just for reference,
-            // not for sequential starting.
+
+            // Prepare all tracks first, then schedule a shared start time
+            const preparedTracks = await Promise.all(
+                tracks.map(async track => ({
+                    track,
+                    audioFilePath: await this.prepareTrackForPlayback(track)
+                }))
+            );
+
+            const startAtMs = Date.now() + 250; // small buffer to align process startup
             const startTime: number = Date.now();
-            
-            // Prepare all track start promises (master + slaves)
-            const allTrackPromises: Promise<void>[] = tracks.map(track => {
-                const isMaster: boolean = track === masterTrack;
-                return this.startTrackWithClock(track, isMaster);
-            });
-            
-            // Start all tracks simultaneously - NO DELAYS
-            // Use allSettled to handle partial failures gracefully
+
+            const allTrackPromises: Promise<void>[] = preparedTracks.map(({ track, audioFilePath }) =>
+                this.startPreparedTrackAt(track, audioFilePath, startAtMs)
+            );
+
             const results: PromiseSettledResult<void>[] = await Promise.allSettled(allTrackPromises);
             
             const totalTime: number = Date.now() - startTime;
@@ -819,10 +809,24 @@ class AudioMixer {
 
     async startSynchronizedSimultaneousPlayback(tracks: AudioTrack[]): Promise<void> {
         try {
-            // Start all tracks as close to simultaneously as possible
+            // Prepare all tracks first (conversion/pan setup), then start at a shared timestamp
+            const preparedTracks = await Promise.all(
+                tracks.map(async track => ({
+                    track,
+                    audioFilePath: await this.prepareTrackForPlayback(track)
+                }))
+            );
+
+            const startAtMs = Date.now() + 50;  // Minimal buffer for process startup - all files start at exactly timestamp 0
+            if (serverInstance.io) {
+                serverInstance.io.emit('playback_ready', {
+                    trackCount: preparedTracks.length,
+                    startAtMs
+                });
+            }
             const startTime: number = Date.now();
-            const promises: Promise<void>[] = tracks.map(track => 
-                this.startTrackWithClock(track, false) // Remove delay for true simultaneity
+            const promises: Promise<void>[] = preparedTracks.map(({ track, audioFilePath }) =>
+                this.startPreparedTrackAt(track, audioFilePath, startAtMs)
             );
             
             // Use allSettled to handle partial failures gracefully
@@ -866,138 +870,177 @@ class AudioMixer {
             }
             
             try {
-                // Clean up any existing audic instance
-                if (track.audic) {
-                    try {
-                        track.audic.destroy();
-                    } catch (error) {
-                        console.error(`⚠️ Error cleaning up existing audic for ${track.name}:`, error);
-                    }
-                    track.audic = null;
-                }
-                
-                // Clean up any existing temp file
-                if (track.tempFilePath && fs.existsSync(track.tempFilePath)) {
-                    try {
-                        fs.unlinkSync(track.tempFilePath);
-                    } catch (error) {
-                        console.error(`⚠️ Error cleaning up existing temp file for ${track.name}:`, error);
-                    }
-                    track.tempFilePath = null;
-                }
-                
-                // Check file format
-                const fileExt = path.extname(track.filePath).toLowerCase();
-                
-                // Determine pan based on track type
-                const isClickOrGuide: boolean = track.name.toLowerCase().includes('click') || 
-                                     track.name.toLowerCase().includes('guide') ||
-                                     track.name.toLowerCase().includes('metronome');
-                const pan: number = isClickOrGuide ? -1 : 1; // -1 = full left, 1 = full right
-                
-                // Update track's pan value for UI consistency
-                track.pan = pan;
-                
-                // Convert audio to WAV via FFmpeg if needed
-                let audioFilePath = track.filePath;
-                let ffmpegProcess: any = null;
-                
-                // For non-WAV formats, convert via FFmpeg
-                if (fileExt !== '.wav') {
-                    console.log(`🎵 Converting ${track.name} to WAV via FFmpeg (format: ${fileExt})`);
-                    
-                    const tempDir = os.tmpdir();
-                    const tempFileName = `harmony_${track.id}_${Date.now()}.wav`;
-                    audioFilePath = path.join(tempDir, tempFileName);
-                    track.tempFilePath = audioFilePath;
-                    
-                    const { spawn } = require('child_process');
-                    ffmpegProcess = spawn('ffmpeg', [
-                        '-i', track.filePath,
-                        '-f', 'wav',
-                        '-y',              // Overwrite output file
-                        audioFilePath      // Write to temp file
-                    ], {
-                        stdio: ['ignore', 'ignore', 'pipe']
-                    });
-                    
-                    // Wait for FFmpeg to finish converting
-                    await new Promise<void>((resolve, reject) => {
-                        ffmpegProcess.on('close', (code: number) => {
-                            if (code === 0) {
-                                console.log(`✅ FFmpeg conversion complete for ${track.name}`);
-                                resolve();
-                            } else {
-                                reject(new Error(`FFmpeg exited with code ${code}`));
-                            }
-                        });
-                        
-                        ffmpegProcess.on('error', (error: Error) => {
-                            console.error(`❌ FFmpeg error during conversion for ${track.name}:`, error);
-                            reject(error);
-                        });
-                    });
-                }
-                
-                try {
-                    // Now load the WAV file (either original or converted)
-                    track.audic = new Audic(audioFilePath) as any;
-                    (track.audic as any).volume = track.isMuted ? 0 : track.volume;
-                    (track.audic as any).play();
-                    track.isPlaying = true;
-                    
-                    console.log(`▶️ Playing ${track.name}`);
-                    
-                    // Handle track end - check if audic has event methods
-                    if (typeof (track.audic as any).on === 'function') {
-                        (track.audic as any).on('ended', () => {
-                            console.log(`✅ Track ended: ${track.name}`);
-                            track.isPlaying = false;
-                            
-                            // Clean up temp file if it was created
-                            if (track.tempFilePath && fs.existsSync(track.tempFilePath)) {
-                                try {
-                                    fs.unlinkSync(track.tempFilePath);
-                                    console.log(`🗑️ Cleaned up: ${track.tempFilePath}`);
-                                } catch (e) {}
-                            }
-                        });
-                        
-                        // Handle audic errors
-                        (track.audic as any).on('error', (error: Error) => {
-                            console.error(`❌ Audic error for ${track.name}:`, error);
-                            track.isPlaying = false;
-                        });
-                    } else {
-                        console.log(`⚠️ Audic instance for ${track.name} doesn't support events, using timeout fallback`);
-                        // Fallback: use a timeout based on track duration
-                        setTimeout(() => {
-                            console.log(`✅ Track ended (timeout): ${track.name}`);
-                            track.isPlaying = false;
-                            
-                            // Clean up temp file if it was created
-                            if (track.tempFilePath && fs.existsSync(track.tempFilePath)) {
-                                try {
-                                    fs.unlinkSync(track.tempFilePath);
-                                    console.log(`🗑️ Cleaned up: ${track.tempFilePath}`);
-                                } catch (e) {}
-                            }
-                        }, (track.duration || 245) * 1000); // Default to 245 seconds if no duration
-                    }
-                    
-                    resolve();
-                } catch (audicError) {
-                    console.error(`❌ Failed to load audio for ${track.name}:`, audicError);
-                    if (track.tempFilePath && fs.existsSync(track.tempFilePath)) {
-                        try { fs.unlinkSync(track.tempFilePath); } catch (e) {}
-                    }
-                    reject(audicError);
-                }
+                const audioFilePath = await this.prepareTrackForPlayback(track);
+                await this.startPreparedTrack(track, audioFilePath);
+                resolve();
             } catch (error) {
                 console.error(`❌ Error in startTrackWithClock for ${track.name}:`, error);
                 reject(error);
             }
         });
+    }
+
+    private async prepareTrackForPlayback(track: AudioTrack): Promise<string> {
+        // Clean up any existing audic instance
+        if (track.audic) {
+            try {
+                track.audic.destroy();
+            } catch (error) {
+                console.error(`⚠️ Error cleaning up existing audic for ${track.name}:`, error);
+            }
+            track.audic = null;
+        }
+
+        if (track.audioProcess) {
+            try {
+                track.audioProcess.kill('SIGTERM');
+            } catch (error) {
+                console.error(`⚠️ Error cleaning up existing audio process for ${track.name}:`, error);
+            }
+            track.audioProcess = null;
+        }
+
+        // Clean up any existing temp file
+        if (track.tempFilePath && fs.existsSync(track.tempFilePath)) {
+            try {
+                fs.unlinkSync(track.tempFilePath);
+            } catch (error) {
+                console.error(`⚠️ Error cleaning up existing temp file for ${track.name}:`, error);
+            }
+            track.tempFilePath = null;
+        }
+
+        const fileExt = path.extname(track.filePath).toLowerCase();
+
+        // Determine pan based on track type
+        const isClickOrGuide: boolean = track.name.toLowerCase().includes('click') || 
+                             track.name.toLowerCase().includes('guide') ||
+                             track.name.toLowerCase().includes('metronome');
+        const pan: number = isClickOrGuide ? -1 : 1; // -1 = full left, 1 = full right
+        track.pan = pan;
+
+        let audioFilePath = track.filePath;
+
+        if (fileExt !== '.wav') {
+            console.log(`🎵 Converting ${track.name} to WAV via FFmpeg (format: ${fileExt})`);
+
+            const tempDir = os.tmpdir();
+            const tempFileName = `harmony_${track.id}_${Date.now()}.wav`;
+            audioFilePath = path.join(tempDir, tempFileName);
+            track.tempFilePath = audioFilePath;
+
+            const { spawn } = require('child_process');
+            const ffmpegProcess = spawn('ffmpeg', [
+                '-i', track.filePath,
+                '-f', 'wav',
+                '-y',
+                audioFilePath
+            ], {
+                stdio: ['ignore', 'ignore', 'pipe']
+            });
+
+            await new Promise<void>((resolve, reject) => {
+                ffmpegProcess.on('close', (code: number) => {
+                    if (code === 0) {
+                        console.log(`✅ FFmpeg conversion complete for ${track.name}`);
+                        resolve();
+                    } else {
+                        reject(new Error(`FFmpeg exited with code ${code}`));
+                    }
+                });
+
+                ffmpegProcess.on('error', (error: Error) => {
+                    console.error(`❌ FFmpeg error during conversion for ${track.name}:`, error);
+                    reject(error);
+                });
+            });
+        }
+
+        return audioFilePath;
+    }
+
+    private async startPreparedTrack(track: AudioTrack, audioFilePath: string): Promise<void> {
+        // Prefer ffplay for reliable local audio output
+        if (this.commandExists('ffplay')) {
+            const ffplayPath = this.getCommandPath('ffplay');
+            const volumePercent = Math.round((track.isMuted ? 0 : track.volume) * 100);
+
+            const clampedPan = Math.max(-1, Math.min(1, track.pan));
+            const angle = ((clampedPan + 1) * Math.PI) / 4; // 0 to pi/2
+            const leftGain = Math.cos(angle);
+            const rightGain = Math.sin(angle);
+            const panFilter = `pan=stereo|c0=${leftGain.toFixed(4)}*c0|c1=${rightGain.toFixed(4)}*c1`;
+
+            const args = [
+                '-nodisp',
+                '-autoexit',
+                '-loglevel', 'error',
+                '-volume', String(volumePercent),
+                '-seek_interval', '0'  // Start immediately at position 0 without waiting for audio detection
+            ];
+
+            if (clampedPan !== 0) {
+                args.push('-af', panFilter);
+            }
+
+            args.push(audioFilePath);
+
+            const { spawn } = require('child_process');
+            track.audioProcess = spawn(ffplayPath, args, {
+                stdio: ['ignore', 'ignore', 'ignore']
+            });
+
+            track.isPlaying = true;
+            console.log(`▶️ Playing ${track.name} (ffplay)`);
+
+            const audioProcess = track.audioProcess;
+            if (audioProcess) {
+                audioProcess.on('close', () => {
+                    track.isPlaying = false;
+                    if (track.tempFilePath && fs.existsSync(track.tempFilePath)) {
+                        try {
+                            fs.unlinkSync(track.tempFilePath);
+                            console.log(`🗑️ Cleaned up: ${track.tempFilePath}`);
+                        } catch (e) {}
+                    }
+                });
+            }
+
+            return;
+        }
+
+        // Fallback: Audic playback
+        track.audic = new Audic(audioFilePath) as any;
+        (track.audic as any).volume = track.isMuted ? 0 : track.volume;
+        (track.audic as any).play();
+        track.isPlaying = true;
+
+        console.log(`▶️ Playing ${track.name} (audic)`);
+
+        const durationSecondsRaw = Number(track.duration);
+        const durationSeconds = Number.isFinite(durationSecondsRaw) && durationSecondsRaw > 0
+            ? durationSecondsRaw
+            : 245;
+        console.log(`⚠️ Using timeout-based track ending for ${track.name} (duration: ${durationSeconds.toFixed(2)}s)`);
+        setTimeout(() => {
+            console.log(`✅ Track ended (timeout): ${track.name}`);
+            track.isPlaying = false;
+
+            if (track.tempFilePath && fs.existsSync(track.tempFilePath)) {
+                try {
+                    fs.unlinkSync(track.tempFilePath);
+                    console.log(`🗑️ Cleaned up: ${track.tempFilePath}`);
+                } catch (e) {}
+            }
+        }, durationSeconds * 1000);
+    }
+
+    private async startPreparedTrackAt(track: AudioTrack, audioFilePath: string, startAtMs: number): Promise<void> {
+        const delayMs = Math.max(0, startAtMs - Date.now());
+        if (delayMs > 0) {
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+        await this.startPreparedTrack(track, audioFilePath);
     }
 
     commandExists(cmd: string): boolean {

@@ -22,6 +22,7 @@ import { BaseViewModel } from '../base/BaseViewModel';
 import type { IAudioViewModel } from '../types/viewmodels';
 import type { IAudioService } from '../types/services';
 import type { AudioTrack, MemoryUsage, TransposeProgress, MixerConfig } from '../types';
+import { initializeAudioService } from '../utils/audio/audio-nodejs';
 
 export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
   protected readonly viewModelName = 'AudioViewModel';
@@ -269,7 +270,28 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
   // Actions: Playback controls
   public async play(): Promise<void> {
     try {
+      // Trigger playback on the service
       await this.audioService.play();
+
+      // Wait for backend readiness signal before updating UI state
+      const audioClient = await initializeAudioService().catch(() => null);
+      if (audioClient) {
+        await new Promise<void>((resolve) => {
+          const timeout = setTimeout(() => {
+            audioClient.off('playbackReady', onReady);
+            resolve();
+          }, 5000);
+
+          const onReady = () => {
+            clearTimeout(timeout);
+            audioClient.off('playbackReady', onReady);
+            resolve();
+          };
+
+          audioClient.on('playbackReady', onReady);
+        });
+      }
+
       runInAction(() => {
         this.isPlaying = true;
         this.isPaused = false;

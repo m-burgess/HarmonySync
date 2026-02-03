@@ -240,6 +240,9 @@ const App = observer(() => {
     // If we have tracks with file paths, load them into the audio service in one batch
     if (tracks && tracks.length > 0) {
       try {
+        // Clear any previously loaded tracks to avoid mixing songs
+        await (window as any).electronAPI?.invoke?.('audio:clearTracks');
+
         // Extract file paths from track objects
         const trackPaths = (tracks as any[])
           .filter(t => t.file_path)

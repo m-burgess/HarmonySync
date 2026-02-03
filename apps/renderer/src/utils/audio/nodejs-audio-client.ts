@@ -102,6 +102,10 @@ class NodeJSAudioClient {
             this.emit('playbackComplete', data);
         });
 
+        this.socket.on('playback_ready', (data: unknown) => {
+            this.emit('playbackReady', data);
+        });
+
         this.socket.on('error', (error: unknown) => {
             this.emit('error', error);
         });
