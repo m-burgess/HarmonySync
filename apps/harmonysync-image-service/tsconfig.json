@@ -11,6 +11,10 @@
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "types": ["node", "jest"],
+    "allowImportingTsExtensions": true,
     
     /* Type Checking */
     "strict": true,
@@ -41,6 +45,7 @@
   "include": [
     "server.ts",
     "smoke-test.ts"
+    ,"tests/**/*.ts"
   ],
   "exclude": [
     "node_modules",
