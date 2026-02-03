@@ -1160,6 +1160,7 @@ class IPCHandlerManager {
 
     this.ipcMain.handle('audio:loadMultipleTracks', async (_event, filePaths: string[]) => {
       try {
+        await fetch('http://127.0.0.1:3001/api/tracks/clear', { method: 'POST' });
         console.log('[audio:loadMultipleTracks] Loading', filePaths.length, 'tracks');
         const results = [];
         
@@ -1231,7 +1232,7 @@ class IPCHandlerManager {
 
     this.ipcMain.handle('audio:stop', async (_event) => {
       try {
-        await fetch('http://127.0.0.1:3001/api/playback/stop', { method: 'POST' });
+        await fetch('http://127.0.0.1:3001/api/mixer/stop-all', { method: 'POST' });
       } catch (error) {
         console.error('[audio:stop] Error:', error);
       }
@@ -1239,7 +1240,8 @@ class IPCHandlerManager {
 
     this.ipcMain.handle('audio:pause', async (_event) => {
       try {
-        await fetch('http://127.0.0.1:3001/api/playback/pause', { method: 'POST' });
+        // Pause is not supported by the audio service; treat as stop-all for now
+        await fetch('http://127.0.0.1:3001/api/mixer/stop-all', { method: 'POST' });
       } catch (error) {
         console.error('[audio:pause] Error:', error);
       }
@@ -1346,7 +1348,7 @@ class IPCHandlerManager {
 
     this.ipcMain.handle('audio:cleanup', async (_event) => {
       try {
-        await fetch('http://127.0.0.1:3001/api/cleanup', { method: 'POST' });
+        await fetch('http://127.0.0.1:3001/api/tracks/clear', { method: 'POST' });
       } catch (error) {
         console.error('[audio:cleanup] Error:', error);
       }
@@ -1354,7 +1356,7 @@ class IPCHandlerManager {
 
     this.ipcMain.handle('audio:playAllTracks', async (_event) => {
       try {
-        await fetch('http://127.0.0.1:3001/api/playback/play-all', { method: 'POST' });
+        await fetch('http://127.0.0.1:3001/api/mixer/play-all', { method: 'POST' });
       } catch (error) {
         console.error('[audio:playAllTracks] Error:', error);
       }
@@ -1362,7 +1364,7 @@ class IPCHandlerManager {
 
     this.ipcMain.handle('audio:stopAllAudio', async (_event) => {
       try {
-        await fetch('http://127.0.0.1:3001/api/playback/stop', { method: 'POST' });
+        await fetch('http://127.0.0.1:3001/api/mixer/stop-all', { method: 'POST' });
       } catch (error) {
         console.error('[audio:stopAllAudio] Error:', error);
       }
@@ -1370,7 +1372,8 @@ class IPCHandlerManager {
 
     this.ipcMain.handle('audio:goToBeginning', async (_event) => {
       try {
-        await fetch('http://127.0.0.1:3001/api/playback/reset', { method: 'POST' });
+        // No reset endpoint exists; stop all as a safe fallback
+        await fetch('http://127.0.0.1:3001/api/mixer/stop-all', { method: 'POST' });
       } catch (error) {
         console.error('[audio:goToBeginning] Error:', error);
       }
