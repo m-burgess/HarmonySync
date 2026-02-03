@@ -161,6 +161,7 @@ class ElectronApplication {
   private audienceWindow: BrowserWindow | null = null;
   private confidenceWindow: BrowserWindow | null = null;
   private lowerThirdsWindow: BrowserWindow | null = null;
+  private displayServiceInstance: any = null;
   private serviceManager: ServiceProcessManager;  private serviceOrderManagerReady: boolean = false;
   private pendingServiceOrderItems: any[] | null = null;
   constructor() {
@@ -174,8 +175,8 @@ class ElectronApplication {
     try {
       console.log('[Application] Initializing...');
 
-      // Register IPC handlers FIRST (before creating windows)
-      this.setupIpcHandlers();
+      // NOTE: register IPC handlers after creating windows so display/window
+      // getters can be provided to services that need them.
 
       // Listen for service order manager ready signal
       ipcMain.on('service-order-manager-ready', () => {
@@ -197,6 +198,49 @@ class ElectronApplication {
       this.createAudienceWindow();
       this.createConfidenceWindow();
       this.createLowerThirdsWindow();
+
+      // Instantiate display service with window getters if possible
+      try {
+        const DisplayServiceModule = require('./electron/services/display-service');
+        const DisplayServiceClass = DisplayServiceModule?.default || DisplayServiceModule;
+        if (typeof DisplayServiceClass === 'function') {
+          this.displayServiceInstance = new DisplayServiceClass(
+            () => this.audienceWindow,
+            () => this.confidenceWindow,
+            () => this.lowerThirdsWindow
+          );
+        } else {
+          // Fallback: use module as-is and try to update getters
+          this.displayServiceInstance = DisplayServiceModule;
+          if (this.displayServiceInstance && this.displayServiceInstance.updateWindowGetters) {
+            this.displayServiceInstance.updateWindowGetters(
+              () => this.audienceWindow,
+              () => this.confidenceWindow,
+              () => this.lowerThirdsWindow
+            );
+          }
+        }
+      } catch (err) {
+        console.warn('[Application] Could not instantiate display service:', err);
+        this.displayServiceInstance = displayService; // fallback to original require
+      }
+
+      // Register window getters with windowService if available
+      try {
+        const windowSvc = windowService;
+        if (windowSvc && typeof windowSvc.registerWindowGetters === 'function') {
+          windowSvc.registerWindowGetters(
+            () => this.audienceWindow,
+            () => this.confidenceWindow,
+            () => this.lowerThirdsWindow
+          );
+        }
+      } catch (err) {
+        console.warn('[Application] Could not register window getters:', err);
+      }
+
+      // Register IPC handlers now that windows and display service are available
+      this.setupIpcHandlers();
 
       // Start external services (audio, video, image)
       await this.startExternalServices();
@@ -516,7 +560,7 @@ class ElectronApplication {
       youtubeService,
       imageService,
       textService,
-      displayService,
+      displayService: this.displayServiceInstance || displayService,
       windowService,
       macroService,
       schedulerService,
