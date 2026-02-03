@@ -1,5 +1,41 @@
 /* Unified styles for all settings modals */
 
+.settings-modal .modal-body {
+  padding: 0;
+}
+
+.settings-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--vscode-widget-border);
+  background: var(--vscode-editor-background);
+}
+
+.settings-tab {
+  padding: 12px 24px;
+  background: none;
+  border: none;
+  color: var(--vscode-foreground);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.settings-tab:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.settings-tab.active {
+  color: var(--vscode-textLink-activeForeground);
+  border-bottom-color: var(--vscode-textLink-activeForeground);
+}
+
+.settings-content {
+  max-height: calc(80vh - 150px);
+  overflow-y: auto;
+}
+
 .settings-sections {
   display: flex;
   flex-direction: column;

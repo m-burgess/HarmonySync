@@ -35,6 +35,7 @@ import LyricsColumn from './components/lyrics/LyricsColumn.tsx';
 import MixerSidebar from './components/audio/MixerSidebar.tsx';
 import DisplaySettings from './components/screens/DisplaySettings.tsx';
 import AudioSettings from './components/screens/AudioSettings.tsx';
+import ServiceOrderImportDialog from './components/modals/ServiceOrderImportDialog.tsx';
 
 import { getViewModel } from './viewmodels';
 import { getService } from './services';
@@ -50,6 +51,7 @@ const App = observer(() => {
   // UI-only state (not business logic)
   const [isDisplaySettingsOpen, setIsDisplaySettingsOpen] = useState(false);
   const [isAudioSettingsOpen, setIsAudioSettingsOpen] = useState(false);
+  const [serviceOrderImportZip, setServiceOrderImportZip] = useState<string | null>(null);
   const containerRef = useRef(null);
 
   // Resizable layout state
@@ -344,6 +346,17 @@ const App = observer(() => {
       <AudioSettings
         isOpen={isAudioSettingsOpen}
         onClose={() => setIsAudioSettingsOpen(false)}
+      />
+
+      <ServiceOrderImportDialog
+        zipPath={serviceOrderImportZip}
+        isOpen={!!serviceOrderImportZip}
+        onImport={(metadata) => {
+          console.log('Service order imported:', metadata);
+          setServiceOrderImportZip(null);
+          // TODO: Load imported service order into UI
+        }}
+        onCancel={() => setServiceOrderImportZip(null)}
       />
     </div>
   );
