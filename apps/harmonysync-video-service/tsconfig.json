@@ -36,11 +36,13 @@
     
     /* Interop Constraints */
     "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": ["node", "jest"]
   },
   "include": [
     "server.ts",
-    "smoke-test.ts"
+    "smoke-test.ts",
+    "tests/**/*.ts"
   ],
   "exclude": [
     "node_modules",
