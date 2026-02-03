@@ -161,8 +161,8 @@ class ElectronApplication {
   private audienceWindow: BrowserWindow | null = null;
   private confidenceWindow: BrowserWindow | null = null;
   private lowerThirdsWindow: BrowserWindow | null = null;
-  private serviceManager: ServiceProcessManager;
-
+  private serviceManager: ServiceProcessManager;  private serviceOrderManagerReady: boolean = false;
+  private pendingServiceOrderItems: any[] | null = null;
   constructor() {
     this.serviceManager = new ServiceProcessManager();
   }
@@ -177,6 +177,21 @@ class ElectronApplication {
       // Register IPC handlers FIRST (before creating windows)
       this.setupIpcHandlers();
 
+      // Listen for service order manager ready signal
+      ipcMain.on('service-order-manager-ready', () => {
+        console.log('[Application] Service order manager is ready');
+        this.serviceOrderManagerReady = true;
+        
+        // If we have pending items, send them now
+        if (this.pendingServiceOrderItems && this.mainWindow && !this.mainWindow.isDestroyed()) {
+          console.log('[Application] Sending pending service order items:', this.pendingServiceOrderItems.length);
+          this.mainWindow.webContents.send('service-order-loaded', {
+            serviceOrder: this.pendingServiceOrderItems
+          });
+          this.pendingServiceOrderItems = null;
+        }
+      });
+
       // Create windows
       this.createMainWindow();
       this.createAudienceWindow();
@@ -185,6 +200,9 @@ class ElectronApplication {
 
       // Start external services (audio, video, image)
       await this.startExternalServices();
+
+      // Auto-scan for service orders if enabled
+      this.performAutoScanAndImport();
 
       console.log('[Application] Initialized successfully');
     } catch (error) {
@@ -422,6 +440,63 @@ class ElectronApplication {
     );
 
     console.log('[Application] External services started');
+  }
+
+  /**
+   * Auto-scan for service orders on startup if enabled
+   */
+  private async performAutoScanAndImport(): Promise<void> {
+    try {
+      // Wait a bit for services to fully stabilize
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      const settings = await appSettingsService.getServiceOrderSettings();
+      
+      if (!settings?.autoImportOnStartup || !settings?.watchFolder) {
+        console.log('[Application] Auto-load disabled or no watch folder configured');
+        return;
+      }
+
+      console.log('[Application] Auto-scanning watch folder:', settings.watchFolder);
+
+      // Scan for service order folders (user manually unzips)
+      const fs = require('fs-extra');
+      const entries = await fs.readdir(settings.watchFolder, { withFileTypes: true });
+      const serviceFolder = entries.find((entry: any) => entry.isDirectory());
+      
+      if (!serviceFolder) {
+        console.log('[Application] No service order folders found');
+        return;
+      }
+
+      const folderPath = require('path').join(settings.watchFolder, serviceFolder.name);
+      console.log(`[Application] Found service order folder: ${serviceFolder.name}`);
+      
+      try {
+        // Parse the service order items directly from the folder
+        const items = await serviceOrderImporter.parseItems(folderPath);
+        
+        if (items.length > 0) {
+          const itemsToSend = items.map((item: any) => ({
+            id: item.id,
+            name: item.name,
+            path: item.path,
+            type: item.type,
+            config: item.config
+          }));
+
+          // Store pending items - they will be sent when the component signals it's ready
+          console.log('[Application] Storing', items.length, 'items, waiting for component to be ready');
+          this.pendingServiceOrderItems = itemsToSend;
+        } else {
+          console.log('[Application] No service items found in folder');
+        }
+      } catch (error) {
+        console.error(`[Application] ❌ Failed to load ${folderPath}:`, error);
+      }
+    } catch (error) {
+      console.error('[Application] Error during auto-scan:', error);
+    }
   }
 
   /**

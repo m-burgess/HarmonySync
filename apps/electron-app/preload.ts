@@ -105,11 +105,13 @@ interface ElectronAPI {
   onTracksUpdated: (callback: (data: any) => void) => () => void;
   onVideoEnded: (callback: () => void) => () => void;
   onSlidesImportProgress: (callback: (data: any) => void) => () => void;
+  onServiceOrderLoaded: (callback: (event: any, data: any) => void) => () => void;
 
   // Service Order Import
   serviceOrderScanForZips: (folderPath: string) => Promise<any>;
   serviceOrderImportZip: (zipPath: string) => Promise<any>;
   serviceOrderListImported: () => Promise<any>;
+  serviceOrderLoad: (serviceId: string) => Promise<any>;
   serviceOrderGetService: (serviceId: string) => Promise<any>;
   serviceOrderDeleteService: (serviceId: string) => Promise<any>;
   serviceOrderCleanup: (maxAgeDays?: number) => Promise<any>;
@@ -127,6 +129,9 @@ interface ElectronAPI {
   sendToAudience: (channel: string, data: any) => Promise<void>;
   sendToConfidence: (channel: string, data: any) => Promise<void>;
   sendToLowerThirds: (channel: string, data: any) => Promise<void>;
+
+  // Send event to main process
+  send: (channel: string, ...args: any[]) => void;
 
   // Receive from main process
   receive: (channel: string, callback: (...args: any[]) => void) => () => void;
@@ -263,6 +268,8 @@ class ElectronAPIBuilder {
         ipcRenderer.invoke('service-order:importZip', zipPath),
       serviceOrderListImported: () =>
         ipcRenderer.invoke('service-order:listImported'),
+      serviceOrderLoad: (serviceId: string) =>
+        ipcRenderer.invoke('service-order:load', serviceId),
       serviceOrderGetService: (serviceId: string) =>
         ipcRenderer.invoke('service-order:getService', serviceId),
       serviceOrderDeleteService: (serviceId: string) =>
@@ -320,6 +327,16 @@ class ElectronAPIBuilder {
       onSlidesImportProgress: (callback: (data: any) => void) => {
         ipcRenderer.on('slides-import-progress', (_event: IpcRendererEvent, data: any) => callback(data));
         return () => ipcRenderer.removeAllListeners('slides-import-progress');
+      },
+
+      onServiceOrderLoaded: (callback: (event: any, data: any) => void) => {
+        ipcRenderer.on('service-order-loaded', (_event: IpcRendererEvent, data: any) => callback(_event, data));
+        return () => ipcRenderer.removeAllListeners('service-order-loaded');
+      },
+
+      // Send events to main process
+      send: (channel: string, ...args: any[]) => {
+        ipcRenderer.send(channel, ...args);
       },
 
       // Send to specific window

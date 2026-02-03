@@ -268,7 +268,9 @@ export class ServiceOrderViewModel extends BaseViewModel implements Partial<ISer
       await this.displayService.clearAll();
 
       // Load slides and tracks from the item
+      this.log(`📂 Calling slideService.loadFromFolder with path: ${item.path}`);
       const result = await this.slideService.loadFromFolder(item.path);
+      this.log(`📂 slideService.loadFromFolder returned:`, result);
 
       runInAction(() => {
         this.isLoading = false;
@@ -276,6 +278,19 @@ export class ServiceOrderViewModel extends BaseViewModel implements Partial<ISer
         this.loadingMessage = '';
         this.loadingProgress = 100;
       });
+
+      // Set lyrics if this is a song and has lyrics
+      if (item.type === 'song' && item.lyrics) {
+        runInAction(() => {
+          this.selectedSongForLyrics = item.lyrics;
+        });
+        this.log('📜 Loaded lyrics for song:', item.name);
+      } else {
+        // Clear lyrics for non-song items
+        runInAction(() => {
+          this.selectedSongForLyrics = null;
+        });
+      }
 
       return result;
     } catch (error) {

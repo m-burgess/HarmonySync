@@ -9,6 +9,7 @@
  */
 import React, { useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
+import { runInAction } from 'mobx';
 import { getViewModel } from '../../viewmodels';
 import { ArrowDownTrayIcon, CheckCircleIcon, PencilIcon } from '@heroicons/react/24/outline';
 import LyricsFetcher from './LyricsFetcher';
@@ -58,7 +59,7 @@ interface ServiceOrderViewModel {
 
 interface ServiceOrderManagerProps {
   setAllSlides: (slides: unknown[]) => void;
-  setAllTracks: (tracks: unknown[]) => void;
+  setAllTracks: (tracks: unknown[], folderPath?: string) => void;
   setIsLoadingTracks: (isLoading: boolean) => void;
   setCurrentLyrics: (lyrics: string) => void;
 }
@@ -69,6 +70,12 @@ const ServiceOrderManager: React.FC<ServiceOrderManagerProps> = observer(({
   setCurrentLyrics 
 }) => {
   const viewModel = getViewModel('serviceOrderViewModel') as ServiceOrderViewModel;
+
+  // Notify backend that component is ready
+  useEffect(() => {
+    console.log('[ServiceOrderManager] Component mounted, sending ready signal...');
+    (window as any).electronAPI?.send?.('service-order-manager-ready');
+  }, []);
 
   // Setup playback completion listener for autoplay
   useEffect(() => {
@@ -94,12 +101,34 @@ const ServiceOrderManager: React.FC<ServiceOrderManagerProps> = observer(({
     };
   }, [viewModel]);
 
+  // Listen for service order loaded events (from imported services)
+  useEffect(() => {
+    console.log('[ServiceOrderManager] Setting up service order loaded listener...');
+    
+    const handleServiceOrderLoaded = (event: any, data: { serviceOrder: ServiceOrderItem[] }) => {
+      console.log('[ServiceOrderManager] Service order loaded event received!', data.serviceOrder);
+      // Use runInAction to properly update MobX observable
+      runInAction(() => {
+        viewModel.serviceOrder.replace(data.serviceOrder);
+      });
+      console.log('[ServiceOrderManager] Service order updated, count:', viewModel.serviceOrder.length);
+    };
+
+    const cleanup = (window as any).electronAPI?.onServiceOrderLoaded?.(handleServiceOrderLoaded);
+    console.log('[ServiceOrderManager] Listener registered:', !!cleanup);
+    
+    return () => {
+      console.log('[ServiceOrderManager] Cleaning up listener');
+      cleanup?.();
+    };
+  }, [viewModel]);
+
   // Handle service order item click with index
   const handleServiceOrderItemClickWithIndex = async (item: ServiceOrderItem, index: number) => {
     const result = await viewModel.loadItem(item, index);
     if (result && setAllSlides && setAllTracks) {
       setAllSlides(result.slides || []);
-      setAllTracks(result.tracks || []);
+      setAllTracks(result.tracks || [], item.path);
       if (setCurrentLyrics && item.lyrics) {
         setCurrentLyrics(item.lyrics);
       }
@@ -192,20 +221,21 @@ const ServiceOrderManager: React.FC<ServiceOrderManagerProps> = observer(({
         {viewModel.serviceOrder.map((item, index) => {
           const isPreloaded = viewModel.isSongPreloaded(item);
           const isCurrentSong = viewModel.currentSongIndex === index;
+          const isLoading = viewModel.loadingProgress > 0 && viewModel.loadingProgress < 100 && viewModel.loadingMessage.includes(item.name);
           
           return (
             <li 
               key={item.id || `fallback-${index}`} 
-              className={`service-order-item ${isCurrentSong ? 'current-song' : ''}`}
+              className={`service-order-item ${isCurrentSong ? 'current-song' : ''} ${isLoading ? 'loading' : ''}`}
               onClick={() => handleServiceOrderItemClickWithIndex(item, index)}
               style={{ 
-                backgroundColor: isCurrentSong ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
-                borderLeft: isCurrentSong ? '3px solid #3b82f6' : '3px solid transparent'
+                backgroundColor: isCurrentSong ? 'rgba(59, 130, 246, 0.1)' : isLoading ? 'rgba(239, 68, 68, 0.15)' : 'transparent',
+                borderLeft: isCurrentSong ? '3px solid #3b82f6' : isLoading ? '3px solid #ef4444' : '3px solid transparent'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ flex: 1 }} onClick={() => handleServiceOrderItemClickWithIndex(item, index)}>
-                  {isCurrentSong && '▶ '}{item.name}
+                  {isCurrentSong && '▶ '}{isLoading && '⟳ '}{item.name}
                 </span>
                 {item.type === 'song' && (
                   <div style={{ display: 'flex', gap: '4px' }}>
@@ -213,8 +243,7 @@ const ServiceOrderManager: React.FC<ServiceOrderManagerProps> = observer(({
                     {!item.lyrics && (
                       <button
                         onClick={(e) => { 
-                          e.stopPropagation(); 
-                          viewModel.openLyricsFetcher(item);
+                          e.stopPropagation();                          viewModel.openLyricsFetcher(item);
                         }}
                         title="Fetch lyrics from Genius"
                         style={{ 
@@ -258,7 +287,8 @@ const ServiceOrderManager: React.FC<ServiceOrderManagerProps> = observer(({
                       </button>
                     )}
                     
-                    {/* Preload Button */}
+                    {/* Preload Button - Only for songs */}
+                    {item.type === 'song' && (
                     <button
                       onClick={(e) => { 
                         e.stopPropagation(); 
@@ -290,6 +320,7 @@ const ServiceOrderManager: React.FC<ServiceOrderManagerProps> = observer(({
                         </>
                       )}
                     </button>
+                    )}
                   </div>
                 )}
               </div>

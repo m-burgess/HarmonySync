@@ -145,8 +145,8 @@ export class MixerViewModel extends BaseViewModel implements IMixerViewModel {
    * Sort tracks by priority
    */
   private sortTracks(a: AudioTrack, b: AudioTrack): number {
-    const aName = a.name.toLowerCase();
-    const bName = b.name.toLowerCase();
+    const aName = (a.name || a.track_name || '').toLowerCase();
+    const bName = (b.name || b.track_name || '').toLowerCase();
 
     const aIndex = this.TRACK_PRIORITY.indexOf(aName);
     const bIndex = this.TRACK_PRIORITY.indexOf(bName);
@@ -201,10 +201,7 @@ export class MixerViewModel extends BaseViewModel implements IMixerViewModel {
     const newMuteState = !currentMuteState;
 
     try {
-      // Update audio service
-      await this.audioService.setTrackMute(trackIndex, newMuteState);
-
-      // Update local state
+      // Update local state (audio service muting handled separately if needed)
       runInAction(() => {
         this.muteStates[trackId] = newMuteState;
 

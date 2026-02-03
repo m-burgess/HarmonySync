@@ -15,12 +15,11 @@
  */
 import { useState, useEffect, useRef } from 'react';
 import { observer } from 'mobx-react-lite';
-import { core, event, preserviceWindow } from './electron-adapter';
+import { core, event } from './electron-adapter';
 import { 
   PresentationChartBarIcon, 
   CogIcon,
-  PlayIcon,
-  CalendarIcon,
+  AdjustmentsHorizontalIcon,
   MusicalNoteIcon
 } from '@heroicons/react/24/outline';
 
@@ -35,6 +34,8 @@ import LyricsColumn from './components/lyrics/LyricsColumn.tsx';
 import MixerSidebar from './components/audio/MixerSidebar.tsx';
 import DisplaySettings from './components/screens/DisplaySettings.tsx';
 import AudioSettings from './components/screens/AudioSettings.tsx';
+import ServiceOrderSettings from './components/screens/ServiceOrderSettings.tsx';
+import Modal from './components/ui/Modal.tsx';
 import ServiceOrderImportDialog from './components/modals/ServiceOrderImportDialog.tsx';
 
 import { getViewModel } from './viewmodels';
@@ -50,6 +51,7 @@ const App = observer(() => {
 
   // UI-only state (not business logic)
   const [isDisplaySettingsOpen, setIsDisplaySettingsOpen] = useState(false);
+  const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
   const [isAudioSettingsOpen, setIsAudioSettingsOpen] = useState(false);
   const [serviceOrderImportZip, setServiceOrderImportZip] = useState<string | null>(null);
   const containerRef = useRef(null);
@@ -231,8 +233,28 @@ const App = observer(() => {
     slideViewModel.setSlides(slides);
   };
 
-  const handleSetAllTracks = (tracks: unknown[]) => {
+  const handleSetAllTracks = async (tracks: unknown[], folderPath?: string) => {
+    // Set tracks in both AudioViewModel and MixerViewModel
     audioViewModel.setTracks(tracks);
+    
+    // If we have tracks with file paths, load them into the audio service in one batch
+    if (tracks && tracks.length > 0) {
+      try {
+        // Extract file paths from track objects
+        const trackPaths = (tracks as any[])
+          .filter(t => t.file_path)
+          .map(t => t.file_path);
+        
+        if (trackPaths.length > 0) {
+          console.log('[App] Loading', trackPaths.length, 'tracks into audio service');
+          const result = await (window as any).electronAPI?.invoke?.('audio:loadMultipleTracks', trackPaths);
+          console.log('[App] Tracks loaded:', result);
+        }
+      } catch (error) {
+        console.warn('[App] Failed to load tracks into audio service:', error);
+        // Continue anyway - tracks are still in state
+      }
+    }
   };
 
   const handleSetIsLoadingTracks = (isLoading: boolean) => {
@@ -256,28 +278,6 @@ const App = observer(() => {
           label="Service Order" 
           active={true}
         />
-        <ActivityBarIcon 
-          icon={<CalendarIcon className="w-8 h-8" />} 
-          label="Scheduler" 
-          onClick={async () => {
-            try {
-              await core.invoke('open_scheduler_window');
-            } catch (error) {
-              console.error('Failed to open scheduler window:', error);
-            }
-          }}
-        />
-        <ActivityBarIcon 
-          icon={<PlayIcon className="w-8 h-8" />} 
-          label="Pre-Service Music" 
-          onClick={async () => {
-            try {
-              await preserviceWindow.open();
-            } catch (error) {
-              console.error('Failed to open pre-service music window:', error);
-            }
-          }}
-        />
 
         <ActivityBarIcon 
           icon={<MusicalNoteIcon className="w-8 h-8" />} 
@@ -287,8 +287,14 @@ const App = observer(() => {
 
         <ActivityBarIcon 
           icon={<CogIcon className="w-8 h-8" />} 
-          label="Settings" 
+          label="Display Settings" 
           onClick={() => setIsDisplaySettingsOpen(true)}
+        />
+
+        <ActivityBarIcon 
+          icon={<AdjustmentsHorizontalIcon className="w-8 h-8" />} 
+          label="Preferences" 
+          onClick={() => setIsPreferencesOpen(true)}
         />
       </div>
 
@@ -347,6 +353,15 @@ const App = observer(() => {
         isOpen={isAudioSettingsOpen}
         onClose={() => setIsAudioSettingsOpen(false)}
       />
+
+      <Modal
+        isOpen={isPreferencesOpen}
+        onClose={() => setIsPreferencesOpen(false)}
+        title="Preferences"
+        size="large"
+      >
+        <ServiceOrderSettings />
+      </Modal>
 
       <ServiceOrderImportDialog
         zipPath={serviceOrderImportZip}

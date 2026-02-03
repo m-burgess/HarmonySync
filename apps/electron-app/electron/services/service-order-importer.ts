@@ -14,6 +14,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import AdmZip from 'adm-zip';
+import unzipper from 'unzipper';
 import { v4 as uuidv4 } from 'uuid';
 import os from 'os';
 
@@ -138,16 +139,47 @@ export class ServiceOrderImporter {
     const serviceId = uuidv4();
     const extractPath = path.join(this.extractBaseFolder, serviceId);
 
-    console.log(`📂 Extracting zip to: ${extractPath}`);
+    console.log(`📂 Extracting zip: ${zipPath}`);
+    console.log(`📂 Destination: ${extractPath}`);
 
     try {
+      // Ensure extract directory exists
       await fs.ensureDir(extractPath);
 
-      // Use adm-zip for extraction
-      const zip = new AdmZip(zipPath);
-      zip.extractAllTo(extractPath, true);
+      // Verify zip file exists
+      const zipExists = await fs.pathExists(zipPath);
+      if (!zipExists) {
+        throw new Error(`Zip file not found: ${zipPath}`);
+      }
 
-      console.log('✅ Extraction complete');
+      // Get zip file stats
+      const zipStats = await fs.stat(zipPath);
+      const fileSizeGB = (zipStats.size / (1024 * 1024 * 1024)).toFixed(2);
+      console.log(`📦 Zip file size: ${zipStats.size} bytes (${fileSizeGB} GB)`);
+
+      // Use streaming extraction for large files (unzipper handles files > 2GB)
+      console.log('📦 Starting streaming extraction...');
+      
+      await new Promise<void>((resolve, reject) => {
+        const stream = fs.createReadStream(zipPath)
+          .pipe(unzipper.Extract({ path: extractPath }));
+        
+        stream.on('finish', () => {
+          console.log('✅ Streaming extraction complete');
+          // Give filesystem a moment to finalize writes
+          setTimeout(() => resolve(), 100);
+        });
+        
+        stream.on('error', (err: Error) => {
+          console.error('❌ Streaming extraction error:', err);
+          reject(err);
+        });
+      });
+
+      // Verify extraction
+      const extractedContents = await fs.readdir(extractPath);
+      console.log(`✅ Extraction verified. Found ${extractedContents.length} items:`, extractedContents);
+
       return extractPath;
     } catch (error) {
       console.error('❌ Extraction failed:', error);
@@ -199,22 +231,38 @@ export class ServiceOrderImporter {
       // Handle nested folder structure
       let scanPath = folderPath;
       const rootContents = await fs.readdir(folderPath);
+      
+      console.log(`📁 Root contents (${rootContents.length} items):`, rootContents);
 
-      // If single folder, assume that's the service root
+      // If single folder, dive into it recursively until we find actual item folders
       if (rootContents.length === 1) {
         const potentialRoot = path.join(folderPath, rootContents[0]);
         const stat = await fs.stat(potentialRoot);
         if (stat.isDirectory()) {
+          console.log(`📂 Diving into single folder: ${rootContents[0]}`);
           scanPath = potentialRoot;
+          // Recursively check if this also has a single folder
+          const nestedContents = await fs.readdir(scanPath);
+          if (nestedContents.length === 1) {
+            const nestedPath = path.join(scanPath, nestedContents[0]);
+            const nestedStat = await fs.stat(nestedPath);
+            if (nestedStat.isDirectory()) {
+              console.log(`📂 Diving deeper into: ${nestedContents[0]}`);
+              scanPath = nestedPath;
+            }
+          }
         }
       }
 
+      console.log(`🔍 Scanning for items in: ${scanPath}`);
+
       // Read items
       const entries = await fs.readdir(scanPath, { withFileTypes: true });
+      const folders = entries.filter(e => e.isDirectory());
+      
+      console.log(`📋 Found ${folders.length} folders to process:`, folders.map(f => f.name));
 
-      for (const entry of entries) {
-        if (!entry.isDirectory()) continue;
-
+      for (const entry of folders) {
         const fullPath = path.join(scanPath, entry.name);
         const sortOrder = this.extractSortOrder(entry.name);
         const cleanName = this.cleanItemName(entry.name);
@@ -230,12 +278,14 @@ export class ServiceOrderImporter {
           config: config
         };
 
+        console.log(`✅ Added item: ${cleanName} (type: ${itemType}, order: ${sortOrder})`);
         items.push(item);
       }
 
       // Sort by numeric order
       items.sort((a, b) => a.sortOrder - b.sortOrder);
 
+      console.log(`✅ Total items parsed: ${items.length}`);
       return items;
     } catch (error) {
       console.error('Error parsing items:', error);
@@ -245,12 +295,16 @@ export class ServiceOrderImporter {
 
   /**
    * Extract sort order from folder name
-   * Looks for pattern like "01 - Item Name" or "01-Item"
+   * Looks for patterns like:
+   * - "01 - Item Name"
+   * - "01-Item"
+   * - "01 Item Name" (just space)
    * @param name - Folder name
    * @returns Numeric sort order (999 if not found)
    */
   private extractSortOrder(name: string): number {
-    const match = name.match(/^(\d+)\s*[-–—]\s*/);
+    // Try with dash/hyphen/space separator
+    const match = name.match(/^(\d+)(?:\s*[-–—]\s*|\s+)/);
     if (match) {
       return parseInt(match[1], 10);
     }
@@ -263,7 +317,8 @@ export class ServiceOrderImporter {
    * @returns Cleaned name
    */
   private cleanItemName(name: string): string {
-    return name.replace(/^\d+\s*[-–—]\s*/, '').trim();
+    // Remove number with dash/hyphen or just space
+    return name.replace(/^\d+(?:\s*[-–—]\s*|\s+)/, '').trim();
   }
 
   /**
@@ -387,11 +442,16 @@ export class ServiceOrderImporter {
 
         const servicePath = path.join(this.extractBaseFolder, entry.name);
         try {
+          // Find the actual service folder name inside the UUID folder
+          const subfolders = await fs.readdir(servicePath, { withFileTypes: true });
+          const serviceFolder = subfolders.find(f => f.isDirectory());
+          const serviceName = serviceFolder ? serviceFolder.name : entry.name;
+
           const items = await this.parseItems(servicePath);
           if (items.length > 0) {
             services.push({
               id: entry.name,
-              name: entry.name,
+              name: serviceName, // Use the actual service folder name
               path: servicePath,
               items: items,
               extractedAt: new Date() // Approximate

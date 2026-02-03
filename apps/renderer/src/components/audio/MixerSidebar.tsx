@@ -9,6 +9,7 @@
  */
 import { useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
+import { runInAction } from 'mobx';
 import { getViewModel } from '../../viewmodels';
 import { PlayIcon, PauseIcon } from '@heroicons/react/24/solid';
 import type { Track } from '../../types/audio';
@@ -31,8 +32,10 @@ const MixerSidebar = observer(({ allTracks, isLoadingTracks }: MixerSidebarProps
 
   // Sync loading state
   useEffect(() => {
-    viewModel.isLoadingTracks = isLoadingTracks;
-  }, [isLoadingTracks]);
+    runInAction(() => {
+      viewModel.isLoadingTracks = isLoadingTracks;
+    });
+  }, [isLoadingTracks, viewModel]);
 
   return (
     <div className="mixer-sidebar h-full flex flex-col bg-gray-800 border-l border-gray-700 overflow-hidden">
@@ -75,10 +78,10 @@ const MixerSidebar = observer(({ allTracks, isLoadingTracks }: MixerSidebarProps
           </div>
         ) : (
           <div className="space-y-1">
-            {viewModel.sortedTracks.map((track: Track) => (
+            {viewModel.sortedTracks.map((track: Track, index: number) => (
               <button
                 key={track.id}
-                onClick={() => viewModel.toggleMute(track)}
+                onClick={() => viewModel.toggleMute(index)}
                 className={`mixer-track-item ${viewModel.muteStates[track.id] ? 'muted' : ''}`}
               >
                 {/* Icon */}
@@ -88,7 +91,7 @@ const MixerSidebar = observer(({ allTracks, isLoadingTracks }: MixerSidebarProps
                 
                 {/* Track Name */}
                 <span className="mixer-track-name">
-                  {track.name
+                  {((track.name || track.track_name || 'Unknown Track') as string)
                     .replace(/\.(mp3|wav|ogg|m4a|flac)$/i, '')
                     .replace(/[-_]/g, ' ')
                     .trim()

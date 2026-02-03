@@ -857,7 +857,7 @@ class AudioMixer {
     }
 
     startTrackWithClock(track: AudioTrack, isMaster: boolean): Promise<void> {
-        return new Promise<void>((resolve, reject) => {
+        return new Promise<void>(async (resolve, reject) => {
             // Prevent starting if already playing
             if (track.isPlaying) {
                 console.log(`⚠️ Track ${track.name} is already playing, skipping duplicate start`);
@@ -885,6 +885,10 @@ class AudioMixer {
                     }
                     track.tempFilePath = null;
                 }
+                
+                // Check file format
+                const fileExt = path.extname(track.filePath).toLowerCase();
+                
                 // Determine pan based on track type
                 const isClickOrGuide: boolean = track.name.toLowerCase().includes('click') || 
                                      track.name.toLowerCase().includes('guide') ||
@@ -894,121 +898,108 @@ class AudioMixer {
                 // Update track's pan value for UI consistency
                 track.pan = pan;
                 
-                // Decode WAV file
-                const buffer: Buffer = fs.readFileSync(track.filePath);
-                const result: WavDecodeResult = wav.decode(buffer) as WavDecodeResult;
+                // Convert audio to WAV via FFmpeg if needed
+                let audioFilePath = track.filePath;
+                let ffmpegProcess: any = null;
                 
-                // Apply constant power panning
-                if (result.channelData.length >= 2) { // Stereo
-                    const leftChannel: Float32Array = result.channelData[0];
-                    const rightChannel: Float32Array = result.channelData[1];
+                // For non-WAV formats, convert via FFmpeg
+                if (fileExt !== '.wav') {
+                    console.log(`🎵 Converting ${track.name} to WAV via FFmpeg (format: ${fileExt})`);
                     
-                    // Constant power panning formula
-                    const angle: number = ((pan + 1) * Math.PI) / 4; // 0 to π/2
-                    const leftGain: number = Math.cos(angle);
-                    const rightGain: number = Math.sin(angle);
+                    const tempDir = os.tmpdir();
+                    const tempFileName = `harmony_${track.id}_${Date.now()}.wav`;
+                    audioFilePath = path.join(tempDir, tempFileName);
+                    track.tempFilePath = audioFilePath;
                     
-                    for (let i = 0; i < leftChannel.length; i++) {
-                        const sample: number = leftChannel[i];
-                        leftChannel[i] = sample * leftGain;
-                        rightChannel[i] = sample * rightGain;
-                    }
+                    const { spawn } = require('child_process');
+                    ffmpegProcess = spawn('ffmpeg', [
+                        '-i', track.filePath,
+                        '-f', 'wav',
+                        '-y',              // Overwrite output file
+                        audioFilePath      // Write to temp file
+                    ], {
+                        stdio: ['ignore', 'ignore', 'pipe']
+                    });
+                    
+                    // Wait for FFmpeg to finish converting
+                    await new Promise<void>((resolve, reject) => {
+                        ffmpegProcess.on('close', (code: number) => {
+                            if (code === 0) {
+                                console.log(`✅ FFmpeg conversion complete for ${track.name}`);
+                                resolve();
+                            } else {
+                                reject(new Error(`FFmpeg exited with code ${code}`));
+                            }
+                        });
+                        
+                        ffmpegProcess.on('error', (error: Error) => {
+                            console.error(`❌ FFmpeg error during conversion for ${track.name}:`, error);
+                            reject(error);
+                        });
+                    });
                 }
                 
-                // Encode back to WAV buffer
-                const pannedBuffer: Buffer = wav.encode(result.channelData, {
-                    sampleRate: result.sampleRate,
-                    bitDepth: 16
-                });
-                
-                // Save to temporary file
-                const tempDir: string = os.tmpdir();
-                const tempFileName: string = `harmony_${track.id}_${Date.now()}.wav`;
-                const tempFilePath: string = path.join(tempDir, tempFileName);
-                fs.writeFileSync(tempFilePath, Buffer.from(pannedBuffer));
-                
-                // Store temp file path for cleanup
-                track.tempFilePath = tempFilePath;
-                
-                // Play with audic
-                track.audic = new Audic(tempFilePath) as AudicInstance;
-                track.audic.volume = track.isMuted ? 0 : track.volume;
-                
-                console.log(`▶️ Starting track: ${track.name} (pan: ${pan})`);
-                track.audic.play();
-                track.isPlaying = true;
-                
-                track.audic.on('ended', () => {
-                    console.log(`🏁 Track finished: ${track.name}`);
-                    track.isPlaying = false;
+                try {
+                    // Now load the WAV file (either original or converted)
+                    track.audic = new Audic(audioFilePath) as any;
+                    (track.audic as any).volume = track.isMuted ? 0 : track.volume;
+                    (track.audic as any).play();
+                    track.isPlaying = true;
                     
-                    // Clean up temp file
-                    if (track.tempFilePath && fs.existsSync(track.tempFilePath)) {
-                        try {
-                            fs.unlinkSync(track.tempFilePath);
-                            console.log(`🗑️ Cleaned up temp file: ${track.tempFilePath}`);
-                        } catch (error) {
-                            console.error(`❌ Failed to clean up temp file ${track.tempFilePath}:`, error);
-                        }
-                    }
+                    console.log(`▶️ Playing ${track.name}`);
                     
-                    if (track.audic) {
-                        track.audic.destroy();
-                        track.audic = null;
-                    }
-                    track.tempFilePath = null;
-                    
-                    // Check if all tracks have finished
-                    const allTracksFinished: boolean = !Array.from(this.tracks.values()).some(t => t.isPlaying);
-                    if (allTracksFinished && this.isPlaying) {
-                        console.log('🎵 All tracks have finished playback');
-                        this.isPlaying = false;
+                    // Handle track end - check if audic has event methods
+                    if (typeof (track.audic as any).on === 'function') {
+                        (track.audic as any).on('ended', () => {
+                            console.log(`✅ Track ended: ${track.name}`);
+                            track.isPlaying = false;
+                            
+                            // Clean up temp file if it was created
+                            if (track.tempFilePath && fs.existsSync(track.tempFilePath)) {
+                                try {
+                                    fs.unlinkSync(track.tempFilePath);
+                                    console.log(`🗑️ Cleaned up: ${track.tempFilePath}`);
+                                } catch (e) {}
+                            }
+                        });
                         
-                        // Emit playback complete event
-                        if (serverInstance.io) {
-                            serverInstance.io.emit('playback_complete', {
-                                reason: 'all_tracks_finished',
-                                timestamp: Date.now()
-                            });
-                        }
+                        // Handle audic errors
+                        (track.audic as any).on('error', (error: Error) => {
+                            console.error(`❌ Audic error for ${track.name}:`, error);
+                            track.isPlaying = false;
+                        });
+                    } else {
+                        console.log(`⚠️ Audic instance for ${track.name} doesn't support events, using timeout fallback`);
+                        // Fallback: use a timeout based on track duration
+                        setTimeout(() => {
+                            console.log(`✅ Track ended (timeout): ${track.name}`);
+                            track.isPlaying = false;
+                            
+                            // Clean up temp file if it was created
+                            if (track.tempFilePath && fs.existsSync(track.tempFilePath)) {
+                                try {
+                                    fs.unlinkSync(track.tempFilePath);
+                                    console.log(`🗑️ Cleaned up: ${track.tempFilePath}`);
+                                } catch (e) {}
+                            }
+                        }, (track.duration || 245) * 1000); // Default to 245 seconds if no duration
                     }
                     
-                    // If master track stops, stop all tracks
-                    if (isMaster) {
-                        console.log('🛑 Master clock completed, stopping all tracks');
-                        this.stopAllTracks();
-                    }
-                });
-                
-                track.audic.on('error', (error?: Error) => {
-                    console.error(`❌ Audio playback error for ${track.name}:`, error);
-                    track.isPlaying = false;
-                    
-                    // Clean up temp file on error
+                    resolve();
+                } catch (audicError) {
+                    console.error(`❌ Failed to load audio for ${track.name}:`, audicError);
                     if (track.tempFilePath && fs.existsSync(track.tempFilePath)) {
-                        try {
-                            fs.unlinkSync(track.tempFilePath);
-                        } catch (cleanupError) {
-                            console.error(`❌ Failed to clean up temp file ${track.tempFilePath}:`, cleanupError);
-                        }
+                        try { fs.unlinkSync(track.tempFilePath); } catch (e) {}
                     }
-                    
-                    if (track.audic) {
-                        track.audic.destroy();
-                        track.audic = null;
-                    }
-                    track.tempFilePath = null;
-                });
-                
-                resolve();
-                
+                    reject(audicError);
+                }
             } catch (error) {
-                console.error(`❌ Error starting track ${track.name}:`, error);
+                console.error(`❌ Error in startTrackWithClock for ${track.name}:`, error);
                 reject(error);
             }
         });
     }
-    
+
     commandExists(cmd: string): boolean {
         try {
             // First try the standard PATH check
@@ -1495,8 +1486,16 @@ app.post('/api/shutdown', (req: Request, res: Response): void => {
 
 app.post('/api/tracks/load', async (req: Request, res: Response): Promise<void> => {
     try {
+        console.log('[/api/tracks/load] Request received');
+        console.log('[/api/tracks/load] Request body:', JSON.stringify(req.body));
+        console.log('[/api/tracks/load] Content-Type:', req.headers['content-type']);
+        
         const { filePath, name } = req.body;
+        console.log('[/api/tracks/load] Extracted filePath:', filePath);
+        console.log('[/api/tracks/load] Extracted name:', name);
+        
         if (!filePath) {
+            console.error('[/api/tracks/load] ERROR: filePath is required but was not provided in request body');
             res.status(400).json({ error: 'filePath is required' });
             return;
         }
@@ -1507,6 +1506,7 @@ app.post('/api/tracks/load', async (req: Request, res: Response): Promise<void> 
         // Emit to all connected clients
         io.emit('mixer_state_changed', mixerState);
         
+        console.log('[/api/tracks/load] Track loaded successfully:', trackId);
         res.json({ trackId, success: true });
     } catch (error) {
         console.error('Error loading track:', error);

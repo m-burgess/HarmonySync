@@ -44,20 +44,23 @@ body {
 }
 
 .col {
-    padding: 15px;
+    padding: 0;
     border-right: 1px solid #333;
-    overflow-y: auto;
     height: 100%;
 }
 
 /* Setlist Manager */
 #service-order-col {
-    flex: 0 0 250px; /* Fixed width for service order */
+    flex: 0 0 400px; /* Wider column for service order */
     background-color: #282828;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 0;
 }
 
 #add-folder-button {
-    width: 100%;
+    width: calc(100% - 20px);
     padding: 10px;
     background-color: #007bff;
     color: white;
@@ -65,17 +68,32 @@ body {
     border-radius: 5px;
     cursor: pointer;
     font-size: 16px;
-    margin-bottom: 15px;
+    margin: 0 10px 15px 10px;
+    flex-shrink: 0;
 }
 
 #add-folder-button:hover {
     background-color: #0056b3;
 }
 
+/* Control sections - keep at top with fixed sizing */
+#service-order-col > div {
+    flex-shrink: 0;
+    padding: 10px 15px;
+    border-bottom: 1px solid #3a3a3a;
+    overflow: hidden;
+}
+
 #service-order {
     list-style: none;
-    padding: 0;
+    padding: 0 15px 15px 15px;
     margin: 0;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .service-order-item {
@@ -84,11 +102,32 @@ body {
     margin-bottom: 8px;
     border-radius: 5px;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: background-color 0.2s, border-color 0.2s;
 }
 
 .service-order-item:hover {
     background-color: #4a4a4a;
+}
+
+/* Loading state for items being preloaded */
+.service-order-item.loading {
+    animation: pulse-loading 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-loading {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.6;
+    }
+}
+
+/* Spinner animation for loading indicator */
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* Main Content Area */
