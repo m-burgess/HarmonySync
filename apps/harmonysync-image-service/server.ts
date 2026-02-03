@@ -49,6 +49,7 @@ interface JobJSON {
 const jobs = new Map<string, ImageJob>();
 const jobQueue: ImageJob[] = [];
 let activeJobCount: number = 0;
+const cleanupTimers = new Map<string, NodeJS.Timeout>();
 
 class ImageJob {
     public id: string;
@@ -133,11 +134,19 @@ async function processQueue(io: SocketIOServer): Promise<void> {
         console.error(`Job ${job.id} error:`, error);
     } finally {
         activeJobCount--;
-        // Clean up job after 5 minutes
-        setTimeout(() => jobs.delete(job.id), 5 * 60 * 1000);
+        // Clean up job after 5 minutes (store timer so tests can clear it)
+        const t = setTimeout(() => jobs.delete(job.id), 5 * 60 * 1000);
+        cleanupTimers.set(job.id, t as unknown as NodeJS.Timeout);
         // Process next job in queue
         processQueue(io);
     }
+}
+
+function clearAllJobCleanupTimers(): void {
+    for (const t of cleanupTimers.values()) {
+        try { clearTimeout(t as unknown as number); } catch (e) {}
+    }
+    cleanupTimers.clear();
 }
 
 // Image processing functions
@@ -169,6 +178,13 @@ async function resizeImage(job: ImageJob, io: SocketIOServer): Promise<void> {
         await sharp(inputPath)
             .resize(resizeOptions)
             .toFile(outputPath);
+
+        if (job.status === 'cancelled') {
+            job.endTime = Date.now();
+            io.emit('job:complete', job.toJSON());
+            console.log(`⚠️ Resize cancelled: ${job.id}`);
+            return;
+        }
 
         job.status = 'completed';
         job.progress = 100;
@@ -238,6 +254,14 @@ async function convertFormat(job: ImageJob, io: SocketIOServer): Promise<void> {
 
         await pipeline.toFile(outputPath);
 
+        // If job was cancelled while writing, keep cancelled status
+        if (job.status === 'cancelled') {
+            job.endTime = Date.now();
+            io.emit('job:complete', job.toJSON());
+            console.log(`⚠️ Convert cancelled: ${job.id}`);
+            return;
+        }
+
         job.status = 'completed';
         job.progress = 100;
         job.result = { outputPath };
@@ -280,6 +304,13 @@ async function generateThumbnail(job: ImageJob, io: SocketIOServer): Promise<voi
             .jpeg({ quality: 80 })
             .toFile(thumbnailPath);
 
+        if (job.status === 'cancelled') {
+            job.endTime = Date.now();
+            io.emit('job:complete', job.toJSON());
+            console.log(`⚠️ Thumbnail cancelled: ${job.id}`);
+            return;
+        }
+
         job.status = 'completed';
         job.progress = 100;
         job.result = { thumbnailPath };
@@ -313,6 +344,13 @@ async function optimizeForWeb(job: ImageJob, io: SocketIOServer): Promise<void> 
             .resize({ width: options.maxWidth || 1920, withoutEnlargement: true })
             .jpeg({ quality: options.quality || 85, progressive: true })
             .toFile(outputPath);
+
+        if (job.status === 'cancelled') {
+            job.endTime = Date.now();
+            io.emit('job:complete', job.toJSON());
+            console.log(`⚠️ Optimize cancelled: ${job.id}`);
+            return;
+        }
 
         job.status = 'completed';
         job.progress = 100;
@@ -525,13 +563,15 @@ io.on('connection', (socket: Socket) => {
     });
 });
 
-// Start server
-server.listen(PORT, HOST, () => {
-    console.log(`🖼️  HarmonySync Image Service listening on ${HOST}:${PORT}`);
-    console.log(`📊 Process ID: ${process.pid}`);
-    console.log(`💾 Memory: ${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`);
-    console.log(`⚙️  Max concurrent jobs: ${MAX_CONCURRENT_JOBS}`);
-});
+// Start server only when run directly
+if (require.main === module) {
+    server.listen(PORT, HOST, () => {
+        console.log(`🖼️  HarmonySync Image Service listening on ${HOST}:${PORT}`);
+        console.log(`📊 Process ID: ${process.pid}`);
+        console.log(`💾 Memory: ${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`);
+        console.log(`⚙️  Max concurrent jobs: ${MAX_CONCURRENT_JOBS}`);
+    });
+}
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
@@ -549,3 +589,7 @@ process.on('SIGINT', () => {
         process.exit(0);
     });
 });
+
+// Export internals for testing
+// Export helper to clear timers for tests
+export { app, server, io, jobs, jobQueue, ImageJob, clearAllJobCleanupTimers };
