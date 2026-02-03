@@ -14,13 +14,21 @@ module.exports = function (input) {
     save: (output) => {
       process.nextTick(() => {
         if (handlers['progress']) handlers['progress']({ timemark: '00:00:02' });
-        if (handlers['end']) handlers['end']();
+        if (global.__FLUENT_FFMPEG_SHOULD_ERROR) {
+          if (handlers['error']) handlers['error'](new Error('mock ffmpeg error'));
+        } else {
+          if (handlers['end']) handlers['end']();
+        }
       });
       return command;
     },
     screenshots: (opts) => {
       process.nextTick(() => {
-        if (handlers['end']) handlers['end']();
+        if (global.__FLUENT_FFMPEG_SHOULD_ERROR) {
+          if (handlers['error']) handlers['error'](new Error('mock ffmpeg error'));
+        } else {
+          if (handlers['end']) handlers['end']();
+        }
       });
       return command;
     },
@@ -31,6 +39,11 @@ module.exports = function (input) {
 };
 
 module.exports.ffprobe = function (input, cb) {
+  if (global.__FLUENT_FFMPEG_SHOULD_ERROR) {
+    process.nextTick(() => cb(new Error('mock ffprobe error')));
+    return;
+  }
+
   const metadata = {
     format: { duration: 10, format_name: 'mp4', bit_rate: '4000', size: '2048' },
     streams: [
