@@ -7,9 +7,9 @@
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import { app } from 'electron';
-import { BaseElectronService } from '../types/services';
-import { IStorageService, ServiceConfig } from '../types/services';
-import { ScheduledEvent, Macro } from '../types/models';
+import { BaseElectronService } from '@harmonysync/core';
+import { IStorageService, ServiceConfig } from '@harmonysync/core';
+import { ScheduledEvent, Macro } from '@harmonysync/core';
 
 /**
  * Google Drive sync configuration

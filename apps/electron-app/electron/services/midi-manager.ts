@@ -4,7 +4,7 @@
  * Note: MIDI support is optional and gracefully degrades if not available
  */
 
-import { BaseElectronService } from '../types/services';
+import { BaseElectronService } from '@harmonysync/core';
 
 // ==================== Type Definitions ====================
 

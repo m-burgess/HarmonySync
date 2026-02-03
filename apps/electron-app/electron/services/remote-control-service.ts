@@ -10,7 +10,7 @@ import * as path from 'path';
 import * as fs from 'fs-extra';
 import * as os from 'os';
 import { BrowserWindow } from 'electron';
-import { BaseElectronService, IRemoteControlService, ServiceConfig } from '../types/services';
+import { BaseElectronService, IRemoteControlService, ServiceConfig } from '@harmonysync/core';
 
 /**
  * Rate limit record structure

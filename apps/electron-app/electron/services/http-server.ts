@@ -8,7 +8,7 @@ import { Server } from 'http';
 import * as path from 'path';
 import * as fs from 'fs';
 import cors from 'cors';
-import { BaseElectronService, IHTTPServerService, ServiceConfig } from '../types/services';
+import { BaseElectronService, IHTTPServerService, ServiceConfig } from '@harmonysync/core';
 
 /**
  * HTTP Server Service Implementation

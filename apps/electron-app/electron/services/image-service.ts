@@ -9,8 +9,8 @@ import * as fs from 'fs-extra';
 import { app } from 'electron';
 import { v4 as uuidv4 } from 'uuid';
 import sharp from 'sharp';
-import { BaseElectronService, IImageService, ServiceConfig } from '../types/services';
-import { ImageMetadata } from '../types/models';
+import { BaseElectronService, IImageService, ServiceConfig } from '@harmonysync/core';
+import { ImageMetadata } from '@harmonysync/core';
 
 /**
  * Supported image formats

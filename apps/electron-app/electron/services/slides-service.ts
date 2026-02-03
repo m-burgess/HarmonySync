@@ -20,7 +20,7 @@ import { fromPath } from 'pdf2pic';
 import * as sharp from 'sharp';
 import * as AdmZip from 'adm-zip';
 import { spawnSync } from 'child_process';
-import { BaseElectronService, ISlidesService, ServiceConfig } from '../types/services';
+import { BaseElectronService, ISlidesService, ServiceConfig } from '@harmonysync/core';
 
 /**
  * Progress callback type

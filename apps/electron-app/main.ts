@@ -25,6 +25,7 @@ const scriptService = require('./electron/services/script-service');
 const scriptingAPI = require('./electron/services/scripting-api');
 const slidesService = require('./electron/services/slides-service');
 const displayConfigService = require('./electron/services/display-config-service');
+const eventTriggerService = require('./electron/services/event-trigger-service');
 
 // MIDI manager with optional loading
 let midiManager: any = null;
@@ -299,7 +300,7 @@ class ElectronApplication {
         });
     } else {
       this.mainWindow.loadFile(
-        path.join(__dirname, '../harmonysync/dist/index.html')
+        path.join(__dirname, '../renderer/dist/index.html')
       );
     }
   }
@@ -373,7 +374,7 @@ class ElectronApplication {
     if (isDev) {
       window.loadURL(`${VITE_DEV_SERVER_URL}/${htmlFile}`);
     } else {
-      window.loadFile(path.join(__dirname, '../harmonysync/dist', htmlFile));
+      window.loadFile(path.join(__dirname, '../renderer/dist', htmlFile));
     }
   }
 
@@ -381,6 +382,12 @@ class ElectronApplication {
    * Start all external services
    */
   private async startExternalServices(): Promise<void> {
+    // In dev mode, services are already running from the monorepo pnpm dev command
+    if (isDev) {
+      console.log('[Application] Skipping external service startup in dev mode (already running)');
+      return;
+    }
+
     console.log('[Application] Starting external services...');
 
     // Start audio service
@@ -439,6 +446,7 @@ class ElectronApplication {
       scriptingAPI,
       slidesService,
       displayConfigService,
+      eventTriggerService,
     });
   }
 
