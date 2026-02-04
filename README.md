@@ -467,8 +467,9 @@ HarmonySync uses JSON files for all data persistence (replaced SQLite).
      this.ensureInitialized();
      const newData: MyData = {
        // ID Generation: This example uses Date.now() to match json-storage.ts pattern
-       // Acceptable for single-user operations with low concurrency
-       // Use UUID for high-concurrency scenarios or multi-user systems
+       // Acceptable for single-user, low-frequency operations
+       // WARNING: Rapid operations (bulk imports, loops, automated tests) can cause duplicates
+       // Use UUID for production systems: import { v4 as uuidv4 } from 'uuid'; id: uuidv4()
        id: Date.now().toString(),
        name: data.name || 'Untitled',
        createdAt: new Date().toISOString()
@@ -495,7 +496,9 @@ HarmonySync uses JSON files for all data persistence (replaced SQLite).
 
 4. **Per-Presentation Storage**
    - Some data is stored per-presentation (songs/slides)
-   - Location: `{presentationFolder}/harmonysync.json` where `{presentationFolder}` is the user-selected presentation/song directory path
+   - Location: `{presentationFolder}/harmonysync.json` 
+     - Example: `/Users/username/Documents/Presentations/MyPresentation/harmonysync.json`
+     - `{presentationFolder}` = the user-selected presentation/song directory path
    - Methods in `JSONStorageService`: `getSongMetadata(songPath)`, `saveSongMetadata(songPath, metadata)`
    - Also supports `youtube.txt` for YouTube links in the same folder
 
