@@ -176,6 +176,7 @@ HarmonySync uses a comprehensive testing framework. Tests should be written BEFO
 #### Test Location
 - **Service Tests (Backend)**: `apps/testing/utils/electron-tests/__tests__/your-service.test.ts`
 - **Integration Tests**: `apps/testing/utils/test-utils/__tests__/__tests__/integration/`
+  - Note: The nested `__tests__/__tests__/` structure is intentional in this repository
 - **ViewModel Tests**: `apps/testing/utils/test-utils/__tests__/__tests__/viewmodels/`
 - **Example/Tutorial Tests**: `apps/testing/utils/test-utils/__tests__/example-service.test.ts`
 
