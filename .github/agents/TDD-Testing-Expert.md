@@ -77,3 +77,26 @@ Notes
 - Keep tests small and focused to get fast red/green cycles
 - Make coverage checks incremental (changed files only) to avoid long CI runs
 - Prefer manual Copilot-driven test generation in IDE to avoid Copilot API rate limits; enable the optional TDD guidance job in the consolidated workflow only when needed
+
+Coverage requirement
+- Minimum: 80% code coverage on new or modified code (team-defined scope). This is a baseline target for the feature branch and should be enforced by CI where practical.
+- Recommended tools: `jest --coverage` (with `coverageThreshold` in `package.json` or Jest config), `nyc` for node CLI coverage, and `coverage/lcov` output for CI coverage reporters.
+- Example `package.json` snippet to enforce thresholds:
+```json
+"jest": {
+  "collectCoverage": true,
+  "coverageDirectory": "coverage",
+  "coverageThreshold": {
+    "global": {
+      "branches": 80,
+      "functions": 80,
+      "lines": 80,
+      "statements": 80
+    }
+  }
+}
+```
+- CI suggestions:
+  - Run unit tests with coverage first and fail early if thresholds not met.
+  - Keep coverage gates focused on changed files when full repo thresholds are too expensive.
+  - Publish coverage reports as build artifacts and use PR comments to show coverage diffs.
