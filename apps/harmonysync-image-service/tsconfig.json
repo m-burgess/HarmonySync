@@ -46,7 +46,7 @@
     "server.ts",
     "smoke-test.ts"
     ,"tests/**/*.ts"
-  ],
+, "../harmonysync-tests/harmonysync-image-service-tests/unit-tests/rest.test.ts", "../harmonysync-tests/harmonysync-image-service-tests/unit-tests/socket.test.ts"  ],
   "exclude": [
     "node_modules",
     "dist",
