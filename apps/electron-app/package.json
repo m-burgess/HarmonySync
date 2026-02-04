@@ -11,7 +11,7 @@
     "dev:electron": "wait-on tcp:5174 && cross-env NODE_ENV=development electron dist/main.js",
     "build": "tsc -b",
     "typecheck": "tsc --noEmit",
-    "test": "jest --config=jest.config.electron.js --passWithNoTests"
+    "test": "jest --config=jest.config.electron.js --passWithNoTests --detectOpenHandles"
   },
   "dependencies": {
     "@harmonysync/core": "workspace:*",
