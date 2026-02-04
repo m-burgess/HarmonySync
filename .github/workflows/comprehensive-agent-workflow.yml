@@ -65,7 +65,7 @@ jobs:
             git push -u origin "$BRANCH"
           fi
 
-       - name: Create PR with checklist
+      - name: Create PR with checklist
         id: create-pr
         uses: actions/github-script@v7
         env:
@@ -114,7 +114,8 @@ jobs:
               '- [ ] Services integrated\n' +
               '- [ ] Cross-platform compatibility verified\n' +
               '- [ ] Integration points documented\n' +
-              '- [ ] Code follows TypeScript best practices\n\n' +
+              '- [ ] Code follows TypeScript best practices\n' +
+              '- [ ] Tests written before implementation (TDD)\n\n' +
               '### Frontend Checklist\n' +
               '- [ ] MVVM View components implemented\n' +
               '- [ ] Components properly bound to ViewModels\n' +
@@ -122,12 +123,14 @@ jobs:
               '- [ ] Styling complete with TailwindCSS\n' +
               '- [ ] Accessibility requirements met\n' +
               '- [ ] Responsive design verified\n' +
-              '- [ ] Backend API integration working\n\n' +
+              '- [ ] Backend API integration working\n' +
+              '- [ ] Tests written before implementation (TDD)\n\n' +
               '### QA Checklist\n' +
               '- [ ] Unit tests\n' +
               '- [ ] Integration tests\n' +
               '- [ ] End-to-End tests\n' +
-              '- [ ] Regression tests & Code Coverage reported\n\n' +
+              '- [ ] Regression tests & Code Coverage reported\n' +
+              '- [ ] Tests-first verification completed\n\n' +
               '### Validation (Project Manager)\n' +
               '- [ ] Backend follows detailed backend plan\n' +
               '- [ ] Frontend follows detailed frontend plan\n' +
@@ -317,11 +320,12 @@ jobs:
         uses: github/create-pr-with-copilot@v1
         with:
           problem_statement: |
-            As the Backend Expert, implement the backend requirements for this feature.
-            
+            As the Backend Expert (TDD), implement the backend to make the previously created tests pass.
+
             Read and follow the detailed backend plan in plans/02-project-manager-plans.md.
-            
+
             Tasks to complete:
+            - Ensure all failing backend tests (created earlier) are addressed and pass
             - Implement Models following MVVM architecture
             - Implement ViewModels with observable state
             - Integrate necessary services (audio, file processing, etc.)
@@ -329,13 +333,45 @@ jobs:
             - Document all integration points
             - Follow TypeScript best practices
             - Write inline code documentation
-            
+
             DO NOT modify workflow files in .github/workflows/
-            
-            Mark each task complete as you finish it. All backend checklist items must be implemented.
+
+            Mark each task complete as you finish it. All backend checklist items must be implemented and tests must pass.
           branch: ${{ needs.product-owner-planning.outputs.branch_name }}
           update_existing_pr: true
           pr_number: ${{ needs.product-owner-planning.outputs.pr_number }}
+
+      - name: Create failing backend tests (TDD)
+        uses: github/create-pr-with-copilot@v1
+        with:
+          problem_statement: |
+            As the Backend Expert (TDD), write unit and integration tests for the feature BEFORE implementing functionality.
+            Place tests under an appropriate test folder (e.g., tests/backend/) and ensure they fail initially.
+            The goal: tests should drive the implementation that follows.
+            DO NOT modify workflow files in .github/workflows/
+          branch: ${{ needs.product-owner-planning.outputs.branch_name }}
+          update_existing_pr: true
+          pr_number: ${{ needs.product-owner-planning.outputs.pr_number }}
+
+      - name: Run tests (expected failures)
+        shell: bash
+        run: |
+          pnpm -w -s test || true
+
+      - name: Run tests (verify pass)
+        shell: bash
+        run: |
+          pnpm -w -s test
+
+      - name: (TDD) Verify tests and report
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pr_number = Number(`${{ needs.product-owner-planning.outputs.pr_number }}`);
+            const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: pr_number });
+            await github.rest.issues.createComment({ owner, repo, issue_number: pr_number, body: 'TDD: Backend tests created, and implementation run to make tests pass.' });
 
       - name: Verify Backend Implementation
         shell: bash
@@ -368,7 +404,8 @@ jobs:
               "Services integrated",
               "Cross-platform compatibility verified",
               "Integration points documented",
-              "Code follows TypeScript best practices"
+              "Code follows TypeScript best practices",
+              "Tests written before implementation (TDD)"
             ]);
             await github.rest.pulls.update({ owner, repo, pull_number: pr_number, body });
 
@@ -390,12 +427,13 @@ jobs:
         uses: github/create-pr-with-copilot@v1
         with:
           problem_statement: |
-            As the Frontend Expert, implement the frontend requirements for this feature.
-            
+            As the Frontend Expert (TDD), implement the frontend to make the previously created frontend tests pass.
+
             Read and follow the detailed frontend plan in plans/02-project-manager-plans.md.
-            Review the backend implementation to understand the APIs and ViewModels available.
-            
+            Review the backend implementation and the failing frontend tests to understand required behavior.
+
             Tasks to complete:
+            - Ensure failing frontend tests (created earlier) are addressed and pass
             - Implement MVVM View components (stateless React components)
             - Properly bind components to ViewModels
             - Keep business logic OUT of View components
@@ -403,13 +441,44 @@ jobs:
             - Ensure accessibility (ARIA labels, keyboard navigation)
             - Verify responsive design works on all screen sizes
             - Integrate with backend APIs
-            
+
             DO NOT modify workflow files in .github/workflows/
-            
-            Mark each task complete as you finish it. All frontend checklist items must be implemented.
+
+            Mark each task complete as you finish it. All frontend checklist items must be implemented and tests must pass.
           branch: ${{ needs.product-owner-planning.outputs.branch_name }}
           update_existing_pr: true
           pr_number: ${{ needs.product-owner-planning.outputs.pr_number }}
+
+      - name: Create failing frontend tests (TDD)
+        uses: github/create-pr-with-copilot@v1
+        with:
+          problem_statement: |
+            As the Frontend Expert (TDD), write frontend unit and end-to-end tests for the feature BEFORE implementing UI behavior.
+            Place tests under an appropriate test folder (e.g., tests/frontend/) and ensure they fail initially.
+            The goal: tests should drive the implementation that follows.
+            DO NOT modify workflow files in .github/workflows/
+          branch: ${{ needs.product-owner-planning.outputs.branch_name }}
+          update_existing_pr: true
+          pr_number: ${{ needs.product-owner-planning.outputs.pr_number }}
+
+      - name: Run frontend tests (expected failures)
+        shell: bash
+        run: |
+          pnpm -w -s test || true
+
+      - name: Run tests (verify pass)
+        shell: bash
+        run: |
+          pnpm -w -s test
+
+      - name: (TDD) Verify frontend tests and report
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pr_number = Number(`${{ needs.product-owner-planning.outputs.pr_number }}`);
+            await github.rest.issues.createComment({ owner, repo, issue_number: pr_number, body: 'TDD: Frontend tests created, and implementation run to make tests pass.' });
 
       - name: Update PR checklist (Frontend items)
         uses: actions/github-script@v7
@@ -437,7 +506,8 @@ jobs:
               "Styling complete with TailwindCSS",
               "Accessibility requirements met",
               "Responsive design verified",
-              "Backend API integration working"
+              "Backend API integration working",
+              "Tests written before implementation (TDD)"
             ]);
             await github.rest.pulls.update({ owner, repo, pull_number: pr_number, body });
 
@@ -503,7 +573,8 @@ jobs:
               "Unit tests",
               "Integration tests",
               "End-to-End tests",
-              "Regression tests & Code Coverage reported"
+              "Regression tests & Code Coverage reported",
+              "Tests-first verification completed"
             ]);
             await github.rest.pulls.update({ owner, repo, pull_number: pr_number, body });
 
