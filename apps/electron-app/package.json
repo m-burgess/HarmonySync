@@ -10,7 +10,8 @@
     "dev:build": "tsc -b --watch",
     "dev:electron": "wait-on tcp:5174 && cross-env NODE_ENV=development electron dist/main.js",
     "build": "tsc -b",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "jest --config=jest.config.electron.js --passWithNoTests"
   },
   "dependencies": {
     "@harmonysync/core": "workspace:*",
@@ -43,6 +44,10 @@
     "concurrently": "^9.1.0",
     "cross-env": "^10.1.0",
     "typescript": "^5.3.3",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.0",
+    "@types/jest": "^29.5.3",
+    "@types/node": "^20.11.16",
     "wait-on": "^7.2.0"
   }
 }
