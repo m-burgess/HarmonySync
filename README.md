@@ -177,7 +177,7 @@ HarmonySync uses a comprehensive testing framework. Tests should be written BEFO
 - **Service Tests (Backend)**: `apps/testing/utils/electron-tests/__tests__/your-service.test.ts`
   - Replace `your-service` with your actual service name, e.g., `audio-service.test.ts`
 - **Integration Tests**: `apps/testing/utils/test-utils/__tests__/__tests__/integration/`
-  - Note: The nested `__tests__/__tests__/` structure is intentional in this repository
+  - Note: The nested `__tests__/__tests__/` structure is intentional - the first `__tests__` contains test utilities, and the nested one contains actual tests
 - **ViewModel Tests**: `apps/testing/utils/test-utils/__tests__/__tests__/viewmodels/`
 - **Example/Tutorial Tests**: `apps/testing/utils/test-utils/__tests__/example-service.test.ts`
 
@@ -466,8 +466,9 @@ HarmonySync uses JSON files for all data persistence (replaced SQLite).
    public async createMyData(data: Partial<MyData>): Promise<MyData> {
      this.ensureInitialized();
      const newData: MyData = {
-       // Using Date.now() for simplicity in this example
-       // For production, use UUID library (e.g., import { v4 as uuidv4 } from 'uuid')
+       // This example uses Date.now() to match the existing pattern in json-storage.ts
+       // Note: This can cause collisions with concurrent rapid operations
+       // Consider UUID (import { v4 as uuidv4 } from 'uuid') if concurrency is needed
        id: Date.now().toString(),
        name: data.name || 'Untitled',
        createdAt: new Date().toISOString()
@@ -495,7 +496,7 @@ HarmonySync uses JSON files for all data persistence (replaced SQLite).
 4. **Per-Presentation Storage**
    - Some data is stored per-presentation (songs/slides)
    - Location: `{presentationFolder}/harmonysync.json`
-   - Methods: `getSongMetadata()`, `saveSongMetadata()`
+   - Methods in `JSONStorageService`: `getSongMetadata()`, `saveSongMetadata()`
    - Also supports `youtube.txt` for YouTube links
 
 5. **Testing Storage**
