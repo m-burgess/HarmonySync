@@ -1,4 +1,4 @@
-import setupIpcHandlers from '../../ipc-handlers';
+import setupIpcHandlers from '../../../ipc-handlers';
 
 describe('IPC Handler registration', () => {
   test('registers expected handlers', () => {
