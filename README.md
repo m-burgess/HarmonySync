@@ -174,9 +174,10 @@ When adding a new feature that requires a service, follow this checklist:
 HarmonySync uses a comprehensive testing framework. Tests should be written BEFORE or ALONGSIDE implementation (TDD).
 
 #### Test Location
-- **Service Tests**: `apps/testing/utils/electron-tests/__tests__/your-service.test.ts`
+- **Service Tests (Backend)**: `apps/testing/utils/electron-tests/__tests__/your-service.test.ts`
 - **Integration Tests**: `apps/testing/utils/test-utils/__tests__/__tests__/integration/`
 - **ViewModel Tests**: `apps/testing/utils/test-utils/__tests__/__tests__/viewmodels/`
+- **Example/Tutorial Tests**: `apps/testing/utils/test-utils/__tests__/example-service.test.ts`
 
 #### Writing a Service Test
 
@@ -231,7 +232,7 @@ HarmonySync uses a comprehensive testing framework. Tests should be written BEFO
    ```
 
 #### Example Test Pattern
-See `apps/testing/utils/test-utils/__tests__/example-service.test.ts` for a comprehensive example demonstrating:
+See `apps/testing/utils/test-utils/__tests__/example-service.test.ts` for a comprehensive tutorial demonstrating:
 - Service initialization patterns
 - File system mocking
 - Event capture and verification
