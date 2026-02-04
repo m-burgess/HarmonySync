@@ -1,6 +1,6 @@
 packages:
   - apps/*
-  - packages/*
+  - harmonysync-core-logic/*
 
 ignoredBuiltDependencies:
   - electron

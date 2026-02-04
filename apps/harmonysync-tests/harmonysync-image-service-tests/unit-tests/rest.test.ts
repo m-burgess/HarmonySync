@@ -13,7 +13,7 @@ beforeAll(async () => {
   process.env.HOST = '127.0.0.1';
   process.env.SHUTDOWN_TOKEN = 'testtoken';
 
-  const mod = await import('../../../harmonysync-image-service/server.ts');
+  const mod = await import('../../../harmonysync-image-service/server');
   app = mod.app;
   server = mod.server;
   ioServer = mod.io;

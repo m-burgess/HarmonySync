@@ -14,10 +14,7 @@ importers:
     dependencies:
       '@harmonysync/core':
         specifier: workspace:*
-        version: link:../../packages/core
-      '@harmonysync/shared-logic':
-        specifier: workspace:*
-        version: link:../../packages/shared-logic
+        version: link:../../harmonysync-core-logic/core
       '@types/unzipper':
         specifier: ^0.10.11
         version: 0.10.11
@@ -336,6 +333,10 @@ importers:
         version: 5.9.3
 
   apps/harmonysync-tests:
+    dependencies:
+      '@harmonysync/core':
+        specifier: workspace:*
+        version: link:../../harmonysync-core-logic/core
     devDependencies:
       '@jest/globals':
         specifier: ^30.2.0
@@ -346,9 +347,21 @@ importers:
       '@types/node':
         specifier: ^25.2.0
         version: 25.2.0
+      '@types/supertest':
+        specifier: ^2.0.16
+        version: 2.0.16
       jest:
         specifier: ^29.7.0
         version: 29.7.0(@types/node@25.2.0)(ts-node@10.9.2(@types/node@25.2.0)(typescript@5.9.3))
+      socket.io-client:
+        specifier: ^4.8.3
+        version: 4.8.3
+      supertest:
+        specifier: ^6.3.4
+        version: 6.3.4
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
 
   apps/harmonysync-video-service:
     dependencies:
@@ -495,7 +508,7 @@ importers:
         specifier: ^4.0.18
         version: 4.0.18(@types/node@25.2.0)(@vitest/ui@4.0.18)(jiti@2.6.1)(lightningcss@1.30.2)
 
-  packages/core:
+  harmonysync-core-logic/core:
     devDependencies:
       '@types/node':
         specifier: ^20.10.6
@@ -504,14 +517,21 @@ importers:
         specifier: ^5.3.3
         version: 5.9.3
 
-  packages/shared-logic:
+  harmonysync-core-logic/data-access:
+    dependencies:
+      '@harmonysync/core':
+        specifier: workspace:*
+        version: link:../core
+      '@types/uuid':
+        specifier: ^11.0.0
+        version: 11.0.0
+      uuid:
+        specifier: ^13.0.0
+        version: 13.0.0
     devDependencies:
-      typescript:
-        specifier: ^5.3.3
-        version: 5.9.3
-
-  packages/ui:
-    devDependencies:
+      '@types/node':
+        specifier: ^20.10.6
+        version: 20.19.30
       typescript:
         specifier: ^5.3.3
         version: 5.9.3
@@ -1769,6 +1789,10 @@ packages:
 
   '@types/unzipper@0.10.11':
     resolution: {integrity: sha512-D25im2zjyMCcgL9ag6N46+wbtJBnXIr7SI4zHf9eJD2Dw2tEB5e+p5MYkrxKIVRscs5QV0EhtU9rgXSPx90oJg==}
+
+  '@types/uuid@11.0.0':
+    resolution: {integrity: sha512-HVyk8nj2m+jcFRNazzqyVKiZezyhDKrGUA3jlEcg/nZ6Ms+qHwocba1Y/AaVaznJTAM9xpdFSh+ptbNrhOGvZA==}
+    deprecated: This is a stub types definition. uuid provides its own type definitions, so you do not need this installed.
 
   '@types/uuid@9.0.8':
     resolution: {integrity: sha512-jg+97EGIcY9AGHJJRaaPVgetKDsrTgbRjQ5Msgjh/DQKEFl0DtyRr/VCOyD1T2R1MNeWPK/u7JoGhlDZnKBAfA==}
@@ -4422,6 +4446,10 @@ packages:
     resolution: {integrity: sha512-pMZTvIkT1d+TFGvDOqodOclx0QWkkgi6Tdoa8gC8ffGAAqz9pzPTZWAybbsHHoED/ztMtkv/VoYTYyShUn81hA==}
     engines: {node: '>= 0.4.0'}
 
+  uuid@13.0.0:
+    resolution: {integrity: sha512-XQegIaBTVUjSHliKqcnFqYypAd4S+WCYt5NIeRs6w/UAry7z8Y9j5ZwRRL4kzq9U3sD6v+85er9FvkEaBpji2w==}
+    hasBin: true
+
   uuid@9.0.1:
     resolution: {integrity: sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==}
     hasBin: true
@@ -5878,6 +5906,10 @@ snapshots:
   '@types/unzipper@0.10.11':
     dependencies:
       '@types/node': 20.19.30
+
+  '@types/uuid@11.0.0':
+    dependencies:
+      uuid: 9.0.1
 
   '@types/uuid@9.0.8': {}
 
@@ -9083,6 +9115,8 @@ snapshots:
   util-deprecate@1.0.2: {}
 
   utils-merge@1.0.1: {}
+
+  uuid@13.0.0: {}
 
   uuid@9.0.1: {}
 

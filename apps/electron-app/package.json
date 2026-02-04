@@ -15,7 +15,6 @@
   },
   "dependencies": {
     "@harmonysync/core": "workspace:*",
-    "@harmonysync/shared-logic": "workspace:*",
     "@types/unzipper": "^0.10.11",
     "adm-zip": "^0.5.10",
     "axios": "^1.12.2",
