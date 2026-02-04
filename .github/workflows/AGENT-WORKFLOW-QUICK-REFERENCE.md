@@ -191,8 +191,8 @@ All phases enforce MVVM architecture:
 
 - **Full Documentation**: `.github/workflows/README-AGENT-WORKFLOW.md`
 - **Workflow File**: `.github/workflows/comprehensive-agent-workflow.yml`
-- **Agent Definitions**: `.github/agents/*.md`
-- **Existing Workflows**: `.github/workflows/issue-agent-collaboration.yml`
+-- **Agent Definitions**: `.github/agents/*.md`
+-- **Per-agent Workflows**: none (use consolidated `.github/workflows/comprehensive-agent-workflow.yml` or manual Copilot invocation)
 
 ## 🎓 Example Feature Request
 
