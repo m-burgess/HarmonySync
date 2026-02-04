@@ -15,4 +15,17 @@
     "test": "pnpm -r run test",
     "typecheck": "pnpm -r run typecheck"
   }
+  ,
+  "jest": {
+    "collectCoverage": true,
+    "coverageDirectory": "coverage",
+    "coverageThreshold": {
+      "global": {
+        "branches": 80,
+        "functions": 80,
+        "lines": 80,
+        "statements": 80
+      }
+    }
+  }
 }
