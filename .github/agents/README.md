@@ -6,47 +6,47 @@ This directory contains specialized GitHub Copilot agents for collaborative issu
 
 ### Backend Expert
 **File**: `Backend-Expert.md`
-**Workflow**: `.github/workflows/agent-backend-expert.yml`
+**Workflow**: `.github/workflows/comprehensive-agent-workflow.yml` (consolidated)
 **Specialization**: Node.js, Rust, Tauri, API design, database integration, authentication, performance optimization
 
 ### Frontend Expert
 **File**: `Frontend-Expert.md`
-**Workflow**: `.github/workflows/agent-frontend-expert.yml`
+**Workflow**: `.github/workflows/comprehensive-agent-workflow.yml` (consolidated)
 **Specialization**: HTML, CSS, ReactJS, TailwindCSS, component architecture, responsive design
 
 ### Integration Architect
 **File**: `Integration-Architect.md`
-**Workflow**: `.github/workflows/agent-integration-architect.yml`
+**Workflow**: `.github/workflows/comprehensive-agent-workflow.yml` (consolidated)
 **Specialization**: API design, cross-system communication, deployment pipelines, architecture coordination
 
 ### UX Designer
 **File**: `UX-Designer.md`
-**Workflow**: `.github/workflows/agent-ux-designer.yml`
+**Workflow**: `.github/workflows/comprehensive-agent-workflow.yml` (consolidated)
 **Specialization**: User experience, interface design, usability, accessibility
 
 ### Media Systems Engineer
 **File**: `Media-Systems-Engineer.md`
-**Workflow**: `.github/workflows/agent-media-systems-engineer.yml`
+**Workflow**: `.github/workflows/comprehensive-agent-workflow.yml` (consolidated)
 **Specialization**: Audio/video processing, FFmpeg, DMX lighting control, media pipelines
 
 ### Cross-Platform Systems Expert
 **File**: `Cross-Platform-Systems-Expert.md`
-**Workflow**: `.github/workflows/agent-cross-platform-systems-expert.yml`
+**Workflow**: `.github/workflows/comprehensive-agent-workflow.yml` (consolidated)
 **Specialization**: Windows/Linux/macOS setup, FFmpeg configuration, MIDI routing, Tauri dependencies
 
 ### QA Testing Expert
 **File**: `QA-Testing-Expert.md`
-**Workflow**: `.github/workflows/agent-qa-testing-expert.yml`
+**Workflow**: `.github/workflows/comprehensive-agent-workflow.yml` (consolidated)
 **Specialization**: Unit testing, integration testing, test automation, quality assurance
 
 ### GitHub Workflow Expert
 **File**: `GitHub-Workflow-Expert.md`
-**Workflow**: `.github/workflows/agent-github-workflow-expert.yml`
+**Workflow**: `.github/workflows/comprehensive-agent-workflow.yml` (consolidated)
 **Specialization**: GitHub Actions, workflow syntax, CI/CD, debugging, permissions
 
 ### Project Manager
 **File**: `Project-Manager.md`
-**Workflow**: `.github/workflows/agent-project-manager.yml`
+**Workflow**: `.github/workflows/comprehensive-agent-workflow.yml` (consolidated)
 **Specialization**: Multi-agent coordination, synthesizing feedback, implementation planning, PR creation
 
 ## How to Use
