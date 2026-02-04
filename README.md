@@ -175,6 +175,7 @@ HarmonySync uses a comprehensive testing framework. Tests should be written BEFO
 
 #### Test Location
 - **Service Tests (Backend)**: `apps/testing/utils/electron-tests/__tests__/your-service.test.ts`
+  - Replace `your-service` with your actual service name, e.g., `audio-service.test.ts`
 - **Integration Tests**: `apps/testing/utils/test-utils/__tests__/__tests__/integration/`
   - Note: The nested `__tests__/__tests__/` structure is intentional in this repository
 - **ViewModel Tests**: `apps/testing/utils/test-utils/__tests__/__tests__/viewmodels/`
@@ -330,9 +331,9 @@ The backend consists of Electron main process services and separate microservice
 #### Backend Architecture
 - **Main Process Services**: `apps/electron-app/electron/services/`
 - **Microservices**: 
-  - Audio: `apps/harmonysync-audio-service/`
-  - Image: `apps/harmonysync-image-service/`
-  - Video: `apps/harmonysync-video-service/`
+  - Audio: `apps/harmonysync-audio-service/` (Port: 3001)
+  - Image: `apps/harmonysync-image-service/` (Port: 3003)
+  - Video: `apps/harmonysync-video-service/` (Port: 3002)
   - Folder: `apps/harmonysync-folder-service/`
 
 #### Service Types
@@ -392,7 +393,7 @@ The backend consists of Electron main process services and separate microservice
    pnpm --filter @harmonysync/audio-service test
 
    # Microservices expose REST API and Socket.IO
-   # Default ports: Audio:3001, Video:3002, Image:3003
+   # Ports: Audio:3001, Video:3002, Image:3003
    ```
 
 #### Backend Resources
@@ -465,7 +466,7 @@ HarmonySync uses JSON files for all data persistence (replaced SQLite).
    public async createMyData(data: Partial<MyData>): Promise<MyData> {
      this.ensureInitialized();
      const newData: MyData = {
-       id: Date.now().toString(),
+       id: Date.now().toString(), // Note: Use UUID for production to avoid collisions
        name: data.name || 'Untitled',
        createdAt: new Date().toISOString()
      };
