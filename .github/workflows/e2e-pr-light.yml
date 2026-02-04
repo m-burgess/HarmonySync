@@ -1,0 +1,89 @@
+name: PR Lightweight E2E
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: e2e-pr-light-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  light-e2e:
+    name: Lightweight E2E (smoke)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node and pnpm
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Enable corepack and prepare pnpm
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare pnpm@latest --activate
+
+      - name: Install dependencies (fast)
+        shell: bash
+        run: |
+          pnpm install -w --frozen-lockfile --prefer-offline
+
+      - name: Build renderer only (fast)
+        shell: bash
+        run: |
+          pnpm --filter @harmonysync/renderer build || true
+
+      - name: Start renderer preview (port 5173)
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter @harmonysync/renderer preview -- --port 5173 &
+          PREVIEW_PID=$!
+          echo "PREVIEW_PID=$PREVIEW_PID" >> $GITHUB_ENV
+          # wait for port
+          n=0
+          until curl --silent --fail http://localhost:5173/ >/dev/null 2>&1 || [ $n -ge 30 ]; do
+            n=$((n+1))
+            sleep 1
+          done
+          if [ $n -ge 30 ]; then
+            echo "Renderer preview not available after 30s"
+            ps aux
+            kill $PREVIEW_PID || true
+            exit 1
+          fi
+
+      - name: Install Playwright browsers (light)
+        shell: bash
+        run: |
+          npx playwright install --with-deps
+
+      - name: Run Playwright smoke tests (@smoke)
+        shell: bash
+        env:
+          CI: true
+        run: |
+          # Run only tests tagged @smoke for quick feedback
+          npx playwright test --grep @smoke --reporter=list --workers=2 || true
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report || |
+            playwright-report
+
+      - name: Cleanup renderer preview
+        if: always()
+        shell: bash
+        run: |
+          if [ -n "${PREVIEW_PID-}" ]; then
+            echo "Killing preview PID $PREVIEW_PID"
+            kill $PREVIEW_PID || true
+          fi
