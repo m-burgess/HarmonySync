@@ -6,7 +6,7 @@
  */
 
 // Export all interfaces and types
-export * from '../../types/testing';
+export * from '../types/testing';
 
 // Export all test helpers
-export * from './test-helpers';
+export * from './test-utils/test-helpers';

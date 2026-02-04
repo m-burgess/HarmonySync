@@ -754,7 +754,7 @@ jobs:
           pkgs=()
           for d in apps/* packages/*; do
             if [ -d "$d" ]; then
-              if [ -f "$d/jest.config.js" ] || [ -f "$d/vitest.config.ts" ]; then
+              if compgen -G "$d/jest.config.*" >/dev/null 2>&1 || compgen -G "$d/vitest.config.*" >/dev/null 2>&1; then
                 if [ -f "$d/package.json" ]; then
                   name=$(node -e "console.log(require('./$d/package.json').name)")
                   echo "Will run tests for package: $name (dir: $d)"

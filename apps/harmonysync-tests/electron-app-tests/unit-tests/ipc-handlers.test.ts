@@ -1,4 +1,5 @@
-import setupIpcHandlers from '../../../../electron-app/electron/ipc-handlers';
+import setupIpcHandlers from '../../../electron-app/ipc-handlers';
+import { createTempDir, trackService, cleanupAll } from '@harmonysync-tests/utils/test-utils';
 
 describe('IPC Handler registration', () => {
   test('registers expected handlers', () => {

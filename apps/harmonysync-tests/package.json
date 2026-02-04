@@ -1,0 +1,11 @@
+{
+  "name": "@harmonysync/tests",
+  "version": "0.0.1",
+  "private": true,
+  "main": "index.ts",
+  "license": "UNLICENSED",
+  "scripts": {
+    "test:local": "jest -c ./jest.config.harmonysync.js",
+    "typecheck": "tsc --noEmit -p ./tsconfig.json"
+  }
+}

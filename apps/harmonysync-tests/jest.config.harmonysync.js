@@ -12,6 +12,8 @@ export default {
   },
   moduleNameMapper: {
     '\\.(css|less|scss|sass)$': '<rootDir>/__mocks__/styleMock.js',
+    '^@harmonysync-tests/(.*)$': '<rootDir>/$1',
+    '^@harmonysync-tests$': '<rootDir>/index.ts',
   },
   collectCoverageFrom: [
     'harmonysync/src/services/**/*.ts',

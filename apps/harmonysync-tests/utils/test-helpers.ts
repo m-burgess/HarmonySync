@@ -20,7 +20,7 @@ import {
   MockEventBus,
   MockHttpClient,
   MockDatabase
-} from '../../types/testing';
+} from '../types/testing';
 // ServiceConfig is a lightweight test config shape; declare as any here to avoid cross-package type resolution.
 type ServiceConfig = any;
 
