@@ -466,7 +466,9 @@ HarmonySync uses JSON files for all data persistence (replaced SQLite).
    public async createMyData(data: Partial<MyData>): Promise<MyData> {
      this.ensureInitialized();
      const newData: MyData = {
-       id: Date.now().toString(), // Note: Use UUID for production to avoid collisions
+       // Using Date.now() for simplicity in this example
+       // For production, use UUID library (e.g., import { v4 as uuidv4 } from 'uuid')
+       id: Date.now().toString(),
        name: data.name || 'Untitled',
        createdAt: new Date().toISOString()
      };
