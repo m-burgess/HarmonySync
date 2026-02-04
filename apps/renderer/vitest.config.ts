@@ -1,9 +1,16 @@
+import path from 'path'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
+  resolve: {
+    alias: [
+      { find: '@harmonysync-tests', replacement: path.resolve(__dirname, '../harmonysync-tests') },
+    ],
+  },
   test: {
     globals: true,
     environment: 'jsdom',
+    include: ['src/**/*.test.{ts,tsx,js,jsx}'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],

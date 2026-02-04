@@ -1,7 +1,7 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  roots: ['<rootDir>/electron', '<rootDir>/../harmonysync-tests/electron-app/unit-tests'],
+  roots: ['<rootDir>/electron', '<rootDir>/../harmonysync-tests/electron-app-tests/unit-tests'],
   testMatch: ['**/__tests__/**/*.test.ts'],
   testTimeout: 10000,
   moduleFileExtensions: ['ts', 'js', 'json'],
