@@ -28,7 +28,7 @@ beforeAll(async () => {
     }));
   });
 
-  const mod = await import('../../../harmonysync-image-service/server.ts');
+  const mod = await import('../../../harmonysync-image-service/server');
   serverModule = mod;
   server = mod.server;
   ioServer = mod.io;
@@ -338,7 +338,7 @@ test('concurrency: only one active when MAX_CONCURRENT_JOBS=1', async () => {
   process.env.PORT = String(PORT);
   process.env.HOST = '127.0.0.1';
 
-  const mod = await import('../../../harmonysync-image-service/server.ts');
+  const mod = await import('../../../harmonysync-image-service/server');
   const server2 = mod.server;
   const clientsLocal: any[] = [];
 
