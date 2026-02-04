@@ -2,18 +2,20 @@ import { FileManagerService } from '../../services/file-manager';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import os from 'os';
+import { createTempDir, trackService, cleanupAll } from '../test-utils';
 
 describe('FileManagerService', () => {
   let tempDir: string;
   let svc: FileManagerService;
 
   beforeAll(async () => {
-    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fm-'));
+    tempDir = await createTempDir('fm-');
     svc = new FileManagerService();
+    trackService(svc as any);
   });
 
   afterAll(async () => {
-    await fs.remove(tempDir);
+    await cleanupAll();
   });
 
   test('writeFile and readFile', async () => {
