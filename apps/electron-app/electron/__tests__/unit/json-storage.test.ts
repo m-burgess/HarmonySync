@@ -1,6 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
+import { createTempDir, trackService, cleanupAll } from '../test-utils';
 
 describe('JSONStorageService', () => {
   let tempDir: string;
@@ -26,6 +27,7 @@ describe('JSONStorageService', () => {
     const svc = new JSONStorageService();
     // initialize will create storage and files
     await svc.initialize();
+    trackService(svc as any);
 
     const ev = await svc.createScheduledEvent({ title: 'T1' });
     expect(ev).toHaveProperty('id');
@@ -47,6 +49,7 @@ describe('JSONStorageService', () => {
   test('getTodayEvents and getUpcomingEvents behavior', async () => {
     const svc = new JSONStorageService();
     await svc.initialize();
+    trackService(svc as any);
 
     const now = new Date().toISOString();
     const ev = await svc.createScheduledEvent({ title: 'Today', startTime: now });
