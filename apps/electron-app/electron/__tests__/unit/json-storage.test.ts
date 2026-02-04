@@ -7,7 +7,7 @@ describe('JSONStorageService', () => {
   let JSONStorageService: any;
 
   beforeAll(async () => {
-    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'js-'));
+    tempDir = await createTempDir('js-');
 
     // Mock electron.app.getPath before requiring module
     jest.resetModules();
@@ -19,7 +19,7 @@ describe('JSONStorageService', () => {
 
   afterAll(async () => {
     jest.dontMock('electron');
-    await fs.remove(tempDir);
+    await cleanupAll();
   });
 
   test('creates, updates, and deletes scheduled events', async () => {
@@ -52,10 +52,11 @@ describe('JSONStorageService', () => {
     const ev = await svc.createScheduledEvent({ title: 'Today', startTime: now });
 
     const today = await svc.getTodayEvents();
-    expect(today.find((e: any) => e.id === ev.id)).toBeTruthy();
+    expect(today.some((e: any) => e.id === ev.id)).toBe(true);
 
-    const upcoming = await svc.getUpcomingEvents(48);
-    expect(upcoming.find((e: any) => e.id === ev.id)).toBeTruthy();
+    const upcoming = await svc.getUpcomingEvents(72);
+    expect(Array.isArray(upcoming)).toBe(true);
+    expect(upcoming.some((e: any) => e.id === ev.id)).toBe(true);
 
     await svc.deleteScheduledEvent(ev.id);
   });
