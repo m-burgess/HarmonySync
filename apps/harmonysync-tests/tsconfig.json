@@ -9,6 +9,7 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "baseUrl": ".",
+    "types": ["jest", "@jest/globals", "node"],
     "paths": {
       "@harmonysync-tests/*": ["*"] ,
       "@harmonysync-tests": ["index.ts"]

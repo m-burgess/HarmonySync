@@ -21,6 +21,7 @@ import {
   MockHttpClient,
   MockDatabase
 } from '../types/testing';
+import { jest } from '@jest/globals';
 // ServiceConfig is a lightweight test config shape; declare as any here to avoid cross-package type resolution.
 type ServiceConfig = any;
 
