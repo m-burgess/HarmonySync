@@ -713,51 +713,75 @@ jobs:
               "Cross-platform compatibility confirmed",
               "Performance requirements met"
             ]);
-            await github.rest.pulls.update({ owner, repo, pull_number: pr_number, body });
+              await github.rest.pulls.update({ owner, repo, pull_number: pr_number, body });
+  
+  # ============================================================================
+  # Coverage check: run repository tests with coverage and enforce thresholds
+  # This runs after QA testing and will fail the workflow if coverage thresholds
+  # (configured in package.json) are not met.
+  # ============================================================================
+  coverage-check:
+    name: "📊 Coverage Check"
+    runs-on: ubuntu-latest
+    needs: [product-owner-planning, qa-testing]
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.product-owner-planning.outputs.branch_name }}
 
-    # ==========================================================================
-    # Coverage check: run repository tests with coverage and enforce thresholds
-    # This runs after QA testing and will fail the workflow if coverage thresholds
-    # (configured in package.json) are not met.
-    # ==========================================================================
-    coverage-check:
-      name: "📊 Coverage Check"
-      runs-on: ubuntu-latest
-      needs: [product-owner-planning, qa-testing]
-      steps:
-        - name: Checkout feature branch
-          uses: actions/checkout@v4
-          with:
-            ref: ${{ needs.product-owner-planning.outputs.branch_name }}
+      - name: Setup Node and pnpm
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
 
-        - name: Setup Node and pnpm
-          uses: actions/setup-node@v4
-          with:
-            node-version: '18'
+      - name: Enable corepack and prepare pnpm
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare pnpm@latest --activate
 
-        - name: Enable corepack and prepare pnpm
-          shell: bash
-          run: |
-            corepack enable
-            corepack prepare pnpm@latest --activate
+      - name: Install dependencies
+        shell: bash
+        run: |
+          pnpm install -w --frozen-lockfile
 
-        - name: Install dependencies
-          shell: bash
-          run: |
-            pnpm install -w --frozen-lockfile
+      - name: Run coverage only for packages with coverage config
+        shell: bash
+        run: |
+          echo "Finding packages with jest.config.js or vitest.config.ts..."
+          set -e
+          pkgs=()
+          for d in apps/* packages/*; do
+            if [ -d "$d" ]; then
+              if [ -f "$d/jest.config.js" ] || [ -f "$d/vitest.config.ts" ]; then
+                if [ -f "$d/package.json" ]; then
+                  name=$(node -e "console.log(require('./$d/package.json').name)")
+                  echo "Will run tests for package: $name (dir: $d)"
+                  pkgs+=("$name")
+                fi
+              fi
+            fi
+          done
 
-        - name: Run tests with coverage
-          shell: bash
-          run: |
-            pnpm -w test --if-present
+          if [ ${#pkgs[@]} -eq 0 ]; then
+            echo "No packages with coverage config found; skipping tests."
+            exit 0
+          fi
 
-        - name: Upload coverage artifacts (optional)
-          uses: actions/upload-artifact@v4
-          with:
-            name: coverage-reports
-            path: |
-              coverage
-              **/coverage
+          # Run tests per package via pnpm filter (runs using workspace node_modules)
+          for pkg in "${pkgs[@]}"; do
+            echo "Running tests for $pkg"
+            pnpm -w --filter "$pkg" test --if-present
+          done
+
+      - name: Upload coverage artifacts (optional)
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: |
+            apps/*/coverage
+            packages/*/coverage
 
   # ============================================================================
   # Phase 7: Product Owner - Final Vision Approval
