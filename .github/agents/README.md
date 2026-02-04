@@ -39,6 +39,11 @@ This directory contains specialized GitHub Copilot agents for collaborative issu
 **Workflow**: `.github/workflows/comprehensive-agent-workflow.yml` (consolidated)
 **Specialization**: Unit testing, integration testing, test automation, quality assurance
 
+### TDD Testing Expert
+**File**: `TDD-Testing-Expert.md`
+**Workflow**: `.github/workflows/comprehensive-agent-workflow.yml` (consolidated / optional)
+**Specialization**: Test-driven development patterns, test templates, unit/integration/e2e examples
+
 ### GitHub Workflow Expert
 **File**: `GitHub-Workflow-Expert.md`
 **Workflow**: `.github/workflows/comprehensive-agent-workflow.yml` (consolidated)
@@ -85,20 +90,10 @@ The recommended sequence for multi-agent collaboration:
 
 ### GitHub Actions Workflow
 
-The workflow at `.github/workflows/issue-agent-collaboration.yml` can be manually triggered to post collaboration information to an issue:
-
-```bash
-# Trigger via GitHub CLI
-gh workflow run issue-agent-collaboration.yml -f issue_number=<ISSUE_NUMBER>
-
-# Or trigger via GitHub UI
-# Actions → Issue Agent Collaboration → Run workflow
-```
-
-**Note**: This workflow does NOT automatically create PRs. PRs should only be created after:
-- All relevant agents have provided their analysis
-- The Project Manager has synthesized feedback into a plan
-- The implementation approach has been reviewed and approved
+There are no per-agent automated workflows in this repository. Use the consolidated
+`.github/workflows/comprehensive-agent-workflow.yml` for orchestrated runs, or invoke
+agents manually via GitHub Copilot in your IDE. Manual invocation minimizes automated
+API/Copilot calls and reduces the risk of hitting rate limits.
 
 ## Important Notes
 
@@ -112,7 +107,11 @@ gh workflow run issue-agent-collaboration.yml -f issue_number=<ISSUE_NUMBER>
 To add new specialized agents:
 
 1. Create an agent definition in `.github/agents/<Agent-Name>.md`
-2. Create a corresponding workflow in `.github/workflows/agent-<agent-name>.yml`
+2. Do NOT create automated per-agent workflows. Instead:
+	 - Add the agent definition in `.github/agents/<Agent-Name>.md`.
+	 - Invoke the agent manually via GitHub Copilot, or include agent steps in
+		 the consolidated `.github/workflows/comprehensive-agent-workflow.yml` if
+		 you need automation (prefer manual runs to avoid rate limits).
 3. Update this README with the new agent's information
 4. Update the collaboration workflow if the agent should be part of the standard sequence
 
