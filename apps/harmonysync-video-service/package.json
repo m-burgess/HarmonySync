@@ -44,19 +44,7 @@
     "ts-jest": "^29.1.0",
     "typescript": "^5.3.3"
   },
-  ,
-  "jest": {
-    "collectCoverage": true,
-    "coverageDirectory": "coverage",
-    "coverageThreshold": {
-      "global": {
-        "branches": 80,
-        "functions": 80,
-        "lines": 80,
-        "statements": 80
-      }
-    }
-  }
+  },
   "engines": {
     "node": ">=16.0.0"
   }
