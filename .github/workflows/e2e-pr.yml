@@ -1,0 +1,114 @@
+name: PR End-to-End Tests
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: e2e-pr-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: End-to-End tests on PR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js and pnpm
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Enable corepack and prepare pnpm
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare pnpm@latest --activate
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          pnpm install -w --frozen-lockfile
+
+      - name: Build monorepo
+        shell: bash
+        run: |
+          pnpm -w build || true
+
+      - name: Start services and renderer preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          PIDS=()
+
+          # Helper to start a package if it exists and has a start script
+          start_if_exists() {
+            pkg_dir=$1
+            if [ -f "$pkg_dir/package.json" ]; then
+              has_start=$(node -e "const p=require('./$pkg_dir/package.json'); console.log(Boolean(p.scripts && p.scripts.start))")
+              if [ "$has_start" = "true" ]; then
+                echo "Starting $pkg_dir..."
+                pnpm --filter "$(node -e "console.log(require('./$pkg_dir/package.json').name)")" start &
+                PIDS+=("$!")
+                sleep 1
+              fi
+            fi
+          }
+
+          start_if_exists apps/harmonysync-audio-service || true
+          start_if_exists apps/harmonysync-image-service || true
+          start_if_exists apps/harmonysync-video-service || true
+          start_if_exists apps/harmonysync-folder-service || true
+
+          # Start renderer preview on port 5173 if available
+          if [ -f "apps/renderer/package.json" ]; then
+            has_preview=$(node -e "const p=require('./apps/renderer/package.json'); console.log(Boolean(p.scripts && (p.scripts.preview||p.scripts.start)))")
+            if [ "$has_preview" = "true" ]; then
+              echo "Starting renderer preview..."
+              pnpm --filter @harmonysync/renderer preview -- --port 5173 &
+              PIDS+=("$!")
+            fi
+          fi
+
+          # Wait for renderer to be available
+          echo "Waiting for renderer on http://localhost:5173..."
+          n=0
+          until curl --silent --fail http://localhost:5173/ >/dev/null 2>&1 || [ $n -ge 60 ]; do
+            n=$((n+1))
+            sleep 1
+          done
+          if [ $n -ge 60 ]; then
+            echo "Renderer did not become available after 60s"
+            ps aux
+            kill ${PIDS[@]} || true
+            exit 1
+          fi
+
+          # Export cleanup command for later step
+          echo "PIDS=${PIDS[*]}" >> $GITHUB_ENV
+
+      - name: Install Playwright browsers
+        shell: bash
+        run: |
+          npx playwright install --with-deps
+
+      - name: Run Playwright E2E tests
+        shell: bash
+        env:
+          CI: true
+        run: |
+          npx playwright test --reporter=list
+
+      - name: Cleanup started services
+        if: always()
+        shell: bash
+        run: |
+          echo "Cleaning up background processes..."
+          if [ -n "${PIDS-}" ]; then
+            for pid in $PIDS; do
+              echo "Killing $pid" || true
+              kill $pid || true
+            done
+          fi
