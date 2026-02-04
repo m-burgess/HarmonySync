@@ -177,7 +177,7 @@ HarmonySync uses a comprehensive testing framework. Tests should be written BEFO
 - **Service Tests (Backend)**: `apps/testing/utils/electron-tests/__tests__/your-service.test.ts`
   - Replace `your-service` with your actual service name, e.g., `audio-service.test.ts`
 - **Integration Tests**: `apps/testing/utils/test-utils/__tests__/__tests__/integration/`
-  - Note: The nested `__tests__/__tests__/` structure is intentional - the first `__tests__` contains test utilities, and the nested one contains actual tests
+  - Note: The nested `__tests__/__tests__/` is part of the existing directory structure in this repository. The first level contains test utilities, the second contains actual test files organized by type.
 - **ViewModel Tests**: `apps/testing/utils/test-utils/__tests__/__tests__/viewmodels/`
 - **Example/Tutorial Tests**: `apps/testing/utils/test-utils/__tests__/example-service.test.ts`
 
@@ -466,9 +466,9 @@ HarmonySync uses JSON files for all data persistence (replaced SQLite).
    public async createMyData(data: Partial<MyData>): Promise<MyData> {
      this.ensureInitialized();
      const newData: MyData = {
-       // This example uses Date.now() to match the existing pattern in json-storage.ts
-       // Note: This can cause collisions with concurrent rapid operations
-       // Consider UUID (import { v4 as uuidv4 } from 'uuid') if concurrency is needed
+       // ID Generation: This example uses Date.now() to match json-storage.ts pattern
+       // Acceptable for single-user operations with low concurrency
+       // Use UUID for high-concurrency scenarios or multi-user systems
        id: Date.now().toString(),
        name: data.name || 'Untitled',
        createdAt: new Date().toISOString()
@@ -495,9 +495,9 @@ HarmonySync uses JSON files for all data persistence (replaced SQLite).
 
 4. **Per-Presentation Storage**
    - Some data is stored per-presentation (songs/slides)
-   - Location: `{presentationFolder}/harmonysync.json`
-   - Methods in `JSONStorageService`: `getSongMetadata()`, `saveSongMetadata()`
-   - Also supports `youtube.txt` for YouTube links
+   - Location: `{presentationFolder}/harmonysync.json` where `{presentationFolder}` is the user-selected presentation/song directory path
+   - Methods in `JSONStorageService`: `getSongMetadata(songPath)`, `saveSongMetadata(songPath, metadata)`
+   - Also supports `youtube.txt` for YouTube links in the same folder
 
 5. **Testing Storage**
    ```typescript
