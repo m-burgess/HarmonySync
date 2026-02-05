@@ -58,11 +58,18 @@ const App = observer(() => {
 
   // Resizable layout state
   const DEFAULT_SIDEBAR_WIDTH = 300;
+  const DEFAULT_MIXER_WIDTH = 300;
   
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const stored = localStorage.getItem('rp_sidebarWidth');
     const v = stored ? parseInt(stored, 10) : NaN;
     return isNaN(v) ? DEFAULT_SIDEBAR_WIDTH : v;
+  });
+  
+  const [mixerWidth, setMixerWidth] = useState(() => {
+    const stored = localStorage.getItem('rp_mixerWidth');
+    const v = stored ? parseInt(stored, 10) : NaN;
+    return isNaN(v) ? DEFAULT_MIXER_WIDTH : v;
   });
   
   const draggingRef = useRef<{ type: string; startX: number; startWidth: number } | null>(null);
@@ -184,6 +191,55 @@ const App = observer(() => {
   const resetSidebar = () => {
     setSidebarWidth(DEFAULT_SIDEBAR_WIDTH);
     localStorage.removeItem('rp_sidebarWidth');
+  };
+
+  // Mixer sidebar resizing
+  const startMixerResize = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    const startX = e.type.startsWith('touch') ? (e as React.TouchEvent).touches[0].clientX : (e as React.MouseEvent).clientX;
+    const startWidth = mixerWidth;
+    
+    draggingRef.current = { type: 'mixer', startX, startWidth };
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'ew-resize';
+
+    const onMove = (ev: MouseEvent | TouchEvent) => {
+      if (!draggingRef.current || draggingRef.current.type !== 'mixer') return;
+      const clientX = ev.type.startsWith('touch') ? (ev as TouchEvent).touches[0].clientX : (ev as MouseEvent).clientX;
+      const { startX, startWidth } = draggingRef.current;
+      const dx = startX - clientX; // Reversed because we're resizing from the left edge
+      const minWidth = 200;
+      const maxWidth = 600;
+
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(() => {
+        let newWidth = Math.max(minWidth, Math.min(maxWidth, startWidth + dx));
+        setMixerWidth(newWidth);
+        localStorage.setItem('rp_mixerWidth', String(newWidth));
+      });
+    };
+
+    const onUp = () => {
+      draggingRef.current = null;
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchend', onUp);
+    };
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchend', onUp);
+  };
+
+  const resetMixer = () => {
+    setMixerWidth(DEFAULT_MIXER_WIDTH);
+    localStorage.removeItem('rp_mixerWidth');
   };
 
   // Listen for display settings menu event
@@ -321,6 +377,7 @@ const App = observer(() => {
           className="vscode-resize-handle-vertical"
           onMouseDown={startSidebarResize}
           onDoubleClick={resetSidebar}
+          title="Double-click to reset sidebar width"
         />
 
         {/* Main Content Area */}
@@ -339,11 +396,21 @@ const App = observer(() => {
             )}
           </div>
 
-          {/* Mixer Sidebar */}
-          <MixerSidebar 
-            allTracks={audioViewModel.tracks} 
-            isLoadingTracks={audioViewModel.isLoading} 
+          {/* VS Code Resize Handle for Mixer */}
+          <div
+            className="vscode-resize-handle-vertical"
+            onMouseDown={startMixerResize}
+            onDoubleClick={resetMixer}
+            title="Double-click to reset mixer width"
           />
+
+          {/* Mixer Sidebar */}
+          <div style={{ width: `${mixerWidth}px`, minWidth: '200px', maxWidth: '600px' }}>
+            <MixerSidebar 
+              allTracks={audioViewModel.tracks} 
+              isLoadingTracks={audioViewModel.isLoading} 
+            />
+          </div>
         </div>
       </div>
 
