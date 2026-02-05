@@ -1,5 +1,6 @@
 .mixer-sidebar {
-  width: 220px;
+  /* Width controlled by parent container for resizable layout */
+  width: 100%;
   background: linear-gradient(180deg, #111827 0%, #0f1419 100%);
 }
 

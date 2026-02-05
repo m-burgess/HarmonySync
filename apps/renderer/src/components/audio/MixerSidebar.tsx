@@ -91,7 +91,7 @@ const MixerSidebar = observer(({ allTracks, isLoadingTracks }: MixerSidebarProps
                 
                 {/* Track Name */}
                 <span className="mixer-track-name">
-                  {((track.name || track.track_name || 'Unknown Track') as string)
+                  {(track.name || `Track ${index + 1}`)
                     .replace(/\.(mp3|wav|ogg|m4a|flac)$/i, '')
                     .replace(/[-_]/g, ' ')
                     .trim()
