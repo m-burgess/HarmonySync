@@ -5,11 +5,17 @@ export default {
     '**/harmonysync/src/__tests__/**/*.test.ts',
     '**/harmonysync/src/__tests__/**/*.test.js',
     '**/testing/smoke-tests/**/*.ts',
-    '**/testing/utils/electron-tests/**/*.test.ts'
+    '**/testing/utils/electron-tests/**/*.test.ts',
+    '**/coverage-tests/**/*.test.ts',
+    '**/smoke-tests/**/*.test.ts',
+    '**/unit-tests/**/*.test.ts'
   ],
   transform: {
     '^.+\\.tsx?$': ['ts-jest', { useESM: true }]
   },
+  transformIgnorePatterns: [
+    'node_modules/(?!(uuid)/)'
+  ],
   moduleNameMapper: {
     '\\.(css|less|scss|sass)$': '<rootDir>/__mocks__/styleMock.js',
     '^@harmonysync-tests/(.*)$': '<rootDir>/$1',
