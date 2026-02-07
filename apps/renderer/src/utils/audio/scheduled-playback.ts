@@ -47,7 +47,7 @@ export async function loadAudioBuffer(filePath: string): Promise<AudioBuffer> {
  * This implements step 1 from the issue: "Calculate the duration of each track"
  */
 export async function calculateTrackDurations(tracks: Track[]): Promise<Track[]> {
-  console.log(`🔢 Calculating durations for ${tracks.length} tracks...`);
+  console.log(`📊 Calculating durations for ${tracks.length} tracks...`);
   
   const tracksWithDurations = await Promise.all(
     tracks.map(async (track) => {
@@ -136,7 +136,7 @@ export async function playAllTracksScheduled(tracks: Track[]): Promise<void> {
   const tracksWithBuffers = tracks.filter(track => track.buffer && !track.isMuted);
   
   if (tracksWithBuffers.length === 0) {
-    console.warn('⚠️  No tracks with loaded buffers to play');
+    console.warn('⚠️ No tracks with loaded buffers to play');
     return;
   }
   
@@ -198,7 +198,7 @@ export async function playAllTracksScheduled(tracks: Track[]): Promise<void> {
  * Stop all scheduled tracks
  */
 export function stopAllScheduledTracks(): void {
-  console.log(`⏹️  Stopping ${scheduledTracks.size} scheduled tracks`);
+  console.log(`⏹️ Stopping ${scheduledTracks.size} scheduled tracks`);
   
   for (const [trackId, scheduled] of scheduledTracks.entries()) {
     try {
@@ -232,7 +232,7 @@ export function setScheduledTrackPan(trackId: string, pan: number): void {
   if (scheduled) {
     scheduled.pannerNode.pan.value = pan;
     scheduled.track.panValue = pan;
-    console.log(`🎛️  Set pan for ${scheduled.track.name}: ${pan.toFixed(2)}`);
+    console.log(`🎛️ Set pan for ${scheduled.track.name}: ${pan.toFixed(2)}`);
   }
 }
 
