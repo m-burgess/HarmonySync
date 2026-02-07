@@ -267,7 +267,7 @@ export class AudioMixer {
             // Log track durations for debugging
             console.log('📊 Track durations:');
             tracks.forEach(track => {
-                console.log(`  - ${track.name}: ${track.duration.toFixed(2)}s`);
+                console.log(`  - ${track.name}: ${track.duration?.toFixed(2) ?? 'unknown'}s`);
             });
             
             // Prepare all tracks first before scheduling
@@ -317,7 +317,7 @@ export class AudioMixer {
             // Log track information for debugging
             console.log('📊 Preparing synchronized playback for tracks:');
             tracks.forEach(track => {
-                console.log(`  - ${track.name}: ${track.duration.toFixed(2)}s`);
+                console.log(`  - ${track.name}: ${track.duration?.toFixed(2) ?? 'unknown'}s`);
             });
             
             // Prepare all tracks first before scheduling
