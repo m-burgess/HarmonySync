@@ -7,7 +7,7 @@
  * - No useState for business state (only UI state for grid rendering)
  * - Pure presentation logic only (~140 lines vs original 269 lines)
  */
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { observer } from 'mobx-react-lite';
 import { runInAction } from 'mobx';
 import { getViewModel } from '../../viewmodels';
@@ -16,8 +16,7 @@ import { VSCodePanel } from '../VSCodeUI.tsx';
 import SlideItem from './SlideItem';
 import SlideImportModal from './SlideImportModal';
 import { event } from '../../electron-adapter';
-import { FixedSizeGrid as Grid, GridChildComponentProps } from 'react-window';
-import type { SlideData, SlideGridItemData } from './types';
+import type { SlideData } from './types';
 
 interface SlideManagerProps {
   allSlides: SlideData[];
@@ -29,16 +28,10 @@ interface SlideManagerProps {
 const SlideManager: React.FC<SlideManagerProps> = observer(({ allSlides, setAllSlides, selectedSlide, setSelectedSlide }) => {
   const viewModel = getViewModel('slideViewModel');
   
-  // UI-only state (for grid rendering - not business logic)
-  const [columns, setColumns] = useState(4);
-  const [gridHeight, setGridHeight] = useState(400);
-  const [gridKey, setGridKey] = useState(0);
-  
-  const gridRef = useRef<Grid>(null);
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
   const slideColRef = useRef<HTMLDivElement>(null);
-  const gridContainerRef = useRef<HTMLDivElement>(null);
+  const slidesWrapRef = useRef<HTMLDivElement>(null);
 
   // Sync ViewModel state with parent component props
   // This is a temporary bridge until we fully refactor parent components
@@ -73,20 +66,6 @@ const SlideManager: React.FC<SlideManagerProps> = observer(({ allSlides, setAllS
     }
   }, [viewModel.selectedSlide, setSelectedSlide]);
 
-  // Calculate grid height based on available space
-  const updateGridHeight = useCallback(() => {
-    if (gridContainerRef.current) {
-      const containerHeight = gridContainerRef.current.clientHeight;
-      setGridHeight(Math.max(200, containerHeight));
-    }
-  }, []);
-
-  useEffect(() => {
-    updateGridHeight();
-    window.addEventListener('resize', updateGridHeight);
-    return () => window.removeEventListener('resize', updateGridHeight);
-  }, [updateGridHeight]);
-
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -106,46 +85,16 @@ const SlideManager: React.FC<SlideManagerProps> = observer(({ allSlides, setAllS
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [viewModel]);
 
-  // Recalculate columns on resize
+  // Ensure selected slide stays in view
   useEffect(() => {
-    let ro: ResizeObserver | null = null;
-    const handleResize = () => {
-      const width = slideColRef.current ? slideColRef.current.clientWidth : 800;
-      const col = Math.max(2, Math.floor(width / (viewModel.thumbnailSize + 16)));
-      setColumns(col);
-      setGridKey(k => k + 1);
-    };
-    handleResize();
-    if (window.ResizeObserver && slideColRef.current) {
-      ro = new ResizeObserver(handleResize);
-      ro.observe(slideColRef.current);
-    } else {
-      window.addEventListener('resize', handleResize);
-    }
-
-    return () => {
-      if (ro && slideColRef.current) {
-        ro.unobserve(slideColRef.current);
-      } else {
-        window.removeEventListener('resize', handleResize);
-      }
-    };
-  }, [viewModel.thumbnailSize]);
-
-  // Center selected slide in the grid viewport
-  useEffect(() => {
-    if (!gridRef.current || !viewModel.selectedSlide) return;
+    if (!slidesWrapRef.current || !viewModel.selectedSlide) return;
     const index = viewModel.selectedSlideIndex;
     if (index === -1) return;
-    const row = Math.floor(index / columns);
-    const col = index % columns;
-    const rowHeight = viewModel.thumbnailSize + 24;
-    const colWidth = viewModel.thumbnailSize + 16;
-    gridRef.current.scrollTo({ 
-      scrollLeft: Math.max(0, col * colWidth - (gridRef.current.props.width / 2) + (colWidth / 2)), 
-      scrollTop: Math.max(0, row * rowHeight - (gridRef.current.props.height / 2) + (rowHeight / 2)) 
-    });
-  }, [viewModel.selectedSlide, columns, viewModel.thumbnailSize]);
+    const el = slidesWrapRef.current.querySelector(`[data-slide-index="${index}"]`);
+    if (el instanceof HTMLElement) {
+      el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+  }, [viewModel.selectedSlide, viewModel.selectedSlideIndex]);
 
   // Handle slide click
   const handleSlideClick = (index: number) => {
@@ -190,42 +139,6 @@ const SlideManager: React.FC<SlideManagerProps> = observer(({ allSlides, setAllS
     e.preventDefault();
   };
 
-  // Grid cell renderer
-  const Cell: React.FC<GridChildComponentProps<SlideGridItemData>> = ({ columnIndex, rowIndex, style, data }) => {
-    const index = rowIndex * data.columns + columnIndex;
-    if (index >= data.allSlides.length) return null;
-    const slide = data.allSlides[index];
-    return (
-      <div style={style} className="p-1">
-        <SlideItem
-          slide={slide}
-          index={index}
-          isSelected={slide === data.selectedSlide}
-          onSelect={data.handleSlideClick}
-          onDragStart={data.handleDragStart}
-          onDragEnter={data.handleDragEnter}
-          onDrop={data.handleDrop}
-          onDragEnd={data.handleDragEnd}
-          thumbnailSize={data.thumbnailSize}
-          onVideoTranscoded={data.handleVideoTranscoded}
-        />
-      </div>
-    );
-  };
-
-  const gridItemData: SlideGridItemData = { 
-    allSlides: viewModel.slides, 
-    columns, 
-    thumbnailSize: viewModel.thumbnailSize, 
-    selectedSlide: viewModel.selectedSlide, 
-    handleSlideClick, 
-    handleDragStart, 
-    handleDragEnter, 
-    handleDrop, 
-    handleDragEnd,
-    handleVideoTranscoded: viewModel.handleVideoTranscoded.bind(viewModel)
-  };
-
   return (
     <div className="h-full flex flex-col" id="slide-col" ref={slideColRef} onDragOver={handleDragOver}>
       <VSCodePanel title="Slides" className="pl-3 pt-3 pb-3 h-full flex flex-col">
@@ -267,20 +180,29 @@ const SlideManager: React.FC<SlideManagerProps> = observer(({ allSlides, setAllS
       </div>
 
       {/* Slides Grid */}
-      <div className="flex-1 -mr-3" ref={gridContainerRef} style={{ height: '100%' }}>
-        <Grid
-          key={gridKey}
-          ref={gridRef}
-          columnCount={columns}
-          columnWidth={viewModel.thumbnailSize + 8}
-          height={gridHeight}
-          rowCount={Math.ceil(viewModel.slides.length / columns)}
-          rowHeight={Math.round(viewModel.thumbnailSize * 0.56) + 12}
-          width={slideColRef.current ? slideColRef.current.clientWidth : 800}
-          itemData={gridItemData}
-        >
-          {Cell}
-        </Grid>
+      <div
+        className="slides-wrap"
+        ref={slidesWrapRef}
+        style={{
+          '--slide-size': `${viewModel.thumbnailSize}px`
+        } as React.CSSProperties}
+      >
+        {viewModel.slides.map((slide, index) => (
+          <div className="slides-wrap-item" key={slide.id || `${slide.name}-${index}`}>
+            <SlideItem
+              slide={slide}
+              index={index}
+              isSelected={slide === viewModel.selectedSlide}
+              onSelect={handleSlideClick}
+              onDragStart={handleDragStart}
+              onDragEnter={handleDragEnter}
+              onDrop={handleDrop}
+              onDragEnd={handleDragEnd}
+              thumbnailSize={viewModel.thumbnailSize}
+              onVideoTranscoded={viewModel.handleVideoTranscoded.bind(viewModel)}
+            />
+          </div>
+        ))}
       </div>
 
       {/* Slide Import Modal */}

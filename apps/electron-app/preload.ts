@@ -133,6 +133,9 @@ interface ElectronAPI {
   // Send event to main process
   send: (channel: string, ...args: any[]) => void;
 
+  // Send to main window
+  sendToMain: (channel: string, data: any) => Promise<void>;
+
   // Receive from main process
   receive: (channel: string, callback: (...args: any[]) => void) => () => void;
 }
@@ -344,6 +347,7 @@ class ElectronAPIBuilder {
       sendToConfidence: (channel: string, data: any) => ipcRenderer.invoke('send:confidence', channel, data),
       sendToLowerThirds: (channel: string, data: any) =>
         ipcRenderer.invoke('send:lowerThirds', channel, data),
+      sendToMain: (channel: string, data: any) => ipcRenderer.invoke('send:main', channel, data),
 
       // Receive from main process
       receive: (channel: string, callback: (...args: any[]) => void) => {

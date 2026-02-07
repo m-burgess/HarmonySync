@@ -124,6 +124,7 @@ export interface IDisplayService extends IService {
   getWindowConfig(type: DisplayWindow['type']): Promise<DisplayWindow | null>;
   setWindowBounds(type: DisplayWindow['type'], bounds: { x: number; y: number; width: number; height: number }): Promise<void>;
   clearAll(): Promise<void>;
+  showSlide(slide: Slide): Promise<void>;
   displayVideoSlide(path: string, duration?: number): Promise<void>;
 }
 

@@ -15,7 +15,7 @@
 
 import { BaseService } from '../base/BaseService';
 import type { IDisplayService, IIpcService } from '../types/services';
-import type { Display, DisplayWindow } from '../types';
+import type { Display, DisplayWindow, Slide } from '../types';
 
 /**
  * Display Service Implementation
@@ -109,6 +109,17 @@ export class DisplayService extends BaseService implements IDisplayService {
       await this.ipc.invoke('display:clearAll');
     } catch (error) {
       return this.handleError('clearAll', error);
+    }
+  }
+
+  /**
+   * Display a slide across display windows
+   */
+  public async showSlide(slide: Slide): Promise<void> {
+    try {
+      await this.ipc.invoke('display:slide', slide);
+    } catch (error) {
+      return this.handleError('showSlide', error);
     }
   }
 
