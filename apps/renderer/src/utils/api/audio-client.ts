@@ -32,6 +32,7 @@ export interface MixerState {
   tracks: Array<{
     id: string;
     name: string;
+    duration?: number; // Duration in seconds
     volume: number;
     pan: number;
     isMuted: boolean;
