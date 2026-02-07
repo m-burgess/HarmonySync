@@ -129,9 +129,9 @@ const ConfidenceMonitor = () => {
   const getTimerDisplay = () => {
     if (!timer.active || timer.total === 0) return null;
     
-    const remaining = timer.total - timer.elapsed;
+    const remaining = Math.max(0, timer.total - timer.elapsed);
     const minutes = Math.floor(remaining / 60);
-    const seconds = Math.floor(remaining % 60).toString().padStart(2, '0');
+    const seconds = (remaining % 60).toString().padStart(2, '0');
     const percentage = (timer.elapsed / timer.total) * 100;
     
     let colorClass = '';
