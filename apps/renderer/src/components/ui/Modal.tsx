@@ -61,9 +61,9 @@ const Modal: React.FC<ModalProps> = ({
 
   return (
     <div className="modal-overlay" onClick={handleOverlayClick}>
-      <div className={modalClass}>
+      <div className={`vscode-panel-content ${modalClass}`}>
         {(title || showCloseButton) && (
-          <div className="modal-header">
+          <div className="modal-header vscode-panel-header">
             {title && <h2 className="modal-title">{title}</h2>}
             {showCloseButton && (
               <Button

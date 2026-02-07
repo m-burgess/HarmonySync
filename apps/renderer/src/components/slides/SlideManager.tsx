@@ -12,7 +12,8 @@ import { observer } from 'mobx-react-lite';
 import { runInAction } from 'mobx';
 import { getViewModel } from '../../viewmodels';
 import { ArrowPathIcon, ArrowUpTrayIcon } from '@heroicons/react/24/solid';
-import { VSCodePanel } from '../VSCodeUI.tsx';
+import { VSCodeInput, VSCodePanel } from '../VSCodeUI.tsx';
+import Button from '../ui/Button.tsx';
 import SlideItem from './SlideItem';
 import SlideImportModal from './SlideImportModal';
 import { event } from '../../electron-adapter';
@@ -145,20 +146,20 @@ const SlideManager: React.FC<SlideManagerProps> = observer(({ allSlides, setAllS
       {/* Screen Controls */}
       <div className="flex items-center justify-between mb-3 pr-3">
         <div className="flex items-center gap-2">
-          <button
+          <Button
             onClick={() => viewModel.openImportModal()}
-            className="p-1.5 bg-accent text-white rounded-md hover:bg-accent-dark transition-colors"
             title="Import Slides"
-          >
-            <ArrowUpTrayIcon className="w-4 h-4" />
-          </button>
+            size="small"
+            variant="secondary"
+            icon={<ArrowUpTrayIcon className="w-4 h-4" />}
+          />
         </div>
       </div>
       
       {/* Thumbnail Size Control */}
       <div className="flex items-center gap-4 mb-3 pr-3">
         <label htmlFor="thumbnail-size-slider" className="text-sm text-muted">Slide Size</label>
-        <input
+        <VSCodeInput
           aria-label="Slide Size"
           type="range"
           id="thumbnail-size-slider"
@@ -169,14 +170,15 @@ const SlideManager: React.FC<SlideManagerProps> = observer(({ allSlides, setAllS
           className="w-48"
         />
         <div className="text-sm text-muted">{viewModel.thumbnailSize}px</div>
-        <button 
-          aria-label="Reset slide size" 
-          title="Reset" 
-          className="ml-auto p-2 bg-surface rounded-md" 
+        <Button
+          aria-label="Reset slide size"
+          title="Reset"
+          className="ml-auto"
+          size="small"
+          variant="ghost"
+          icon={<ArrowPathIcon className="w-4 h-4" />}
           onClick={() => viewModel.setThumbnailSize(220)}
-        >
-          <ArrowPathIcon className="w-4 h-4 text-muted" />
-        </button>
+        />
       </div>
 
       {/* Slides Grid */}

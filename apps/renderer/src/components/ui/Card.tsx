@@ -42,8 +42,13 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(({
   };
 
   return (
-    <div ref={ref} className={cardClass} onClick={handleClick} {...props}>
-      {header && <div className="card-header">{header}</div>}
+    <div
+      ref={ref}
+      className={`vscode-panel-content ${cardClass}`}
+      onClick={handleClick}
+      {...props}
+    >
+      {header && <div className="vscode-panel-header card-header">{header}</div>}
       <div className="card-body">{children}</div>
       {footer && <div className="card-footer">{footer}</div>}
     </div>

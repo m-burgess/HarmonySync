@@ -6,6 +6,14 @@
   color: var(--vscode-foreground);
 }
 
+.service-order-settings .vscode-panel-content {
+  margin-bottom: 16px;
+}
+
+.service-order-settings .vscode-panel-content:last-child {
+  margin-bottom: 0;
+}
+
 .service-order-settings h2 {
   margin: 0 0 24px 0;
   font-size: 1.75rem;
@@ -41,11 +49,7 @@
 }
 
 .settings-section {
-  margin-bottom: 32px;
-  padding: 20px;
-  background: var(--vscode-editor-background);
-  border-radius: 8px;
-  border: 1px solid var(--vscode-widget-border);
+  margin-bottom: 0;
 }
 
 .settings-section .description {

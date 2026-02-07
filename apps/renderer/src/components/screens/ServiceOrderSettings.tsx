@@ -10,6 +10,7 @@
 import React, { useState, useEffect } from 'react';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
+import { VSCodeInput, VSCodePanel } from '../VSCodeUI.tsx';
 import '../../styles/components/ServiceOrderSettings.css';
 
 interface ServiceOrderSettings {
@@ -249,8 +250,7 @@ const ServiceOrderSettings: React.FC = () => {
         </div>
       )}
 
-      <div className="settings-section">
-        <h3>Watch Folder</h3>
+      <VSCodePanel title="Watch Folder" className="settings-section">
         <p className="description">The folder to monitor for zipped service orders.</p>
         <div className="folder-input-group">
           <Input
@@ -264,12 +264,11 @@ const ServiceOrderSettings: React.FC = () => {
         <Button onClick={handleScanNow} disabled={loading || !settings.watchFolder}>
           {loading ? 'Scanning...' : 'Scan Now'}
         </Button>
-      </div>
+      </VSCodePanel>
 
-      <div className="settings-section">
-        <h3>Auto-Import</h3>
+      <VSCodePanel title="Auto-Import" className="settings-section">
         <label className="checkbox-label">
-          <input
+          <VSCodeInput
             type="checkbox"
             checked={settings.autoImportOnStartup}
             onChange={(e) => saveSettings({ ...settings, autoImportOnStartup: e.target.checked })}
@@ -280,12 +279,11 @@ const ServiceOrderSettings: React.FC = () => {
           When enabled, the app will scan the watch folder when it starts and prompt you to import
           any found service orders.
         </p>
-      </div>
+      </VSCodePanel>
 
-      <div className="settings-section">
-        <h3>Cleanup</h3>
+      <VSCodePanel title="Cleanup" className="settings-section">
         <label className="checkbox-label">
-          <input
+          <VSCodeInput
             type="checkbox"
             checked={settings.cleanupOldServices}
             onChange={(e) => saveSettings({ ...settings, cleanupOldServices: e.target.checked })}
@@ -295,7 +293,7 @@ const ServiceOrderSettings: React.FC = () => {
         <div className="cleanup-age">
           <label>
             Delete services older than:
-            <input
+            <VSCodeInput
               type="number"
               value={settings.maxServiceAge}
               onChange={(e) => saveSettings({ ...settings, maxServiceAge: parseInt(e.target.value, 10) })}
@@ -309,10 +307,9 @@ const ServiceOrderSettings: React.FC = () => {
         <Button onClick={handleCleanupOld} disabled={loading} variant="secondary">
           {loading ? 'Cleaning...' : 'Cleanup Old Services Now'}
         </Button>
-      </div>
+      </VSCodePanel>
 
-      <div className="settings-section">
-        <h3>Imported Service Orders ({importedServices.length})</h3>
+      <VSCodePanel title={`Imported Service Orders (${importedServices.length})`} className="settings-section">
         {importedServices.length === 0 ? (
           <p className="no-services">No imported service orders</p>
         ) : (
@@ -353,7 +350,7 @@ const ServiceOrderSettings: React.FC = () => {
             </Button>
           </>
         )}
-      </div>
+      </VSCodePanel>
     </div>
   );
 };

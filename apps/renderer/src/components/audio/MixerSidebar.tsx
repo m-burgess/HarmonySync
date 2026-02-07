@@ -12,6 +12,8 @@ import { observer } from 'mobx-react-lite';
 import { runInAction } from 'mobx';
 import { getViewModel } from '../../viewmodels';
 import { PlayIcon, PauseIcon } from '@heroicons/react/24/solid';
+import { VSCodePanel } from '../VSCodeUI.tsx';
+import Button from '../ui/Button.tsx';
 import type { Track } from '../../types/audio';
 import '../../styles/components/MixerSidebar.css';
 
@@ -38,70 +40,69 @@ const MixerSidebar = observer(({ allTracks, isLoadingTracks }: MixerSidebarProps
   }, [isLoadingTracks, viewModel]);
 
   return (
-    <div className="mixer-sidebar h-full flex flex-col bg-gray-800 border-l border-gray-700 overflow-hidden">
-      {/* Header with Controls */}
-      <div className="flex-shrink-0 px-3 py-2 border-b border-gray-700">
-        <div className="flex items-center justify-between gap-2 mb-2">
-          <h3 className="text-sm font-semibold text-gray-200 flex items-center gap-2">
-            🎚️ Mixer
-          </h3>
-          <div className="flex gap-1">
-            <button
+    <div className="mixer-sidebar h-full flex flex-col overflow-hidden">
+      <VSCodePanel title="Mixer" className="mixer-sidebar-panel h-full flex flex-col">
+        {/* Header with Controls */}
+        <div className="mixer-controls">
+          <div className="mixer-controls-group">
+            <Button
               onClick={() => viewModel.playAll()}
               disabled={!viewModel.canPlay}
-              className="p-1.5 bg-green-700 hover:bg-green-600 rounded-md text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               title="Play All"
-            >
-              <PlayIcon className="w-4 h-4" />
-            </button>
-            <button
+              size="small"
+              variant="success"
+              icon={<PlayIcon className="w-4 h-4" />}
+              aria-label="Play all tracks"
+            />
+            <Button
               onClick={() => viewModel.stopAll()}
               disabled={!viewModel.canStop}
-              className="p-1.5 bg-red-700 hover:bg-red-600 rounded-md text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               title="Stop All"
-            >
-              <PauseIcon className="w-4 h-4" />
-            </button>
+              size="small"
+              variant="danger"
+              icon={<PauseIcon className="w-4 h-4" />}
+              aria-label="Stop all tracks"
+            />
           </div>
         </div>
-      </div>
 
-      {/* Tracks List */}
-      <div className="flex-1 overflow-y-auto p-2">
-        {viewModel.isLoadingTracks ? (
-          <div className="flex items-center justify-center h-full text-gray-500 text-sm">
-            Loading tracks...
-          </div>
-        ) : !viewModel.hasTracks ? (
-          <div className="flex items-center justify-center h-full text-gray-500 text-sm text-center px-2">
-            Load a song to see tracks
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {viewModel.sortedTracks.map((track: Track, index: number) => (
-              <button
-                key={track.id}
-                onClick={() => viewModel.toggleMute(index)}
-                className={`mixer-track-item ${viewModel.muteStates[track.id] ? 'muted' : ''}`}
-              >
-                {/* Icon */}
-                <span className="mixer-track-icon">
-                  {viewModel.muteStates[track.id] ? '🔇' : '🔊'}
-                </span>
-                
-                {/* Track Name */}
-                <span className="mixer-track-name">
-                  {(track.name || `Track ${index + 1}`)
-                    .replace(/\.(mp3|wav|ogg|m4a|flac)$/i, '')
-                    .replace(/[-_]/g, ' ')
-                    .trim()
-                  }
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+        {/* Tracks List */}
+        <div className="mixer-track-list">
+          {viewModel.isLoadingTracks ? (
+            <div className="mixer-empty-state">
+              Loading tracks...
+            </div>
+          ) : !viewModel.hasTracks ? (
+            <div className="mixer-empty-state">
+              Load a song to see tracks
+            </div>
+          ) : (
+            <div className="mixer-track-stack">
+              {viewModel.sortedTracks.map((track: Track, index: number) => (
+                <Button
+                  key={track.id}
+                  onClick={() => viewModel.toggleMute(index)}
+                  className={`mixer-track-item ${viewModel.muteStates[track.id] ? 'muted' : ''}`}
+                  variant="ghost"
+                  size="small"
+                  title={track.name}
+                >
+                  <span className="mixer-track-icon">
+                    {viewModel.muteStates[track.id] ? '🔇' : '🔊'}
+                  </span>
+                  <span className="mixer-track-name">
+                    {(track.name || `Track ${index + 1}`)
+                      .replace(/\.(mp3|wav|ogg|m4a|flac)$/i, '')
+                      .replace(/[-_]/g, ' ')
+                      .trim()
+                    }
+                  </span>
+                </Button>
+              ))}
+            </div>
+          )}
+        </div>
+      </VSCodePanel>
     </div>
   );
 });

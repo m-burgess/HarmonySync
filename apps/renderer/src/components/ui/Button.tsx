@@ -1,5 +1,6 @@
 import React from 'react';
 import '../../styles/components/Button.css';
+import { VSCodeButton } from '../VSCodeUI.tsx';
 
 interface ButtonProps {
   children?: React.ReactNode;
@@ -34,28 +35,36 @@ const Button: React.FC<ButtonProps> = ({
     }
   };
 
+  const isIconOnly = !children && !!icon;
+  const vscodeVariant = isIconOnly
+    ? 'icon'
+    : variant === 'secondary' || variant === 'ghost'
+      ? 'secondary'
+      : 'primary';
+
   const buttonClass = [
     'btn',
     `btn-${variant}`,
     `btn-${size}`,
+    isIconOnly && 'btn-icon-only',
     disabled && 'btn-disabled',
     loading && 'btn-loading',
     className
   ].filter(Boolean).join(' ');
 
   return (
-    <button
+    <VSCodeButton
       type={type}
+      variant={vscodeVariant}
       className={buttonClass}
       onClick={handleClick}
       disabled={disabled || loading}
       title={title}
+      icon={loading ? <span className="btn-spinner" /> : icon}
       {...props}
     >
-      {loading && <span className="btn-spinner" />}
-      {icon && <span className="btn-icon">{icon}</span>}
       <span className="btn-content">{children}</span>
-    </button>
+    </VSCodeButton>
   );
 };
 
