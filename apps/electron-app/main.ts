@@ -28,6 +28,7 @@ const displayConfigService = require('./electron/services/display-config-service
 const eventTriggerService = require('./electron/services/event-trigger-service');
 const { ServiceOrderImporter } = require('./electron/services/service-order-importer');
 const { appSettingsService } = require('./electron/services/app-settings-service');
+const { getTimerService } = require('./electron/services/timer-service');
 
 // MIDI manager with optional loading
 let midiManager: any = null;
@@ -43,6 +44,9 @@ const serviceOrderImporter = new ServiceOrderImporter();
 
 // Initialize FFmpeg service singleton
 const ffmpegService = getFFmpegService();
+
+// Initialize Timer service singleton
+const timerService = getTimerService(jsonStorage);
 
 // Initialize and load app settings
 appSettingsService.load().catch((err: Error) => {
@@ -270,6 +274,14 @@ class ElectronApplication {
 
       // Register IPC handlers now that windows and display service are available
       this.setupIpcHandlers();
+
+      // Initialize timer service
+      await timerService.initialize();
+      timerService.setUpdateCallback((timer: any) => {
+        if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+          this.mainWindow.webContents.send('timer:updated', timer);
+        }
+      });
 
       // Start external services (audio, video, image)
       await this.startExternalServices();
@@ -617,6 +629,7 @@ class ElectronApplication {
       eventTriggerService,
       serviceOrderImporter,
       appSettingsService,
+      timerService,
     });
   }
 

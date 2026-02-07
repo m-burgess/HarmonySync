@@ -1,0 +1,148 @@
+# Timer Feature Visual Mockup
+
+## Activity Bar (Left Side of Main Window)
+```
+╔════════════════════════════════════════════════════════════════╗
+║ ┌────┐                                                         ║
+║ │ 📊 │ ← Service Order (Active)                               ║
+║ ├────┤                                                         ║
+║ │ 🎵 │ ← Audio/MIDI Settings                                  ║
+║ ├────┤                                                         ║
+║ │ ⚙️ │ ← Display Settings                                     ║
+║ ├────┤                                                         ║
+║ │ 🎛️ │ ← Preferences                                          ║
+║ ├────┤                                                         ║
+║ │ 🕐 │ ← TIMERS (NEW!)                                        ║
+║ │ [2]│    Badge shows 2 running timers                        ║
+║ ├────┤                                                         ║
+║ │    │                                                         ║
+║ │    │ (space)                                                 ║
+║ │    │                                                         ║
+║ ├────┤                                                         ║
+║ │ 📺 │ ← Screen Buttons                                       ║
+║ └────┘                                                         ║
+╚════════════════════════════════════════════════════════════════╝
+```
+
+## Timer Panel Modal (Opened when clicking timer icon)
+```
+╔═══════════════════════════════════════════════════════════════════════╗
+║                          Timers                      [+ New Timer]    ║
+╠═══════════════════════════════════════════════════════════════════════╣
+║                                                                        ║
+║  ┌──────────────────────────────────────────────────────────────┐   ║
+║  │  Sermon Timer                                    [✎]  [🗑]    │   ║
+║  │  Duration: 0h 30m                                             │   ║
+║  │                                                                │   ║
+║  │                         25:43                                  │   ║
+║  │                    (running - green)                           │   ║
+║  │                                                                │   ║
+║  │           [⏸ Pause]   [⏹ Stop]   [↻ Reset]                   │   ║
+║  │                                                                │   ║
+║  │  Displays: 2 selected (Primary, Secondary)                    │   ║
+║  └──────────────────────────────────────────────────────────────┘   ║
+║                                                                        ║
+║  ┌──────────────────────────────────────────────────────────────┐   ║
+║  │  Break Timer                                     [✎]  [🗑]    │   ║
+║  │  Duration: 0h 15m                                             │   ║
+║  │                                                                │   ║
+║  │                         08:12                                  │   ║
+║  │                    (running - green)                           │   ║
+║  │                                                                │   ║
+║  │           [⏸ Pause]   [⏹ Stop]   [↻ Reset]                   │   ║
+║  │                                                                │   ║
+║  │  Displays: 1 selected (Primary)                               │   ║
+║  └──────────────────────────────────────────────────────────────┘   ║
+║                                                                        ║
+║  ┌──────────────────────────────────────────────────────────────┐   ║
+║  │  Worship Timer                                   [✎]  [🗑]    │   ║
+║  │  Duration: 1h 0m                                              │   ║
+║  │                                                                │   ║
+║  │                         60:00                                  │   ║
+║  │                    (stopped - gray)                            │   ║
+║  │                                                                │   ║
+║  │           [▶ Start]   [⏹ Stop]   [↻ Reset]                   │   ║
+║  │                                                                │   ║
+║  │  Displays: 3 selected (All displays)                          │   ║
+║  └──────────────────────────────────────────────────────────────┘   ║
+║                                                                        ║
+╚═══════════════════════════════════════════════════════════════════════╝
+```
+
+## Create/Edit Timer Modal
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  Create Timer                                           [×]   ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                                ║
+║  Timer Name                                                    ║
+║  ┌──────────────────────────────────────────────────────┐    ║
+║  │ Sermon Timer                                         │    ║
+║  └──────────────────────────────────────────────────────┘    ║
+║                                                                ║
+║  Duration                                                      ║
+║  ┌─────────────┐        ┌─────────────┐                      ║
+║  │     0       │  hours  │     30      │  minutes             ║
+║  └─────────────┘        └─────────────┘                      ║
+║                                                                ║
+║  Show timer on displays                                        ║
+║  ┌──────────────────────────────────────────────────────┐    ║
+║  │ ☑  Primary Display                                   │    ║
+║  │ ☑  Secondary Display (Display 2)                     │    ║
+║  │ ☐  Lower Thirds Display                              │    ║
+║  │ ☐  NDI Output                                        │    ║
+║  └──────────────────────────────────────────────────────┘    ║
+║                                                                ║
+║                                                                ║
+║                        [Cancel]  [Create Timer]               ║
+║                                                                ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+## Timer Running - Badge on Activity Bar
+```
+When timers are running:
+┌────┐
+│ 🕐 │
+│ [2]│  ← Badge shows count of running timers
+└────┘
+```
+
+## States Visualization
+```
+╔═══════════════════════════════════════════════════════════╗
+║ TIMER STATES                                              ║
+╠═══════════════════════════════════════════════════════════╣
+║                                                            ║
+║  ● STOPPED (Gray)                                         ║
+║    - Timer at initial duration                            ║
+║    - Shows [▶ Start] button                              ║
+║    - Can edit or delete                                   ║
+║                                                            ║
+║  ● RUNNING (Green)                                        ║
+║    - Countdown active                                     ║
+║    - Updates every second                                 ║
+║    - Shows [⏸ Pause] button                              ║
+║    - Badge visible on activity bar                        ║
+║                                                            ║
+║  ● PAUSED (Yellow)                                        ║
+║    - Countdown stopped at current time                    ║
+║    - Shows [▶ Start] button to resume                    ║
+║    - Can stop or reset                                    ║
+║                                                            ║
+╚═══════════════════════════════════════════════════════════╝
+```
+
+## Feature Highlights
+```
+✓ Multiple timers supported simultaneously
+✓ Countdown displayed in hh:mm or mm:ss format
+✓ Real-time updates (1 second intervals)
+✓ Persistent storage (survives app restart)
+✓ Target specific displays
+✓ Visual status indicators (color-coded)
+✓ Badge shows running timer count
+✓ Easy-to-use controls (start, pause, stop, reset)
+✓ Create, edit, delete timers
+✓ Duration input in hours:minutes format
+```

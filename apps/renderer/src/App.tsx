@@ -20,7 +20,8 @@ import {
   PresentationChartBarIcon, 
   CogIcon,
   AdjustmentsHorizontalIcon,
-  MusicalNoteIcon
+  MusicalNoteIcon,
+  ClockIcon
 } from '@heroicons/react/24/outline';
 
 import './styles/App.css';
@@ -38,6 +39,8 @@ import AudioSettings from './components/screens/AudioSettings.tsx';
 import ServiceOrderSettings from './components/screens/ServiceOrderSettings.tsx';
 import Modal from './components/ui/Modal.tsx';
 import ServiceOrderImportDialog from './components/modals/ServiceOrderImportDialog.tsx';
+import TimerPanel from './components/timer/TimerPanel.tsx';
+import TimerModal from './components/modals/TimerModal.tsx';
 
 import { getViewModel } from './viewmodels';
 import { getService } from './services';
@@ -48,12 +51,14 @@ const App = observer(() => {
   const serviceOrderViewModel = getViewModel('serviceOrderViewModel');
   const slideViewModel = getViewModel('slideViewModel');
   const audioViewModel = getViewModel('audioViewModel');
+  const timerViewModel = getViewModel('timerViewModel');
   const eventBusService = getService('eventBusService');
 
   // UI-only state (not business logic)
   const [isDisplaySettingsOpen, setIsDisplaySettingsOpen] = useState(false);
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
   const [isAudioSettingsOpen, setIsAudioSettingsOpen] = useState(false);
+  const [isTimerPanelOpen, setIsTimerPanelOpen] = useState(false);
   const [serviceOrderImportZip, setServiceOrderImportZip] = useState<string | null>(null);
   const containerRef = useRef(null);
 
@@ -357,6 +362,13 @@ const App = observer(() => {
           onClick={() => setIsPreferencesOpen(true)}
         />
 
+        <ActivityBarIcon 
+          icon={<ClockIcon className="w-8 h-8" />} 
+          label="Timers" 
+          onClick={() => setIsTimerPanelOpen(true)}
+          badge={timerViewModel.runningTimers.length > 0 ? timerViewModel.runningTimers.length : null}
+        />
+
         <div style={{ marginTop: 'auto', padding: '8px 0' }}>
           <ScreenButtons variant="activity" />
         </div>
@@ -447,6 +459,43 @@ const App = observer(() => {
           // TODO: Load imported service order into UI
         }}
         onCancel={() => setServiceOrderImportZip(null)}
+      />
+
+      {/* Timer Panel Modal */}
+      <Modal
+        isOpen={isTimerPanelOpen}
+        onClose={() => setIsTimerPanelOpen(false)}
+        title="Timers"
+        size="large"
+      >
+        <TimerPanel
+          timers={timerViewModel.timers}
+          onStart={(id) => timerViewModel.startTimer(id)}
+          onPause={(id) => timerViewModel.pauseTimer(id)}
+          onStop={(id) => timerViewModel.stopTimer(id)}
+          onReset={(id) => timerViewModel.resetTimer(id)}
+          onDelete={(id) => timerViewModel.deleteTimer(id)}
+          onEdit={(timer) => timerViewModel.openEditModal(timer)}
+          onCreate={() => timerViewModel.openCreateModal()}
+        />
+      </Modal>
+
+      {/* Timer Create/Edit Modals */}
+      <TimerModal
+        isOpen={timerViewModel.showCreateModal}
+        onClose={() => timerViewModel.closeCreateModal()}
+        onSave={(timer) => timerViewModel.createTimer(timer)}
+        displays={timerViewModel.displays}
+        title="Create Timer"
+      />
+
+      <TimerModal
+        isOpen={timerViewModel.showEditModal}
+        onClose={() => timerViewModel.closeEditModal()}
+        onSave={(timer) => timerViewModel.updateTimer(timerViewModel.selectedTimer?.id || '', timer)}
+        timer={timerViewModel.selectedTimer}
+        displays={timerViewModel.displays}
+        title="Edit Timer"
       />
     </div>
   );

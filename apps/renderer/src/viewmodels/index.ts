@@ -9,8 +9,9 @@ import { ServiceOrderViewModel } from './ServiceOrderViewModel';
 import { SlideViewModel } from './SlideViewModel';
 import { DisplayViewModel } from './DisplayViewModel';
 import { MixerViewModel } from './MixerViewModel';
+import { TimerViewModel } from './TimerViewModel';
 
-export { AudioViewModel, ServiceOrderViewModel, SlideViewModel, DisplayViewModel, MixerViewModel };
+export { AudioViewModel, ServiceOrderViewModel, SlideViewModel, DisplayViewModel, MixerViewModel, TimerViewModel };
 
 /**
  * Setup all ViewModels in the DI container
@@ -27,6 +28,8 @@ export function setupViewModels(): void {
     ['displayService', 'fileService', 'ipcService'], true);
   container.register('mixerViewModel', MixerViewModel, 
     ['audioService'], true);
+  container.register('timerViewModel', TimerViewModel, 
+    ['timerService', 'displayService', 'ipcService'], true);
 
   console.log('[ViewModelRegistry] All ViewModels registered successfully');
 }
@@ -46,6 +49,7 @@ export default {
   SlideViewModel,
   DisplayViewModel,
   MixerViewModel,
+  TimerViewModel,
   setupViewModels,
   getViewModel,
 };

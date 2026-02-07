@@ -11,6 +11,7 @@ import type {
   Slide,
   ServiceOrderFolder,
   TransposeProgress,
+  Timer,
 } from './models';
 
 /**
@@ -183,4 +184,38 @@ export interface IMixerViewModel extends IViewModel {
   mutedTracks: AudioTrack[];
   soloedTracks: AudioTrack[];
   activeTracks: AudioTrack[];
+}
+
+/**
+ * Timer ViewModel interface
+ */
+export interface ITimerViewModel extends IViewModel {
+  // Observable state
+  timers: Timer[];
+  displays: Display[];
+  selectedTimer: Timer | null;
+  isLoading: boolean;
+  error: string | null;
+  showCreateModal: boolean;
+  showEditModal: boolean;
+
+  // Actions
+  loadTimers(): Promise<void>;
+  loadDisplays(): Promise<void>;
+  createTimer(timer: Omit<Timer, 'id' | 'createdAt' | 'status'>): Promise<boolean>;
+  updateTimer(id: string, updates: Partial<Timer>): Promise<boolean>;
+  deleteTimer(id: string): Promise<boolean>;
+  startTimer(id: string): Promise<void>;
+  pauseTimer(id: string): Promise<void>;
+  stopTimer(id: string): Promise<void>;
+  resetTimer(id: string): Promise<void>;
+  selectTimer(timer: Timer | null): void;
+  openCreateModal(): void;
+  closeCreateModal(): void;
+  openEditModal(timer: Timer): void;
+  closeEditModal(): void;
+
+  // Computed
+  runningTimers: Timer[];
+  hasTimers: boolean;
 }

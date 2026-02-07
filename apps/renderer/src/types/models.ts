@@ -147,3 +147,17 @@ export interface FolderSelectionResult {
   canceled: boolean;
   filePaths: string[];
 }
+
+/**
+ * Timer for countdown functionality
+ */
+export interface Timer {
+  id: string;
+  name: string;
+  durationMinutes: number;
+  targetDisplays: string[];
+  createdAt: number;
+  status: 'stopped' | 'running' | 'paused';
+  remainingMs?: number;
+  startedAt?: number;
+}

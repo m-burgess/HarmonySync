@@ -15,6 +15,7 @@ import type {
   Song,
   ServiceOrderFolder,
   TransposeResult,
+  Timer,
 } from './models';
 import type { EventType, EventHandler, UnsubscribeFunction } from './events';
 
@@ -157,4 +158,19 @@ export interface IServiceOrderService extends IService {
   loadSongMetadata(folderPath: string): Promise<ServiceOrderFolder>;
   loadLyrics(songPath: string): Promise<string | null>;
   openLyricsFile(songPath: string): Promise<void>;
+}
+
+/**
+ * Timer Service interface
+ */
+export interface ITimerService extends IService {
+  getAllTimers(): Promise<Timer[]>;
+  getTimer(id: string): Promise<Timer | null>;
+  createTimer(timer: Omit<Timer, 'id' | 'createdAt' | 'status'>): Promise<Timer>;
+  updateTimer(id: string, updates: Partial<Timer>): Promise<Timer>;
+  deleteTimer(id: string): Promise<void>;
+  startTimer(id: string): Promise<void>;
+  pauseTimer(id: string): Promise<void>;
+  stopTimer(id: string): Promise<void>;
+  resetTimer(id: string): Promise<void>;
 }

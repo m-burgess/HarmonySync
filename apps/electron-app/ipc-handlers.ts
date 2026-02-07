@@ -37,6 +37,7 @@ interface Services {
   eventTriggerService: any;
   serviceOrderImporter: any;
   appSettingsService: any;
+  timerService: any;
 }
 
 interface DialogOpenDirectoryOptions {
@@ -90,6 +91,7 @@ class IPCHandlerManager {
     this.registerDisplayConfigHandlers();
     this.registerRemoteControlEventHandlers();
     this.registerAppSettingsHandlers();
+    this.registerTimerHandlers();
   }
 
   /**
@@ -1984,6 +1986,56 @@ class IPCHandlerManager {
         playbackStatus: data.status,
         playbackPosition: data.position || 0,
       });
+    });
+  }
+
+  /**
+   * Timer Handlers
+   */
+  private registerTimerHandlers(): void {
+    // Get all timers
+    this.ipcMain.handle('timer:getAll', async () => {
+      return await this.services.timerService.getAllTimers();
+    });
+
+    // Get specific timer
+    this.ipcMain.handle('timer:get', async (_event, id: string) => {
+      return await this.services.timerService.getTimer(id);
+    });
+
+    // Create timer
+    this.ipcMain.handle('timer:create', async (_event, timerData: any) => {
+      return await this.services.timerService.createTimer(timerData);
+    });
+
+    // Update timer
+    this.ipcMain.handle('timer:update', async (_event, id: string, updates: any) => {
+      return await this.services.timerService.updateTimer(id, updates);
+    });
+
+    // Delete timer
+    this.ipcMain.handle('timer:delete', async (_event, id: string) => {
+      return await this.services.timerService.deleteTimer(id);
+    });
+
+    // Start timer
+    this.ipcMain.handle('timer:start', async (_event, id: string) => {
+      return await this.services.timerService.startTimer(id);
+    });
+
+    // Pause timer
+    this.ipcMain.handle('timer:pause', async (_event, id: string) => {
+      return await this.services.timerService.pauseTimer(id);
+    });
+
+    // Stop timer
+    this.ipcMain.handle('timer:stop', async (_event, id: string) => {
+      return await this.services.timerService.stopTimer(id);
+    });
+
+    // Reset timer
+    this.ipcMain.handle('timer:reset', async (_event, id: string) => {
+      return await this.services.timerService.resetTimer(id);
     });
   }
 }
