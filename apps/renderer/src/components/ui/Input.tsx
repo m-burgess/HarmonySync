@@ -1,5 +1,6 @@
 import React from 'react';
 import '../../styles/components/Input.css';
+import { VSCodeInput } from '../VSCodeUI.tsx';
 
 interface InputProps {
   type?: string;
@@ -53,7 +54,7 @@ const Input: React.FC<InputProps> = ({
       )}
       <div className="input-container">
         {icon && <span className="input-icon">{icon}</span>}
-        <input
+        <VSCodeInput
           type={type}
           value={value}
           onChange={onChange}

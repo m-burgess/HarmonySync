@@ -7,6 +7,8 @@ import {
   ArchiveBoxIcon,
   ArrowUpTrayIcon 
 } from '@heroicons/react/24/outline';
+import Button from '../ui/Button.tsx';
+import { VSCodeInput } from '../VSCodeUI.tsx';
 import type { 
   SlideData, 
   SlideImportOptions, 
@@ -250,13 +252,14 @@ const SlideImportModal: React.FC<SlideImportModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border">
           <h2 className="text-xl font-semibold text-primary">Import Slides</h2>
-          <button
+          <Button
             onClick={onClose}
-            className="p-2 hover:bg-hover rounded-md transition-colors"
+            title="Close"
+            size="small"
+            variant="ghost"
+            icon={<XMarkIcon className="w-5 h-5" />}
             disabled={isImporting}
-          >
-            <XMarkIcon className="w-5 h-5 text-muted" />
-          </button>
+          />
         </div>
 
         {/* Content */}
@@ -267,7 +270,7 @@ const SlideImportModal: React.FC<SlideImportModalProps> = ({
               Import Source
             </label>
             <div className="grid grid-cols-4 gap-3">
-              <button
+              <Button
                 onClick={() => {
                   setImportType('pdf');
                   setSelectedFile(null);
@@ -279,13 +282,14 @@ const SlideImportModal: React.FC<SlideImportModalProps> = ({
                     ? 'border-accent bg-accent bg-opacity-10'
                     : 'border-border hover:border-accent'
                 }`}
+                variant="secondary"
                 disabled={isImporting}
               >
                 <DocumentIcon className="w-8 h-8 mx-auto mb-2 text-accent" />
                 <div className="text-sm font-medium text-primary">PDF</div>
-              </button>
+              </Button>
 
-              <button
+              <Button
                 onClick={() => {
                   setImportType('powerpoint');
                   setSelectedFile(null);
@@ -297,13 +301,14 @@ const SlideImportModal: React.FC<SlideImportModalProps> = ({
                     ? 'border-accent bg-accent bg-opacity-10'
                     : 'border-border hover:border-accent'
                 }`}
+                variant="secondary"
                 disabled={isImporting}
               >
                 <DocumentTextIcon className="w-8 h-8 mx-auto mb-2 text-accent" />
                 <div className="text-sm font-medium text-primary">PowerPoint</div>
-              </button>
+              </Button>
 
-              <button
+              <Button
                 onClick={() => {
                   setImportType('zip');
                   setSelectedFile(null);
@@ -315,13 +320,14 @@ const SlideImportModal: React.FC<SlideImportModalProps> = ({
                     ? 'border-accent bg-accent bg-opacity-10'
                     : 'border-border hover:border-accent'
                 }`}
+                variant="secondary"
                 disabled={isImporting}
               >
                 <ArchiveBoxIcon className="w-8 h-8 mx-auto mb-2 text-accent" />
                 <div className="text-sm font-medium text-primary">Zip File</div>
-              </button>
+              </Button>
 
-              <button
+              <Button
                 onClick={() => {
                   setImportType('folder');
                   setSelectedFile(null);
@@ -333,11 +339,12 @@ const SlideImportModal: React.FC<SlideImportModalProps> = ({
                     ? 'border-accent bg-accent bg-opacity-10'
                     : 'border-border hover:border-accent'
                 }`}
+                variant="secondary"
                 disabled={isImporting}
               >
                 <FolderIcon className="w-8 h-8 mx-auto mb-2 text-accent" />
                 <div className="text-sm font-medium text-primary">Folder</div>
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -371,20 +378,19 @@ const SlideImportModal: React.FC<SlideImportModalProps> = ({
               {importType === 'folder' ? 'Select Folder' : 'Select File'}
             </label>
             <div className="flex gap-2">
-              <input
+              <VSCodeInput
                 type="text"
                 value={selectedFile || selectedFolder || ''}
                 readOnly
                 placeholder={`No ${importType === 'folder' ? 'folder' : 'file'} selected`}
                 className="flex-1 px-3 py-2 bg-background border border-border rounded-md text-primary placeholder-muted"
               />
-              <button
+              <Button
                 onClick={importType === 'folder' ? handleSelectFolder : handleSelectFile}
-                className="px-4 py-2 bg-accent text-white rounded-md hover:bg-accent-dark transition-colors"
                 disabled={isImporting}
               >
                 Browse
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -475,17 +481,17 @@ const SlideImportModal: React.FC<SlideImportModalProps> = ({
 
         {/* Footer */}
         <div className="flex justify-end gap-3 p-6 border-t border-border">
-          <button
+          <Button
             onClick={onClose}
-            className="px-4 py-2 border border-border rounded-md hover:bg-hover transition-colors text-primary"
+            variant="secondary"
             disabled={isImporting}
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleImport}
-            className="px-4 py-2 bg-accent text-white rounded-md hover:bg-accent-dark transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={isImporting || (!selectedFile && !selectedFolder)}
+            icon={isImporting ? null : <ArrowUpTrayIcon className="w-5 h-5" />}
           >
             {isImporting ? (
               <>
@@ -494,11 +500,10 @@ const SlideImportModal: React.FC<SlideImportModalProps> = ({
               </>
             ) : (
               <>
-                <ArrowUpTrayIcon className="w-5 h-5" />
                 Import Slides
               </>
             )}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

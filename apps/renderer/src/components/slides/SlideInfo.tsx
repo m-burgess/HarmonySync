@@ -1,4 +1,5 @@
 import React from 'react';
+import { VSCodePanel } from '../VSCodeUI.tsx';
 import type { SlideData } from './types';
 
 interface SlideInfoProps {
@@ -14,31 +15,27 @@ const SlideInfo: React.FC<SlideInfoProps> = ({ selectedSlide }) => {
     switch (selectedSlide.type) {
       case 'lyric':
         return (
-          <div>
-            <h4>Lyrics</h4>
-            <p>{selectedSlide.text.join('\n')}</p>
-          </div>
+          <VSCodePanel title="Lyrics" className="slide-info-panel">
+            <p className="slide-info-text">{selectedSlide.text.join('\n')}</p>
+          </VSCodePanel>
         );
       case 'video':
         return (
-          <div>
-            <h4>Video</h4>
-            <p>Countdown: {selectedSlide.duration}s</p>
-          </div>
+          <VSCodePanel title="Video" className="slide-info-panel">
+            <p className="slide-info-text">Countdown: {selectedSlide.duration}s</p>
+          </VSCodePanel>
         );
       case 'youtube':
         return (
-          <div>
-            <h4>YouTube</h4>
-            <p>Video ID: {selectedSlide.videoId}</p>
-          </div>
+          <VSCodePanel title="YouTube" className="slide-info-panel">
+            <p className="slide-info-text">Video ID: {selectedSlide.videoId}</p>
+          </VSCodePanel>
         );
       case 'image':
         return (
-          <div>
-            <h4>Image</h4>
-            <p>{selectedSlide.name}</p>
-          </div>
+          <VSCodePanel title="Image" className="slide-info-panel">
+            <p className="slide-info-text">{selectedSlide.name}</p>
+          </VSCodePanel>
         );
       default:
         return null;

@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
+import { VSCodePanel } from '../VSCodeUI.tsx';
 import '../../styles/components/ServiceOrderImport.css';
 
 // Types
@@ -139,27 +140,24 @@ const ServiceOrderImportDialog: React.FC<ServiceOrderImportDialogProps> = ({
         ) : importResult ? (
           <>
             {/* Service Name */}
-            <div className="service-name">
-              <h3>{importResult.metadata?.name}</h3>
+            <VSCodePanel title={importResult.metadata?.name || 'Service Order'} className="service-name">
               <p className="service-path">{zipPath}</p>
-            </div>
+            </VSCodePanel>
 
             {/* Validation Warnings */}
             {importResult.validation?.warnings && importResult.validation.warnings.length > 0 && (
-              <div className="warnings">
-                <h4>⚠️ Warnings</h4>
+              <VSCodePanel title="Warnings" className="warnings">
                 <ul>
                   {importResult.validation.warnings.map((warning, index) => (
                     <li key={index}>{warning}</li>
                   ))}
                 </ul>
-              </div>
+              </VSCodePanel>
             )}
 
             {/* Items Preview */}
             {importResult.metadata && importResult.metadata.items.length > 0 && (
-              <div className="items-preview">
-                <h4>Items ({importResult.metadata.items.length})</h4>
+              <VSCodePanel title={`Items (${importResult.metadata.items.length})`} className="items-preview">
                 <ul className="items-list">
                   {importResult.metadata.items.map((item) => (
                     <li key={item.id} className="item">
@@ -169,15 +167,15 @@ const ServiceOrderImportDialog: React.FC<ServiceOrderImportDialogProps> = ({
                     </li>
                   ))}
                 </ul>
-              </div>
+              </VSCodePanel>
             )}
 
             {/* Import Info */}
-            <div className="import-info">
+            <VSCodePanel title="Import Details" className="import-info">
               <p>
                 This service order will be extracted and made available in your service order list.
               </p>
-            </div>
+            </VSCodePanel>
           </>
         ) : null}
       </div>

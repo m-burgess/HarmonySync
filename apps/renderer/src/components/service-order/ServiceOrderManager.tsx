@@ -12,6 +12,8 @@ import { observer } from 'mobx-react-lite';
 import { runInAction } from 'mobx';
 import { getViewModel } from '../../viewmodels';
 import { ArrowDownTrayIcon, CheckCircleIcon, PencilIcon } from '@heroicons/react/24/outline';
+import Button from '../ui/Button.tsx';
+import { VSCodeInput } from '../VSCodeUI.tsx';
 import LyricsFetcher from './LyricsFetcher';
 import { onPlaybackComplete, offPlaybackComplete, setCrossfadeDuration } from '../../utils/audio';
 
@@ -154,7 +156,7 @@ const ServiceOrderManager: React.FC<ServiceOrderManagerProps> = observer(({
           <label htmlFor="crossfade-duration" className="font-medium text-primary">
             Crossfade:
           </label>
-          <input
+          <VSCodeInput
             id="crossfade-duration"
             type="range"
             min="500"
@@ -173,7 +175,7 @@ const ServiceOrderManager: React.FC<ServiceOrderManagerProps> = observer(({
       {/* Autoplay Control */}
       <div className="mb-2 p-2 bg-stage rounded border border-surface">
         <div className="flex items-center gap-2 text-xs">
-          <input
+          <VSCodeInput
             id="autoplay-enabled"
             type="checkbox"
             checked={viewModel.autoplayEnabled}
@@ -193,14 +195,14 @@ const ServiceOrderManager: React.FC<ServiceOrderManagerProps> = observer(({
 
       {/* Add Folder Button */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-        <button 
-          onClick={() => viewModel.addFolders()} 
-          id="add-folder-button" 
-          style={{ flex: 1 }}
+        <Button
+          onClick={() => viewModel.addFolders()}
+          id="add-folder-button"
+          className="w-full"
           disabled={viewModel.isLoading}
         >
           Add to Service Order
-        </button>
+        </Button>
       </div>
 
       {/* Service Order Items */}
@@ -224,85 +226,52 @@ const ServiceOrderManager: React.FC<ServiceOrderManagerProps> = observer(({
                   <div style={{ display: 'flex', gap: '4px' }}>
                     {/* Fetch Lyrics Button */}
                     {!item.lyrics && (
-                      <button
+                      <Button
                         onClick={(e) => { 
-                          e.stopPropagation();                          viewModel.openLyricsFetcher(item);
+                          e.stopPropagation();
+                          viewModel.openLyricsFetcher(item);
                         }}
                         title="Fetch lyrics from Genius"
-                        style={{ 
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          padding: '4px 8px',
-                          backgroundColor: 'transparent',
-                          border: '1px solid #3b82f6',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                          color: '#3b82f6'
-                        }}
+                        variant="ghost"
+                        size="small"
+                        icon={<ArrowDownTrayIcon className="w-4 h-4" />}
                       >
-                        <ArrowDownTrayIcon className="w-4 h-4" />
-                      </button>
+                      </Button>
                     )}
                     
                     {/* Edit Lyrics Button */}
                     {item.lyrics && (
-                      <button
+                      <Button
                         onClick={(e) => { 
                           e.stopPropagation(); 
                           viewModel.editLyrics(item);
                         }}
                         title="Edit lyrics"
-                        style={{ 
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          padding: '4px 8px',
-                          backgroundColor: 'transparent',
-                          border: '1px solid currentColor',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease'
-                        }}
+                        variant="ghost"
+                        size="small"
+                        icon={<PencilIcon className="w-4 h-4" />}
                       >
-                        <PencilIcon className="w-4 h-4" />
-                      </button>
+                      </Button>
                     )}
                     
                     {/* Preload Button - Only for songs */}
                     {item.type === 'song' && (
-                    <button
+                    <Button
                       onClick={(e) => { 
                         e.stopPropagation(); 
                         viewModel.preloadSong(item);
                       }}
                       title={isPreloaded ? "Song is preloaded and ready" : "Preload song"}
-                      style={{ 
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        padding: '4px 8px',
-                        backgroundColor: isPreloaded ? '#10b981' : 'transparent',
-                        color: isPreloaded ? 'white' : 'inherit',
-                        border: isPreloaded ? 'none' : '1px solid currentColor',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
+                      variant={isPreloaded ? 'success' : 'secondary'}
+                      size="small"
+                      icon={isPreloaded ? <CheckCircleIcon className="w-4 h-4" /> : <ArrowDownTrayIcon className="w-4 h-4" />}
                     >
                       {isPreloaded ? (
-                        <>
-                          <CheckCircleIcon className="w-4 h-4" />
-                          <span>Ready</span>
-                        </>
+                        <span>Ready</span>
                       ) : (
-                        <>
-                          <ArrowDownTrayIcon className="w-4 h-4" />
-                          <span>Preload</span>
-                        </>
+                        <span>Preload</span>
                       )}
-                    </button>
+                    </Button>
                     )}
                   </div>
                 )}
