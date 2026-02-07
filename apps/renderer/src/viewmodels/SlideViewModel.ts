@@ -18,10 +18,12 @@
  * - Never contain business logic
  */
 
-import { makeObservable, observable, action, computed, runInAction } from 'mobx';
+import { makeObservable, observable, action, computed, runInAction, toJS } from 'mobx';
 import { BaseViewModel } from '../base/BaseViewModel';
 import type { ISlideViewModel } from '../types/viewmodels';
 import type { Slide } from '../types';
+import type { SlideData } from '../components/slides/types';
+import { event } from '../electron-adapter';
 
 // Service interfaces
 interface ISlideService {
@@ -257,6 +259,30 @@ export class SlideViewModel extends BaseViewModel implements ISlideViewModel {
     }
   }
 
+  private async displaySlideContent(slide: Slide): Promise<void> {
+    const data = toJS(slide) as unknown as SlideData;
+
+    switch (data.type) {
+      case 'image':
+        await event.emit('display-image-slide', { path: data.path, name: data.name });
+        break;
+      case 'video':
+        await this.displayService.displayVideoSlide(data.path, data.duration);
+        break;
+      case 'youtube':
+        await event.emit('navigate', { videoId: data.videoId });
+        break;
+      case 'lyric':
+      default: {
+        await event.emit('display-lyric-slide', { text: data.text, section: data.section });
+        const sectionLabel = data.section ? `[${data.section}]` : '';
+        const firstLine = data.text && data.text.length > 0 ? data.text[0] : '';
+        await event.emit('set-lower-thirds-text', { line1: sectionLabel, line2: firstLine });
+        break;
+      }
+    }
+  }
+
   // Actions: Select slide
   public selectSlide(slide: Slide | null): void {
     if (!slide) return;
@@ -264,7 +290,7 @@ export class SlideViewModel extends BaseViewModel implements ISlideViewModel {
     this.selectedSlide = slide;
 
     // Display slide on output
-    this.displayService.showSlide(slide);
+    void this.displaySlideContent(slide);
   }
 
   // Actions: Navigate with keyboard
@@ -462,8 +488,8 @@ export class SlideViewModel extends BaseViewModel implements ISlideViewModel {
 
   public async displaySlide(slideId: string): Promise<void> {
     const slide = this.slides.find(s => s.id === slideId);
-    if (slide && this.displayId) {
-      await this.displayService.showSlide(slide);
+    if (slide) {
+      await this.displaySlideContent(slide);
     }
   }
 

@@ -294,22 +294,123 @@ interface EventPayload<T = unknown> {
   payload: T;
 }
 
+type EventCallback<T = unknown> = (data: EventPayload<T>) => void;
+
+const localEventListeners = new Map<string, Set<EventCallback>>();
+
+const addLocalListener = (eventName: string, callback: EventCallback): (() => void) => {
+  if (!localEventListeners.has(eventName)) {
+    localEventListeners.set(eventName, new Set());
+  }
+  localEventListeners.get(eventName)!.add(callback);
+  return () => {
+    localEventListeners.get(eventName)?.delete(callback);
+  };
+};
+
+const emitLocal = (eventName: string, payload: unknown): void => {
+  const listeners = localEventListeners.get(eventName);
+  if (!listeners || listeners.size === 0) return;
+  const data = { payload } as EventPayload;
+  listeners.forEach((callback) => {
+    try {
+      callback(data);
+    } catch (error) {
+      console.error('[electron-adapter] Event listener error:', eventName, error);
+    }
+  });
+};
+
+const cloneEventPayload = (payload: unknown): unknown => {
+  if (payload === null || payload === undefined) return payload;
+  const type = typeof payload;
+  if (type !== 'object') return payload;
+
+  const seen = new WeakSet<object>();
+  const isDomObject = (value: unknown): boolean => {
+    if (!value || typeof value !== 'object') return false;
+    if (typeof Window !== 'undefined' && value instanceof Window) return true;
+    if (typeof Document !== 'undefined' && value instanceof Document) return true;
+    if (typeof Node !== 'undefined' && value instanceof Node) return true;
+    return false;
+  };
+
+  try {
+    const json = JSON.stringify(payload, (_key, value) => {
+      if (typeof value === 'function' || typeof value === 'symbol') return undefined;
+      if (isDomObject(value)) return undefined;
+      if (value && typeof value === 'object') {
+        if (seen.has(value)) return undefined;
+        seen.add(value);
+      }
+      return value;
+    });
+    return json ? JSON.parse(json) : payload;
+  } catch (error) {
+    console.warn('[electron-adapter] JSON clone failed, using raw payload:', error);
+    return payload;
+  }
+};
+
 // Event system
 export const event = {
   listen: <T = unknown>(eventName: string, callback: (data: EventPayload<T>) => void): (() => void) => {
+    const removeLocal = addLocalListener(eventName, callback as EventCallback);
     if (isElectronRuntime()) {
       const win = globalThis.window as Window;
       const handler = (data: unknown) => callback({ payload: data as T });
       const cleanup = win.electronAPI!.receive(eventName, handler);
-      return cleanup || (() => {}); // Return the cleanup function from preload or empty function
+      const removeIpc = cleanup || (() => {});
+      return () => {
+        removeLocal();
+        removeIpc();
+      };
     }
-    return () => {};
+    return removeLocal;
   },
   
   emit: (eventName: string, payload: unknown): void => {
-    if (isElectronRuntime()) {
-      // Electron events are handled through IPC
-      console.log('Emit event:', eventName, payload);
+    const safePayload = cloneEventPayload(payload);
+    emitLocal(eventName, safePayload);
+
+    if (!isElectronRuntime()) return;
+    const win = globalThis.window as Window;
+    const api = win.electronAPI || win.__electronAPICached;
+    if (!api) return;
+
+    const audienceEvents = new Set([
+      'set-background',
+      'display-lyric-slide',
+      'display-image-slide',
+      'clear-lyric-display',
+      'navigate',
+      'start-background-video',
+      'stop-background-video',
+      'display-video-slide'
+    ]);
+    const confidenceEvents = new Set([
+      'display-confidence-slide',
+      'clear-confidence-display',
+      'video-progress'
+    ]);
+    const lowerThirdsEvents = new Set([
+      'set-lower-thirds-text'
+    ]);
+    const mainEvents = new Set([
+      'video-ended'
+    ]);
+
+    if (audienceEvents.has(eventName) && api.sendToAudience) {
+      api.sendToAudience(eventName, safePayload);
+    }
+    if (confidenceEvents.has(eventName) && api.sendToConfidence) {
+      api.sendToConfidence(eventName, safePayload);
+    }
+    if (lowerThirdsEvents.has(eventName) && api.sendToLowerThirds) {
+      api.sendToLowerThirds(eventName, safePayload);
+    }
+    if (mainEvents.has(eventName) && api.sendToMain) {
+      api.sendToMain(eventName, safePayload);
     }
   }
 };
@@ -431,14 +532,23 @@ export const core = {
       return filePath;
     }
     if (filePath.startsWith('file://')) {
-      const stripped = filePath.replace(/^file:\/\//, '').replace(/\\/g, '/');
+      let stripped = filePath.replace(/^file:\/\//, '').replace(/\\/g, '/');
+      if (/^[A-Za-z]\//.test(stripped)) {
+        stripped = `${stripped[0].toUpperCase()}:/${stripped.slice(2)}`;
+      }
       return `local://${encodeURI(stripped)}`;
     }
     if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
       return filePath;
     }
     // Convert to local:// URL
-    const normalized = filePath.replace(/\\/g, '/');
+    let normalized = filePath.replace(/\\/g, '/');
+    if (/^[A-Za-z]\//.test(normalized)) {
+      normalized = `${normalized[0].toUpperCase()}:/${normalized.slice(2)}`;
+    }
+    if (/^\/[A-Za-z]\//.test(normalized)) {
+      normalized = `${normalized[1].toUpperCase()}:/${normalized.slice(3)}`;
+    }
     return `local://${encodeURI(normalized)}`;
   }
 };

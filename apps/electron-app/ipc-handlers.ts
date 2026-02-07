@@ -1061,6 +1061,13 @@ class IPCHandlerManager {
    * Send to specific windows
    */
   private registerSendHandlers(): void {
+    this.ipcMain.handle('send:main', async (_event, channel: string, data: any) => {
+      const win = this.services.mainWindow();
+      if (win) {
+        win.webContents.send(channel, data);
+      }
+    });
+
     this.ipcMain.handle('send:audience', async (_event, channel: string, data: any) => {
       const win = this.services.audienceWindow();
       if (win) {

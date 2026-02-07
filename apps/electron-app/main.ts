@@ -656,6 +656,9 @@ app.whenReady().then(async () => {
       try {
         let urlPath = request.url.replace(/^local:\/\//, '');
         urlPath = decodeURIComponent(urlPath);
+        if (/^[A-Za-z]\//.test(urlPath)) {
+          urlPath = `${urlPath[0].toUpperCase()}:/${urlPath.slice(2)}`;
+        }
         if (process.platform === 'win32' && urlPath.startsWith('/') && /^[A-Za-z]:/.test(urlPath.slice(1))) {
           urlPath = urlPath.slice(1);
         }
@@ -665,6 +668,7 @@ app.whenReady().then(async () => {
         callback({ error: -6 });
       }
     });
+    console.log('[Protocol] local:// scheme registered');
     await application.initialize();
   } catch (error) {
     console.error('[App] Failed to initialize application:', error);
