@@ -7,12 +7,20 @@ type ImageContent = { type: 'image'; path?: string; name?: string };
 type VideoContent = { type: 'video'; path?: string; duration?: number };
 type SlideContent = LyricsContent | ImageContent | VideoContent | ({ type?: string } & Record<string, any>);
 
+interface TimerState {
+  active: boolean;
+  elapsed: number;
+  total: number;
+}
+
 const ConfidenceMonitor = () => {
   const [currentTime, setCurrentTime] = useState<string>('');
   const [currentSlide, setCurrentSlide] = useState<SlideContent | null>(null);
   const [nextSlide, setNextSlide] = useState<SlideContent | null>(null);
   const [isImageDisplay, setIsImageDisplay] = useState<boolean>(false);
   const [videoCountdown, setVideoCountdown] = useState<string | null>(null);
+  const [timer, setTimer] = useState<TimerState>({ active: false, elapsed: 0, total: 0 });
+  const [timerEnabled, setTimerEnabled] = useState<boolean>(false);
   const currentSlideRef = React.useRef<SlideContent | null>(currentSlide);
   const confidenceDisplayRef = useRef<HTMLDivElement | null>(null);
 
@@ -88,46 +96,139 @@ const ConfidenceMonitor = () => {
       }
     });
 
+    // Timer events
+    const unlistenTimerStart = event.listen('timer-started', (e: any) => {
+      console.log('Confidence: timer-started event received:', e.payload);
+      const { total } = e.payload;
+      setTimer({ active: true, elapsed: 0, total });
+    });
+
+    const unlistenTimerUpdate = event.listen('timer-update', (e: any) => {
+      const { elapsed, total } = e.payload;
+      setTimer({ active: true, elapsed, total });
+    });
+
+    const unlistenTimerStop = event.listen('timer-stopped', () => {
+      console.log('Confidence: timer-stopped event received');
+      setTimer({ active: false, elapsed: 0, total: 0 });
+    });
+
+    // Timer visibility control events
+    const unlistenTimerEnable = event.listen('confidence-timer-enable', () => {
+      console.log('Confidence: timer enabled for display');
+      setTimerEnabled(true);
+    });
+
+    const unlistenTimerDisable = event.listen('confidence-timer-disable', () => {
+      console.log('Confidence: timer disabled for display');
+      setTimerEnabled(false);
+    });
+
     return () => {
       unlistenDisplay();
       unlistenClear();
       unlistenVideoProgress();
+      unlistenTimerStart();
+      unlistenTimerUpdate();
+      unlistenTimerStop();
+      unlistenTimerEnable();
+      unlistenTimerDisable();
     };
   }, []);
 
   const isLyricsMode = currentSlide?.type === 'lyrics';
+  const isVideoMode = currentSlide?.type === 'video';
+
+  // Calculate timer display values
+  const getTimerDisplay = () => {
+    if (!timer.active || timer.total === 0) return null;
+    
+    const remaining = Math.max(0, timer.total - timer.elapsed);
+    const minutes = Math.floor(remaining / 60);
+    const seconds = (remaining % 60).toString().padStart(2, '0');
+    const percentage = (timer.elapsed / timer.total) * 100;
+    
+    let colorClass = '';
+    if (percentage >= 90) {
+      colorClass = 'timer-critical';
+    } else if (percentage >= 75) {
+      colorClass = 'timer-warning';
+    }
+    
+    return { time: `${minutes}:${seconds}`, colorClass };
+  };
+
+  const timerDisplay = getTimerDisplay();
 
   return (
-    <div className={`monitor-container ${isLyricsMode ? 'lyrics-mode' : 'media-mode'} ${isImageDisplay ? 'image-mode' : 'text-mode'}`}>
-      <div className="monitor-top-bar">
-        <div id="clock-display">{currentTime}</div>
+    <div className="monitor-container">
+      {/* Floating Clock at Top Center */}
+      <div className="floating-clock">
+        <div className="clock-content">{currentTime}</div>
       </div>
 
-      <div className="monitor-content">
-        <div 
-          id="confidence-transition-display"
-          ref={confidenceDisplayRef}
-          style={{
-            transition: 'opacity 200ms ease-in-out',
-            fontSize: isImageDisplay ? 'inherit' : '24px'
-          }}
-        />
-
-        {isLyricsMode && nextSlide && nextSlide.type === 'lyrics' && (
-          <div id="next-slide-display">
-            <h4>NEXT:</h4>
-            {Array.isArray((nextSlide as LyricsContent).text) && (nextSlide as LyricsContent).text
-              .slice(0, 2)
-              .map((line: string, index: number) => (
-                <div key={index}>{line}</div>
-              ))}
+      {/* Main Content Area - Black Background, Single Column */}
+      <div className="monitor-main-content">
+        {/* Lyrics Mode: Display current and next lyrics */}
+        {isLyricsMode && (
+          <div className="lyrics-display">
+            <div 
+              className="current-lyrics"
+              ref={confidenceDisplayRef}
+              style={{
+                transition: 'opacity 200ms ease-in-out',
+              }}
+            />
+            {nextSlide && nextSlide.type === 'lyrics' && (
+              <div className="next-lyrics">
+                <h4>NEXT:</h4>
+                <div className="next-lyrics-text">
+                  {Array.isArray((nextSlide as LyricsContent).text) && (nextSlide as LyricsContent).text
+                    .slice(0, 2)
+                    .map((line: string, index: number) => (
+                      <div key={index}>{line}</div>
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
+        )}
+
+        {/* Image Mode: Display full image */}
+        {isImageDisplay && !isLyricsMode && (
+          <div 
+            className="image-display"
+            ref={confidenceDisplayRef}
+            style={{
+              transition: 'opacity 200ms ease-in-out',
+            }}
+          />
+        )}
+
+        {/* Video Mode: Display countdown large in center */}
+        {isVideoMode && videoCountdown && (
+          <div className="video-countdown-large">
+            {videoCountdown}
+          </div>
+        )}
+
+        {/* Default/Empty State */}
+        {!isLyricsMode && !isImageDisplay && !isVideoMode && (
+          <div 
+            ref={confidenceDisplayRef}
+            style={{
+              transition: 'opacity 200ms ease-in-out',
+            }}
+          />
         )}
       </div>
 
-      <div className="monitor-bottom-bar">
-        <div id="video-countdown-display">{videoCountdown || ''}</div>
-      </div>
+      {/* Floating Timer at Bottom - Only shows when enabled, active AND not in lyrics mode */}
+      {timerDisplay && timerEnabled && !isLyricsMode && (
+        <div className={`floating-timer ${timerDisplay.colorClass}`}>
+          <div className="timer-content">{timerDisplay.time}</div>
+        </div>
+      )}
     </div>
   );
 };
