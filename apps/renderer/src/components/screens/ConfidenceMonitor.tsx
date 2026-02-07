@@ -20,6 +20,7 @@ const ConfidenceMonitor = () => {
   const [isImageDisplay, setIsImageDisplay] = useState<boolean>(false);
   const [videoCountdown, setVideoCountdown] = useState<string | null>(null);
   const [timer, setTimer] = useState<TimerState>({ active: false, elapsed: 0, total: 0 });
+  const [timerEnabled, setTimerEnabled] = useState<boolean>(false);
   const currentSlideRef = React.useRef<SlideContent | null>(currentSlide);
   const confidenceDisplayRef = useRef<HTMLDivElement | null>(null);
 
@@ -112,6 +113,17 @@ const ConfidenceMonitor = () => {
       setTimer({ active: false, elapsed: 0, total: 0 });
     });
 
+    // Timer visibility control events
+    const unlistenTimerEnable = event.listen('confidence-timer-enable', () => {
+      console.log('Confidence: timer enabled for display');
+      setTimerEnabled(true);
+    });
+
+    const unlistenTimerDisable = event.listen('confidence-timer-disable', () => {
+      console.log('Confidence: timer disabled for display');
+      setTimerEnabled(false);
+    });
+
     return () => {
       unlistenDisplay();
       unlistenClear();
@@ -119,6 +131,8 @@ const ConfidenceMonitor = () => {
       unlistenTimerStart();
       unlistenTimerUpdate();
       unlistenTimerStop();
+      unlistenTimerEnable();
+      unlistenTimerDisable();
     };
   }, []);
 
@@ -209,8 +223,8 @@ const ConfidenceMonitor = () => {
         )}
       </div>
 
-      {/* Floating Timer at Bottom - Only shows when active AND not in lyrics mode */}
-      {timerDisplay && !isLyricsMode && (
+      {/* Floating Timer at Bottom - Only shows when enabled, active AND not in lyrics mode */}
+      {timerDisplay && timerEnabled && !isLyricsMode && (
         <div className={`floating-timer ${timerDisplay.colorClass}`}>
           <div className="timer-content">{timerDisplay.time}</div>
         </div>
