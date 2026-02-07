@@ -83,9 +83,6 @@ export class TimerViewModel extends BaseViewModel implements ITimerViewModel {
   private displayService: IDisplayService;
   private ipcService: IIpcService;
 
-  // Timer update intervals
-  private timerIntervals: Map<string, ReturnType<typeof setInterval>> = new Map();
-
   constructor(timerService: ITimerService, displayService: IDisplayService, ipcService: IIpcService) {
     super();
     this.timerService = timerService;
@@ -146,9 +143,7 @@ export class TimerViewModel extends BaseViewModel implements ITimerViewModel {
    * Cleanup on dispose
    */
   protected override onDispose(): void {
-    // Clear all timer intervals
-    this.timerIntervals.forEach(interval => clearInterval(interval));
-    this.timerIntervals.clear();
+    // Nothing to cleanup - backend manages timer intervals
   }
 
   // Computed properties
@@ -171,13 +166,6 @@ export class TimerViewModel extends BaseViewModel implements ITimerViewModel {
       runInAction(() => {
         this.timers = timers;
         this.isLoading = false;
-      });
-
-      // Start update intervals for running timers
-      timers.forEach(timer => {
-        if (timer.status === 'running') {
-          this.startTimerUpdateInterval(timer.id);
-        }
       });
     } catch (error) {
       this.handleError('Load timers', error);
@@ -260,9 +248,6 @@ export class TimerViewModel extends BaseViewModel implements ITimerViewModel {
     try {
       await this.timerService.deleteTimer(id);
 
-      // Clear interval if running
-      this.stopTimerUpdateInterval(id);
-
       runInAction(() => {
         this.timers = this.timers.filter(t => t.id !== id);
         if (this.selectedTimer?.id === id) {
@@ -286,16 +271,7 @@ export class TimerViewModel extends BaseViewModel implements ITimerViewModel {
   public async startTimer(id: string): Promise<void> {
     try {
       await this.timerService.startTimer(id);
-      
-      runInAction(() => {
-        const timer = this.timers.find(t => t.id === id);
-        if (timer) {
-          timer.status = 'running';
-          timer.startedAt = Date.now();
-        }
-      });
-
-      this.startTimerUpdateInterval(id);
+      // Backend will send timer:updated event with new state
     } catch (error) {
       this.handleError('Start timer', error);
     }
@@ -304,15 +280,7 @@ export class TimerViewModel extends BaseViewModel implements ITimerViewModel {
   public async pauseTimer(id: string): Promise<void> {
     try {
       await this.timerService.pauseTimer(id);
-      
-      runInAction(() => {
-        const timer = this.timers.find(t => t.id === id);
-        if (timer) {
-          timer.status = 'paused';
-        }
-      });
-
-      this.stopTimerUpdateInterval(id);
+      // Backend will send timer:updated event with new state
     } catch (error) {
       this.handleError('Pause timer', error);
     }
@@ -321,16 +289,7 @@ export class TimerViewModel extends BaseViewModel implements ITimerViewModel {
   public async stopTimer(id: string): Promise<void> {
     try {
       await this.timerService.stopTimer(id);
-      
-      runInAction(() => {
-        const timer = this.timers.find(t => t.id === id);
-        if (timer) {
-          timer.status = 'stopped';
-          timer.remainingMs = timer.durationMinutes * 60 * 1000;
-        }
-      });
-
-      this.stopTimerUpdateInterval(id);
+      // Backend will send timer:updated event with new state
     } catch (error) {
       this.handleError('Stop timer', error);
     }
@@ -339,13 +298,7 @@ export class TimerViewModel extends BaseViewModel implements ITimerViewModel {
   public async resetTimer(id: string): Promise<void> {
     try {
       await this.timerService.resetTimer(id);
-      
-      runInAction(() => {
-        const timer = this.timers.find(t => t.id === id);
-        if (timer) {
-          timer.remainingMs = timer.durationMinutes * 60 * 1000;
-        }
-      });
+      // Backend will send timer:updated event with new state
     } catch (error) {
       this.handleError('Reset timer', error);
     }
@@ -376,39 +329,6 @@ export class TimerViewModel extends BaseViewModel implements ITimerViewModel {
     this.showEditModal = false;
     this.selectedTimer = null;
     this.error = null;
-  }
-
-  // Private helpers
-  private startTimerUpdateInterval(timerId: string): void {
-    // Clear existing interval if any
-    this.stopTimerUpdateInterval(timerId);
-
-    // Update every second
-    const interval = setInterval(() => {
-      runInAction(() => {
-        const timer = this.timers.find(t => t.id === timerId);
-        if (timer && timer.status === 'running' && timer.startedAt) {
-          const elapsed = Date.now() - timer.startedAt;
-          const totalMs = timer.durationMinutes * 60 * 1000;
-          timer.remainingMs = Math.max(0, totalMs - elapsed);
-
-          // Auto-stop when time is up
-          if (timer.remainingMs === 0) {
-            this.stopTimer(timerId);
-          }
-        }
-      });
-    }, 1000);
-
-    this.timerIntervals.set(timerId, interval);
-  }
-
-  private stopTimerUpdateInterval(timerId: string): void {
-    const interval = this.timerIntervals.get(timerId);
-    if (interval) {
-      clearInterval(interval);
-      this.timerIntervals.delete(timerId);
-    }
   }
 
   /**
