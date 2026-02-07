@@ -99,10 +99,20 @@ const MultitrackPlayer = observer(({ allTracks, isLoadingTracks }: MultitrackPla
         {/* Playback Controls Group */}
         <div className="flex items-center gap-1.5 border-r border-gray-600 pr-3">
           <button 
-            aria-label="Play all tracks" 
-            title="Play All" 
+            aria-label="Play all tracks (backend)" 
+            title="Play All (Backend Service)" 
             className="p-2.5 bg-green-700 hover:bg-green-600 rounded-lg text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm" 
             onClick={() => viewModel.playAll()}
+            disabled={viewModel.isOperationInProgress || allTracks.length === 0}
+          >
+            <PlayIcon className="w-5 h-5" />
+          </button>
+
+          <button 
+            aria-label="Play all tracks with frontend scheduling" 
+            title="Play All (Frontend Web Audio API - Scheduled)" 
+            className="p-2.5 bg-green-600 hover:bg-green-500 rounded-lg text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm border-2 border-green-400" 
+            onClick={() => viewModel.playAllFrontendScheduled()}
             disabled={viewModel.isOperationInProgress || allTracks.length === 0}
           >
             <PlayIcon className="w-5 h-5" />

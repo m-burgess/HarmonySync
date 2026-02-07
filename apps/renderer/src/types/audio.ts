@@ -26,6 +26,7 @@ export interface Track {
   id: string;
   name: string;
   filePath: string;
+  duration?: number; // Duration in seconds
   isPlaying: boolean;
   isPaused: boolean;
   panValue: number;
