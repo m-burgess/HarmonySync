@@ -263,8 +263,26 @@ export class AudioMixer {
             console.log(`🎯 Master clock designated: ${masterTrack.name}`);
             console.log(`🔍 Master track path: ${masterTrack.filePath}`);
             console.log(`🎵 Starting ALL tracks simultaneously (including master clock)...`);
+            
+            // Log track durations for debugging
+            console.log('📊 Track durations:');
+            tracks.forEach(track => {
+                console.log(`  - ${track.name}: ${track.duration?.toFixed(2) ?? 'unknown'}s`);
+            });
+            
+            // Prepare all tracks first before scheduling
+            console.log('🔄 Preparing all tracks...');
+            const prepareStartTime = Date.now();
             const preparedTracks = await Promise.all(tracks.map(async track => ({ track, audioFilePath: await this.prepareTrackForPlayback(track) })));
-            const startAtMs = Date.now() + 250;
+            const prepareTime = Date.now() - prepareStartTime;
+            console.log(`✅ All tracks prepared in ${prepareTime}ms`);
+            
+            // Use a larger buffer to ensure all tracks are ready before playback starts
+            // This prevents drift by giving enough time for all audio processes to initialize
+            const schedulingBufferMs = 500; // Increased from 250ms to 500ms for better synchronization
+            const startAtMs = Date.now() + schedulingBufferMs;
+            
+            console.log(`⏰ Scheduling playback to start at +${schedulingBufferMs}ms from now`);
             const startTime: number = Date.now();
             const allTrackPromises: Promise<void>[] = preparedTracks.map(({ track, audioFilePath }) => this.startPreparedTrackAt(track, audioFilePath, startAtMs));
             const results: PromiseSettledResult<void>[] = await Promise.allSettled(allTrackPromises);
@@ -278,9 +296,13 @@ export class AudioMixer {
             if (succeededTracks.length === 0) throw new Error('All tracks failed to start');
             console.log(`✅ ${succeededTracks.length}/${tracks.length} tracks started simultaneously in ${totalTime}ms`);
             console.log(`✅ Master clock (${masterTrack.name}) and slave tracks are now playing in sync`);
+            
+            // Verify synchronization after a brief delay
             setTimeout(() => {
                 if (!masterTrack.isPlaying) {
                     console.warn('⚠️ Warning: Master clock may have failed to start');
+                } else {
+                    console.log('✅ Master clock verified playing');
                 }
             }, 100);
         } catch (error) {
@@ -292,10 +314,28 @@ export class AudioMixer {
 
     async startSynchronizedSimultaneousPlayback(tracks: AudioTrack[]): Promise<void> {
         try {
+            // Log track information for debugging
+            console.log('📊 Preparing synchronized playback for tracks:');
+            tracks.forEach(track => {
+                console.log(`  - ${track.name}: ${track.duration?.toFixed(2) ?? 'unknown'}s`);
+            });
+            
+            // Prepare all tracks first before scheduling
+            console.log('🔄 Preparing all tracks for synchronized playback...');
+            const prepareStartTime = Date.now();
             const preparedTracks = await Promise.all(tracks.map(async track => ({ track, audioFilePath: await this.prepareTrackForPlayback(track) })));
-            const startAtMs = Date.now() + 50;
+            const prepareTime = Date.now() - prepareStartTime;
+            console.log(`✅ All tracks prepared in ${prepareTime}ms`);
+            
+            // Use a larger scheduling buffer to prevent drift
+            // This gives all audio processes enough time to initialize before playback
+            const schedulingBufferMs = 300; // Increased from 50ms to 300ms for better sync
+            const startAtMs = Date.now() + schedulingBufferMs;
+            
+            console.log(`⏰ Scheduling synchronized playback to start at +${schedulingBufferMs}ms from now`);
+            
             if (this.io) {
-                this.io.emit('playback_ready', { trackCount: preparedTracks.length, startAtMs });
+                this.io.emit('playback_ready', { trackCount: preparedTracks.length, startAtMs, schedulingBufferMs });
             }
             const startTime: number = Date.now();
             const promises: Promise<void>[] = preparedTracks.map(({ track, audioFilePath }) => this.startPreparedTrackAt(track, audioFilePath, startAtMs));
@@ -309,6 +349,12 @@ export class AudioMixer {
             }
             if (succeededTracks.length === 0) throw new Error('All tracks failed to start');
             console.log(`✅ ${succeededTracks.length}/${tracks.length} tracks started simultaneously in ${totalTime}ms`);
+            
+            // Verify all tracks are playing
+            setTimeout(() => {
+                const playingCount = tracks.filter(t => t.isPlaying).length;
+                console.log(`🎵 Verification: ${playingCount}/${tracks.length} tracks confirmed playing`);
+            }, 200);
         } catch (error) {
             console.error('❌ Error in synchronized playback:', error);
             throw error;
