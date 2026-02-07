@@ -92,7 +92,7 @@ class TimerService {
    * Create a new timer
    */
   public async createTimer(timerData: Omit<Timer, 'id' | 'createdAt' | 'status'>): Promise<Timer> {
-    const id = `timer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const id = `timer_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
     const timer: Timer = {
       ...timerData,
       id,
@@ -188,10 +188,11 @@ class TimerService {
       return; // Not running
     }
 
-    // Calculate remaining time
+    // Calculate remaining time based on current state
     if (timer.startedAt) {
       const elapsed = Date.now() - timer.startedAt;
-      timer.remainingMs = Math.max(0, (timer.remainingMs || 0) - elapsed);
+      const totalMs = timer.durationMinutes * 60 * 1000;
+      timer.remainingMs = Math.max(0, totalMs - elapsed);
     }
 
     timer.status = 'paused';

@@ -105,7 +105,6 @@ export const TimerModal: React.FC<TimerModalProps> = observer(({
       name: name.trim(),
       durationMinutes: totalMinutes,
       targetDisplays: selectedDisplays,
-      remainingMs: totalMinutes * 60 * 1000,
     };
 
     const success = await onSave(timerData);
