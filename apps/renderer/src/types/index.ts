@@ -16,6 +16,7 @@ export type {
   TransposeProgress,
   FileSelectionResult,
   FolderSelectionResult,
+  Timer,
 } from './models';
 
 // Audio types
@@ -88,6 +89,7 @@ export type {
   IDisplayService,
   ISlideService,
   IServiceOrderService,
+  ITimerService,
 } from './services';
 
 // ViewModels
@@ -98,4 +100,5 @@ export type {
   ISlideViewModel,
   IDisplayViewModel,
   IMixerViewModel,
+  ITimerViewModel,
 } from './viewmodels';

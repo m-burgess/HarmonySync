@@ -11,8 +11,9 @@ import { FileService } from './FileService';
 import { DisplayService } from './DisplayService';
 import { SlideService } from './SlideService';
 import { ServiceOrderService } from './ServiceOrderService';
+import { TimerService } from './TimerService';
 
-export { IpcService, EventBusService, AudioService, FileService, DisplayService, SlideService, ServiceOrderService };
+export { IpcService, EventBusService, AudioService, FileService, DisplayService, SlideService, ServiceOrderService, TimerService };
 export { EVENT_TYPES } from './EventBusService';
 
 // Default exports for backward compatibility
@@ -23,6 +24,7 @@ export { default as FileServiceDefault } from './FileService';
 export { default as DisplayServiceDefault } from './DisplayService';
 export { default as SlideServiceDefault } from './SlideService';
 export { default as ServiceOrderServiceDefault } from './ServiceOrderService';
+export { default as TimerServiceDefault } from './TimerService';
 
 /**
  * Setup all services in the DI container
@@ -41,6 +43,7 @@ export function setupServices(): void {
   container.register('displayService', DisplayService, ['ipcService'], true);
   container.register('slideService', SlideService, ['ipcService'], true);
   container.register('serviceOrderService', ServiceOrderService, ['ipcService', 'fileService'], true);
+  container.register('timerService', TimerService, ['ipcService'], true);
 
   console.log('[ServiceRegistry] All services registered successfully');
 }
