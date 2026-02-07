@@ -214,13 +214,23 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
       const tracksArray = Array.isArray(response) ? response : (response?.tracks || []);
 
       runInAction(() => {
-        this.tracks = tracksArray.map((track, index) => ({
-          ...track,
-          index,
-          volume: 1.0,
-          pan: 0,
-          muted: false,
-        }));
+        this.tracks = tracksArray.map((track, index) => {
+          const resolvedPath = (track as { path?: string; file_path?: string; filePath?: string }).path
+            ?? (track as { path?: string; file_path?: string; filePath?: string }).file_path
+            ?? (track as { path?: string; file_path?: string; filePath?: string }).filePath
+            ?? '';
+          const resolvedName = this.resolveTrackName(track as { name?: string; track_name?: string; path?: string; file_path?: string; filePath?: string });
+
+          return {
+            ...track,
+            name: resolvedName,
+            path: resolvedPath,
+            index,
+            volume: track.volume ?? 1.0,
+            pan: track.pan ?? 0,
+            muted: track.muted ?? false,
+          };
+        });
         this.currentSongPath = folderPath;
         this.isLoading = false;
       });
@@ -785,7 +795,8 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
           const lastSeparator = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
           const fileName = path.substring(lastSeparator + 1);
           const lastDot = fileName.lastIndexOf('.');
-          const trackName = result.name || (lastDot > 0 ? fileName.substring(0, lastDot) : fileName);
+          const fallbackName = lastDot > 0 ? fileName.substring(0, lastDot) : fileName;
+          const trackName = this.resolveTrackName({ name: result.name, path: result.path }) || fallbackName;
 
           return {
             id: result.trackId!,
@@ -913,16 +924,53 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   }
 
+  private resolveTrackName(track: { name?: string; track_name?: string; path?: string; file_path?: string; filePath?: string }): string {
+    const rawName = (track.name ?? track.track_name ?? '').trim();
+    const path = track.path ?? track.file_path ?? track.filePath ?? '';
+    const nameFromPath = this.extractNameFromPath(path);
+
+    if (this.isGenericTrackName(rawName)) {
+      return nameFromPath || rawName || 'Unknown Track';
+    }
+
+    return rawName || nameFromPath || 'Unknown Track';
+  }
+
+  private extractNameFromPath(path: string): string {
+    if (!path) return '';
+    const normalized = path.replace(/\\/g, '/');
+    const lastSlash = normalized.lastIndexOf('/');
+    const baseName = lastSlash >= 0 ? normalized.substring(lastSlash + 1) : normalized;
+    if (!baseName) return '';
+    const lastDot = baseName.lastIndexOf('.');
+    return lastDot > 0 ? baseName.substring(0, lastDot) : baseName;
+  }
+
+  private isGenericTrackName(name: string): boolean {
+    if (!name) return true;
+    return /^track\s*\d+$/i.test(name);
+  }
+
   // Direct state setters for App.jsx compatibility (to be phased out)
 
   public setTracks(tracks: AudioTrack[]): void {
-    this.tracks = tracks.map((track, index) => ({
-      ...track,
-      index,
-      volume: track.volume ?? 1.0,
-      pan: track.pan ?? 0.0,
-      muted: track.muted ?? false,
-    }));
+    this.tracks = tracks.map((track, index) => {
+      const resolvedPath = (track as { path?: string; file_path?: string; filePath?: string }).path
+        ?? (track as { path?: string; file_path?: string; filePath?: string }).file_path
+        ?? (track as { path?: string; file_path?: string; filePath?: string }).filePath
+        ?? '';
+      const resolvedName = this.resolveTrackName(track as { name?: string; track_name?: string; path?: string; file_path?: string; filePath?: string });
+
+      return {
+        ...track,
+        name: resolvedName,
+        path: resolvedPath,
+        index,
+        volume: track.volume ?? 1.0,
+        pan: track.pan ?? 0.0,
+        muted: track.muted ?? false,
+      };
+    });
   }
 
 

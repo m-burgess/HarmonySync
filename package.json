@@ -11,9 +11,12 @@
     "harmonysync-core-logic/*"
   ],
   "scripts": {
-    "dev": "pnpm -r --parallel run dev",
+    "dev": "concurrently -k -s first -n renderer,electron,audio,video,image,folder \"pnpm --filter @harmonysync/renderer dev\" \"pnpm --filter @harmonysync/electron-app dev\" \"pnpm --filter @harmonysync/audio-service dev\" \"pnpm --filter @harmonysync/video-service dev\" \"pnpm --filter @harmonysync/image-service dev\" \"pnpm --filter @harmonysync/folder-service dev\"",
     "build": "pnpm -r run build",
     "test": "pnpm -r run test",
     "typecheck": "pnpm -r run typecheck"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
   }
 }

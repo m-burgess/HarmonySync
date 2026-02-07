@@ -198,18 +198,15 @@ class IPCHandlerManager {
     });
 
     this.ipcMain.handle('ffmpeg:getVideoMetadata', async (_event, videoPath: string) => {
-      return await this.services.videoService.getVideoMetadata(videoPath);
+      return await this.services.ffmpegService.getVideoMetadata(videoPath);
     });
 
     this.ipcMain.handle('ffmpeg:transcodeVideo', async (_event, inputPath: string) => {
-      return await this.services.videoService.transcodeVideo(inputPath, (progress: any) => {
-        const win = this.services.mainWindow();
-        if (win) win.webContents.send('video-transcode-progress', progress);
-      });
+      return await this.services.ffmpegService.transcodeVideo(inputPath);
     });
 
     this.ipcMain.handle('ffmpeg:generateThumbnail', async (_event, videoPath: string) => {
-      return await this.services.videoService.generateThumbnail(videoPath);
+      return await this.services.ffmpegService.generateThumbnail(videoPath);
     });
   }
 
@@ -1135,8 +1132,9 @@ class IPCHandlerManager {
         }
         
         const data = await response.json();
-        console.log('[audio:loadTracks] Response:', data);
-        return data;
+        const normalized = this.normalizeTrackPayload(data);
+        console.log('[audio:loadTracks] Response:', normalized);
+        return normalized;
       } catch (error) {
         console.error('[audio:loadTracks] Error:', error);
         return { error: error instanceof Error ? error.message : String(error) };
@@ -1800,6 +1798,10 @@ class IPCHandlerManager {
           }
         }
 
+        if (tracks.length > 0) {
+          tracks = this.normalizeTracks(tracks as Array<Record<string, unknown>>);
+        }
+
         console.log('[ipc-handlers] Returning', slides.length, 'slides and', tracks.length, 'tracks');
         return { slides, tracks };
       } catch (error) {
@@ -1881,6 +1883,46 @@ class IPCHandlerManager {
       const { app } = require('electron');
       return path.join(app.getPath('userData'), 'settings');
     });
+  }
+
+  private normalizeTrackPayload(payload: unknown): unknown {
+    if (Array.isArray(payload)) {
+      return this.normalizeTracks(payload as Array<Record<string, unknown>>);
+    }
+
+    if (payload && typeof payload === 'object' && Array.isArray((payload as { tracks?: unknown }).tracks)) {
+      const typedPayload = payload as { tracks: Array<Record<string, unknown>> };
+      return {
+        ...typedPayload,
+        tracks: this.normalizeTracks(typedPayload.tracks)
+      };
+    }
+
+    return payload;
+  }
+
+  private normalizeTracks(tracks: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+    return tracks.map((track, index) => {
+      const rawName = String(track.name ?? track.track_name ?? '').trim();
+      const filePath = String(track.file_path ?? track.path ?? track.filePath ?? '').trim();
+      const fileName = filePath ? path.basename(filePath, path.extname(filePath)) : '';
+      const normalizedName = this.isGenericTrackName(rawName)
+        ? (fileName || rawName || `Track ${index + 1}`)
+        : (rawName || fileName || `Track ${index + 1}`);
+
+      return {
+        ...track,
+        name: normalizedName,
+        track_name: normalizedName,
+        file_path: filePath || track.file_path,
+        path: track.path ?? filePath
+      };
+    });
+  }
+
+  private isGenericTrackName(name: string): boolean {
+    if (!name) return true;
+    return /^track\s*\d+$/i.test(name);
   }
 
   /**

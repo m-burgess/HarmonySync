@@ -5,7 +5,7 @@ import { spawn, ChildProcess } from 'child_process';
 
 // Import backend services - using require since they will be compiled to CommonJS at runtime
 const jsonStorage = require('./electron/services/json-storage');
-const ffmpegService = require('./electron/services/ffmpeg');
+const { getFFmpegService } = require('./electron/services/ffmpeg');
 const audioService = require('./electron/services/audio-service');
 const videoService = require('./electron/services/video-service');
 const youtubeService = require('./electron/services/youtube-service');
@@ -40,6 +40,9 @@ try {
 
 // Initialize service order importer
 const serviceOrderImporter = new ServiceOrderImporter();
+
+// Initialize FFmpeg service singleton
+const ffmpegService = getFFmpegService();
 
 // Initialize and load app settings
 appSettingsService.load().catch((err: Error) => {

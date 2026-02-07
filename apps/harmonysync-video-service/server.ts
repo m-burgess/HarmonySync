@@ -11,6 +11,8 @@ import { v4 as uuidv4 } from 'uuid';
 const HOST: string = process.env.HOST || '127.0.0.1';
 const PORT: number = parseInt(process.env.PORT || '3002', 10);
 const SHUTDOWN_TOKEN: string | null = process.env.SHUTDOWN_TOKEN || null;
+const IS_TEST_ENV: boolean = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
+let isShuttingDown = false;
 
 // Job management
 export const jobs = new Map<string, VideoJob>();
@@ -601,21 +603,56 @@ if (require.main === module) {
         console.log(`📊 Process ID: ${process.pid}`);
         console.log(`💾 Memory: ${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`);
     });
-
-    // Graceful shutdown when running as main
-    process.on('SIGTERM', () => {
-        console.log('🛑 SIGTERM received, shutting down gracefully');
-        server.close(() => {
-            console.log('✅ Server closed');
-            process.exit(0);
-        });
-    });
-
-    process.on('SIGINT', () => {
-        console.log('🛑 SIGINT received, shutting down gracefully');
-        server.close(() => {
-            console.log('✅ Server closed');
-            process.exit(0);
-        });
-    });
 }
+
+const shutdown = (reason: string, error?: unknown, exitCode: number = 1): void => {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
+
+    if (error) {
+        console.error(`🛑 Video service shutting down due to ${reason}:`, error);
+    } else {
+        console.log(`🛑 Video service shutting down (${reason})`);
+    }
+
+    for (const job of jobs.values()) {
+        try { job.cancel(); } catch (cleanupError) {
+            console.error('Failed to cancel video job:', cleanupError);
+        }
+    }
+
+    if (IS_TEST_ENV) {
+        return;
+    }
+
+    try { io.close(); } catch (closeError) {
+        console.error('Failed to close Socket.IO server:', closeError);
+    }
+
+    server.close(() => {
+        console.log('✅ Server closed');
+        process.exit(exitCode);
+    });
+};
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+    shutdown('SIGTERM', undefined, 0);
+});
+
+process.on('SIGINT', () => {
+    shutdown('SIGINT', undefined, 0);
+});
+
+process.on('uncaughtException', (error: Error): void => {
+    if ((error as any).code === 'EADDRINUSE') {
+        console.warn(`⚠️ Port ${PORT} is already in use. Assuming video service is already running.`);
+        process.exit(0);
+    }
+    shutdown('uncaughtException', error);
+});
+
+process.on('unhandledRejection', (reason: unknown, promise: Promise<any>): void => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    shutdown('unhandledRejection', reason);
+});
