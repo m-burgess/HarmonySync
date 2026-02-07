@@ -1,32 +1,29 @@
 import { useState } from 'react';
-import { event } from '../../electron-adapter';
+import { core, event } from '../../electron-adapter';
 import { ComputerDesktopIcon, TvIcon, WindowIcon } from '@heroicons/react/24/solid';
 import Button from '../ui/Button.jsx';
+import { ActivityBarIcon } from '../VSCodeUI.tsx';
 
-const ScreenButtons = () => {
+interface ScreenButtonsProps {
+  variant?: 'inline' | 'activity';
+}
+
+const ScreenButtons: React.FC<ScreenButtonsProps> = ({ variant = 'inline' }) => {
   const [_audienceWindow, _setAudienceWindow] = useState(null);
   const [_confidenceWindow, _setConfidenceWindow] = useState(null);
   const [_lowerThirdsWindow, _setLowerThirdsWindow] = useState(null);
 
   const openAudienceScreen = async () => {
-    // TODO: Implement window management for Electron
-    // In Electron, windows are managed differently through BrowserWindow in main process
-    console.warn('Window management needs to be implemented for Electron');
-    
-    // For now, use IPC to request window creation
     try {
-      await event.emit('open-window', { name: 'audience' });
+      await core.invoke('show_audience_window');
     } catch (error) {
       console.error('Failed to open audience window:', error);
     }
   };
 
   const openConfidenceMonitor = async () => {
-    // TODO: Implement window management for Electron
-    console.warn('Window management needs to be implemented for Electron');
-    
     try {
-      await event.emit('open-window', { name: 'confidence' });
+      await core.invoke('show_confidence_window');
       // Emit a default empty slide to show the clock initially
       event.emit('display-confidence-slide', { current: null, next: null });
     } catch (error) {
@@ -35,15 +32,34 @@ const ScreenButtons = () => {
   };
 
   const openLowerThirds = async () => {
-    // TODO: Implement window management for Electron
-    console.warn('Window management needs to be implemented for Electron');
-    
     try {
-      await event.emit('open-window', { name: 'lowerthirds' });
+      await core.invoke('show_lower_thirds_window');
     } catch (error) {
       console.error('Failed to open lower thirds window:', error);
     }
   };
+
+  if (variant === 'activity') {
+    return (
+      <div className="flex flex-col gap-2 items-center">
+        <ActivityBarIcon
+          icon={<ComputerDesktopIcon className="w-6 h-6" />}
+          label="Audience"
+          onClick={openAudienceScreen}
+        />
+        <ActivityBarIcon
+          icon={<TvIcon className="w-6 h-6" />}
+          label="Confidence"
+          onClick={openConfidenceMonitor}
+        />
+        <ActivityBarIcon
+          icon={<WindowIcon className="w-6 h-6" />}
+          label="Lower Thirds"
+          onClick={openLowerThirds}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="flex gap-2">

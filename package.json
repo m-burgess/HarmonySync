@@ -7,7 +7,8 @@
   "author": "HarmonySync Team",
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "harmonysync-core-logic/*"
   ],
   "scripts": {
     "dev": "pnpm -r --parallel run dev",

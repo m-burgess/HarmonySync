@@ -5,6 +5,7 @@
 
 import express, { Application, Request, Response } from 'express';
 import { Server } from 'http';
+import net from 'net';
 import * as path from 'path';
 import * as fs from 'fs';
 import cors from 'cors';
@@ -20,6 +21,7 @@ export class HTTPServerService extends BaseElectronService implements IHTTPServe
   private server: Server | null = null;
   private app: Application | null = null;
   private readonly port: number;
+  private currentPort: number | null = null;
 
   constructor(port: number = 8765, config?: ServiceConfig) {
     super(config);
@@ -50,7 +52,8 @@ export class HTTPServerService extends BaseElectronService implements IHTTPServe
    * @param port - Optional port override
    */
   public async start(port?: number): Promise<void> {
-    const serverPort = port || this.port;
+    const requestedPort = port || this.port;
+    const serverPort = await this.pickAvailablePort(requestedPort);
 
     if (this.server) {
       this.log('warn', 'HTTP server already running');
@@ -66,18 +69,25 @@ export class HTTPServerService extends BaseElectronService implements IHTTPServe
 
     return new Promise((resolve, reject) => {
       try {
-        this.server = this.app!.listen(serverPort, '127.0.0.1', (err?: Error) => {
-          if (err) {
-            this.log('error', 'Failed to start HTTP server:', err);
-            reject(err);
-          } else {
-            this.log('info', `HTTP server listening on http://127.0.0.1:${serverPort}`);
-            this.emit('started', { port: serverPort });
-            resolve();
-          }
+        this.server = this.app!.listen(serverPort, '127.0.0.1');
+
+        this.server.once('listening', () => {
+          const address = this.server?.address();
+          const actualPort = typeof address === 'object' && address ? address.port : serverPort;
+          this.currentPort = actualPort;
+          this.log('info', `HTTP server listening on http://127.0.0.1:${actualPort}`);
+          this.emit('started', { port: actualPort });
+          resolve();
+        });
+
+        this.server.once('error', (err: NodeJS.ErrnoException) => {
+          this.log('error', 'Failed to start HTTP server:', err);
+          this.server = null;
+          this.app = null;
+          reject(err);
         });
       } catch (error) {
-        this.handleError('start', error);
+        reject(error);
       }
     });
   }
@@ -92,6 +102,7 @@ export class HTTPServerService extends BaseElectronService implements IHTTPServe
           this.log('info', 'HTTP server stopped');
           this.server = null;
           this.app = null;
+          this.currentPort = null;
           this.emit('stopped');
           resolve();
         });
@@ -105,7 +116,35 @@ export class HTTPServerService extends BaseElectronService implements IHTTPServe
    * Get the server URL
    */
   public async getServerUrl(): Promise<string> {
-    return `http://127.0.0.1:${this.port}`;
+    const port = this.currentPort ?? this.port;
+    return `http://127.0.0.1:${port}`;
+  }
+
+  private async pickAvailablePort(port: number): Promise<number> {
+    const inUse = await this.isPortInUse(port);
+    if (!inUse) {
+      return port;
+    }
+
+    this.log('warn', `Port ${port} is in use, selecting a free port...`);
+    return 0;
+  }
+
+  private async isPortInUse(port: number): Promise<boolean> {
+    return new Promise((resolve) => {
+      const tester = net.createServer();
+      tester.once('error', (err: NodeJS.ErrnoException) => {
+        if (err.code === 'EADDRINUSE') {
+          resolve(true);
+        } else {
+          resolve(false);
+        }
+      });
+      tester.once('listening', () => {
+        tester.close(() => resolve(false));
+      });
+      tester.listen(port, '127.0.0.1');
+    });
   }
 
   /**

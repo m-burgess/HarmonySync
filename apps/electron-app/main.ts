@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, protocol } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs-extra';
 import { spawn, ChildProcess } from 'child_process';
@@ -48,6 +48,20 @@ appSettingsService.load().catch((err: Error) => {
 
 const isDev = process.env.NODE_ENV === 'development';
 const VITE_DEV_SERVER_URL = 'http://localhost:5174';
+
+// Allow secure local file access via a custom protocol (works in dev and prod)
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'local',
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+      stream: true,
+    },
+  },
+]);
 
 /**
  * Window configuration interface
@@ -162,6 +176,7 @@ class ElectronApplication {
   private confidenceWindow: BrowserWindow | null = null;
   private lowerThirdsWindow: BrowserWindow | null = null;
   private displayServiceInstance: any = null;
+  private windowServiceInstance: any = null;
   private serviceManager: ServiceProcessManager;  private serviceOrderManagerReady: boolean = false;
   private pendingServiceOrderItems: any[] | null = null;
   constructor() {
@@ -227,9 +242,20 @@ class ElectronApplication {
 
       // Register window getters with windowService if available
       try {
-        const windowSvc = windowService;
-        if (windowSvc && typeof windowSvc.registerWindowGetters === 'function') {
-          windowSvc.registerWindowGetters(
+        if (!this.windowServiceInstance) {
+          if (windowService?.getWindowService) {
+            this.windowServiceInstance = windowService.getWindowService();
+          } else if (typeof windowService?.default === 'function') {
+            this.windowServiceInstance = new windowService.default();
+          } else if (typeof windowService === 'function') {
+            this.windowServiceInstance = new windowService();
+          } else {
+            this.windowServiceInstance = windowService;
+          }
+        }
+
+        if (this.windowServiceInstance && typeof this.windowServiceInstance.registerWindowGetters === 'function') {
+          this.windowServiceInstance.registerWindowGetters(
             () => this.audienceWindow,
             () => this.confidenceWindow,
             () => this.lowerThirdsWindow
@@ -319,36 +345,46 @@ class ElectronApplication {
     if (!this.mainWindow) return;
 
     this.mainWindow.webContents.on('did-finish-load', () => {
+      if (!this.mainWindow || this.mainWindow.isDestroyed()) {
+        return;
+      }
+
       console.log('[MainWindow] Page finished loading');
 
       // Check if preload executed successfully
-      this.mainWindow?.webContents
-        .executeJavaScript(`
-          console.log('[MainWindow-Injection] Checking for electronAPI...');
-          console.log('[MainWindow-Injection] electronAPI:', typeof window.electronAPI);
-          console.log('[MainWindow-Injection] __electronAPICached:', typeof window.__electronAPICached);
-          console.log('[MainWindow-Injection] __preloadReady:', window.__preloadReady);
-        `)
-        .catch((err: Error) => {
-          console.error('[MainWindow] Failed to execute check script:', err);
-        });
+      if (!this.mainWindow.webContents.isDestroyed()) {
+        this.mainWindow.webContents
+          .executeJavaScript(`
+            console.log('[MainWindow-Injection] Checking for electronAPI...');
+            console.log('[MainWindow-Injection] electronAPI:', typeof window.electronAPI);
+            console.log('[MainWindow-Injection] __electronAPICached:', typeof window.__electronAPICached);
+            console.log('[MainWindow-Injection] __preloadReady:', window.__preloadReady);
+          `)
+          .catch((err: Error) => {
+            console.error('[MainWindow] Failed to execute check script:', err);
+          });
+      }
     });
 
     this.mainWindow.on('close', async (e) => {
       e.preventDefault();
 
-      // Close all windows
-      this.audienceWindow?.close();
-      this.confidenceWindow?.close();
-      this.lowerThirdsWindow?.close();
+      try {
+        // Close all windows
+        this.audienceWindow?.close();
+        this.confidenceWindow?.close();
+        this.lowerThirdsWindow?.close();
 
-      // Stop services
-      await httpServer.stop();
-      await remoteControlService.stop();
-      await this.serviceManager.stopAllServices();
-
-      this.mainWindow?.destroy();
-      app.quit();
+        // Stop services
+        await httpServer.stop();
+        await remoteControlService.stop();
+        await this.serviceManager.stopAllServices();
+      } catch (error) {
+        console.error('[MainWindow] Error during shutdown:', error);
+      } finally {
+        this.mainWindow?.destroy();
+        app.quit();
+      }
     });
   }
 
@@ -561,7 +597,7 @@ class ElectronApplication {
       imageService,
       textService,
       displayService: this.displayServiceInstance || displayService,
-      windowService,
+      windowService: this.windowServiceInstance || windowService,
       macroService,
       schedulerService,
       httpServer,
@@ -616,6 +652,19 @@ const application = new ElectronApplication();
 
 app.whenReady().then(async () => {
   try {
+    protocol.registerFileProtocol('local', (request, callback) => {
+      try {
+        let urlPath = request.url.replace(/^local:\/\//, '');
+        urlPath = decodeURIComponent(urlPath);
+        if (process.platform === 'win32' && urlPath.startsWith('/') && /^[A-Za-z]:/.test(urlPath.slice(1))) {
+          urlPath = urlPath.slice(1);
+        }
+        callback({ path: urlPath });
+      } catch (error) {
+        console.error('[Protocol] Failed to resolve local URL:', request.url, error);
+        callback({ error: -6 });
+      }
+    });
     await application.initialize();
   } catch (error) {
     console.error('[App] Failed to initialize application:', error);

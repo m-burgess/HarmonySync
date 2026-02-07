@@ -31,6 +31,7 @@ import {
 import ServiceOrderManager from './components/service-order/ServiceOrderManager.tsx';
 import SlideManager from './components/slides/SlideManager.tsx';
 import LyricsColumn from './components/lyrics/LyricsColumn.tsx';
+import ScreenButtons from './components/screens/ScreenButtons.jsx';
 import MixerSidebar from './components/audio/MixerSidebar.tsx';
 import DisplaySettings from './components/screens/DisplaySettings.tsx';
 import AudioSettings from './components/screens/AudioSettings.tsx';
@@ -320,7 +321,7 @@ const App = observer(() => {
     audioViewModel.setIsLoading(isLoading);
   };
 
-  const handleSetCurrentLyrics = (lyrics: string) => {
+  const handleSetCurrentLyrics = (lyrics: string | null) => {
     serviceOrderViewModel.setSelectedSongForLyrics(lyrics);
   };
 
@@ -355,6 +356,10 @@ const App = observer(() => {
           label="Preferences" 
           onClick={() => setIsPreferencesOpen(true)}
         />
+
+        <div style={{ marginTop: 'auto', padding: '8px 0' }}>
+          <ScreenButtons variant="activity" />
+        </div>
       </div>
 
       {/* Main Layout: Service Order Sidebar + Slide Editor */}

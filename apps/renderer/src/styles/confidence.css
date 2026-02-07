@@ -1,5 +1,112 @@
-/* Confidence Monitor styles moved into styles/ */
-.confidence-root {
-  background: #111;
+/* Confidence Monitor styles */
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: #000;
   color: #fff;
+  overflow: hidden;
+}
+
+.monitor-container {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  width: 100%;
+  height: 100vh;
+  background: #000;
+  color: #fff;
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+}
+
+.monitor-top-bar,
+.monitor-bottom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 24px;
+  border-top: 2px solid rgba(255, 255, 255, 0.2);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.monitor-top-bar {
+  border-top: none;
+}
+
+.monitor-bottom-bar {
+  border-bottom: none;
+  min-height: 56px;
+}
+
+#clock-display {
+  font-size: 48px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.monitor-content {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  align-items: stretch;
+  min-height: 0;
+}
+
+.monitor-container.lyrics-mode .monitor-content {
+  grid-template-columns: 1fr 1fr;
+}
+
+#confidence-transition-display {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 40px;
+  font-size: 32px;
+  line-height: 1.4;
+}
+
+.monitor-container.lyrics-mode #confidence-transition-display {
+  align-items: flex-start;
+  text-align: left;
+  padding: 40px 48px;
+}
+
+.monitor-container.media-mode #confidence-transition-display {
+  grid-column: 1 / -1;
+}
+
+#next-slide-display {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  text-align: left;
+  padding: 40px 48px;
+  border-left: 2px solid rgba(255, 255, 255, 0.1);
+  color: #ffd400;
+  font-size: 24px;
+  line-height: 1.5;
+}
+
+#next-slide-display h4 {
+  margin: 0 0 18px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: rgba(255, 212, 0, 0.8);
+  letter-spacing: 0.08em;
+}
+
+#next-slide-display div {
+  margin: 6px 0;
+}
+
+#video-countdown-display {
+  font-size: 32px;
+  font-weight: 700;
+  color: #ff4d4d;
 }

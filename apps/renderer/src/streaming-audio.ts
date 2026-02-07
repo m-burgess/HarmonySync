@@ -2,6 +2,7 @@
 // This approach loads tracks as individual files for streaming playback
 
 import { getAudioContext } from './utils/audio/audio-nodejs';
+import { core } from './electron-adapter';
 import type { Track, TrackInfo } from './types/audio';
 
 /**
@@ -32,8 +33,10 @@ export async function loadTrackForStreaming(trackPath: string, trackName: string
 
   try {
     const audioContext = getAudioContext();
-    // For Electron, use file:// protocol directly or fetch from the path
-    const assetUrl = trackPath.startsWith('http') ? trackPath : `file://${trackPath}`;
+    // For Electron, use local protocol or fetch from the path
+    const assetUrl = trackPath.startsWith('http')
+      ? trackPath
+      : (core.convertFileSrc ? core.convertFileSrc(trackPath) : trackPath);
     console.log(`Loading streaming track "${trackName}" from:`, assetUrl);
     
     const response = await fetch(assetUrl);

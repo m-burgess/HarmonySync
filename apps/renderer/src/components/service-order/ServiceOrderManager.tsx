@@ -43,7 +43,7 @@ interface ServiceOrderViewModel {
   loadingProgress: number;
   loadingMessage: string;
   crossfadeDuration: number;
-  selectedSongForLyrics: ServiceOrderItem | null;
+  selectedSongForLyrics: string | null;
   handlePlaybackComplete: () => void;
   handleServiceImported: (detail: ServiceImportedDetail) => void;
   loadItem: (item: ServiceOrderItem, index: number) => Promise<LoadItemResult | null>;
@@ -61,7 +61,7 @@ interface ServiceOrderManagerProps {
   setAllSlides: (slides: unknown[]) => void;
   setAllTracks: (tracks: unknown[], folderPath?: string) => void;
   setIsLoadingTracks: (isLoading: boolean) => void;
-  setCurrentLyrics: (lyrics: string) => void;
+  setCurrentLyrics: (lyrics: string | null) => void;
 }
 
 const ServiceOrderManager: React.FC<ServiceOrderManagerProps> = observer(({ 
@@ -129,8 +129,8 @@ const ServiceOrderManager: React.FC<ServiceOrderManagerProps> = observer(({
     if (result && setAllSlides && setAllTracks) {
       setAllSlides(result.slides || []);
       setAllTracks(result.tracks || [], item.path);
-      if (setCurrentLyrics && item.lyrics) {
-        setCurrentLyrics(item.lyrics);
+      if (setCurrentLyrics) {
+        setCurrentLyrics(viewModel.selectedSongForLyrics || null);
       }
     }
   };
@@ -203,19 +203,6 @@ const ServiceOrderManager: React.FC<ServiceOrderManagerProps> = observer(({
         </button>
       </div>
 
-      {/* Loading Progress */}
-      {viewModel.loadingProgress > 0 && viewModel.loadingProgress < 100 && (
-        <div className="progress-container">
-          <div className="progress-bar" style={{ width: `${viewModel.loadingProgress}%` }}></div>
-          <div className="progress-text">{viewModel.loadingMessage} ({viewModel.loadingProgress}%)</div>
-        </div>
-      )}
-      {viewModel.loadingProgress === 100 && (
-        <div className="progress-container">
-          <div className="progress-text">{viewModel.loadingMessage}</div>
-        </div>
-      )}
-
       {/* Service Order Items */}
       <ul id="service-order">
         {viewModel.serviceOrder.map((item, index) => {
@@ -226,12 +213,8 @@ const ServiceOrderManager: React.FC<ServiceOrderManagerProps> = observer(({
           return (
             <li 
               key={item.id || `fallback-${index}`} 
-              className={`service-order-item ${isCurrentSong ? 'current-song' : ''} ${isLoading ? 'loading' : ''}`}
+              className={`service-order-item ${isLoading ? 'loading' : ''}`}
               onClick={() => handleServiceOrderItemClickWithIndex(item, index)}
-              style={{ 
-                backgroundColor: isCurrentSong ? 'rgba(59, 130, 246, 0.1)' : isLoading ? 'rgba(239, 68, 68, 0.15)' : 'transparent',
-                borderLeft: isCurrentSong ? '3px solid #3b82f6' : isLoading ? '3px solid #ef4444' : '3px solid transparent'
-              }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ flex: 1 }} onClick={() => handleServiceOrderItemClickWithIndex(item, index)}>
@@ -329,13 +312,7 @@ const ServiceOrderManager: React.FC<ServiceOrderManagerProps> = observer(({
         })}
       </ul>
       
-      {/* Lyrics Fetcher Modal */}
-      {viewModel.selectedSongForLyrics && (
-        <LyricsFetcher 
-          songItem={viewModel.selectedSongForLyrics}
-          onLyricsFetched={(item: ServiceOrderItem) => viewModel.handleLyricsFetched(item)}
-        />
-      )}
+      {/* Lyrics Fetcher Modal (disabled) */}
     </div>
   );
 });
