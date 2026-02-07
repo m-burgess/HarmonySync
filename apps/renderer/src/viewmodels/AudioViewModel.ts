@@ -96,6 +96,7 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
       updateMemoryUsage: action,
       cleanup: action,
       playAll: action,
+      playAllFrontendScheduled: action,
       stopAll: action,
       goToBeginning: action,
       setGlobalVolume: action,
@@ -565,6 +566,46 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
       // Operation lock with timeout provides user feedback while preventing rapid clicks.
       // This is intentionally simple for UI responsiveness. For critical operations where
       // race conditions are a concern, consider implementing a Promise-based queue.
+      setTimeout(() => {
+        runInAction(() => {
+          this.log('🔄 Resetting operation in progress flag');
+          this.isOperationInProgress = false;
+        });
+      }, 500);
+    }
+  }
+
+  /**
+   * Play all tracks using frontend Web Audio API scheduling
+   * This implements the issue requirements:
+   * 1. Calculate the duration of each track
+   * 2. Use audio context scheduling with node.start() for perfect sync
+   */
+  public async playAllFrontendScheduled(): Promise<void> {
+    if (this.isOperationInProgress) {
+      this.log('⚠️ Operation already in progress, ignoring playAllFrontendScheduled');
+      return;
+    }
+
+    this.log('🎵 Starting playAll with frontend scheduling (Web Audio API)');
+    runInAction(() => {
+      this.isOperationInProgress = true;
+    });
+
+    try {
+      // Use frontend Web Audio API scheduling instead of backend
+      await this.audioService.playAllTracksFrontendScheduled(this.tracks);
+      runInAction(() => {
+        this.isPlaying = true;
+        this.isPaused = false;
+      });
+      this.log('✅ Frontend scheduled playback started');
+    } catch (error) {
+      this.logError('❌ Frontend scheduled playback failed:', error);
+      runInAction(() => {
+        this.error = error instanceof Error ? error.message : String(error);
+      });
+    } finally {
       setTimeout(() => {
         runInAction(() => {
           this.log('🔄 Resetting operation in progress flag');
