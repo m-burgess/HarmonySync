@@ -2,15 +2,43 @@
 
 ## Overview
 
-The Confidence Monitor now includes a dynamic timer component that displays at the bottom of the screen when a timer is active. The timer changes color based on how much time has elapsed to provide visual feedback to presenters.
+The Confidence Monitor includes a dynamic timer component that displays at the bottom of the screen when enabled. The timer changes color based on how much time has elapsed to provide visual feedback to presenters.
+
+**Important:** The timer stays hidden until explicitly enabled via the `confidence-timer-enable` event from the main window.
 
 ## Timer Events
 
-The confidence monitor listens for the following events to control the timer display:
+The confidence monitor listens for the following events to control the timer:
 
-### `timer-started`
+### Timer Visibility Control
 
-Emitted when a timer is started from the main screen.
+#### `confidence-timer-enable`
+
+Enables the timer display on the confidence monitor. The timer will remain hidden until this event is sent, even if timer events are being received.
+
+**Payload:** None
+
+**Example:**
+```javascript
+event.emit('confidence-timer-enable');
+```
+
+#### `confidence-timer-disable`
+
+Disables the timer display on the confidence monitor. The timer data continues to update but the display is hidden.
+
+**Payload:** None
+
+**Example:**
+```javascript
+event.emit('confidence-timer-disable');
+```
+
+### Timer Data Events
+
+#### `timer-started`
+
+Emitted when a timer is started from the main screen. This updates the timer data but does not show the timer unless it's enabled.
 
 **Payload:**
 ```typescript
@@ -24,7 +52,7 @@ Emitted when a timer is started from the main screen.
 event.emit('timer-started', { total: 600 }); // 10 minute timer
 ```
 
-### `timer-update`
+#### `timer-update`
 
 Emitted periodically to update the timer's elapsed time.
 
@@ -41,7 +69,7 @@ Emitted periodically to update the timer's elapsed time.
 event.emit('timer-update', { elapsed: 300, total: 600 }); // 5 minutes elapsed of 10 minute timer
 ```
 
-### `timer-stopped`
+#### `timer-stopped`
 
 Emitted when a timer is stopped or completes.
 
@@ -74,7 +102,7 @@ The timer component has three visual states based on progress:
 
 ## Implementation Example
 
-Here's an example of how to implement a timer in the main application:
+Here's an example of how to implement a timer in the main application with visibility control:
 
 ```typescript
 class TimerService {
@@ -82,12 +110,17 @@ class TimerService {
   private startTime: number = 0;
   private totalTime: number = 0;
 
-  start(durationInSeconds: number) {
+  start(durationInSeconds: number, showOnConfidence: boolean = false) {
     this.totalTime = durationInSeconds;
     this.startTime = Date.now();
     
-    // Notify confidence monitor
+    // Notify confidence monitor of timer data
     event.emit('timer-started', { total: this.totalTime });
+    
+    // Optionally enable timer display on confidence monitor
+    if (showOnConfidence) {
+      event.emit('confidence-timer-enable');
+    }
     
     // Update every second
     this.intervalId = setInterval(() => {
@@ -113,6 +146,14 @@ class TimerService {
     
     event.emit('timer-stopped');
   }
+  
+  showOnConfidence() {
+    event.emit('confidence-timer-enable');
+  }
+  
+  hideFromConfidence() {
+    event.emit('confidence-timer-disable');
+  }
 }
 ```
 
@@ -127,7 +168,15 @@ class TimerService {
 
 ## Notes
 
-- The timer only appears when active (when `timer.active` is true)
-- The timer automatically hides when stopped
+- **The timer stays hidden by default** until the `confidence-timer-enable` event is sent from the main window
+- Timer data (`timer-started`, `timer-update`, `timer-stopped`) can be sent independently of visibility control
+- The timer will not display during lyrics mode, even when enabled, to avoid distraction during worship
+- The timer automatically hides when stopped (via `timer-stopped` event)
 - The timer display is non-intrusive and doesn't block content
 - The color transitions happen smoothly via CSS transitions
+- To use the timer, the main window must:
+  1. Send `confidence-timer-enable` to make timer visible
+  2. Send `timer-started` with duration to initialize timer
+  3. Send `timer-update` periodically to update the countdown
+  4. Send `timer-stopped` when timer completes
+  5. Optionally send `confidence-timer-disable` to hide timer without stopping it
