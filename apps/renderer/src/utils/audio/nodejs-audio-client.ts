@@ -220,6 +220,7 @@ class NodeJSAudioClient {
                 id: t.id,
                 name: t.name,
                 filePath: '',
+                duration: t.duration, // Pass through duration from backend
                 isPlaying: false,
                 isPaused: false,
                 panValue: t.pan,

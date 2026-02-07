@@ -42,6 +42,7 @@ interface TrackLoadResult {
     path: string;
     trackId: string;
     name: string;
+    duration?: number; // Duration in seconds
     success: boolean;
 }
 
@@ -250,6 +251,7 @@ export async function addTracks(trackPaths: string[], songName: string | null = 
             path: track.filePath,
             trackId: track.id,
             name: track.name,
+            duration: track.duration, // Include duration from backend
             success: true
         }));
         
