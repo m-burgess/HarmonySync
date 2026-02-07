@@ -2,6 +2,7 @@
 import NodeJSAudioClient from './nodejs-audio-client';
 import AudioServiceChecker from './service-checker';
 import * as audioApi from '../api';
+import * as scheduledPlayback from './scheduled-playback';
 import type { 
     Track, 
     MixerState, 
@@ -709,3 +710,59 @@ export function offCrossfadeComplete(handler: EventHandler<CrossfadeCompleteData
         eventHandlers.crossfadeComplete.splice(index, 1);
     }
 }
+
+// ============================================================================
+// Frontend Scheduled Playback (Web Audio API)
+// ============================================================================
+
+/**
+ * Play all tracks using frontend Web Audio API scheduling with node.start()
+ * This implements the issue requirements:
+ * 1. Calculate the duration of each track
+ * 2. Use audio context scheduling with node.start() to keep all files synced
+ * 
+ * Use this instead of playAllTracks() to use browser-based scheduling
+ * rather than backend Node.js service scheduling
+ */
+export async function playAllTracksFrontendScheduled(tracksToPlay: Track[]): Promise<void> {
+    console.log('🎵 Using frontend Web Audio API scheduled playback');
+    
+    try {
+        // Step 1: Calculate track durations (requirement from issue)
+        console.log('📊 Step 1: Calculating track durations...');
+        const tracksWithDurations = await scheduledPlayback.calculateTrackDurations(tracksToPlay);
+        
+        // Step 2: Schedule playback using node.start() (requirement from issue)
+        console.log('⏰ Step 2: Scheduling playback with node.start()...');
+        await scheduledPlayback.playAllTracksScheduled(tracksWithDurations);
+        
+        console.log('✅ Frontend scheduled playback started successfully');
+    } catch (error) {
+        console.error('❌ Failed to start frontend scheduled playback:', error);
+        throw error;
+    }
+}
+
+/**
+ * Stop all frontend scheduled tracks
+ */
+export function stopAllFrontendScheduled(): void {
+    scheduledPlayback.stopAllScheduledTracks();
+}
+
+/**
+ * Check if frontend scheduled playback is active
+ */
+export function isFrontendScheduledPlaying(): boolean {
+    return scheduledPlayback.isPlayingScheduled();
+}
+
+/**
+ * Get current playback position for frontend scheduled playback
+ */
+export function getFrontendScheduledPosition(): number {
+    return scheduledPlayback.getCurrentPlaybackPosition();
+}
+
+// Export scheduled playback module for advanced usage
+export { scheduledPlayback };

@@ -399,10 +399,46 @@ export class AudioService extends BaseService implements IAudioService {
   }
 
   /**
+   * Play all tracks using frontend Web Audio API scheduling
+   * Implements node.start() scheduling for perfect synchronization
+   * @param tracks - Tracks with file paths to play
+   */
+  public async playAllTracksFrontendScheduled(tracks: Array<{ filePath: string; name: string; id: string; volume: number; panValue: number; isMuted?: boolean }>): Promise<void> {
+    try {
+      // Convert to Track type and use frontend scheduling
+      const trackObjects = tracks.map(t => ({
+        ...t,
+        isPlaying: false,
+        isPaused: false,
+      }));
+      await audioUtils.playAllTracksFrontendScheduled(trackObjects);
+    } catch (error) {
+      return this.handleError('playAllTracksFrontendScheduled', error);
+    }
+  }
+
+  /**
+   * Stop frontend scheduled playback
+   */
+  public async stopFrontendScheduled(): Promise<void> {
+    audioUtils.stopAllFrontendScheduled();
+  }
+
+  /**
+   * Check if frontend scheduled playback is active
+   */
+  public isFrontendScheduledPlaying(): boolean {
+    return audioUtils.isFrontendScheduledPlaying();
+  }
+
+  /**
    * Cleanup on dispose
    */
   protected override onDispose(): void {
     this.stopMemoryMonitoring();
+    
+    // Stop any frontend scheduled playback
+    audioUtils.stopAllFrontendScheduled();
     
     // Cleanup audio resources if needed
     audioUtils.cleanupAndStopAudio().catch((error: unknown) => {
