@@ -209,8 +209,8 @@ const ConfidenceMonitor = () => {
         )}
       </div>
 
-      {/* Floating Timer at Bottom - Only shows when active */}
-      {timerDisplay && (
+      {/* Floating Timer at Bottom - Only shows when active AND not in lyrics mode */}
+      {timerDisplay && !isLyricsMode && (
         <div className={`floating-timer ${timerDisplay.colorClass}`}>
           <div className="timer-content">{timerDisplay.time}</div>
         </div>
