@@ -4,6 +4,7 @@ import net from 'net';
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import cors from 'cors';
 import fs from 'fs';
+import path from 'path';
 
 // Audic and track classes moved to audioTrack.ts
 
@@ -56,6 +57,52 @@ app.use(express.json());
 
 // Global mixer instance (pass io for event emissions)
 const mixer: AudioMixer = new AudioMixer(io);
+
+const isGenericTrackName = (name: string): boolean => {
+    if (!name) return true;
+    return /^track\s*\d+$/i.test(name.trim());
+};
+
+const resolveTrackName = (name: string, filePath: string | undefined, index: number): string => {
+    const rawName = (name || '').trim();
+    const fileName = filePath ? path.basename(filePath, path.extname(filePath)) : '';
+
+    if (isGenericTrackName(rawName)) {
+        return fileName || rawName || `Track ${index + 1}`;
+    }
+
+    return rawName || fileName || `Track ${index + 1}`;
+};
+
+const normalizeMixerState = (state: MixerState): MixerState => {
+    const normalizedTracks = state.tracks.map((track, index) => ({
+        ...track,
+        name: resolveTrackName(track.name, track.filePath, index)
+    }));
+
+    const nameById = new Map(normalizedTracks.map(track => [track.id, track.name] as const));
+    const normalizedSongs = state.songs.map(song => {
+        if (!song) return song;
+        return {
+            ...song,
+            tracks: song.tracks.map((track, index) => ({
+                ...track,
+                name: resolveTrackName(nameById.get(track.id) || track.name, undefined, index)
+            }))
+        };
+    });
+
+    return {
+        ...state,
+        tracks: normalizedTracks,
+        songs: normalizedSongs
+    };
+};
+
+const emitMixerStateChanged = (): void => {
+    const normalizedState = normalizeMixerState(mixer.getMixerState());
+    io.emit('mixer_state_changed', normalizedState);
+};
 
 // REST API Routes
 app.get('/api/health', (_req: Request, res: Response): void => {
@@ -127,10 +174,9 @@ app.post('/api/tracks/load', async (req: Request, res: Response): Promise<void> 
         }
 
         const trackId: string = await mixer.loadTrack(filePath, name);
-        const mixerState: MixerState = mixer.getMixerState();
         
         // Emit to all connected clients
-        io.emit('mixer_state_changed', mixerState);
+        emitMixerStateChanged();
         
         console.log('[/api/tracks/load] Track loaded successfully:', trackId);
         res.json({ trackId, success: true });
@@ -143,10 +189,9 @@ app.post('/api/tracks/load', async (req: Request, res: Response): Promise<void> 
 app.post('/api/tracks/clear', (_req: Request, res: Response): void => {
     try {
         mixer.clearAllTracks();
-        const mixerState: MixerState = mixer.getMixerState();
         
         // Emit to all connected clients
-        io.emit('mixer_state_changed', mixerState);
+        emitMixerStateChanged();
         
         res.json({ success: true, message: 'All tracks cleared' });
     } catch (error) {
@@ -160,7 +205,7 @@ app.post('/api/tracks/:trackId/play', (req: Request, res: Response): void => {
     const success: boolean = mixer.playTrack(trackId);
     
     if (success) {
-        io.emit('mixer_state_changed', mixer.getMixerState());
+        emitMixerStateChanged();
         res.json({ success: true });
     } else {
         res.status(404).json({ error: 'Track not found' });
@@ -172,7 +217,7 @@ app.post('/api/tracks/:trackId/stop', (req: Request, res: Response): void => {
     const success: boolean = mixer.stopTrack(trackId);
     
     if (success) {
-        io.emit('mixer_state_changed', mixer.getMixerState());
+        emitMixerStateChanged();
         res.json({ success: true });
     } else {
         res.status(404).json({ error: 'Track not found' });
@@ -186,7 +231,7 @@ app.post('/api/tracks/:trackId/volume', (req: Request, res: Response): void => {
     const success: boolean = mixer.setTrackVolume(trackId, volume);
     
     if (success) {
-        io.emit('mixer_state_changed', mixer.getMixerState());
+        emitMixerStateChanged();
         res.json({ success: true });
     } else {
         res.status(404).json({ error: 'Track not found' });
@@ -200,7 +245,7 @@ app.post('/api/tracks/:trackId/pan', (req: Request, res: Response): void => {
     const success: boolean = mixer.setTrackPan(trackId, pan);
     
     if (success) {
-        io.emit('mixer_state_changed', mixer.getMixerState());
+        emitMixerStateChanged();
         res.json({ success: true });
     } else {
         res.status(404).json({ error: 'Track not found' });
@@ -214,7 +259,7 @@ app.post('/api/tracks/:trackId/mute', (req: Request, res: Response): void => {
     const success: boolean = mixer.setTrackMute(trackId, muted);
     
     if (success) {
-        io.emit('mixer_state_changed', mixer.getMixerState());
+        emitMixerStateChanged();
         res.json({ success: true });
     } else {
         res.status(404).json({ error: 'Track not found' });
@@ -239,7 +284,7 @@ app.post('/api/tracks/mute', (req: Request, res: Response): void => {
 
     const success = mixer.setTrackMute(track.id, Boolean(muted));
     if (success) {
-        io.emit('mixer_state_changed', mixer.getMixerState());
+        emitMixerStateChanged();
         res.json({ success: true });
     } else {
         res.status(500).json({ error: 'Failed to set mute' });
@@ -262,7 +307,7 @@ app.post('/api/tracks/volume', (req: Request, res: Response): void => {
 
     const success = mixer.setTrackVolume(track.id, volume);
     if (success) {
-        io.emit('mixer_state_changed', mixer.getMixerState());
+        emitMixerStateChanged();
         res.json({ success: true });
     } else {
         res.status(500).json({ error: 'Failed to set volume' });
@@ -285,7 +330,7 @@ app.post('/api/tracks/pan', (req: Request, res: Response): void => {
 
     const success = mixer.setTrackPan(track.id, pan);
     if (success) {
-        io.emit('mixer_state_changed', mixer.getMixerState());
+        emitMixerStateChanged();
         res.json({ success: true });
     } else {
         res.status(500).json({ error: 'Failed to set pan' });
@@ -294,31 +339,32 @@ app.post('/api/tracks/pan', (req: Request, res: Response): void => {
 
 app.post('/api/mixer/play-all', (_req: Request, res: Response): void => {
     mixer.playAllTracks();
-    io.emit('mixer_state_changed', mixer.getMixerState());
+    emitMixerStateChanged();
     res.json({ success: true });
 });
 
 app.post('/api/mixer/stop-all', (_req: Request, res: Response): void => {
     mixer.stopAllTracks();
-    io.emit('mixer_state_changed', mixer.getMixerState());
+    emitMixerStateChanged();
     res.json({ success: true });
 });
 
 app.post('/api/mixer/master-volume', (req: Request, res: Response): void => {
     const { volume } = req.body;
     mixer.setMasterVolume(volume);
-    io.emit('mixer_state_changed', mixer.getMixerState());
+    emitMixerStateChanged();
     res.json({ success: true });
 });
 
 app.post('/api/mixer/apply-default-panning', (_req: Request, res: Response): void => {
     mixer.applyDefaultPanning();
-    io.emit('mixer_state_changed', mixer.getMixerState());
+    emitMixerStateChanged();
     res.json({ success: true });
 });
 
 app.get('/api/mixer/state', (_req: Request, res: Response): void => {
-    res.json(mixer.getMixerState());
+    const normalizedState = normalizeMixerState(mixer.getMixerState());
+    res.json(normalizedState);
 });
 
 app.delete('/api/tracks/:trackId', (req: Request, res: Response): void => {
@@ -326,7 +372,7 @@ app.delete('/api/tracks/:trackId', (req: Request, res: Response): void => {
     const success: boolean = mixer.removeTrack(trackId);
     
     if (success) {
-        io.emit('mixer_state_changed', mixer.getMixerState());
+        emitMixerStateChanged();
         res.json({ success: true });
     } else {
         res.status(404).json({ error: 'Track not found' });
@@ -335,7 +381,7 @@ app.delete('/api/tracks/:trackId', (req: Request, res: Response): void => {
 
 app.delete('/api/mixer/clear', (_req: Request, res: Response): void => {
     mixer.clearAllTracks();
-    io.emit('mixer_state_changed', mixer.getMixerState());
+    emitMixerStateChanged();
     res.json({ success: true });
 });
 
@@ -385,7 +431,7 @@ app.post('/api/songs/create', async (req: Request, res: Response): Promise<void>
         }
 
         const songId: string = await mixer.createSong(name, trackPaths);
-        io.emit('mixer_state_changed', mixer.getMixerState());
+        emitMixerStateChanged();
         res.json({ success: true, songId });
     } catch (error) {
         console.error('Error creating song:', error);
@@ -397,7 +443,7 @@ app.post('/api/songs/:songId/play', (req: Request, res: Response): void => {
     try {
         const { songId } = req.params;
         mixer.playSong(songId);
-        io.emit('mixer_state_changed', mixer.getMixerState());
+        emitMixerStateChanged();
         res.json({ success: true });
     } catch (error) {
         console.error('Error playing song:', error);
@@ -409,7 +455,7 @@ app.post('/api/songs/:songId/stop', (req: Request, res: Response): void => {
     try {
         const { songId } = req.params;
         const success: boolean = mixer.stopSong(songId);
-        io.emit('mixer_state_changed', mixer.getMixerState());
+        emitMixerStateChanged();
         res.json({ success });
     } catch (error) {
         console.error('Error stopping song:', error);
@@ -421,7 +467,7 @@ app.delete('/api/songs/:songId', (req: Request, res: Response): void => {
     try {
         const { songId } = req.params;
         const success: boolean = mixer.removeSong(songId);
-        io.emit('mixer_state_changed', mixer.getMixerState());
+        emitMixerStateChanged();
         res.json({ success });
     } catch (error) {
         console.error('Error removing song:', error);
@@ -431,8 +477,8 @@ app.delete('/api/songs/:songId', (req: Request, res: Response): void => {
 
 app.get('/api/songs', (_req: Request, res: Response): void => {
     try {
-        const songs = mixer.getAllSongs();
-        res.json({ success: true, songs });
+        const normalizedState = normalizeMixerState(mixer.getMixerState());
+        res.json({ success: true, songs: normalizedState.songs });
     } catch (error) {
         console.error('Error getting songs:', error);
         res.status(500).json({ error: (error as Error).message });
@@ -442,7 +488,8 @@ app.get('/api/songs', (_req: Request, res: Response): void => {
 app.get('/api/songs/:songId', (req: Request, res: Response): void => {
     try {
         const { songId } = req.params;
-        const song = mixer.getSongState(songId);
+        const normalizedState = normalizeMixerState(mixer.getMixerState());
+        const song = normalizedState.songs.find((item) => item?.id === songId) || null;
         if (!song) {
             res.status(404).json({ error: 'Song not found' });
             return;
@@ -488,7 +535,7 @@ io.on('connection', (socket: Socket): void => {
     console.log('Client connected:', socket.id);
     
     // Send current mixer state to new client
-    socket.emit('mixer_state_changed', mixer.getMixerState());
+    socket.emit('mixer_state_changed', normalizeMixerState(mixer.getMixerState()));
     
     socket.on('disconnect', (): void => {
         console.log('Client disconnected:', socket.id);
@@ -498,7 +545,7 @@ io.on('connection', (socket: Socket): void => {
     socket.on('load_track', async (data: LoadTrackData): Promise<void> => {
         try {
             const trackId: string = await mixer.loadTrack(data.filePath, data.name);
-            io.emit('mixer_state_changed', mixer.getMixerState());
+            emitMixerStateChanged();
             socket.emit('track_loaded', { trackId, success: true });
         } catch (error) {
             socket.emit('error', { message: (error as Error).message });
@@ -508,14 +555,14 @@ io.on('connection', (socket: Socket): void => {
     socket.on('play_track', (data: PlayTrackData): void => {
         const success: boolean = mixer.playTrack(data.trackId);
         if (success) {
-            io.emit('mixer_state_changed', mixer.getMixerState());
+            emitMixerStateChanged();
         }
     });
     
     socket.on('stop_track', (data: StopTrackData): void => {
         const success: boolean = mixer.stopTrack(data.trackId);
         if (success) {
-            io.emit('mixer_state_changed', mixer.getMixerState());
+            emitMixerStateChanged();
         }
     });
 
@@ -524,7 +571,7 @@ io.on('connection', (socket: Socket): void => {
         console.log(`🔇 Setting track ${data.trackId} mute to ${data.muted}`);
         const success: boolean = mixer.setTrackMute(data.trackId, data.muted);
         if (success) {
-            io.emit('mixer_state_changed', mixer.getMixerState());
+            emitMixerStateChanged();
             socket.emit('track_mute_changed', { trackId: data.trackId, muted: data.muted, success: true });
         } else {
             socket.emit('error', { message: `Failed to set track mute: track ${data.trackId} not found` });
@@ -535,7 +582,7 @@ io.on('connection', (socket: Socket): void => {
         console.log(`🎛️ Setting track ${data.trackId} pan to ${data.pan}`);
         const success: boolean = mixer.setTrackPan(data.trackId, data.pan);
         if (success) {
-            io.emit('mixer_state_changed', mixer.getMixerState());
+            emitMixerStateChanged();
             socket.emit('track_pan_changed', { trackId: data.trackId, pan: data.pan, success: true });
         } else {
             socket.emit('error', { message: `Failed to set track pan: track ${data.trackId} not found` });
@@ -546,7 +593,7 @@ io.on('connection', (socket: Socket): void => {
         console.log(`🎚️ Setting track ${data.trackId} volume to ${data.volume}`);
         const success: boolean = mixer.setTrackVolume(data.trackId, data.volume);
         if (success) {
-            io.emit('mixer_state_changed', mixer.getMixerState());
+            emitMixerStateChanged();
             socket.emit('track_volume_changed', { trackId: data.trackId, volume: data.volume, success: true });
         } else {
             socket.emit('error', { message: `Failed to set track volume: track ${data.trackId} not found` });
@@ -556,6 +603,34 @@ io.on('connection', (socket: Socket): void => {
 
 // Port configuration
 const PORT: number = parseInt(process.env.PORT || '3001', 10);
+const IS_TEST_ENV: boolean = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
+let isShuttingDown = false;
+
+const shutdown = (reason: string, error?: unknown, exitCode: number = 1): void => {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
+
+    if (error) {
+        console.error(`🛑 Audio service shutting down due to ${reason}:`, error);
+    } else {
+        console.log(`🛑 Audio service shutting down (${reason})`);
+    }
+
+    try {
+        mixer.stopAllTracks();
+        mixer.clearAllTracks();
+    } catch (cleanupError) {
+        console.error('Failed to cleanup audio tracks:', cleanupError);
+    }
+
+    if (IS_TEST_ENV) {
+        return;
+    }
+
+    server.close(() => {
+        process.exit(exitCode);
+    });
+};
 
 // Error handling
 process.on('uncaughtException', (error: Error): void => {
@@ -564,12 +639,21 @@ process.on('uncaughtException', (error: Error): void => {
         process.exit(0);
     } else {
         console.error('Uncaught Exception:', error);
-        process.exit(1);
+        shutdown('uncaughtException', error);
     }
 });
 
 process.on('unhandledRejection', (reason: unknown, promise: Promise<any>): void => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    shutdown('unhandledRejection', reason);
+});
+
+process.on('SIGTERM', () => {
+    shutdown('SIGTERM', undefined, 0);
+});
+
+process.on('SIGINT', () => {
+    shutdown('SIGINT', undefined, 0);
 });
 
 // Start server

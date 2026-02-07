@@ -29,6 +29,8 @@ const DEFAULT_CONFIG: ServiceConfig = {
   autoDelete: true,
   port: PORT
 };
+const IS_TEST_ENV: boolean = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
+let isShuttingDown = false;
 
 // ==================== Type Definitions ====================
 
@@ -552,16 +554,44 @@ const service = new FolderService();
 service.start();
 
 // Graceful shutdown
+const shutdown = (reason: string, error?: unknown, exitCode: number = 1): void => {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+
+  if (error) {
+    console.error(`\n🛑 Folder service shutting down due to ${reason}:`, error);
+  } else {
+    console.log(`\n🛑 Folder service shutting down (${reason})`);
+  }
+
+  try {
+    service.stop();
+  } catch (cleanupError) {
+    console.error('Failed to stop folder service:', cleanupError);
+  }
+
+  if (IS_TEST_ENV) {
+    return;
+  }
+
+  process.exit(exitCode);
+};
+
 process.on('SIGINT', () => {
-  console.log('\n🛑 Shutting down gracefully...');
-  service.stop();
-  process.exit(0);
+  shutdown('SIGINT', undefined, 0);
 });
 
 process.on('SIGTERM', () => {
-  console.log('\n🛑 Shutting down gracefully...');
-  service.stop();
-  process.exit(0);
+  shutdown('SIGTERM', undefined, 0);
+});
+
+process.on('uncaughtException', (error: Error): void => {
+  shutdown('uncaughtException', error);
+});
+
+process.on('unhandledRejection', (reason: unknown, promise: Promise<any>): void => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  shutdown('unhandledRejection', reason);
 });
 
 export default FolderService;

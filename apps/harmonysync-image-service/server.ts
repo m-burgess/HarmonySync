@@ -12,6 +12,8 @@ const HOST: string = process.env.HOST || '127.0.0.1';
 const PORT: number = parseInt(process.env.PORT || '3003', 10);
 const SHUTDOWN_TOKEN: string | null = process.env.SHUTDOWN_TOKEN || null;
 const MAX_CONCURRENT_JOBS: number = parseInt(process.env.MAX_CONCURRENT_JOBS || '3', 10);
+const IS_TEST_ENV: boolean = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
+let isShuttingDown = false;
 
 // Job types
 type JobType = 'resize' | 'convert' | 'thumbnail' | 'optimize' | 'batch';
@@ -574,20 +576,58 @@ if (require.main === module) {
 }
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
-    console.log('🛑 SIGTERM received, shutting down gracefully');
+const shutdown = (reason: string, error?: unknown, exitCode: number = 1): void => {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
+
+    if (error) {
+        console.error(`🛑 Image service shutting down due to ${reason}:`, error);
+    } else {
+        console.log(`🛑 Image service shutting down (${reason})`);
+    }
+
+    try {
+        clearAllJobCleanupTimers();
+        jobs.clear();
+        jobQueue.length = 0;
+        activeJobCount = 0;
+    } catch (cleanupError) {
+        console.error('Failed to cleanup image jobs:', cleanupError);
+    }
+
+    if (IS_TEST_ENV) {
+        return;
+    }
+
+    try { io.close(); } catch (closeError) {
+        console.error('Failed to close Socket.IO server:', closeError);
+    }
+
     server.close(() => {
         console.log('✅ Server closed');
-        process.exit(0);
+        process.exit(exitCode);
     });
+};
+
+process.on('SIGTERM', () => {
+    shutdown('SIGTERM', undefined, 0);
 });
 
 process.on('SIGINT', () => {
-    console.log('🛑 SIGINT received, shutting down gracefully');
-    server.close(() => {
-        console.log('✅ Server closed');
+    shutdown('SIGINT', undefined, 0);
+});
+
+process.on('uncaughtException', (error: Error): void => {
+    if ((error as any).code === 'EADDRINUSE') {
+        console.warn(`⚠️ Port ${PORT} is already in use. Assuming image service is already running.`);
         process.exit(0);
-    });
+    }
+    shutdown('uncaughtException', error);
+});
+
+process.on('unhandledRejection', (reason: unknown, promise: Promise<any>): void => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    shutdown('unhandledRejection', reason);
 });
 
 // Export internals for testing

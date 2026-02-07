@@ -591,14 +591,18 @@ async function invokeElectronCommand(command: string, args: unknown[], api?: Ele
     case 'transpose_audio':
       return await api.transposeAudio(a[0] as string, a[1] as number);
     case 'get_video_metadata':
-      return await api.getVideoMetadata(a[0] as string);
+      return await api.getVideoMetadata((a[0] as { inputPath?: string; path?: string })?.inputPath || (a[0] as { path?: string })?.path || (a[0] as string));
     case 'transcode_video':
-      return await api.transcodeVideo(a[0] as string);
+      return await api.transcodeVideo((a[0] as { inputPath?: string })?.inputPath || (a[0] as string));
     case 'generate_thumbnail':
-      return await api.generateThumbnail(a[0] as string);
+      return await api.generateThumbnail((a[0] as { videoPath?: string; path?: string })?.videoPath || (a[0] as { path?: string })?.path || (a[0] as string));
     
     // Display operations
     case 'display_video_slide':
+      if (a[0] && typeof a[0] === 'object') {
+        const payload = a[0] as { path?: string; duration?: number };
+        return await api.displayVideoSlide(payload.path as string, payload.duration ?? (a[1] as number));
+      }
       return await api.displayVideoSlide(a[0] as string, a[1] as number);
     case 'display_slide':
       return await api.displaySlide(a[0]);

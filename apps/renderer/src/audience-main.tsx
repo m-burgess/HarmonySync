@@ -57,19 +57,14 @@ const AudienceApp = () => {
 
     // Listen for the display-video-slide event
     const unlisten = event.listen('display-video-slide', async (event) => {
-      const videoPath = event.payload as string; // This is the absolute path to the video file
+      const payload = event.payload as { path?: string } | string;
+      const videoPath = typeof payload === 'string' ? payload : payload?.path;
       console.log('Audience Screen: Received display-video-slide event with path:', videoPath);
 
-      if (videoRef.current && httpServerUrl.current) {
+      if (videoRef.current && httpServerUrl.current && videoPath) {
         try {
-          // Extract filename from path (handles both forward/backward slashes and multiple separators)
-          const fileName = videoPath.replace(/\\/g, '/').split('/').filter(Boolean).pop();
-          
-          if (!fileName) {
-            throw new Error('Could not extract filename from path');
-          }
-          
-          const videoUrl = `${httpServerUrl.current}/${fileName}`;
+          const encodedPath = encodeURIComponent(videoPath);
+          const videoUrl = `${httpServerUrl.current}/video/${encodedPath}`;
 
           console.log('Audience Screen: Video URL from custom HTTP server:', videoUrl);
           videoRef.current.src = videoUrl;
@@ -90,7 +85,7 @@ const AudienceApp = () => {
           console.error('Audience Screen: Error getting video URL or playing video:', error);
         }
       } else {
-        console.error('Audience Screen: Video element or HTTP server not ready!');
+        console.error('Audience Screen: Video path, element, or HTTP server not ready!');
       }
     });
 

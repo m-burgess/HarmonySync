@@ -1,6 +1,8 @@
 export default {
   preset: 'ts-jest',
   testEnvironment: 'node',
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  silent: true,
   testMatch: [
     '**/harmonysync/src/__tests__/**/*.test.ts',
     '**/harmonysync/src/__tests__/**/*.test.js',

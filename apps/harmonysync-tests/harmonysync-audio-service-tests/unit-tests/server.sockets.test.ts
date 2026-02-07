@@ -2,6 +2,31 @@ import { mixer, serverInstance } from '../../../harmonysync-audio-service/server
 import { MockAudioTrack } from '../../mocks/audio-service';
 
 describe('Server Socket handlers', () => {
+  test('mixer_state_changed normalizes generic track names', () => {
+    const io: any = serverInstance.io as any;
+    const listeners = io.listeners('connection') || io._events?.connection ? io.listeners('connection') : [];
+    const connHandler = (listeners && listeners[0]) || (io._events && io._events.connection && io._events.connection[0]);
+    expect(typeof connHandler).toBe('function');
+
+    const emitted: Array<any> = [];
+    const fakeSocket: any = {
+      id: 'fake-normalize',
+      emit: (...args: any[]) => { emitted.push(args); },
+      on: () => {}
+    };
+
+    mixer.tracks.clear();
+    const mockTrack = new MockAudioTrack('t-normalize', 'Track 1', '/tmp/Guitar.wav', 0, 2, 44100);
+    mixer.tracks.set(mockTrack.id, mockTrack as any);
+
+    connHandler(fakeSocket);
+
+    const stateEmit = emitted.find(e => e[0] === 'mixer_state_changed');
+    expect(stateEmit).toBeDefined();
+    const state = stateEmit[1] as any;
+    expect(state.tracks[0].name).toBe('Guitar');
+  });
+
   test('connection handler emits mixer_state_changed and registers socket events', async () => {
     // capture the registered connection listener
     const io: any = serverInstance.io as any;
