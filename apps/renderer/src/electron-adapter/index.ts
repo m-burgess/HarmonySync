@@ -426,15 +426,20 @@ export const core = {
   // Convert file paths to proper URLs for Electron
   convertFileSrc: (filePath: string): string => {
     // In Electron, local files can be accessed directly
-    // Convert to file:// protocol if needed
-    if (filePath.startsWith('file://')) {
+    // Convert to local:// protocol if needed
+    if (filePath.startsWith('local://')) {
       return filePath;
+    }
+    if (filePath.startsWith('file://')) {
+      const stripped = filePath.replace(/^file:\/\//, '').replace(/\\/g, '/');
+      return `local://${encodeURI(stripped)}`;
     }
     if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
       return filePath;
     }
-    // Convert to file:// URL
-    return `file://${filePath}`;
+    // Convert to local:// URL
+    const normalized = filePath.replace(/\\/g, '/');
+    return `local://${encodeURI(normalized)}`;
   }
 };
 

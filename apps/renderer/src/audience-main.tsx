@@ -33,13 +33,18 @@ const AudienceApp = () => {
     // Start the custom HTTP server
     const startServer = async () => {
       try {
-        // Use a fixed port or dynamically find one
-        const port = 3001; // Example port
-        const url = await core.invoke('start_http_server', { port }) as string;
+        const url = await core.invoke('start_http_server') as string;
         httpServerUrl.current = url;
         console.log('Custom HTTP server started at:', url);
       } catch (error) {
         console.error('Error starting custom HTTP server:', error);
+        try {
+          const existingUrl = await core.invoke('http:getServerUrl') as string;
+          httpServerUrl.current = existingUrl;
+          console.log('Using existing HTTP server at:', existingUrl);
+        } catch (fallbackError) {
+          console.error('Error getting existing HTTP server URL:', fallbackError);
+        }
       }
     };
     startServer();

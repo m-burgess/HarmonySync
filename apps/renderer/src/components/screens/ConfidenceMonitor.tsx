@@ -95,83 +95,39 @@ const ConfidenceMonitor = () => {
     };
   }, []);
 
+  const isLyricsMode = currentSlide?.type === 'lyrics';
+
   return (
-    <div className={`monitor-container ${isImageDisplay ? 'image-mode' : 'text-mode'}`}>
-      {/* Transition-enabled current slide display */}
-      <div 
-        id="confidence-transition-display"
-        ref={confidenceDisplayRef}
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          textAlign: 'center',
-          transition: 'opacity 200ms ease-in-out',
-          fontSize: isImageDisplay ? 'inherit' : '24px',
-          padding: '20px'
-        }}
-      />
-
-      {/* Next slide display (no transitions, just text) */}
-      {!isImageDisplay && nextSlide && nextSlide.type === 'lyrics' && ( 
-        <div 
-          id="next-slide-display" 
-          className="slide-column"
-          style={{ 
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center',
-            fontSize: '20px',
-            padding: '20px',
-            color: '#888'
-          }}
-        >
-          <h4 style={{ margin: '0 0 20px 0', color: '#666', fontSize: '16px' }}>NEXT SLIDE:</h4>
-          {Array.isArray((nextSlide as LyricsContent).text) && (nextSlide as LyricsContent).text.map((line: string, index: number) => (
-            <div key={index} style={{ margin: '5px 0' }}>{line}</div>
-          ))}
-        </div>
-      )}
-
-      <div 
-        id="clock-display" 
-        style={{ 
-          position: isImageDisplay ? 'absolute' : 'relative',
-          bottom: isImageDisplay ? '20px' : 'auto',
-          right: isImageDisplay ? '20px' : 'auto',
-          backgroundColor: isImageDisplay ? 'rgba(0, 0, 0, 0.7)' : 'transparent',
-          padding: isImageDisplay ? '10px' : '0',
-          borderRadius: isImageDisplay ? '5px' : '0',
-          fontSize: '24px',
-          fontWeight: 'bold',
-          color: '#fff',
-          zIndex: 10
-        }}
-      >
-        {currentTime}
+    <div className={`monitor-container ${isLyricsMode ? 'lyrics-mode' : 'media-mode'} ${isImageDisplay ? 'image-mode' : 'text-mode'}`}>
+      <div className="monitor-top-bar">
+        <div id="clock-display">{currentTime}</div>
       </div>
-      
-      {currentSlide && currentSlide.type === 'video' && videoCountdown && (
+
+      <div className="monitor-content">
         <div 
-          id="video-countdown-display" 
-          style={{ 
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            color: 'red', 
-            fontSize: '72px',
-            fontWeight: 'bold',
-            textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
-            zIndex: 20
+          id="confidence-transition-display"
+          ref={confidenceDisplayRef}
+          style={{
+            transition: 'opacity 200ms ease-in-out',
+            fontSize: isImageDisplay ? 'inherit' : '24px'
           }}
-        >
-          {videoCountdown}
-        </div>
-      )}
+        />
+
+        {isLyricsMode && nextSlide && nextSlide.type === 'lyrics' && (
+          <div id="next-slide-display">
+            <h4>NEXT:</h4>
+            {Array.isArray((nextSlide as LyricsContent).text) && (nextSlide as LyricsContent).text
+              .slice(0, 2)
+              .map((line: string, index: number) => (
+                <div key={index}>{line}</div>
+              ))}
+          </div>
+        )}
+      </div>
+
+      <div className="monitor-bottom-bar">
+        <div id="video-countdown-display">{videoCountdown || ''}</div>
+      </div>
     </div>
   );
 };

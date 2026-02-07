@@ -1406,6 +1406,10 @@ class IPCHandlerManager {
    * Display Service handlers
    */
   private registerDisplayServiceHandlers(): void {
+    this.ipcMain.handle('display:videoSlide', async (_event, path: string, duration?: number) => {
+      return await this.services.displayService.displayVideoSlide(path, duration);
+    });
+
     this.ipcMain.handle('display:slide', async (_event, content: any) => {
       return await this.services.displayService.displaySlide(
         this.services.audienceWindow,

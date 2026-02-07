@@ -109,18 +109,6 @@
   background: linear-gradient(135deg, rgba(34, 211, 238, 0.25) 0%, rgba(34, 211, 238, 0.15) 100%);
   color: #ffffff;
   font-weight: 500;
-  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.4);
-}
-
-.lyrics-line-selected::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background: #22d3ee;
-  border-radius: 4px 0 0 4px;
 }
 
 /* Pulse animation for selected lines */
@@ -133,9 +121,7 @@
   }
 }
 
-.lyrics-line-selected {
-  animation: selectedPulse 2s ease-in-out infinite;
-}
+/* Disabled pulse animation for selected lines */
 
 /* Footer */
 .lyrics-column-footer {

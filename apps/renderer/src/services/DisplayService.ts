@@ -111,6 +111,26 @@ export class DisplayService extends BaseService implements IDisplayService {
       return this.handleError('clearAll', error);
     }
   }
+
+  /**
+   * Display a video directly on the audience screen
+   */
+  public async displayVideoSlide(path: string, duration?: number): Promise<void> {
+    try {
+      await this.ipc.invoke('display:videoSlide', path, duration);
+    } catch (error) {
+      this.logWarn('display:videoSlide failed, falling back to direct audience send', error);
+      try {
+        await this.ipc.invoke('send:audience', 'display-video-slide', path);
+        if (duration !== undefined) {
+          await this.ipc.invoke('send:confidence', 'start-video-countdown', duration);
+        }
+        return;
+      } catch (fallbackError) {
+        return this.handleError('displayVideoSlide', fallbackError);
+      }
+    }
+  }
 }
 
 export default DisplayService;

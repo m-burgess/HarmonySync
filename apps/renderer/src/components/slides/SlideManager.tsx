@@ -12,8 +12,8 @@ import { observer } from 'mobx-react-lite';
 import { runInAction } from 'mobx';
 import { getViewModel } from '../../viewmodels';
 import { ArrowPathIcon, ArrowUpTrayIcon } from '@heroicons/react/24/solid';
+import { VSCodePanel } from '../VSCodeUI.tsx';
 import SlideItem from './SlideItem';
-import ScreenButtons from '../screens/ScreenButtons.jsx';
 import SlideImportModal from './SlideImportModal';
 import { event } from '../../electron-adapter';
 import { FixedSizeGrid as Grid, GridChildComponentProps } from 'react-window';
@@ -227,11 +227,11 @@ const SlideManager: React.FC<SlideManagerProps> = observer(({ allSlides, setAllS
   };
 
   return (
-    <div className="pl-3 pt-3 pb-3 h-full flex flex-col" id="slide-col" ref={slideColRef} onDragOver={handleDragOver}>
+    <div className="h-full flex flex-col" id="slide-col" ref={slideColRef} onDragOver={handleDragOver}>
+      <VSCodePanel title="Slides" className="pl-3 pt-3 pb-3 h-full flex flex-col">
       {/* Screen Controls */}
       <div className="flex items-center justify-between mb-3 pr-3">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-semibold text-primary">Slides</h2>
           <button
             onClick={() => viewModel.openImportModal()}
             className="p-1.5 bg-accent text-white rounded-md hover:bg-accent-dark transition-colors"
@@ -240,7 +240,6 @@ const SlideManager: React.FC<SlideManagerProps> = observer(({ allSlides, setAllS
             <ArrowUpTrayIcon className="w-4 h-4" />
           </button>
         </div>
-        <ScreenButtons />
       </div>
       
       {/* Thumbnail Size Control */}
@@ -295,6 +294,7 @@ const SlideManager: React.FC<SlideManagerProps> = observer(({ allSlides, setAllS
           window.dispatchEvent(customEvent);
         }}
       />
+      </VSCodePanel>
     </div>
   );
 });

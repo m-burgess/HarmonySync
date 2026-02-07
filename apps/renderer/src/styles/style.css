@@ -80,8 +80,12 @@ body {
 #service-order-col > div {
     flex-shrink: 0;
     padding: 10px 15px;
-    border-bottom: 1px solid #3a3a3a;
+    border-bottom: none;
     overflow: hidden;
+}
+
+#service-order-col {
+    background-color: #222;
 }
 
 #service-order {
@@ -97,10 +101,10 @@ body {
 }
 
 .service-order-item {
-    background-color: #3a3a3a;
+    background-color: #2b2b2b;
     padding: 10px;
     margin-bottom: 8px;
-    border-radius: 5px;
+    border-radius: 6px;
     cursor: pointer;
     transition: background-color 0.2s, border-color 0.2s;
 }

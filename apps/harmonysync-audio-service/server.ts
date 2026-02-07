@@ -1,5 +1,6 @@
 import express, { Request, Response, Application } from 'express';
 import http from 'http';
+import net from 'net';
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import cors from 'cors';
 import fs from 'fs';
@@ -553,12 +554,14 @@ io.on('connection', (socket: Socket): void => {
     });
 });
 
+// Port configuration
+const PORT: number = parseInt(process.env.PORT || '3001', 10);
+
 // Error handling
 process.on('uncaughtException', (error: Error): void => {
     if ((error as any).code === 'EADDRINUSE') {
-        console.error(`❌ Port ${PORT} is already in use. Another audio service may be running.`);
-        console.error('💡 Please stop the existing service or use a different port.');
-        process.exit(1);
+        console.warn(`⚠️ Port ${PORT} is already in use. Assuming audio service is already running.`);
+        process.exit(0);
     } else {
         console.error('Uncaught Exception:', error);
         process.exit(1);
@@ -570,27 +573,65 @@ process.on('unhandledRejection', (reason: unknown, promise: Promise<any>): void 
 });
 
 // Start server
-const PORT: number = parseInt(process.env.PORT || '3001', 10);
-
-// Bind explicitly to localhost to avoid exposing the service on external interfaces
-if (process.env.NODE_ENV !== 'test') {
-    server.listen(PORT, HOST, (): void => {
-        console.log(`🎵 HarmonySync Audio Service running on http://${HOST}:${PORT}`);
-        console.log(`🔗 REST API: http://${HOST}:${PORT}/api`);
-        console.log(`🔌 WebSocket: ws://${HOST}:${PORT}`);
-        console.log(`📊 Health check: http://${HOST}:${PORT}/api/health`);
+const isPortInUse = (port: number, host: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+        const tester = net.createServer();
+        tester.once('error', (error: any) => {
+            if (error?.code === 'EADDRINUSE') {
+                resolve(true);
+            } else {
+                resolve(false);
+            }
+        });
+        tester.once('listening', () => {
+            tester.close(() => resolve(false));
+        });
+        tester.listen(port, host);
     });
+};
 
+const startServer = (): void => {
     server.on('error', (error: any): void => {
         if (error.code === 'EADDRINUSE') {
-            console.error(`❌ Port ${PORT} is already in use. Another audio service may be running.`);
-            console.error('💡 Try running: pkill -f "harmonysync-audio-service" to stop existing service');
-            process.exit(1);
+            console.warn(`⚠️ Port ${PORT} is already in use. Assuming audio service is already running.`);
+            process.exit(0);
         } else {
             console.error('Server error:', error);
             process.exit(1);
         }
     });
+
+    try {
+        server.listen(PORT, HOST, (): void => {
+            console.log(`🎵 HarmonySync Audio Service running on http://${HOST}:${PORT}`);
+            console.log(`🔗 REST API: http://${HOST}:${PORT}/api`);
+            console.log(`🔌 WebSocket: ws://${HOST}:${PORT}`);
+            console.log(`📊 Health check: http://${HOST}:${PORT}/api/health`);
+        });
+    } catch (error: any) {
+        if (error?.code === 'EADDRINUSE') {
+            console.warn(`⚠️ Port ${PORT} is already in use. Assuming audio service is already running.`);
+            process.exit(0);
+        }
+        console.error('Server error:', error);
+        process.exit(1);
+    }
+};
+
+// Bind explicitly to localhost to avoid exposing the service on external interfaces
+if (process.env.NODE_ENV !== 'test') {
+    isPortInUse(PORT, HOST)
+        .then((inUse) => {
+            if (inUse) {
+                console.warn(`⚠️ Port ${PORT} is already in use. Skipping audio service startup.`);
+                return;
+            }
+            startServer();
+        })
+        .catch((error) => {
+            console.error('Failed to check port availability:', error);
+            process.exit(1);
+        });
 }
 
 export { AudioTrack, AudioMixer, mixer, app, serverInstance };

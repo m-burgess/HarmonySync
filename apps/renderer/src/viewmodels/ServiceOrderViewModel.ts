@@ -29,7 +29,7 @@ interface IServiceOrderService {
   selectFolders(): Promise<string[] | null>;
   pathExistsInServiceOrder(serviceOrder: ServiceItem[], path: string): boolean;
   loadSongMetadata(path: string): Promise<ServiceItem>;
-  loadLyrics(path: string): Promise<string>;
+  loadLyrics(path: string): Promise<string | null>;
   openLyricsFile(path: string): Promise<void>;
 }
 
@@ -40,6 +40,7 @@ interface IAudioService {
 
 interface IDisplayService {
   clearAll(): Promise<void>;
+  displayVideoSlide(path: string, duration?: number): Promise<void>;
 }
 
 interface ISlideService {
@@ -69,7 +70,7 @@ export class ServiceOrderViewModel extends BaseViewModel implements Partial<ISer
   public loadingProgress: number = 0;
   public loadingMessage: string = '';
   public error: string | null = null;
-  public selectedSongForLyrics: ServiceItem | null = null;
+  public selectedSongForLyrics: string | null = null;
   public currentBackgroundCssContent: string = '';
   public isFirstLoad: boolean = true;
   public crossfadeDuration: number = 3000; // 3 seconds default
@@ -273,6 +274,16 @@ export class ServiceOrderViewModel extends BaseViewModel implements Partial<ISer
       const result = await this.slideService.loadFromFolder(item.path);
       this.log(`📂 slideService.loadFromFolder returned:`, result);
 
+      const allSlides = (result.slides || []) as Array<{ type?: string; path?: string; duration?: number }>;
+      const videoSlides = allSlides.filter(slide => slide?.type === 'video');
+
+      if (item.type === 'song' && videoSlides.length > 0) {
+        const firstVideo = videoSlides[0];
+        if (firstVideo?.path) {
+          await this.displayService.displayVideoSlide(firstVideo.path, firstVideo.duration);
+        }
+      }
+
       runInAction(() => {
         this.isLoading = false;
         this.isFirstLoad = false;
@@ -280,10 +291,12 @@ export class ServiceOrderViewModel extends BaseViewModel implements Partial<ISer
         this.loadingProgress = 100;
       });
 
-      // Set lyrics if this is a song and has lyrics
-      if (item.type === 'song' && item.lyrics) {
+      // Load lyrics.txt when a song is selected
+      if (item.type === 'song') {
+        const lyrics = await this.serviceOrderService.loadLyrics(item.path);
         runInAction(() => {
-          this.selectedSongForLyrics = item.lyrics;
+          item.lyrics = lyrics || undefined;
+          this.selectedSongForLyrics = lyrics || null;
         });
         this.log('📜 Loaded lyrics for song:', item.name);
       } else {
@@ -293,7 +306,10 @@ export class ServiceOrderViewModel extends BaseViewModel implements Partial<ISer
         });
       }
 
-      return result;
+      return {
+        slides: item.type === 'song' ? [] : allSlides,
+        tracks: result.tracks || []
+      };
     } catch (error) {
       this.handleError('Load item', error);
       runInAction(() => {
@@ -530,7 +546,7 @@ export class ServiceOrderViewModel extends BaseViewModel implements Partial<ISer
   }
 
   // Direct state setter for App.jsx compatibility (to be phased out)
-  public setSelectedSongForLyrics(lyrics: ServiceItem | null): void {
+  public setSelectedSongForLyrics(lyrics: string | null): void {
     this.selectedSongForLyrics = lyrics;
   }
 

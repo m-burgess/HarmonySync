@@ -3,6 +3,7 @@ import { observer } from 'mobx-react-lite';
 import { getViewModel } from '../../viewmodels';
 import TrackControl from './TrackControl';
 import TransposeModal from './TransposeModal';
+import { VSCodePanel } from '../VSCodeUI.tsx';
 import { PlayIcon, PauseIcon, BackwardIcon, RocketLaunchIcon, ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/solid';
 import type { Track } from '../../types/audio';
 
@@ -34,7 +35,8 @@ const MultitrackPlayer = observer(({ allTracks, isLoadingTracks }: MultitrackPla
   }, [allTracks]);
 
   return (
-    <div id="multitrack-player" className="bg-stage text-primary h-full flex flex-col">
+    <div id="multitrack-player" className="h-full flex flex-col">
+      <VSCodePanel title="Multitrack Player" className="h-full flex flex-col text-primary">
       {/* Audio Service Status Bar */}
       <div className="flex items-center justify-between mb-3 px-2 py-1.5 bg-gray-700 bg-opacity-50 rounded text-xs">
         <div className="flex items-center gap-2">
@@ -218,6 +220,7 @@ const MultitrackPlayer = observer(({ allTracks, isLoadingTracks }: MultitrackPla
           </div>
         </div>
       )}
+      </VSCodePanel>
     </div>
   );
 });
