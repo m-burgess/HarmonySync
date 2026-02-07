@@ -129,8 +129,9 @@ export class TimerViewModel extends BaseViewModel implements ITimerViewModel {
     ]);
 
     // Listen for timer updates from backend
-    this.addUnsubscriber(
-      this.ipcService.on('timer:updated', (timer: Timer) => {
+    this.addSubscription(
+      this.ipcService.on('timer:updated', (...args: unknown[]) => {
+        const timer = args[0] as Timer;
         runInAction(() => {
           const index = this.timers.findIndex(t => t.id === timer.id);
           if (index !== -1) {
@@ -416,15 +417,6 @@ export class TimerViewModel extends BaseViewModel implements ITimerViewModel {
   protected override onError(_operation: string, errorMessage: string): void {
     this.error = errorMessage;
   }
-
-  /**
-   * Add an unsubscriber to the collection
-   */
-  protected addUnsubscriber(unsubscriber: () => void): void {
-    this.unsubscribers.push(unsubscriber);
-  }
-
-  private unsubscribers: (() => void)[] = [];
 }
 
 export default TimerViewModel;
