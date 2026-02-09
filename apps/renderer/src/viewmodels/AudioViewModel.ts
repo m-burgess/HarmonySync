@@ -110,6 +110,7 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
       setTracks: action,
       setIsLoading: action,
       transposeAndLoad: action,
+      loadTracksIntoService: action,
     });
   }
 
@@ -1012,6 +1013,35 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
         muted: track.muted ?? false,
       };
     });
+  }
+
+  /**
+   * Load tracks into the audio service
+   * This method sets the tracks in state and loads them into the backend audio service
+   * @param tracks - Array of track objects with file paths
+   */
+  public async loadTracksIntoService(tracks: AudioTrack[]): Promise<void> {
+    // Set tracks in state
+    this.setTracks(tracks);
+    
+    // If we have tracks with file paths, load them into the audio service in one batch
+    if (tracks && tracks.length > 0) {
+      try {
+        // Extract file paths from track objects
+        const trackPaths = (tracks as any[])
+          .filter(t => t.file_path || t.path || t.filePath)
+          .map(t => t.file_path || t.path || t.filePath);
+        
+        if (trackPaths.length > 0) {
+          this.log('Loading', trackPaths.length, 'tracks into audio service');
+          const result = await this.audioService.loadMultipleTracks(trackPaths);
+          this.log('Tracks loaded:', result.loaded, 'of', result.total);
+        }
+      } catch (error) {
+        this.logError('Failed to load tracks into audio service', error);
+        // Continue anyway - tracks are still in state
+      }
+    }
   }
 
 

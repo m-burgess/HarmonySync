@@ -399,6 +399,21 @@ export class AudioService extends BaseService implements IAudioService {
   }
 
   /**
+   * Load multiple tracks (clears existing tracks first)
+   * @param trackPaths - Array of track file paths
+   * @returns Load result with success count
+   */
+  public async loadMultipleTracks(trackPaths: string[]): Promise<{ total: number; loaded: number; results: unknown[] }> {
+    try {
+      const result = await this.ipc.invoke('audio:loadMultipleTracks', trackPaths);
+      return result as { total: number; loaded: number; results: unknown[] };
+    } catch (error) {
+      this.logError('loadMultipleTracks failed', error);
+      return { total: trackPaths.length, loaded: 0, results: [] };
+    }
+  }
+
+  /**
    * Play all tracks using frontend Web Audio API scheduling
    * Implements node.start() scheduling for perfect synchronization
    * @param tracks - Tracks with file paths to play
