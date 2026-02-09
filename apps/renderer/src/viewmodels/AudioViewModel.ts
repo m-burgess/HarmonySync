@@ -1025,12 +1025,16 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
     this.setTracks(tracks);
     
     // If we have tracks with file paths, load them into the audio service in one batch
-    if (tracks && tracks.length > 0) {
+    if (tracks.length > 0) {
       try {
+        // Helper function to extract file path from track object
+        const getTrackPath = (t: any): string | undefined => 
+          t.file_path ?? t.path ?? t.filePath;
+        
         // Extract file paths from track objects
-        const trackPaths = (tracks as any[])
-          .filter(t => t.file_path || t.path || t.filePath)
-          .map(t => t.file_path || t.path || t.filePath);
+        const trackPaths = tracks
+          .map(getTrackPath)
+          .filter((path): path is string => path !== undefined);
         
         if (trackPaths.length > 0) {
           this.log('Loading', trackPaths.length, 'tracks into audio service');
