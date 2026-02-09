@@ -1022,7 +1022,9 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
    */
   private getTrackFilePath(track: AudioTrack | Record<string, any>): string | undefined {
     // Handle both AudioTrack interface and various track object formats
-    const trackObj = track as any; // Type assertion needed for property access flexibility
+    // Note: Using 'any' is pragmatic here since tracks come from different sources (service order, 
+    // file system, etc.) with inconsistent property names. Runtime checks provide safety.
+    const trackObj = track as any;
     
     // Check standard AudioTrack.path first
     if (typeof trackObj.path === 'string' && trackObj.path) return trackObj.path;
@@ -1060,7 +1062,7 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
           if (result.loaded < result.total) {
             const failedCount = result.total - result.loaded;
             this.logError(`Track loading incomplete: ${failedCount} of ${result.total} tracks failed to load`, 
-              new Error(`Partial load failure: ${result.loaded}/${result.total} successful`));
+              new Error(`Partial load failure: ${failedCount}/${result.total} failed`));
           }
         }
       } catch (error) {
