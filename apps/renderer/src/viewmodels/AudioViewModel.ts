@@ -1016,34 +1016,51 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
   }
 
   /**
+   * Extract file path from a track object, handling various property name conventions
+   * @param track - Track object that may have path in different properties
+   * @returns File path string or undefined
+   */
+  private getTrackFilePath(track: AudioTrack | any): string | undefined {
+    // Check standard AudioTrack.path first
+    if (typeof track.path === 'string' && track.path) return track.path;
+    
+    // Check alternative property names from different sources
+    if (typeof track.file_path === 'string' && track.file_path) return track.file_path;
+    if (typeof track.filePath === 'string' && track.filePath) return track.filePath;
+    
+    return undefined;
+  }
+
+  /**
    * Load tracks into the audio service
    * This method sets the tracks in state and loads them into the backend audio service
    * @param tracks - Array of track objects with file paths
    */
   public async loadTracksIntoService(tracks: AudioTrack[]): Promise<void> {
-    // Set tracks in state
+    // Set tracks in state first - they should be in state even if service loading fails
+    // This allows the UI to display track information and mixer controls
     this.setTracks(tracks);
     
     // If we have tracks with file paths, load them into the audio service in one batch
     if (tracks.length > 0) {
       try {
-        // Helper function to extract file path from track object
-        const getTrackPath = (t: any): string | undefined => 
-          t.file_path ?? t.path ?? t.filePath;
-        
         // Extract file paths from track objects
         const trackPaths = tracks
-          .map(getTrackPath)
+          .map(t => this.getTrackFilePath(t))
           .filter((path): path is string => path !== undefined);
         
         if (trackPaths.length > 0) {
           this.log('Loading', trackPaths.length, 'tracks into audio service');
           const result = await this.audioService.loadMultipleTracks(trackPaths);
           this.log('Tracks loaded:', result.loaded, 'of', result.total);
+          
+          if (result.loaded < result.total) {
+            this.logError('Some tracks failed to load', new Error(`Only ${result.loaded} of ${result.total} tracks loaded successfully`));
+          }
         }
       } catch (error) {
         this.logError('Failed to load tracks into audio service', error);
-        // Continue anyway - tracks are still in state
+        // Continue anyway - tracks are still in state for UI display
       }
     }
   }

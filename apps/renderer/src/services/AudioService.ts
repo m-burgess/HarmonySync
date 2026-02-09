@@ -400,6 +400,7 @@ export class AudioService extends BaseService implements IAudioService {
 
   /**
    * Load multiple tracks (clears existing tracks first)
+   * Note: The backend IPC handler automatically clears existing tracks before loading new ones
    * @param trackPaths - Array of track file paths
    * @returns Load result with success count
    */
