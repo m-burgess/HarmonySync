@@ -407,7 +407,18 @@ export class AudioService extends BaseService implements IAudioService {
   public async loadMultipleTracks(trackPaths: string[]): Promise<{ total: number; loaded: number; results: unknown[] }> {
     try {
       const result = await this.ipc.invoke('audio:loadMultipleTracks', trackPaths);
-      return result as { total: number; loaded: number; results: unknown[] };
+      
+      // Validate result structure
+      if (result && typeof result === 'object' && 
+          'total' in result && typeof result.total === 'number' && 
+          'loaded' in result && typeof result.loaded === 'number' &&
+          'results' in result && Array.isArray(result.results)) {
+        return result as { total: number; loaded: number; results: unknown[] };
+      }
+      
+      // If result structure is invalid, return error state
+      this.logError('Invalid result structure from loadMultipleTracks', result);
+      return { total: trackPaths.length, loaded: 0, results: [] };
     } catch (error) {
       this.logError('loadMultipleTracks failed', error);
       return { total: trackPaths.length, loaded: 0, results: [] };

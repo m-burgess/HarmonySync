@@ -1020,13 +1020,16 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
    * @param track - Track object that may have path in different properties
    * @returns File path string or undefined
    */
-  private getTrackFilePath(track: AudioTrack | any): string | undefined {
+  private getTrackFilePath(track: AudioTrack | Record<string, any>): string | undefined {
+    // Handle both AudioTrack interface and various track object formats
+    const trackObj = track as any; // Type assertion needed for property access flexibility
+    
     // Check standard AudioTrack.path first
-    if (typeof track.path === 'string' && track.path) return track.path;
+    if (typeof trackObj.path === 'string' && trackObj.path) return trackObj.path;
     
     // Check alternative property names from different sources
-    if (typeof track.file_path === 'string' && track.file_path) return track.file_path;
-    if (typeof track.filePath === 'string' && track.filePath) return track.filePath;
+    if (typeof trackObj.file_path === 'string' && trackObj.file_path) return trackObj.file_path;
+    if (typeof trackObj.filePath === 'string' && trackObj.filePath) return trackObj.filePath;
     
     return undefined;
   }
@@ -1055,7 +1058,9 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
           this.log('Tracks loaded:', result.loaded, 'of', result.total);
           
           if (result.loaded < result.total) {
-            this.logError('Some tracks failed to load', new Error(`Only ${result.loaded} of ${result.total} tracks loaded successfully`));
+            const failedCount = result.total - result.loaded;
+            this.logError(`Track loading incomplete: ${failedCount} of ${result.total} tracks failed to load`, 
+              new Error(`Partial load failure: ${result.loaded}/${result.total} successful`));
           }
         }
       } catch (error) {
