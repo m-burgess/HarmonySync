@@ -213,7 +213,9 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
     try {
       const response = await this.audioService.loadTracks(folderPath);
       // Handle both array response and {tracks: []} object response
-      const tracksArray = Array.isArray(response) ? response : (response?.tracks || []);
+      const tracksArray: AudioTrack[] = Array.isArray(response) 
+        ? response 
+        : ((response as any)?.tracks || []);
 
       runInAction(() => {
         this.tracks = tracksArray.map((track, index) => {
@@ -231,6 +233,9 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
             volume: track.volume ?? 1.0,
             pan: track.pan ?? 0,
             muted: track.muted ?? false,
+            isPreloaded: track.isPreloaded ?? false,
+            preloadStatus: track.preloadStatus ?? 'pending',
+            preloadError: track.preloadError
           };
         });
         this.currentSongPath = folderPath;
@@ -239,6 +244,16 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
 
       // Try to load saved mixer config
       await this.loadMixerConfig();
+
+      // Auto-preload all tracks for instant playback
+      console.log('🔄 Auto-preloading tracks for instant playback...');
+      try {
+        await this.audioService.preloadAllTracks();
+        console.log('✅ Tracks preloaded successfully');
+      } catch (error) {
+        console.warn('⚠️ Failed to preload tracks:', error);
+        // Non-fatal error, tracks can still be played
+      }
     } catch (error) {
       this.handleError('Load tracks', error);
       runInAction(() => {

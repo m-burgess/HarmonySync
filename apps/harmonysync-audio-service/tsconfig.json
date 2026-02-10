@@ -40,8 +40,13 @@
   },
   "include": [
     "server.ts",
+    "audioMixer.ts",
+    "audioTrack.ts",
+    "ffmpegMixer.ts",
     "smoke-test.ts",
     "test-integration.ts",
+    "test-preload.ts",
+    "test-load.ts",
     "node-wav.d.ts"
   ],
   "exclude": [
