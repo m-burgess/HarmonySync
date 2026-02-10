@@ -56,6 +56,10 @@ interface ServiceItem {
   type: 'song' | 'folder';
   tracks?: unknown[];
   lyrics?: string;
+  hasAudio?: boolean;
+  audioFileCount?: number;
+  files?: string[];
+}
 }
 
 export class ServiceOrderViewModel extends BaseViewModel implements Partial<IServiceOrderViewModel> {
