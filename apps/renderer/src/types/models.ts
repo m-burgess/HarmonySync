@@ -16,6 +16,9 @@ export interface AudioTrack {
   muted: boolean;
   solo?: boolean;
   waveform?: number[];
+  isPreloaded?: boolean;
+  preloadStatus?: 'pending' | 'loading' | 'ready' | 'error';
+  preloadError?: string;
 }
 
 /**
