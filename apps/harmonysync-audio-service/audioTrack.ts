@@ -3,7 +3,7 @@ import path from 'path';
 import os from 'os';
 import { parseFile, IAudioMetadata } from 'music-metadata';
 import wav from 'node-wav';
-import { ChildProcess } from 'child_process';
+import { ChildProcess, spawn } from 'child_process';
 
 // Lazy-load Audic (ESM) to avoid importing it at module evaluation time
 let AudicClass: any = null;
@@ -424,7 +424,6 @@ export class AudioTrack {
                 const tempFilePath = path.join(tempDir, tempFileName);
 
                 // Use FFmpeg to convert to WAV
-                const { spawn } = require('child_process');
                 const ffmpegProcess = spawn('ffmpeg', [
                     '-i', this.filePath,
                     '-acodec', 'pcm_s16le',
