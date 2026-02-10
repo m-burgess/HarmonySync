@@ -103,10 +103,46 @@ export class AudioMixer {
         const track = this.tracks.get(trackId);
         if (track) {
             track.stop();
+            track.cleanupPreloadedResources();
             this.tracks.delete(trackId);
             return true;
         }
         return false;
+    }
+
+    /**
+     * Preload a specific track for instant playback
+     */
+    async preloadTrack(trackId: string): Promise<boolean> {
+        const track = this.tracks.get(trackId);
+        if (!track) {
+            console.error(`Track ${trackId} not found for preloading`);
+            return false;
+        }
+
+        console.log(`🔄 Preloading track: ${track.name}`);
+        const success = await track.preload();
+        
+        if (this.io) {
+            this.io.emit('mixer_state_changed', this.getMixerState());
+        }
+
+        return success;
+    }
+
+    /**
+     * Preload all currently loaded tracks
+     */
+    async preloadAllTracks(): Promise<void> {
+        console.log(`🔄 Preloading all ${this.tracks.size} tracks...`);
+        const preloadPromises = Array.from(this.tracks.values()).map(track => track.preload());
+        await Promise.all(preloadPromises);
+        
+        if (this.io) {
+            this.io.emit('mixer_state_changed', this.getMixerState());
+        }
+        
+        console.log(`✅ All tracks preloaded`);
     }
 
     clearAllTracks(): void {
@@ -114,6 +150,7 @@ export class AudioMixer {
         this.stopAllTracks();
         for (const track of this.tracks.values()) {
             track.stop();
+            track.cleanupPreloadedResources();
         }
         this.tracks.clear();
         this.songs.clear();

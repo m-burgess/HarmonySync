@@ -38,6 +38,9 @@ export interface AudioTrackState {
     isMuted: boolean;
     isPlaying: boolean;
     currentPosition: number;
+    isPreloaded: boolean;
+    preloadStatus: 'pending' | 'loading' | 'ready' | 'error';
+    preloadError?: string;
 }
 
 export interface WavDecodeResult {
@@ -63,6 +66,10 @@ export class AudioTrack {
     public audic: AudicInstance | null;
     public tempFilePath: string | null;
     public originalVolume?: number;
+    public isPreloaded: boolean;
+    public preloadStatus: 'pending' | 'loading' | 'ready' | 'error';
+    public preloadError?: string;
+    public preparedFilePath: string | null;
 
     constructor(
         id: string,
@@ -88,6 +95,9 @@ export class AudioTrack {
         this.audioProcess = null;
         this.audic = null;
         this.tempFilePath = null;
+        this.isPreloaded = false;
+        this.preloadStatus = 'pending';
+        this.preparedFilePath = null;
     }
 
     async loadMetadata(): Promise<boolean> {
@@ -375,6 +385,114 @@ export class AudioTrack {
         return audioStream;
     }
 
+    /**
+     * Preload and prepare the track for instant playback
+     * This converts the file to WAV if needed and caches it
+     */
+    async preload(): Promise<boolean> {
+        if (this.isPreloaded && this.preloadStatus === 'ready') {
+            console.log(`Track ${this.name} already preloaded`);
+            return true;
+        }
+
+        this.preloadStatus = 'loading';
+        this.isPreloaded = false;
+        this.preloadError = undefined;
+
+        try {
+            console.log(`🔄 Preloading track: ${this.name}`);
+
+            // Load metadata if not already loaded
+            if (this.duration === 0) {
+                const metadataLoaded = await this.loadMetadata();
+                if (!metadataLoaded) {
+                    throw new Error('Failed to load track metadata');
+                }
+            }
+
+            // Check if the file is already a WAV
+            const ext = path.extname(this.filePath).toLowerCase();
+            if (ext === '.wav') {
+                // For WAV files, we can use them directly
+                this.preparedFilePath = this.filePath;
+                console.log(`✅ Track ${this.name} is already WAV format`);
+            } else {
+                // For non-WAV files, convert to WAV and cache
+                console.log(`🔄 Converting ${this.name} to WAV for faster playback...`);
+                const tempDir = os.tmpdir();
+                const tempFileName = `harmonysync_preload_${this.id}_${Date.now()}.wav`;
+                const tempFilePath = path.join(tempDir, tempFileName);
+
+                // Use FFmpeg to convert to WAV
+                const { spawn } = require('child_process');
+                const ffmpegProcess = spawn('ffmpeg', [
+                    '-i', this.filePath,
+                    '-acodec', 'pcm_s16le',
+                    '-ar', '44100',
+                    '-ac', '2',
+                    '-y', // Overwrite output file if exists
+                    tempFilePath
+                ]);
+
+                await new Promise<void>((resolve, reject) => {
+                    let errorOutput = '';
+
+                    ffmpegProcess.stderr.on('data', (data: Buffer) => {
+                        errorOutput += data.toString();
+                    });
+
+                    ffmpegProcess.on('close', (code: number) => {
+                        if (code === 0) {
+                            resolve();
+                        } else {
+                            reject(new Error(`FFmpeg conversion failed with code ${code}: ${errorOutput}`));
+                        }
+                    });
+
+                    ffmpegProcess.on('error', (err: Error) => {
+                        reject(new Error(`FFmpeg process error: ${err.message}`));
+                    });
+                });
+
+                this.preparedFilePath = tempFilePath;
+                console.log(`✅ Converted ${this.name} to WAV at ${tempFilePath}`);
+            }
+
+            this.isPreloaded = true;
+            this.preloadStatus = 'ready';
+            console.log(`✅ Track ${this.name} preloaded and ready for playback`);
+            return true;
+
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error(`❌ Failed to preload track ${this.name}:`, errorMessage);
+            this.preloadStatus = 'error';
+            this.preloadError = errorMessage;
+            this.isPreloaded = false;
+            return false;
+        }
+    }
+
+    /**
+     * Clean up preloaded resources
+     */
+    cleanupPreloadedResources(): void {
+        if (this.preparedFilePath && this.preparedFilePath !== this.filePath) {
+            // Only delete if it's a temp file we created, not the original
+            if (fs.existsSync(this.preparedFilePath)) {
+                try {
+                    fs.unlinkSync(this.preparedFilePath);
+                    console.log(`🗑️ Cleaned up prepared file: ${this.preparedFilePath}`);
+                } catch (error) {
+                    console.error(`⚠️ Failed to cleanup prepared file ${this.preparedFilePath}:`, error);
+                }
+            }
+            this.preparedFilePath = null;
+        }
+        this.isPreloaded = false;
+        this.preloadStatus = 'pending';
+    }
+
     getState(): AudioTrackState {
         return {
             id: this.id,
@@ -387,7 +505,10 @@ export class AudioTrack {
             pan: this.pan,
             isMuted: this.isMuted,
             isPlaying: this.isPlaying,
-            currentPosition: this.currentPosition
+            currentPosition: this.currentPosition,
+            isPreloaded: this.isPreloaded,
+            preloadStatus: this.preloadStatus,
+            preloadError: this.preloadError
         };
     }
 }

@@ -200,6 +200,45 @@ app.post('/api/tracks/clear', (_req: Request, res: Response): void => {
     }
 });
 
+app.post('/api/tracks/preload-all', async (_req: Request, res: Response): Promise<void> => {
+    try {
+        console.log('[/api/tracks/preload-all] Preloading all tracks...');
+        await mixer.preloadAllTracks();
+        
+        // Emit to all connected clients
+        emitMixerStateChanged();
+        
+        console.log('[/api/tracks/preload-all] All tracks preloaded successfully');
+        res.json({ success: true, message: 'All tracks preloaded' });
+    } catch (error) {
+        console.error('Error preloading tracks:', error);
+        res.status(500).json({ error: (error as Error).message });
+    }
+});
+
+app.post('/api/tracks/:id/preload', async (req: Request, res: Response): Promise<void> => {
+    try {
+        const trackId: string = req.params.id;
+        console.log(`[/api/tracks/${trackId}/preload] Preloading track...`);
+        
+        const success = await mixer.preloadTrack(trackId);
+        
+        if (!success) {
+            res.status(500).json({ error: 'Failed to preload track' });
+            return;
+        }
+        
+        // Emit to all connected clients
+        emitMixerStateChanged();
+        
+        console.log(`[/api/tracks/${trackId}/preload] Track preloaded successfully`);
+        res.json({ success: true, message: 'Track preloaded' });
+    } catch (error) {
+        console.error('Error preloading track:', error);
+        res.status(500).json({ error: (error as Error).message });
+    }
+});
+
 app.post('/api/tracks/:trackId/play', (req: Request, res: Response): void => {
     const { trackId } = req.params;
     const success: boolean = mixer.playTrack(trackId);
@@ -597,6 +636,32 @@ io.on('connection', (socket: Socket): void => {
             socket.emit('track_volume_changed', { trackId: data.trackId, volume: data.volume, success: true });
         } else {
             socket.emit('error', { message: `Failed to set track volume: track ${data.trackId} not found` });
+        }
+    });
+
+    socket.on('preload_track', async (data: { trackId: string }): Promise<void> => {
+        console.log(`🔄 Preloading track ${data.trackId}`);
+        try {
+            const success = await mixer.preloadTrack(data.trackId);
+            if (success) {
+                emitMixerStateChanged();
+                socket.emit('track_preloaded', { trackId: data.trackId, success: true });
+            } else {
+                socket.emit('error', { message: `Failed to preload track ${data.trackId}` });
+            }
+        } catch (error) {
+            socket.emit('error', { message: (error as Error).message });
+        }
+    });
+
+    socket.on('preload_all_tracks', async (): Promise<void> => {
+        console.log('🔄 Preloading all tracks');
+        try {
+            await mixer.preloadAllTracks();
+            emitMixerStateChanged();
+            socket.emit('all_tracks_preloaded', { success: true });
+        } catch (error) {
+            socket.emit('error', { message: (error as Error).message });
         }
     });
 });
