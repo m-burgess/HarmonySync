@@ -406,8 +406,9 @@ class IPCHandlerManager {
         });
         
         // Get full paths for audio files
+        // Note: track_name is the filename - can be parsed for actual track name if needed
         const audioTracks = audioFiles.map(file => ({
-          track_name: file,
+          track_name: file,  // Currently filename, could be enhanced to parse actual track name
           file_path: path.join(folderPath, file)
         }));
         
