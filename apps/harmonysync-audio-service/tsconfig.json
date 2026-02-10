@@ -42,6 +42,7 @@
     "server.ts",
     "audioMixer.ts",
     "audioTrack.ts",
+    "ffmpegMixer.ts",
     "smoke-test.ts",
     "test-integration.ts",
     "test-preload.ts",
