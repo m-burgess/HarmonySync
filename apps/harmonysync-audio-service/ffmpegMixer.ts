@@ -164,17 +164,25 @@ export class FFmpegMixer {
         const platform = process.platform;
         if (platform === 'darwin') return '-'; // default device
         if (platform === 'linux') return 'default';
-        if (platform === 'win32') return 'audio="@device_cm_{33D9A762-90C8-11D0-BD43-00A0C911CE86}\\wave_{YOUR-DEVICE-ID}"';
+        if (platform === 'win32') {
+            // Windows: Use 'audio' as default device name
+            // For specific device, users can configure via environment variable
+            // Set HARMONYSYNC_AUDIO_DEVICE to specific device identifier
+            return process.env.HARMONYSYNC_AUDIO_DEVICE || 'audio';
+        }
         return 'default'; // fallback
     }
 
     /**
-     * Update track volume without restarting (not supported with this approach)
-     * Would need to restart playback with new parameters
+     * Check if mixer is available (ffmpeg installed)
      */
-    async updateVolume(trackIndex: number, volume: number): Promise<boolean> {
-        console.warn('FFmpegMixer: Dynamic volume updates require restart');
-        return false;
+    static isAvailable(): boolean {
+        try {
+            require('child_process').execSync('ffmpeg -version', { stdio: 'ignore' });
+            return true;
+        } catch {
+            return false;
+        }
     }
 }
 
