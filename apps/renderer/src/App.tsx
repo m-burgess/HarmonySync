@@ -45,6 +45,7 @@ import TimerModal from './components/modals/TimerModal.tsx';
 import { getViewModel } from './viewmodels';
 import { getService } from './services';
 import { EVENT_TYPES } from './services/EventBusService.ts';
+import type { AudioTrack } from './types';
 
 const App = observer(() => {
   // Get ViewModels from DI container
@@ -295,31 +296,9 @@ const App = observer(() => {
     slideViewModel.setSlides(slides);
   };
 
-  const handleSetAllTracks = async (tracks: unknown[], folderPath?: string) => {
-    // Set tracks in both AudioViewModel and MixerViewModel
-    audioViewModel.setTracks(tracks);
-    
-    // If we have tracks with file paths, load them into the audio service in one batch
-    if (tracks && tracks.length > 0) {
-      try {
-        // Clear any previously loaded tracks to avoid mixing songs
-        await (window as any).electronAPI?.invoke?.('audio:clearTracks');
-
-        // Extract file paths from track objects
-        const trackPaths = (tracks as any[])
-          .filter(t => t.file_path)
-          .map(t => t.file_path);
-        
-        if (trackPaths.length > 0) {
-          console.log('[App] Loading', trackPaths.length, 'tracks into audio service');
-          const result = await (window as any).electronAPI?.invoke?.('audio:loadMultipleTracks', trackPaths);
-          console.log('[App] Tracks loaded:', result);
-        }
-      } catch (error) {
-        console.warn('[App] Failed to load tracks into audio service:', error);
-        // Continue anyway - tracks are still in state
-      }
-    }
+  const handleSetAllTracks = async (tracks: unknown[], _folderPath?: string) => {
+    // Delegate to AudioViewModel which handles both state and service loading
+    await audioViewModel.loadTracksIntoService(tracks as AudioTrack[]);
   };
 
   const handleSetIsLoadingTracks = (isLoading: boolean) => {

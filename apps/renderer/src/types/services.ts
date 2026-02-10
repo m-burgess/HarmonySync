@@ -89,6 +89,7 @@ export interface IAudioService extends IService {
   goToBeginningAllTracks(): Promise<void>;
   clearTracks(): Promise<void>;
   addTracks(trackPaths: string[]): Promise<unknown[]>;
+  loadMultipleTracks(trackPaths: string[]): Promise<{ total: number; loaded: number; results: unknown[] }>;
   onPositionUpdate(callback: (event: unknown, position: number) => void): void;
   onDurationUpdate(callback: (event: unknown, duration: number) => void): void;
   onStateChange(callback: (event: unknown, state: { isPlaying: boolean; isPaused: boolean }) => void): void;
