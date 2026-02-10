@@ -174,22 +174,23 @@ jobs:
             core.setOutput('pr_number', String(pr.data.number));
             core.setOutput('pr_url', pr.data.html_url);
 
-      - name: Create Product Owner Plan using Copilot
-        uses: github/github-copilot-cli@v1
-        continue-on-error: true
-        with:
-          prompt: |
-            As the Product Owner, review this feature request and create a high-level plan in plans/01-product-owner-plan.md:
-            
-            Feature: ${{ inputs.feature_request }}
-            Context: ${{ inputs.project_context }}
-            
-            Include:
-            - Vision & Scope
-            - User value and success criteria
-            - Acceptance criteria
-            - Scope boundaries (MVP vs Phase 2+)
-            - MVVM architecture guidelines for this feature
+      # NOTE: The following step is commented out because github/github-copilot-cli action does not exist
+      # - name: Create Product Owner Plan using Copilot
+      #   uses: github/github-copilot-cli@v1
+      #   continue-on-error: true
+      #   with:
+      #     prompt: |
+      #       As the Product Owner, review this feature request and create a high-level plan in plans/01-product-owner-plan.md:
+      #       
+      #       Feature: ${{ inputs.feature_request }}
+      #       Context: ${{ inputs.project_context }}
+      #       
+      #       Include:
+      #       - Vision & Scope
+      #       - User value and success criteria
+      #       - Acceptance criteria
+      #       - Scope boundaries (MVP vs Phase 2+)
+      #       - MVVM architecture guidelines for this feature
 
       - name: Commit and push Product Owner plan
         shell: bash
@@ -300,19 +301,20 @@ jobs:
         with:
           ref: ${{ needs.product-owner-planning.outputs.branch_name }}
 
-      - name: Create Project Manager Plans using Copilot
-        uses: github/github-copilot-cli@v1
-        continue-on-error: true
-        with:
-          prompt: |
-            As the Project Manager, read plans/01-product-owner-plan.md and create detailed implementation plans in plans/02-project-manager-plans.md:
-            
-            Create three detailed plans:
-            1. Backend Expert Plan - API design, data models, MVVM implementation, cross-platform requirements
-            2. Frontend Expert Plan - React component architecture, UI/UX, accessibility, styling with TailwindCSS
-            3. QA Testing Expert Plan - Test strategy, test cases, coverage requirements
-            
-            Be specific and actionable. Reference the codebase structure.
+      # NOTE: The following step is commented out because github/github-copilot-cli action does not exist
+      # - name: Create Project Manager Plans using Copilot
+      #   uses: github/github-copilot-cli@v1
+      #   continue-on-error: true
+      #   with:
+      #     prompt: |
+      #       As the Project Manager, read plans/01-product-owner-plan.md and create detailed implementation plans in plans/02-project-manager-plans.md:
+      #       
+      #       Create three detailed plans:
+      #       1. Backend Expert Plan - API design, data models, MVVM implementation, cross-platform requirements
+      #       2. Frontend Expert Plan - React component architecture, UI/UX, accessibility, styling with TailwindCSS
+      #       3. QA Testing Expert Plan - Test strategy, test cases, coverage requirements
+      #       
+      #       Be specific and actionable. Reference the codebase structure.
 
       - name: Commit and push PM plans
         shell: bash
@@ -372,42 +374,44 @@ jobs:
           ref: ${{ needs.product-owner-planning.outputs.branch_name }}
           fetch-depth: 0
 
-      - name: Implement Backend using Copilot Coding Agent
-        uses: github/create-pr-with-copilot@v1
-        with:
-          problem_statement: |
-            As the Backend Expert (TDD), implement the backend to make the previously created tests pass.
+      # NOTE: The following step is commented out because github/create-pr-with-copilot action does not exist
+      # - name: Implement Backend using Copilot Coding Agent
+      #   uses: github/create-pr-with-copilot@v1
+      #   with:
+      #     problem_statement: |
+      #       As the Backend Expert (TDD), implement the backend to make the previously created tests pass.
+      #
+      #       Read and follow the detailed backend plan in plans/02-project-manager-plans.md.
+      #
+      #       Tasks to complete:
+      #       - Ensure all failing backend tests (created earlier) are addressed and pass
+      #       - Implement Models following MVVM architecture
+      #       - Implement ViewModels with observable state
+      #       - Integrate necessary services (audio, file processing, etc.)
+      #       - Ensure cross-platform compatibility (Windows, macOS, Linux)
+      #       - Document all integration points
+      #       - Follow TypeScript best practices
+      #       - Write inline code documentation
+      #
+      #       DO NOT modify workflow files in .github/workflows/
+      #
+      #       Mark each task complete as you finish it. All backend checklist items must be implemented and tests must pass.
+      #     branch: ${{ needs.product-owner-planning.outputs.branch_name }}
+      #     update_existing_pr: true
+      #     pr_number: ${{ needs.product-owner-planning.outputs.pr_number }}
 
-            Read and follow the detailed backend plan in plans/02-project-manager-plans.md.
-
-            Tasks to complete:
-            - Ensure all failing backend tests (created earlier) are addressed and pass
-            - Implement Models following MVVM architecture
-            - Implement ViewModels with observable state
-            - Integrate necessary services (audio, file processing, etc.)
-            - Ensure cross-platform compatibility (Windows, macOS, Linux)
-            - Document all integration points
-            - Follow TypeScript best practices
-            - Write inline code documentation
-
-            DO NOT modify workflow files in .github/workflows/
-
-            Mark each task complete as you finish it. All backend checklist items must be implemented and tests must pass.
-          branch: ${{ needs.product-owner-planning.outputs.branch_name }}
-          update_existing_pr: true
-          pr_number: ${{ needs.product-owner-planning.outputs.pr_number }}
-
-      - name: Create failing backend tests (TDD)
-        uses: github/create-pr-with-copilot@v1
-        with:
-          problem_statement: |
-            As the Backend Expert (TDD), write unit and integration tests for the feature BEFORE implementing functionality.
-            Place tests under an appropriate test folder (e.g., tests/backend/) and ensure they fail initially.
-            The goal: tests should drive the implementation that follows.
-            DO NOT modify workflow files in .github/workflows/
-          branch: ${{ needs.product-owner-planning.outputs.branch_name }}
-          update_existing_pr: true
-          pr_number: ${{ needs.product-owner-planning.outputs.pr_number }}
+      # NOTE: The following step is commented out because github/create-pr-with-copilot action does not exist
+      # - name: Create failing backend tests (TDD)
+      #   uses: github/create-pr-with-copilot@v1
+      #   with:
+      #     problem_statement: |
+      #       As the Backend Expert (TDD), write unit and integration tests for the feature BEFORE implementing functionality.
+      #       Place tests under an appropriate test folder (e.g., tests/backend/) and ensure they fail initially.
+      #       The goal: tests should drive the implementation that follows.
+      #       DO NOT modify workflow files in .github/workflows/
+      #     branch: ${{ needs.product-owner-planning.outputs.branch_name }}
+      #     update_existing_pr: true
+      #     pr_number: ${{ needs.product-owner-planning.outputs.pr_number }}
 
       - name: Run tests (expected failures)
         shell: bash
@@ -479,43 +483,45 @@ jobs:
           ref: ${{ needs.product-owner-planning.outputs.branch_name }}
           fetch-depth: 0
 
-      - name: Implement Frontend using Copilot Coding Agent
-        uses: github/create-pr-with-copilot@v1
-        with:
-          problem_statement: |
-            As the Frontend Expert (TDD), implement the frontend to make the previously created frontend tests pass.
+      # NOTE: The following step is commented out because github/create-pr-with-copilot action does not exist
+      # - name: Implement Frontend using Copilot Coding Agent
+      #   uses: github/create-pr-with-copilot@v1
+      #   with:
+      #     problem_statement: |
+      #       As the Frontend Expert (TDD), implement the frontend to make the previously created frontend tests pass.
+      #
+      #       Read and follow the detailed frontend plan in plans/02-project-manager-plans.md.
+      #       Review the backend implementation and the failing frontend tests to understand required behavior.
+      #
+      #       Tasks to complete:
+      #       - Ensure failing frontend tests (created earlier) are addressed and pass
+      #       - Implement MVVM View components (stateless React components)
+      #       - Properly bind components to ViewModels
+      #       - Keep business logic OUT of View components
+      #       - Style components with TailwindCSS
+      #       - Ensure accessibility (ARIA labels, keyboard navigation)
+      #       - Verify responsive design works on all screen sizes
+      #       - Integrate with backend APIs
+      #
+      #       DO NOT modify workflow files in .github/workflows/
+      #
+      #       Mark each task complete as you finish it. All frontend checklist items must be implemented and tests must pass.
+      #     branch: ${{ needs.product-owner-planning.outputs.branch_name }}
+      #     update_existing_pr: true
+      #     pr_number: ${{ needs.product-owner-planning.outputs.pr_number }}
 
-            Read and follow the detailed frontend plan in plans/02-project-manager-plans.md.
-            Review the backend implementation and the failing frontend tests to understand required behavior.
-
-            Tasks to complete:
-            - Ensure failing frontend tests (created earlier) are addressed and pass
-            - Implement MVVM View components (stateless React components)
-            - Properly bind components to ViewModels
-            - Keep business logic OUT of View components
-            - Style components with TailwindCSS
-            - Ensure accessibility (ARIA labels, keyboard navigation)
-            - Verify responsive design works on all screen sizes
-            - Integrate with backend APIs
-
-            DO NOT modify workflow files in .github/workflows/
-
-            Mark each task complete as you finish it. All frontend checklist items must be implemented and tests must pass.
-          branch: ${{ needs.product-owner-planning.outputs.branch_name }}
-          update_existing_pr: true
-          pr_number: ${{ needs.product-owner-planning.outputs.pr_number }}
-
-      - name: Create failing frontend tests (TDD)
-        uses: github/create-pr-with-copilot@v1
-        with:
-          problem_statement: |
-            As the Frontend Expert (TDD), write frontend unit and end-to-end tests for the feature BEFORE implementing UI behavior.
-            Place tests under an appropriate test folder (e.g., tests/frontend/) and ensure they fail initially.
-            The goal: tests should drive the implementation that follows.
-            DO NOT modify workflow files in .github/workflows/
-          branch: ${{ needs.product-owner-planning.outputs.branch_name }}
-          update_existing_pr: true
-          pr_number: ${{ needs.product-owner-planning.outputs.pr_number }}
+      # NOTE: The following step is commented out because github/create-pr-with-copilot action does not exist
+      # - name: Create failing frontend tests (TDD)
+      #   uses: github/create-pr-with-copilot@v1
+      #   with:
+      #     problem_statement: |
+      #       As the Frontend Expert (TDD), write frontend unit and end-to-end tests for the feature BEFORE implementing UI behavior.
+      #       Place tests under an appropriate test folder (e.g., tests/frontend/) and ensure they fail initially.
+      #       The goal: tests should drive the implementation that follows.
+      #       DO NOT modify workflow files in .github/workflows/
+      #     branch: ${{ needs.product-owner-planning.outputs.branch_name }}
+      #     update_existing_pr: true
+      #     pr_number: ${{ needs.product-owner-planning.outputs.pr_number }}
 
       - name: Run frontend tests (expected failures)
         shell: bash
@@ -581,30 +587,31 @@ jobs:
           ref: ${{ needs.product-owner-planning.outputs.branch_name }}
           fetch-depth: 0
 
-      - name: Implement Tests using Copilot Coding Agent
-        uses: github/create-pr-with-copilot@v1
-        with:
-          problem_statement: |
-            As the QA Testing Expert, create comprehensive tests for this feature.
-            
-            Read and follow the QA plan in plans/02-project-manager-plans.md.
-            Review the backend and frontend implementation.
-            
-            Tasks to complete:
-            - Write unit tests for backend Models and ViewModels
-            - Write unit tests for frontend components
-            - Write integration tests for API endpoints
-            - Write integration tests for ViewModel-View bindings
-            - Write end-to-end tests for complete user workflows
-            - Run regression tests to ensure existing functionality works
-            - Generate test coverage report
-            
-            DO NOT modify workflow files in .github/workflows/
-            
-            All tests must pass. Achieve minimum 80% code coverage on new code.
-          branch: ${{ needs.product-owner-planning.outputs.branch_name }}
-          update_existing_pr: true
-          pr_number: ${{ needs.product-owner-planning.outputs.pr_number }}
+      # NOTE: The following step is commented out because github/create-pr-with-copilot action does not exist
+      # - name: Implement Tests using Copilot Coding Agent
+      #   uses: github/create-pr-with-copilot@v1
+      #   with:
+      #     problem_statement: |
+      #       As the QA Testing Expert, create comprehensive tests for this feature.
+      #       
+      #       Read and follow the QA plan in plans/02-project-manager-plans.md.
+      #       Review the backend and frontend implementation.
+      #       
+      #       Tasks to complete:
+      #       - Write unit tests for backend Models and ViewModels
+      #       - Write unit tests for frontend components
+      #       - Write integration tests for API endpoints
+      #       - Write integration tests for ViewModel-View bindings
+      #       - Write end-to-end tests for complete user workflows
+      #       - Run regression tests to ensure existing functionality works
+      #       - Generate test coverage report
+      #       
+      #       DO NOT modify workflow files in .github/workflows/
+      #       
+      #       All tests must pass. Achieve minimum 80% code coverage on new code.
+      #     branch: ${{ needs.product-owner-planning.outputs.branch_name }}
+      #     update_existing_pr: true
+      #     pr_number: ${{ needs.product-owner-planning.outputs.pr_number }}
 
       - name: Update PR checklist (QA items)
         uses: actions/github-script@v7
@@ -648,37 +655,38 @@ jobs:
           ref: ${{ needs.product-owner-planning.outputs.branch_name }}
           fetch-depth: 0
 
-      - name: Validate Implementation using Copilot
-        uses: github/create-pr-with-copilot@v1
-        with:
-          problem_statement: |
-            As the Project Manager, validate that the implementation matches the plans.
-            
-            Review:
-            - plans/02-project-manager-plans.md (the original detailed plans)
-            - The backend implementation
-            - The frontend implementation  
-            - The test implementation
-            
-            Create a validation report in reports/validation-report.md that confirms:
-            - Backend follows the detailed backend plan
-            - Frontend follows the detailed frontend plan
-            - QA covered all planned scenarios
-            - All dependencies properly addressed
-            - MVVM architecture properly implemented
-            - All tests passing
-            - Code quality standards met
-            - Documentation complete
-            - No scope creep detected
-            - Backend and frontend properly integrated
-            - Cross-platform compatibility confirmed
-            - Performance requirements met
-            
-            If any items are NOT complete, list them clearly and request fixes.
-            DO NOT modify workflow files in .github/workflows/
-          branch: ${{ needs.product-owner-planning.outputs.branch_name }}
-          update_existing_pr: true
-          pr_number: ${{ needs.product-owner-planning.outputs.pr_number }}
+      # NOTE: The following step is commented out because github/create-pr-with-copilot action does not exist
+      # - name: Validate Implementation using Copilot
+      #   uses: github/create-pr-with-copilot@v1
+      #   with:
+      #     problem_statement: |
+      #       As the Project Manager, validate that the implementation matches the plans.
+      #       
+      #       Review:
+      #       - plans/02-project-manager-plans.md (the original detailed plans)
+      #       - The backend implementation
+      #       - The frontend implementation  
+      #       - The test implementation
+      #       
+      #       Create a validation report in reports/validation-report.md that confirms:
+      #       - Backend follows the detailed backend plan
+      #       - Frontend follows the detailed frontend plan
+      #       - QA covered all planned scenarios
+      #       - All dependencies properly addressed
+      #       - MVVM architecture properly implemented
+      #       - All tests passing
+      #       - Code quality standards met
+      #       - Documentation complete
+      #       - No scope creep detected
+      #       - Backend and frontend properly integrated
+      #       - Cross-platform compatibility confirmed
+      #       - Performance requirements met
+      #       
+      #       If any items are NOT complete, list them clearly and request fixes.
+      #       DO NOT modify workflow files in .github/workflows/
+      #     branch: ${{ needs.product-owner-planning.outputs.branch_name }}
+      #     update_existing_pr: true
+      #     pr_number: ${{ needs.product-owner-planning.outputs.pr_number }}
 
       - name: Update PR checklist (Validation items)
         uses: actions/github-script@v7
@@ -797,37 +805,38 @@ jobs:
           ref: ${{ needs.product-owner-planning.outputs.branch_name }}
           fetch-depth: 0
 
-      - name: Final Product Owner Review using Copilot
-        uses: github/create-pr-with-copilot@v1
-        with:
-          problem_statement: |
-            As the Product Owner, perform final vision alignment review.
-            
-            Review:
-            - plans/01-product-owner-plan.md (the original high-level plan)
-            - reports/validation-report.md (the PM validation)
-            - The complete implementation
-            
-            Create a final approval report in reports/final-approval.md that confirms:
-            - Feature aligns with product vision
-            - User value clearly delivered
-            - MVP scope respected (no scope creep)
-            - MVVM architecture integrity maintained
-            - Implementation is volunteer-friendly
-            - Meets acceptance criteria from high-level plan
-            - No hidden automation or surprises
-            - Reliability prioritized over features
-            - Production-ready quality
-            - Cross-platform confirmed
-            - Documentation adequate for users and developers
-            
-            If approved, clearly state "APPROVED FOR RELEASE" in the report.
-            If not approved, list specific issues and request fixes.
-            
-            DO NOT modify workflow files in .github/workflows/
-          branch: ${{ needs.product-owner-planning.outputs.branch_name }}
-          update_existing_pr: true
-          pr_number: ${{ needs.product-owner-planning.outputs.pr_number }}
+      # NOTE: The following step is commented out because github/create-pr-with-copilot action does not exist
+      # - name: Final Product Owner Review using Copilot
+      #   uses: github/create-pr-with-copilot@v1
+      #   with:
+      #     problem_statement: |
+      #       As the Product Owner, perform final vision alignment review.
+      #       
+      #       Review:
+      #       - plans/01-product-owner-plan.md (the original high-level plan)
+      #       - reports/validation-report.md (the PM validation)
+      #       - The complete implementation
+      #       
+      #       Create a final approval report in reports/final-approval.md that confirms:
+      #       - Feature aligns with product vision
+      #       - User value clearly delivered
+      #       - MVP scope respected (no scope creep)
+      #       - MVVM architecture integrity maintained
+      #       - Implementation is volunteer-friendly
+      #       - Meets acceptance criteria from high-level plan
+      #       - No hidden automation or surprises
+      #       - Reliability prioritized over features
+      #       - Production-ready quality
+      #       - Cross-platform confirmed
+      #       - Documentation adequate for users and developers
+      #       
+      #       If approved, clearly state "APPROVED FOR RELEASE" in the report.
+      #       If not approved, list specific issues and request fixes.
+      #       
+      #       DO NOT modify workflow files in .github/workflows/
+      #     branch: ${{ needs.product-owner-planning.outputs.branch_name }}
+      #     update_existing_pr: true
+      #     pr_number: ${{ needs.product-owner-planning.outputs.pr_number }}
 
       - name: Update PR checklist (Final Approval items)
         uses: actions/github-script@v7
