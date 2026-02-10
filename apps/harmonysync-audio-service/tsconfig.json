@@ -46,6 +46,7 @@
     "smoke-test.ts",
     "test-integration.ts",
     "test-preload.ts",
+    "test-load.ts",
     "node-wav.d.ts"
   ],
   "exclude": [
