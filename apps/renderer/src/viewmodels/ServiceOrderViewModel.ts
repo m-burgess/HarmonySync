@@ -36,7 +36,7 @@ interface IServiceOrderService {
 interface IAudioService {
   stop(): Promise<void>;
   cleanup(): Promise<void>;
-  loadTracks(folderPath: string): Promise<any>;
+  loadTracks(folderPath: string): Promise<{ tracks?: AudioTrackInfo[] }>;
   preloadAllTracks(): Promise<void>;
 }
 
@@ -49,12 +49,17 @@ interface ISlideService {
   loadFromFolder(path: string): Promise<{ slides: unknown[]; tracks: unknown[] }>;
 }
 
+interface AudioTrackInfo {
+  track_name: string;
+  file_path: string;
+}
+
 interface ServiceItem {
   id?: string;
   name: string;
   path: string;
   type: 'song' | 'folder';
-  tracks?: unknown[];
+  tracks?: AudioTrackInfo[];
   lyrics?: string;
   hasAudio?: boolean;
   audioFileCount?: number;
