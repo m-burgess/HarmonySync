@@ -1278,6 +1278,48 @@ class IPCHandlerManager {
       }
     });
 
+    this.ipcMain.handle('audio:preloadAllTracks', async (_event) => {
+      try {
+        console.log('[audio:preloadAllTracks] Preloading all tracks...');
+        const response = await fetch('http://127.0.0.1:3001/api/tracks/preload-all', { 
+          method: 'POST' 
+        });
+        
+        if (!response.ok) {
+          console.error('[audio:preloadAllTracks] HTTP Error:', response.status, response.statusText);
+          return { success: false, error: `HTTP ${response.status}` };
+        }
+        
+        const data = await response.json();
+        console.log('[audio:preloadAllTracks] Response:', data);
+        return data;
+      } catch (error) {
+        console.error('[audio:preloadAllTracks] Error:', error);
+        return { success: false, error: error instanceof Error ? error.message : String(error) };
+      }
+    });
+
+    this.ipcMain.handle('audio:preloadTrack', async (_event, trackId: string) => {
+      try {
+        console.log('[audio:preloadTrack] Preloading track:', trackId);
+        const response = await fetch(`http://127.0.0.1:3001/api/tracks/${trackId}/preload`, { 
+          method: 'POST' 
+        });
+        
+        if (!response.ok) {
+          console.error('[audio:preloadTrack] HTTP Error:', response.status, response.statusText);
+          return { success: false, error: `HTTP ${response.status}` };
+        }
+        
+        const data = await response.json();
+        console.log('[audio:preloadTrack] Response:', data);
+        return data;
+      } catch (error) {
+        console.error('[audio:preloadTrack] Error:', error);
+        return { success: false, error: error instanceof Error ? error.message : String(error) };
+      }
+    });
+
     this.ipcMain.handle('audio:setTrackPan', async (_event, trackIndex: number, pan: number) => {
       try {
         await fetch('http://127.0.0.1:3001/api/tracks/pan', {

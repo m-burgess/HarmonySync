@@ -152,6 +152,29 @@ export class AudioService extends BaseService implements IAudioService {
   }
 
   /**
+   * Preload all tracks for instant playback
+   */
+  public async preloadAllTracks(): Promise<void> {
+    try {
+      await this.ipc.invoke('audio:preloadAllTracks');
+    } catch (error) {
+      return this.handleError('preloadAllTracks', error);
+    }
+  }
+
+  /**
+   * Preload a specific track
+   * @param trackId - Track ID to preload
+   */
+  public async preloadTrack(trackId: string): Promise<void> {
+    try {
+      await this.ipc.invoke('audio:preloadTrack', trackId);
+    } catch (error) {
+      return this.handleError('preloadTrack', error);
+    }
+  }
+
+  /**
    * Set global/master volume
    * @param volume - Volume (0-1)
    */

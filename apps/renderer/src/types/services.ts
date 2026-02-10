@@ -74,6 +74,8 @@ export interface IAudioService extends IService {
   setTrackVolume(trackIndex: number, volume: number): Promise<void>;
   setTrackPan(trackIndex: number, pan: number): Promise<void>;
   muteTrack(trackIndex: number, muted: boolean): Promise<void>;
+  preloadAllTracks(): Promise<void>;
+  preloadTrack(trackId: string): Promise<void>;
   setGlobalVolume(volume: number): Promise<void>;
   saveMixerConfig(config: MixerConfig): Promise<void>;
   loadMixerConfig(songPath: string): Promise<MixerConfig | null>;
