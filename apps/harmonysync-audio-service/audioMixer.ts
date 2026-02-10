@@ -65,7 +65,7 @@ export class AudioMixer {
     public activeCrossfade: CrossfadeInfo | null;
     public io: SocketIOServer | null;
     private ffmpegMixer: FFmpegMixer;
-    private useSingleProcessMixing: boolean;
+    public useSingleProcessMixing: boolean;
 
     constructor(io: SocketIOServer | null = null) {
         this.tracks = new Map<string, AudioTrack>();
@@ -79,7 +79,14 @@ export class AudioMixer {
         this.activeCrossfade = null;
         this.io = io;
         this.ffmpegMixer = new FFmpegMixer();
-        this.useSingleProcessMixing = true; // Enable single-process mixing to eliminate drift
+        // Enable single-process mixing to eliminate drift (can be disabled if needed)
+        this.useSingleProcessMixing = FFmpegMixer.isAvailable();
+        
+        if (this.useSingleProcessMixing) {
+            console.log('✅ FFmpeg mixer available - drift elimination enabled');
+        } else {
+            console.log('⚠️  FFmpeg not found - using legacy multi-process playback');
+        }
     }
 
     async loadTrack(filePath: string, name: string | null = null): Promise<string> {
@@ -340,6 +347,8 @@ export class AudioMixer {
             
             if (success) {
                 // Mark all tracks as playing
+                // Note: When using FFmpegMixer, individual tracks don't have audioProcess
+                // instances. The isPlaying flag indicates they're part of the mixed playback.
                 tracks.forEach(track => {
                     track.isPlaying = true;
                 });
