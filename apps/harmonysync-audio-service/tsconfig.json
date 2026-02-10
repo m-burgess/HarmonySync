@@ -40,6 +40,8 @@
   },
   "include": [
     "server.ts",
+    "audioMixer.ts",
+    "audioTrack.ts",
     "smoke-test.ts",
     "test-integration.ts",
     "node-wav.d.ts"
