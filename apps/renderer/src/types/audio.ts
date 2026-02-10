@@ -40,6 +40,10 @@ export interface Track {
   audioEl?: HTMLAudioElement | null;
   buffer?: AudioBuffer | null;
   individualVolume?: number;
+  // Preload status
+  isPreloaded?: boolean;
+  preloadStatus?: 'pending' | 'loading' | 'ready' | 'error';
+  preloadError?: string;
 }
 
 /**

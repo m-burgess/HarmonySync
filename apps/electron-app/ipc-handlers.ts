@@ -398,15 +398,45 @@ class IPCHandlerManager {
           console.error('[service-order:loadSongMetadata] Error reading directory:', error);
         }
         
+        // Detect audio files to determine if this is a song folder
+        const audioExtensions = ['.mp3', '.wav', '.m4a', '.flac', '.ogg', '.aac', '.wma'];
+        const audioFiles = files.filter(file => {
+          const ext = path.extname(file).toLowerCase();
+          return audioExtensions.includes(ext);
+        });
+        
+        // Get full paths for audio files
+        // Note: track_name is the filename - can be parsed for actual track name if needed
+        const audioTracks = audioFiles.map(file => ({
+          track_name: file,  // Currently filename, could be enhanced to parse actual track name
+          file_path: path.join(folderPath, file)
+        }));
+        
+        // Determine folder type based on content
+        const type = audioFiles.length > 0 ? 'song' : 'folder';
+        const hasAudio = audioFiles.length > 0;
+        
         return {
           path: folderPath,
           name: folderName,
           files,
           id: folderName,
+          type,
+          hasAudio,
+          tracks: audioTracks,
+          audioFileCount: audioFiles.length
         };
       } catch (error) {
         console.error('[service-order:loadSongMetadata] Error:', error);
-        return { path: folderPath, name: folderPath.split(/[\\/]/).pop() || folderPath, files: [] };
+        return { 
+          path: folderPath, 
+          name: folderPath.split(/[\\/]/).pop() || folderPath, 
+          files: [],
+          type: 'folder',
+          hasAudio: false,
+          tracks: [],
+          audioFileCount: 0
+        };
       }
     });
 
@@ -1275,6 +1305,48 @@ class IPCHandlerManager {
         });
       } catch (error) {
         console.error('[audio:setTrackVolume] Error:', error);
+      }
+    });
+
+    this.ipcMain.handle('audio:preloadAllTracks', async (_event) => {
+      try {
+        console.log('[audio:preloadAllTracks] Preloading all tracks...');
+        const response = await fetch('http://127.0.0.1:3001/api/tracks/preload-all', { 
+          method: 'POST' 
+        });
+        
+        if (!response.ok) {
+          console.error('[audio:preloadAllTracks] HTTP Error:', response.status, response.statusText);
+          return { success: false, error: `HTTP ${response.status}` };
+        }
+        
+        const data = await response.json();
+        console.log('[audio:preloadAllTracks] Response:', data);
+        return data;
+      } catch (error) {
+        console.error('[audio:preloadAllTracks] Error:', error);
+        return { success: false, error: error instanceof Error ? error.message : String(error) };
+      }
+    });
+
+    this.ipcMain.handle('audio:preloadTrack', async (_event, trackId: string) => {
+      try {
+        console.log('[audio:preloadTrack] Preloading track:', trackId);
+        const response = await fetch(`http://127.0.0.1:3001/api/tracks/${trackId}/preload`, { 
+          method: 'POST' 
+        });
+        
+        if (!response.ok) {
+          console.error('[audio:preloadTrack] HTTP Error:', response.status, response.statusText);
+          return { success: false, error: `HTTP ${response.status}` };
+        }
+        
+        const data = await response.json();
+        console.log('[audio:preloadTrack] Response:', data);
+        return data;
+      } catch (error) {
+        console.error('[audio:preloadTrack] Error:', error);
+        return { success: false, error: error instanceof Error ? error.message : String(error) };
       }
     });
 

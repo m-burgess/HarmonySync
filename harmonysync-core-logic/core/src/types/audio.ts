@@ -30,6 +30,9 @@ export interface AudioTrackState {
   isMuted: boolean;
   isPlaying: boolean;
   currentPosition: number;
+  isPreloaded: boolean;
+  preloadStatus: 'pending' | 'loading' | 'ready' | 'error';
+  preloadError?: string;
 }
 
 export interface WavDecodeResult {

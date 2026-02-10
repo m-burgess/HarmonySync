@@ -36,6 +36,8 @@ interface IServiceOrderService {
 interface IAudioService {
   stop(): Promise<void>;
   cleanup(): Promise<void>;
+  loadTracks(folderPath: string): Promise<{ tracks?: AudioTrackInfo[] }>;
+  preloadAllTracks(): Promise<void>;
 }
 
 interface IDisplayService {
@@ -47,13 +49,22 @@ interface ISlideService {
   loadFromFolder(path: string): Promise<{ slides: unknown[]; tracks: unknown[] }>;
 }
 
+interface AudioTrackInfo {
+  track_name: string;
+  file_path: string;
+}
+
 interface ServiceItem {
   id?: string;
   name: string;
   path: string;
   type: 'song' | 'folder';
-  tracks?: unknown[];
+  tracks?: AudioTrackInfo[];
   lyrics?: string;
+  hasAudio?: boolean;
+  audioFileCount?: number;
+  files?: string[];
+}
 }
 
 export class ServiceOrderViewModel extends BaseViewModel implements Partial<IServiceOrderViewModel> {
@@ -206,6 +217,16 @@ export class ServiceOrderViewModel extends BaseViewModel implements Partial<ISer
         runInAction(() => {
           this.serviceOrder.push(item);
         });
+
+        // Auto-preload if it's a song folder with audio files
+        if (item.type === 'song' && item.hasAudio) {
+          this.log(`[addFolders] Auto-preloading detected song folder: ${item.name}`);
+          
+          // Trigger preload asynchronously (don't wait for completion)
+          this.preloadSong(item).catch(error => {
+            this.logError(`[addFolders] Auto-preload failed for ${item.name}:`, error);
+          });
+        }
       }
 
       runInAction(() => {
@@ -349,30 +370,30 @@ export class ServiceOrderViewModel extends BaseViewModel implements Partial<ISer
         return;
       }
 
-      // Preload each track
-      let successCount = 0;
-      for (let i = 0; i < tracks.length; i++) {
-        const track = tracks[i] as { track_name: string };
-        try {
-          this.log(`[preloadSong] Preloading track ${i + 1}/${tracks.length}: ${track.track_name}`);
-          // In a real implementation, this would call audio service preload
-          // For now, just simulate progress
-          successCount++;
-
-          runInAction(() => {
-            this.loadingProgress = Math.round(((i + 1) / tracks.length) * 100);
-          });
-        } catch (err) {
-          this.logError(`[preloadSong] Error preloading track ${track.track_name}:`, err);
-        }
-      }
-
-      if (successCount > 0) {
+      // Load tracks in audio service
+      this.log(`[preloadSong] Loading ${tracks.length} tracks from ${item.path}`);
+      
+      try {
+        // Load tracks into audio service
+        await this.audioService.loadTracks(item.path);
+        
         runInAction(() => {
-          this.loadingMessage = `✓ ${item.name} ready (${successCount}/${tracks.length} tracks)`;
+          this.loadingProgress = 50;
+          this.loadingMessage = `Loading tracks for ${item.name}...`;
+        });
+        
+        // Trigger preload of all tracks
+        await this.audioService.preloadAllTracks();
+        
+        runInAction(() => {
+          this.loadingProgress = 100;
+          this.loadingMessage = `✓ ${item.name} ready (${tracks.length} tracks preloaded)`;
           this.preloadedSongs.add(item.id || item.path);
         });
-      } else {
+        
+        this.log(`[preloadSong] Successfully preloaded ${tracks.length} tracks for ${item.name}`);
+      } catch (error) {
+        this.logError('[preloadSong] Error loading/preloading tracks:', error);
         runInAction(() => {
           this.loadingMessage = `Preload failed for ${item.name}`;
         });

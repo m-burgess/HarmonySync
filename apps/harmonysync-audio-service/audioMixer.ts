@@ -4,6 +4,7 @@ import os from 'os';
 import { v4 as uuidv4 } from 'uuid';
 import { AudioTrack, getAudic, AudioTrackState } from './audioTrack';
 import type { Server as SocketIOServer } from 'socket.io';
+import FFmpegMixer, { TrackInput } from './ffmpegMixer';
 
 export interface Song {
     id: string;
@@ -63,6 +64,8 @@ export class AudioMixer {
     public crossfadeDuration: number;
     public activeCrossfade: CrossfadeInfo | null;
     public io: SocketIOServer | null;
+    private ffmpegMixer: FFmpegMixer;
+    public useSingleProcessMixing: boolean;
 
     constructor(io: SocketIOServer | null = null) {
         this.tracks = new Map<string, AudioTrack>();
@@ -75,6 +78,15 @@ export class AudioMixer {
         this.crossfadeDuration = 3000; // 3 seconds default crossfade
         this.activeCrossfade = null;
         this.io = io;
+        this.ffmpegMixer = new FFmpegMixer();
+        // Enable single-process mixing to eliminate drift (can be disabled if needed)
+        this.useSingleProcessMixing = FFmpegMixer.isAvailable();
+        
+        if (this.useSingleProcessMixing) {
+            console.log('✅ FFmpeg mixer available - drift elimination enabled');
+        } else {
+            console.log('⚠️  FFmpeg not found - using legacy multi-process playback');
+        }
     }
 
     async loadTrack(filePath: string, name: string | null = null): Promise<string> {
@@ -103,10 +115,46 @@ export class AudioMixer {
         const track = this.tracks.get(trackId);
         if (track) {
             track.stop();
+            track.cleanupPreloadedResources();
             this.tracks.delete(trackId);
             return true;
         }
         return false;
+    }
+
+    /**
+     * Preload a specific track for instant playback
+     */
+    async preloadTrack(trackId: string): Promise<boolean> {
+        const track = this.tracks.get(trackId);
+        if (!track) {
+            console.error(`Track ${trackId} not found for preloading`);
+            return false;
+        }
+
+        console.log(`🔄 Preloading track: ${track.name}`);
+        const success = await track.preload();
+        
+        if (this.io) {
+            this.io.emit('mixer_state_changed', this.getMixerState());
+        }
+
+        return success;
+    }
+
+    /**
+     * Preload all currently loaded tracks
+     */
+    async preloadAllTracks(): Promise<void> {
+        console.log(`🔄 Preloading all ${this.tracks.size} tracks...`);
+        const preloadPromises = Array.from(this.tracks.values()).map(track => track.preload());
+        await Promise.all(preloadPromises);
+        
+        if (this.io) {
+            this.io.emit('mixer_state_changed', this.getMixerState());
+        }
+        
+        console.log(`✅ All tracks preloaded`);
     }
 
     clearAllTracks(): void {
@@ -114,6 +162,7 @@ export class AudioMixer {
         this.stopAllTracks();
         for (const track of this.tracks.values()) {
             track.stop();
+            track.cleanupPreloadedResources();
         }
         this.tracks.clear();
         this.songs.clear();
@@ -252,10 +301,67 @@ export class AudioMixer {
         const activeTracks: AudioTrack[] = [];
         for (const track of this.tracks.values()) if (!track.isMuted) activeTracks.push(track);
         if (activeTracks.length === 0) { console.log('⚠️  No tracks to play'); return; }
-        console.log(`▶️  Playing ${activeTracks.length} tracks in sync with master clock`);
-        console.log('🎵 Using synchronized simultaneous playback');
-        await this.startSynchronizedSimultaneousPlayback(activeTracks);
+        console.log(`▶️  Playing ${activeTracks.length} tracks in sync`);
+        
+        // Use single-process FFmpeg mixing to eliminate drift
+        if (this.useSingleProcessMixing) {
+            console.log('🎵 Using single-process FFmpeg mixer (eliminates drift)');
+            await this.startFFmpegMixedPlayback(activeTracks);
+        } else {
+            console.log('🎵 Using synchronized simultaneous playback (legacy)');
+            await this.startSynchronizedSimultaneousPlayback(activeTracks);
+        }
+        
         this.isPlaying = true;
+    }
+
+    /**
+     * Start playback using single FFmpeg process for perfect synchronization
+     * This eliminates drift by using a single clock for all tracks
+     */
+    private async startFFmpegMixedPlayback(tracks: AudioTrack[]): Promise<void> {
+        try {
+            console.log('🔄 Preparing tracks for FFmpeg mixing...');
+            
+            // Prepare all tracks (convert to WAV if needed)
+            const preparedTracks = await Promise.all(
+                tracks.map(async track => ({
+                    track,
+                    audioFilePath: await this.prepareTrackForPlayback(track)
+                }))
+            );
+            
+            console.log(`✅ All tracks prepared`);
+            
+            // Build TrackInput array for FFmpegMixer
+            const trackInputs: TrackInput[] = preparedTracks.map(({ track, audioFilePath }) => ({
+                filePath: audioFilePath,
+                volume: track.volume,
+                pan: track.pan,
+                isMuted: track.isMuted,
+                name: track.name
+            }));
+            
+            // Start mixed playback
+            const success = await this.ffmpegMixer.startMixedPlayback(trackInputs);
+            
+            if (success) {
+                // Mark all tracks as playing
+                // Note: When using FFmpegMixer, individual tracks don't have audioProcess
+                // instances. The isPlaying flag indicates they're part of the mixed playback.
+                tracks.forEach(track => {
+                    track.isPlaying = true;
+                });
+                console.log(`✅ FFmpeg mixer started successfully`);
+            } else {
+                throw new Error('FFmpeg mixer failed to start');
+            }
+            
+        } catch (error) {
+            console.error('❌ Error in FFmpeg mixed playback:', error);
+            console.log('🔄 Falling back to synchronized simultaneous playback');
+            await this.startSynchronizedSimultaneousPlayback(tracks);
+        }
     }
 
     async startMasterClockPlayback(tracks: AudioTrack[], masterTrack: AudioTrack): Promise<void> {
@@ -457,6 +563,13 @@ export class AudioMixer {
 
     stopAllTracks(): void {
         console.log('🛑 Stopping all tracks');
+        
+        // Stop FFmpeg mixer if using single-process mixing
+        if (this.ffmpegMixer.isCurrentlyPlaying()) {
+            console.log('🛑 Stopping FFmpeg mixer');
+            this.ffmpegMixer.stop();
+        }
+        
         if (this.currentSongId) { this.stopSong(this.currentSongId); return; }
         for (const track of this.tracks.values()) {
             if (track.audioProcess) { try { track.audioProcess.kill('SIGTERM'); console.log(`⏹️ Stopped track: ${track.name}`); } catch (error) { console.error(`❌ Error stopping track ${track.name}:`, error); } }
