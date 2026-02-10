@@ -398,15 +398,44 @@ class IPCHandlerManager {
           console.error('[service-order:loadSongMetadata] Error reading directory:', error);
         }
         
+        // Detect audio files to determine if this is a song folder
+        const audioExtensions = ['.mp3', '.wav', '.m4a', '.flac', '.ogg', '.aac', '.wma'];
+        const audioFiles = files.filter(file => {
+          const ext = path.extname(file).toLowerCase();
+          return audioExtensions.includes(ext);
+        });
+        
+        // Get full paths for audio files
+        const audioTracks = audioFiles.map(file => ({
+          track_name: file,
+          file_path: path.join(folderPath, file)
+        }));
+        
+        // Determine folder type based on content
+        const type = audioFiles.length > 0 ? 'song' : 'folder';
+        const hasAudio = audioFiles.length > 0;
+        
         return {
           path: folderPath,
           name: folderName,
           files,
           id: folderName,
+          type,
+          hasAudio,
+          tracks: audioTracks,
+          audioFileCount: audioFiles.length
         };
       } catch (error) {
         console.error('[service-order:loadSongMetadata] Error:', error);
-        return { path: folderPath, name: folderPath.split(/[\\/]/).pop() || folderPath, files: [] };
+        return { 
+          path: folderPath, 
+          name: folderPath.split(/[\\/]/).pop() || folderPath, 
+          files: [],
+          type: 'folder',
+          hasAudio: false,
+          tracks: [],
+          audioFileCount: 0
+        };
       }
     });
 
