@@ -43,6 +43,8 @@ const TrackControl: React.FC<TrackControlProps> = ({ track, onMuteToggle }) => {
       trackName={track.name}
       isMuted={isMuted}
       onMuteToggle={handleMuteToggle}
+      isPreloaded={track.isPreloaded}
+      preloadStatus={track.preloadStatus}
     />
   );
 };
