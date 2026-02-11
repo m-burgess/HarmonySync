@@ -66,6 +66,7 @@ export class HTTPServerService extends BaseElectronService implements IHTTPServe
     // Setup routes
     this.setupVideoRoute();
     this.setupImageRoute();
+    this.setupAudioRoute();
 
     return new Promise((resolve, reject) => {
       try {
@@ -238,6 +239,73 @@ export class HTTPServerService extends BaseElectronService implements IHTTPServe
         this.log('debug', `Served image: ${imagePath}`);
       } catch (error) {
         this.log('error', 'Error serving image:', error);
+        res.status(500).send('Internal server error');
+      }
+    });
+  }
+
+  /**
+   * Setup audio serving route
+   * Serves audio files with proper content types and range requests
+   */
+  private setupAudioRoute(): void {
+    if (!this.app) return;
+
+    this.app.get('/audio/*', (req: Request, res: Response) => {
+      try {
+        const audioPath = decodeURIComponent(req.params[0]);
+
+        if (!fs.existsSync(audioPath)) {
+          this.log('warn', `Audio not found: ${audioPath}`);
+          res.status(404).send('Audio not found');
+          return;
+        }
+
+        const stat = fs.statSync(audioPath);
+        const fileSize = stat.size;
+        const range = req.headers.range;
+
+        const ext = path.extname(audioPath).toLowerCase();
+        const contentTypeMap: Record<string, string> = {
+          '.wav': 'audio/wav',
+          '.mp3': 'audio/mpeg',
+          '.ogg': 'audio/ogg',
+          '.oga': 'audio/ogg',
+          '.flac': 'audio/flac',
+          '.m4a': 'audio/mp4',
+          '.aac': 'audio/aac'
+        };
+        const contentType = contentTypeMap[ext] || 'application/octet-stream';
+
+        if (range) {
+          const parts = range.replace(/bytes=/, '').split('-');
+          const start = parseInt(parts[0], 10);
+          const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+          const chunkSize = (end - start) + 1;
+          const file = fs.createReadStream(audioPath, { start, end });
+
+          const headers = {
+            'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+            'Accept-Ranges': 'bytes',
+            'Content-Length': chunkSize,
+            'Content-Type': contentType
+          };
+
+          res.writeHead(206, headers);
+          file.pipe(res);
+        } else {
+          const headers = {
+            'Content-Length': fileSize,
+            'Content-Type': contentType
+          };
+
+          res.writeHead(200, headers);
+          fs.createReadStream(audioPath).pipe(res);
+        }
+
+        this.log('debug', `Served audio: ${audioPath}`);
+      } catch (error) {
+        this.log('error', 'Error serving audio:', error);
         res.status(500).send('Internal server error');
       }
     });

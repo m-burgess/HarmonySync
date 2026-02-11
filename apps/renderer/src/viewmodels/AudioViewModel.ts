@@ -567,7 +567,7 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
     });
 
     try {
-      await this.audioService.playAllTracks();
+      await this.audioService.playAllTracksFrontendScheduled(this.tracks);
       runInAction(() => {
         this.isPlaying = true;
         this.isPaused = false;
@@ -645,6 +645,7 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
     });
 
     try {
+      await this.audioService.stopFrontendScheduled();
       await this.audioService.stopAllAudio();
       runInAction(() => {
         this.isPlaying = false;
@@ -681,7 +682,8 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
     });
 
     try {
-      await this.audioService.goToBeginningAllTracks();
+      await this.audioService.stopFrontendScheduled();
+      await this.audioService.playAllTracksFrontendScheduled(this.tracks);
       runInAction(() => {
         this.isPlaying = true;
         this.currentPosition = 0;

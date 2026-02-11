@@ -79,14 +79,9 @@ export class AudioMixer {
         this.activeCrossfade = null;
         this.io = io;
         this.ffmpegMixer = new FFmpegMixer();
-        // Enable single-process mixing to eliminate drift (can be disabled if needed)
-        this.useSingleProcessMixing = FFmpegMixer.isAvailable();
-        
-        if (this.useSingleProcessMixing) {
-            console.log('✅ FFmpeg mixer available - drift elimination enabled');
-        } else {
-            console.log('⚠️  FFmpeg not found - using legacy multi-process playback');
-        }
+        // Frontend Web Audio handles playback; disable backend FFmpeg mixing.
+        this.useSingleProcessMixing = false;
+        console.log('ℹ️  Backend FFmpeg mixing disabled (frontend Web Audio handles playback)');
     }
 
     async loadTrack(filePath: string, name: string | null = null): Promise<string> {

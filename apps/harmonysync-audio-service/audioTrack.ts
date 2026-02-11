@@ -30,6 +30,7 @@ export interface AudioTrackState {
     id: string;
     name: string;
     filePath: string;
+    preparedFilePath?: string | null;
     duration: number;
     channels: number;
     sampleRate: number;
@@ -412,24 +413,25 @@ export class AudioTrack {
 
             // Check if the file is already a WAV
             const ext = path.extname(this.filePath).toLowerCase();
+            const tempDir = os.tmpdir();
+            const tempFileName = `harmonysync_preload_${this.id}_${Date.now()}.wav`;
+            const tempFilePath = path.join(tempDir, tempFileName);
             if (ext === '.wav') {
-                // For WAV files, we can use them directly
-                this.preparedFilePath = this.filePath;
-                console.log(`✅ Track ${this.name} is already WAV format`);
+                // For WAV files, copy to a temp location to keep prepared files isolated
+                await fs.promises.copyFile(this.filePath, tempFilePath);
+                this.preparedFilePath = tempFilePath;
+                console.log(`✅ Track ${this.name} prepared (copied WAV) at ${tempFilePath}`);
             } else {
                 // For non-WAV files, convert to WAV and cache
                 console.log(`🔄 Converting ${this.name} to WAV for faster playback...`);
-                const tempDir = os.tmpdir();
-                const tempFileName = `harmonysync_preload_${this.id}_${Date.now()}.wav`;
-                const tempFilePath = path.join(tempDir, tempFileName);
 
                 // Use FFmpeg to convert to WAV
                 const ffmpegProcess = spawn('ffmpeg', [
                     '-i', this.filePath,
-                    '-acodec', 'pcm_s16le',
-                    '-ar', '44100',
-                    '-ac', '2',
-                    '-y', // Overwrite output file if exists
+                    '-acodec', 'pcm_f32le', // 32-bit float PCM for browser-native decode
+                    '-ar', '44100',         // 44.1kHz sample rate
+                    '-ac', '2',             // Stereo
+                    '-y',                   // Overwrite output file if exists
                     tempFilePath
                 ]);
 
@@ -497,6 +499,7 @@ export class AudioTrack {
             id: this.id,
             name: this.name,
             filePath: this.filePath,
+            preparedFilePath: this.preparedFilePath,
             duration: this.duration,
             channels: this.channels,
             sampleRate: this.sampleRate,

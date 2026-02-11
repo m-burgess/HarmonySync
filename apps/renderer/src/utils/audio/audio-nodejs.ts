@@ -279,11 +279,10 @@ export async function loadAudioFile(path: string): Promise<string> {
 
 // Play all tracks
 export async function playAllTracks(): Promise<void> {
-    const client = await ensureAudioService();
-    
     try {
-        await client.playAllTracks();
-        console.log('▶️  Playing all tracks');
+        console.log('🎵 Using frontend scheduled playback for playAllTracks');
+        const tracksToPlay = getTracks();
+        await playAllTracksFrontendScheduled(tracksToPlay);
     } catch (error) {
         console.error('❌ Failed to play all tracks:', error);
         throw error;
@@ -292,9 +291,9 @@ export async function playAllTracks(): Promise<void> {
 
 // Stop all audio
 export async function stopAllAudio(): Promise<void> {
-    const client = await ensureAudioService();
-    
     try {
+        stopAllFrontendScheduled();
+        const client = await ensureAudioService();
         await client.stopAllTracks();
         console.log('⏹️  Stopped all tracks');
     } catch (error) {
@@ -306,12 +305,12 @@ export async function stopAllAudio(): Promise<void> {
 // Go to beginning of all tracks (stop and restart)
 export async function goToBeginningAllTracks(): Promise<void> {
     console.log('🔄 goToBeginningAllTracks called');
-    const client = await ensureAudioService();
     
     try {
-        await client.stopAllTracks();
+        stopAllFrontendScheduled();
         await new Promise(resolve => setTimeout(resolve, 100)); // Brief pause
-        await client.playAllTracks();
+        const tracksToPlay = getTracks();
+        await playAllTracksFrontendScheduled(tracksToPlay);
         console.log('⏮️  Restarted all tracks from beginning');
     } catch (error) {
         console.error('❌ Failed to restart tracks:', error);
@@ -766,3 +765,6 @@ export function getFrontendScheduledPosition(): number {
 
 // Export scheduled playback module for advanced usage
 export { scheduledPlayback };
+
+// Export getCurrentPlaybackPosition from scheduled-playback via audio-nodejs.ts for use in other modules
+export { getCurrentPlaybackPosition } from './scheduled-playback';

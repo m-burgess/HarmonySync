@@ -24,7 +24,7 @@ import type { AudioTrack } from '../types';
 // Service interface
 interface IAudioService {
   setTrackMute(trackIndex: number, muted: boolean): Promise<void>;
-  play(): Promise<void>;
+  playAllTracksFrontendScheduled(tracks: Array<{ filePath: string; name: string; id: string; volume: number; panValue: number; isMuted?: boolean; preparedFilePath?: string | null; pan?: number }>): Promise<void>;
   stop(): Promise<void>;
   onStateChange(callback: (event: unknown, state: { isPlaying: boolean }) => void): void;
 }
@@ -234,7 +234,16 @@ export class MixerViewModel extends BaseViewModel implements IMixerViewModel {
     this.error = null;
 
     try {
-      await this.audioService.play();
+      const tracksToPlay = this.tracks.map(track => ({
+        id: track.id,
+        name: track.name,
+        filePath: track.path ?? (track as { filePath?: string }).filePath ?? '',
+        preparedFilePath: (track as { preparedFilePath?: string | null }).preparedFilePath ?? null,
+        volume: track.volume ?? 1,
+        panValue: (track as { panValue?: number }).panValue ?? track.pan ?? 0,
+        isMuted: track.muted
+      }));
+      await this.audioService.playAllTracksFrontendScheduled(tracksToPlay);
 
       runInAction(() => {
         this.isPlaying = true;

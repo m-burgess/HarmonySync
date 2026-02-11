@@ -3,7 +3,9 @@
  * Uses a single ffmpeg process with complex filter to eliminate drift
  */
 
-import { spawn, ChildProcess } from 'child_process';
+import { spawn, spawnSync, ChildProcess } from 'child_process';
+import fs from 'fs';
+import path from 'path';
 
 export interface TrackInput {
     filePath: string;
@@ -16,6 +18,9 @@ export interface TrackInput {
 export class FFmpegMixer {
     private process: ChildProcess | null = null;
     private isPlaying: boolean = false;
+    private static cachedOutputDevices: Set<string> | null = null;
+    private static cachedOutputFormats: Set<string> | null = null;
+    private static cachedFfmpegPath: string | null = null;
 
     /**
      * Build ffmpeg filter graph for mixing multiple tracks
@@ -61,6 +66,11 @@ export class FFmpegMixer {
             return false;
         }
 
+        if (!FFmpegMixer.hasSupportedOutput()) {
+            console.warn('FFmpegMixer: No supported audio output devices found');
+            return false;
+        }
+
         if (tracks.length === 0) {
             console.warn('FFmpegMixer: No tracks to play');
             return false;
@@ -83,15 +93,18 @@ export class FFmpegMixer {
             args.push('-map', '[out]');
 
             // Output to audio device
-            args.push('-f', this.getAudioFormat());
-            args.push(this.getAudioDevice());
+            const output = this.getAudioOutput();
+            args.push('-f', output.format);
+            args.push(output.device);
 
-            console.log('🎵 FFmpegMixer: Starting synchronized playback');
+            const ffmpegPath = FFmpegMixer.getFfmpegPath();
+
+            console.log(`🎵 FFmpegMixer: Starting synchronized playback (${ffmpegPath})`);
             console.log(`   Tracks: ${tracks.length}`);
-            console.log(`   Command: ffmpeg ${args.join(' ')}`);
+            console.log(`   Command: ${ffmpegPath} ${args.join(' ')}`);
 
             // Spawn ffmpeg process
-            this.process = spawn('ffmpeg', args, {
+            this.process = spawn(ffmpegPath, args, {
                 stdio: ['ignore', 'pipe', 'pipe']
             });
 
@@ -149,28 +162,93 @@ export class FFmpegMixer {
     /**
      * Get the appropriate audio format for the platform
      */
-    private getAudioFormat(): string {
+    private getAudioOutput(): { format: string; device: string } {
         const platform = process.platform;
-        if (platform === 'darwin') return 'coreaudio';
-        if (platform === 'linux') return 'alsa';
-        if (platform === 'win32') return 'dshow';
-        return 'alsa'; // fallback
+        const availableFormats = FFmpegMixer.getAvailableOutputFormats();
+        const preferredFormats = this.getPreferredFormats(platform);
+
+        const format = preferredFormats.find(candidate => availableFormats.has(candidate));
+        if (!format) {
+            throw new Error('FFmpegMixer: No supported audio output formats found');
+        }
+        const device = this.getAudioDeviceForFormat(platform, format);
+        console.log(`FFmpegMixer: Available outputs: ${Array.from(availableFormats).join(', ') || 'none'}`);
+        console.log(`FFmpegMixer: Selected output: ${format} ${device}`);
+
+        return { format, device };
     }
 
-    /**
-     * Get the appropriate audio device for the platform
-     */
-    private getAudioDevice(): string {
-        const platform = process.platform;
-        if (platform === 'darwin') return '-'; // default device
+    static hasSupportedOutput(platform: NodeJS.Platform = process.platform): boolean {
+        const availableFormats = FFmpegMixer.getAvailableOutputFormats();
+        const preferredFormats = platform === 'darwin'
+            ? ['coreaudio']
+            : platform === 'linux'
+                ? ['pulse', 'alsa']
+                : platform === 'win32'
+                    ? ['wasapi', 'dshow']
+                    : ['alsa'];
+
+        return preferredFormats.some(format => availableFormats.has(format));
+    }
+
+    private getPreferredFormats(platform: NodeJS.Platform): string[] {
+        if (platform === 'darwin') return ['coreaudio'];
+        if (platform === 'linux') return ['pulse', 'alsa'];
+        if (platform === 'win32') return ['wasapi', 'dshow'];
+        return ['alsa'];
+    }
+
+    private getAudioDeviceForFormat(platform: NodeJS.Platform, format: string): string {
+        if (platform === 'darwin') return '-';
         if (platform === 'linux') return 'default';
         if (platform === 'win32') {
-            // Windows: Use 'audio' as default device name
-            // For specific device, users can configure via environment variable
-            // Set HARMONYSYNC_AUDIO_DEVICE to specific device identifier
-            return process.env.HARMONYSYNC_AUDIO_DEVICE || 'audio';
+            // Windows: use default device unless explicitly configured.
+            return process.env.HARMONYSYNC_AUDIO_DEVICE || (format === 'dshow' ? 'audio' : 'default');
         }
-        return 'default'; // fallback
+        return 'default';
+    }
+
+    private static getAvailableOutputFormats(): Set<string> {
+        if (FFmpegMixer.cachedOutputDevices) return FFmpegMixer.cachedOutputDevices;
+
+        const deviceFormats = FFmpegMixer.getAvailableOutputDevices();
+        if (deviceFormats.size > 0) {
+            FFmpegMixer.cachedOutputDevices = deviceFormats;
+            return deviceFormats;
+        }
+
+        if (FFmpegMixer.cachedOutputFormats) return FFmpegMixer.cachedOutputFormats;
+        try {
+            const output = FFmpegMixer.runFfmpegCommand(['-formats']);
+            const formats = new Set<string>();
+            const lines = output.split(/\r?\n/);
+            for (const line of lines) {
+                const match = line.match(/^\s*[D\.][E\.]\s+([A-Za-z0-9_]+)/);
+                if (match) formats.add(match[1].toLowerCase());
+            }
+            FFmpegMixer.cachedOutputFormats = formats;
+            return formats;
+        } catch {
+            FFmpegMixer.cachedOutputFormats = new Set<string>();
+            return FFmpegMixer.cachedOutputFormats;
+        }
+    }
+
+    private static getAvailableOutputDevices(): Set<string> {
+        try {
+            const output = FFmpegMixer.runFfmpegCommand(['-devices']);
+            const devices = new Set<string>();
+            const lines = output.split(/\r?\n/);
+            for (const line of lines) {
+                const match = line.match(/^\s*([D\.])([E\.])\s+([A-Za-z0-9_]+)/);
+                if (match && match[2] === 'E') {
+                    devices.add(match[3].toLowerCase());
+                }
+            }
+            return devices;
+        } catch {
+            return new Set<string>();
+        }
     }
 
     /**
@@ -178,11 +256,52 @@ export class FFmpegMixer {
      */
     static isAvailable(): boolean {
         try {
-            require('child_process').execSync('ffmpeg -version', { stdio: 'ignore' });
+            const ffmpegPath = FFmpegMixer.getFfmpegPath();
+            FFmpegMixer.runFfmpegCommand(['-version']);
+            const outputs = Array.from(FFmpegMixer.getAvailableOutputFormats());
+            console.log(`FFmpegMixer: Using ffmpeg at ${ffmpegPath}`);
+            console.log(`FFmpegMixer: Detected outputs: ${outputs.join(', ') || 'none'}`);
             return true;
         } catch {
             return false;
         }
+    }
+
+    private static runFfmpegCommand(args: string[]): string {
+        const ffmpegPath = FFmpegMixer.getFfmpegPath();
+        const result = spawnSync(ffmpegPath, args, { encoding: 'utf8' });
+        return `${result.stdout ?? ''}${result.stderr ?? ''}`;
+    }
+
+    private static getFfmpegPath(): string {
+        if (FFmpegMixer.cachedFfmpegPath) return FFmpegMixer.cachedFfmpegPath;
+
+        const envPath = process.env.HARMONYSYNC_FFMPEG_PATH || process.env.FFMPEG_PATH;
+        const executableName = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg';
+        const candidates: string[] = [];
+        const resourcesPath = (process as NodeJS.Process & { resourcesPath?: string }).resourcesPath;
+
+        if (envPath) candidates.push(envPath);
+        if (resourcesPath) {
+            candidates.push(path.join(resourcesPath, 'ffmpeg', executableName));
+        }
+        candidates.push(path.join(process.cwd(), 'apps', 'harmonysync-audio-service', 'bin', executableName));
+        candidates.push(path.join(process.cwd(), 'bin', executableName));
+        candidates.push(executableName);
+
+        for (const candidate of candidates) {
+            if (candidate === executableName) {
+                FFmpegMixer.cachedFfmpegPath = candidate;
+                return candidate;
+            }
+            if (fs.existsSync(candidate)) {
+                FFmpegMixer.cachedFfmpegPath = candidate;
+                return candidate;
+            }
+        }
+
+        FFmpegMixer.cachedFfmpegPath = executableName;
+        return executableName;
     }
 }
 

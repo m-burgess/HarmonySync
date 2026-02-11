@@ -654,6 +654,8 @@ async function invokeElectronCommand(command: string, args: unknown[], api?: Ele
     // HTTP Server
     case 'get_http_server_url':
       return await api.getHttpServerUrl();
+    case 'http:getServerUrl':
+      return await api.getHttpServerUrl();
     
     // CSS generation
     case 'generate_background_css':

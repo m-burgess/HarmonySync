@@ -65,7 +65,7 @@ interface ServiceItem {
   audioFileCount?: number;
   files?: string[];
 }
-}
+
 
 export class ServiceOrderViewModel extends BaseViewModel implements Partial<IServiceOrderViewModel> {
   protected readonly viewModelName = 'ServiceOrderViewModel';

@@ -72,7 +72,8 @@ export class AudioService extends BaseService implements IAudioService {
    */
   public async play(): Promise<void> {
     try {
-      await this.ipc.invoke('audio:play');
+      const tracksToPlay = audioUtils.getTracks();
+      await audioUtils.playAllTracksFrontendScheduled(tracksToPlay);
     } catch (error) {
       return this.handleError('play', error);
     }
@@ -83,6 +84,7 @@ export class AudioService extends BaseService implements IAudioService {
    */
   public async stop(): Promise<void> {
     try {
+      audioUtils.stopAllFrontendScheduled();
       await this.ipc.invoke('audio:stop');
     } catch (error) {
       return this.handleError('stop', error);
@@ -388,13 +390,15 @@ export class AudioService extends BaseService implements IAudioService {
    * Play all tracks
    */
   public async playAllTracks(): Promise<void> {
-    await this.ipc.invoke('audio:playAllTracks');
+    const tracksToPlay = audioUtils.getTracks();
+    await audioUtils.playAllTracksFrontendScheduled(tracksToPlay);
   }
 
   /**
    * Stop all audio
    */
   public async stopAllAudio(): Promise<void> {
+    audioUtils.stopAllFrontendScheduled();
     await this.ipc.invoke('audio:stopAllAudio');
   }
 
@@ -458,6 +462,10 @@ export class AudioService extends BaseService implements IAudioService {
       // Convert to Track type and use frontend scheduling
       const trackObjects = tracks.map(t => ({
         ...t,
+        filePath: t.filePath,
+        preparedFilePath: (t as { preparedFilePath?: string | null }).preparedFilePath ?? null,
+        panValue: t.panValue ?? (t as { pan?: number }).pan ?? 0,
+        volume: t.volume ?? 1,
         isPlaying: false,
         isPaused: false,
       }));

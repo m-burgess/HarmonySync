@@ -87,6 +87,8 @@ export interface IAudioService extends IService {
   stopMemoryMonitoring(): void;
   cleanup(): Promise<void>;
   playAllTracks(): Promise<void>;
+  playAllTracksFrontendScheduled(tracks: Array<{ filePath: string; name: string; id: string; volume: number; panValue: number; isMuted?: boolean; preparedFilePath?: string | null; pan?: number }>): Promise<void>;
+  stopFrontendScheduled(): Promise<void>;
   stopAllAudio(): Promise<void>;
   goToBeginningAllTracks(): Promise<void>;
   clearTracks(): Promise<void>;
