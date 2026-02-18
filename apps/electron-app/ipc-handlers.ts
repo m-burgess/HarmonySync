@@ -1807,10 +1807,7 @@ class IPCHandlerManager {
           return { slides: [], tracks: [] };
         }
 
-        // Read folder contents
-        const files = await fs.readdir(folderPath);
-        console.log('[ipc-handlers] Found', files.length, 'files in folder');
-
+        // Recursive scanner
         // Detect file types
         const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg'];
         const videoExts = ['.mp4', '.mov', '.avi', '.mkv', '.webm'];
@@ -1822,20 +1819,32 @@ class IPCHandlerManager {
         const presentationFiles: string[] = [];
         const audioFiles: string[] = [];
 
-        for (const file of files) {
-          const lower = file.toLowerCase();
-          const fullPath = path.join(folderPath, file);
-
-          if (imageExts.some(ext => lower.endsWith(ext))) {
-            imageFiles.push(fullPath);
-          } else if (videoExts.some(ext => lower.endsWith(ext))) {
-            videoFiles.push(fullPath);
-          } else if (presentationExts.some(ext => lower.endsWith(ext))) {
-            presentationFiles.push(fullPath);
-          } else if (audioExts.some(ext => lower.endsWith(ext))) {
-            audioFiles.push(fullPath);
+        const scanDir = async (dir: string) => {
+          try {
+            const entries = await fs.readdir(dir, { withFileTypes: true });
+            for (const entry of entries) {
+              const fullPath = path.join(dir, entry.name);
+              if (entry.isDirectory()) {
+                await scanDir(fullPath);
+              } else if (entry.isFile()) {
+                const lower = entry.name.toLowerCase();
+                if (imageExts.some(ext => lower.endsWith(ext))) {
+                  imageFiles.push(fullPath);
+                } else if (videoExts.some(ext => lower.endsWith(ext))) {
+                  videoFiles.push(fullPath);
+                } else if (presentationExts.some(ext => lower.endsWith(ext))) {
+                  presentationFiles.push(fullPath);
+                } else if (audioExts.some(ext => lower.endsWith(ext))) {
+                  audioFiles.push(fullPath);
+                }
+              }
+            }
+          } catch (e) {
+            console.warn('[ipc-handlers] Error scanning directory:', dir, e);
           }
-        }
+        };
+
+        await scanDir(folderPath);
 
         console.log('[ipc-handlers] File types - Images:', imageFiles.length, 'Videos:', videoFiles.length, 'Presentations:', presentationFiles.length, 'Audio:', audioFiles.length);
 

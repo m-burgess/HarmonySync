@@ -31,21 +31,32 @@ const AudienceApp = () => {
     }
   }; useEffect(() => {
     // Start the custom HTTP server
+    // Start the custom HTTP server with retry logic
     const startServer = async () => {
-      try {
-        const url = await core.invoke('start_http_server') as string;
-        httpServerUrl.current = url;
-        console.log('Custom HTTP server started at:', url);
-      } catch (error) {
-        console.error('Error starting custom HTTP server:', error);
+      let attempts = 0;
+      const maxAttempts = 10;
+
+      while (attempts < maxAttempts) {
         try {
-          const existingUrl = await core.invoke('http:getServerUrl') as string;
-          httpServerUrl.current = existingUrl;
-          console.log('Using existing HTTP server at:', existingUrl);
-        } catch (fallbackError) {
-          console.error('Error getting existing HTTP server URL:', fallbackError);
+          // Try to start or get URL
+          let url = await core.invoke('start_http_server') as string;
+          if (!url) {
+            url = await core.invoke('http:getServerUrl') as string;
+          }
+
+          if (url) {
+            httpServerUrl.current = url;
+            console.log('Custom HTTP server ready at:', url);
+            return;
+          }
+        } catch (error) {
+          console.warn(`HTTP server init attempt ${attempts + 1} failed:`, error);
         }
+
+        attempts++;
+        await new Promise(r => setTimeout(r, 1000));
       }
+      console.error('Failed to initialize HTTP server after multiple attempts');
     };
     startServer();
 
@@ -103,7 +114,7 @@ const AudienceApp = () => {
 
   return (
     <div style={{ width: '100%', height: '100vh', backgroundColor: 'black', position: 'relative', overflow: 'hidden' }}>
-      <video id="audience-video" ref={videoRef} autoPlay muted playsInline style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', display: 'none', zIndex: 1 }}></video>
+      <video id="audience-video" ref={videoRef} autoPlay muted playsInline style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'none', zIndex: 1 }}></video>
       <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 10 }}>
         <AudienceScreen />
       </div>

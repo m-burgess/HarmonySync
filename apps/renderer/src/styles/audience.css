@@ -1,6 +1,7 @@
 body {
     background-color: black;
-    color: white; /* Assuming white text for visibility on black */
+    color: white;
+    /* Assuming white text for visibility on black */
     font-family: sans-serif;
     height: 100vh;
     margin: 0;
@@ -15,20 +16,26 @@ body {
 #audience-container {
     width: 100%;
     height: 100%;
-    background-color: black;
+    /* background-color: black; Removed to allow underlying video to show */
 }
 
 #lyric-display {
     width: 100%;
     height: 100%;
-    display: flex; /* Use flexbox for centering */
-    flex-direction: column; /* Stack lines vertically */
-    justify-content: center; /* Center vertically */
-    align-items: center; /* Center horizontally */
+    display: flex;
+    /* Use flexbox for centering */
+    flex-direction: column;
+    /* Stack lines vertically */
+    justify-content: center;
+    /* Center vertically */
+    align-items: center;
+    /* Center horizontally */
     text-align: center;
-    font-size: 72px; /* Changed from 48px to 72px */
+    font-size: 72px;
+    /* Changed from 48px to 72px */
     text-transform: uppercase;
-    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 5px #000; /* Black outline */
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 5px #000;
+    /* Black outline */
 }
 
 iframe {
@@ -43,6 +50,7 @@ iframe {
     from {
         opacity: 1;
     }
+
     to {
         opacity: 0;
     }
