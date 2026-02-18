@@ -386,10 +386,10 @@ class IPCHandlerManager {
       try {
         const path = require('path');
         const fs = require('fs-extra');
-        
+
         // Get folder name from path
         const folderName = path.basename(folderPath);
-        
+
         // Try to read files in folder to get metadata
         let files: string[] = [];
         try {
@@ -397,25 +397,25 @@ class IPCHandlerManager {
         } catch (error) {
           console.error('[service-order:loadSongMetadata] Error reading directory:', error);
         }
-        
+
         // Detect audio files to determine if this is a song folder
         const audioExtensions = ['.mp3', '.wav', '.m4a', '.flac', '.ogg', '.aac', '.wma'];
         const audioFiles = files.filter(file => {
           const ext = path.extname(file).toLowerCase();
           return audioExtensions.includes(ext);
         });
-        
+
         // Get full paths for audio files
         // Note: track_name is the filename - can be parsed for actual track name if needed
         const audioTracks = audioFiles.map(file => ({
           track_name: file,  // Currently filename, could be enhanced to parse actual track name
           file_path: path.join(folderPath, file)
         }));
-        
+
         // Determine folder type based on content
         const type = audioFiles.length > 0 ? 'song' : 'folder';
         const hasAudio = audioFiles.length > 0;
-        
+
         return {
           path: folderPath,
           name: folderName,
@@ -428,9 +428,9 @@ class IPCHandlerManager {
         };
       } catch (error) {
         console.error('[service-order:loadSongMetadata] Error:', error);
-        return { 
-          path: folderPath, 
-          name: folderPath.split(/[\\/]/).pop() || folderPath, 
+        return {
+          path: folderPath,
+          name: folderPath.split(/[\\/]/).pop() || folderPath,
           files: [],
           type: 'folder',
           hasAudio: false,
@@ -533,7 +533,7 @@ class IPCHandlerManager {
         }
 
         const services = await this.services.serviceOrderImporter.listImportedServices();
-        console.log(`[service-order:listImported] Found ${services.length} imported services:`, 
+        console.log(`[service-order:listImported] Found ${services.length} imported services:`,
           services.map((s: any) => ({ id: s.id, name: s.name, itemCount: s.items.length })));
         return {
           success: true,
@@ -658,7 +658,7 @@ class IPCHandlerManager {
         }
 
         console.log(`[service-order:load] Loaded service order: ${serviceOrder.name} with ${serviceOrder.items.length} items`);
-        
+
         // Send event to main window to populate the service order
         const mainWindow = this.services.mainWindow?.();
         if (mainWindow && !mainWindow.isDestroyed()) {
@@ -672,7 +672,7 @@ class IPCHandlerManager {
             }))
           });
         }
-        
+
         return {
           success: true,
           itemCount: serviceOrder.items.length,
@@ -1092,28 +1092,32 @@ class IPCHandlerManager {
   private registerSendHandlers(): void {
     this.ipcMain.handle('send:main', async (_event, channel: string, data: any) => {
       const win = this.services.mainWindow();
-      if (win) {
+      if (win && !win.isDestroyed()) {
         win.webContents.send(channel, data);
       }
     });
 
     this.ipcMain.handle('send:audience', async (_event, channel: string, data: any) => {
       const win = this.services.audienceWindow();
-      if (win) {
+      console.log(`[Main] send:audience called for channel: ${channel}`);
+      if (win && !win.isDestroyed()) {
+        console.log(`[Main] Sending to Audience Window (ID: ${win.id})`);
         win.webContents.send(channel, data);
+      } else {
+        console.warn(`[Main] Audience Window not found or destroyed! (win: ${!!win})`);
       }
     });
 
     this.ipcMain.handle('send:confidence', async (_event, channel: string, data: any) => {
       const win = this.services.confidenceWindow();
-      if (win) {
+      if (win && !win.isDestroyed()) {
         win.webContents.send(channel, data);
       }
     });
 
     this.ipcMain.handle('send:lowerThirds', async (_event, channel: string, data: any) => {
       const win = this.services.lowerThirdsWindow();
-      if (win) {
+      if (win && !win.isDestroyed()) {
         win.webContents.send(channel, data);
       }
     });
@@ -1123,6 +1127,30 @@ class IPCHandlerManager {
    * Audio Service handlers
    */
   private registerAudioServiceHandlers(): void {
+    this.ipcMain.handle('audio:readFile', async (_event, filePath: string) => {
+      try {
+        // Return buffer directly - Electron handles serialization
+        return await fs.readFile(filePath);
+      } catch (error) {
+        console.error('[audio:readFile] Error reading file:', filePath, error);
+        throw error;
+      }
+    });
+
+    this.ipcMain.handle('audio:getFiles', async (_event, folderPath: string) => {
+      try {
+        const files = await fs.readdir(folderPath);
+        const audioExtensions = ['.mp3', '.wav', '.ogg', '.m4a', '.flac', '.aac', '.wma'];
+        return files.filter(file => {
+          const ext = path.extname(file).toLowerCase();
+          return audioExtensions.includes(ext);
+        });
+      } catch (error) {
+        console.error('[audio:getFiles] Error reading directory:', folderPath, error);
+        return [];
+      }
+    });
+
     this.ipcMain.handle('audio:convertToOgg', async (_event, inputPath: string, outputDir: string) => {
       return await this.services.audioService.convertToOgg(inputPath, outputDir, (progress: any) => {
         const win = this.services.mainWindow();
@@ -1157,12 +1185,12 @@ class IPCHandlerManager {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
         });
-        
+
         if (!response.ok) {
           console.error('[audio:loadTracks] HTTP Error:', response.status, response.statusText);
           return { error: `HTTP ${response.status}: ${response.statusText}` };
         }
-        
+
         const data = await response.json();
         const normalized = this.normalizeTrackPayload(data);
         console.log('[audio:loadTracks] Response:', normalized);
@@ -1180,12 +1208,12 @@ class IPCHandlerManager {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
         });
-        
+
         if (!response.ok) {
           console.error('[audio:loadTrack] HTTP Error:', response.status, response.statusText);
           return { error: `HTTP ${response.status}: ${response.statusText}` };
         }
-        
+
         const data = await response.json();
         console.log('[audio:loadTrack] Response:', data);
         return data;
@@ -1200,19 +1228,19 @@ class IPCHandlerManager {
         await fetch('http://127.0.0.1:3001/api/tracks/clear', { method: 'POST' });
         console.log('[audio:loadMultipleTracks] Loading', filePaths.length, 'tracks');
         const results = [];
-        
+
         for (const filePath of filePaths) {
           try {
             // Convert Windows backslashes to forward slashes
             const normalizedPath = filePath.replace(/\\/g, '/');
             console.log('[audio:loadMultipleTracks] Loading:', normalizedPath);
-            
+
             const response = await fetch('http://127.0.0.1:3001/api/tracks/load', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ filePath: normalizedPath, songPath: normalizedPath }),
             });
-            
+
             if (response.ok) {
               const data = await response.json();
               results.push({ filePath, success: true, data });
@@ -1227,7 +1255,7 @@ class IPCHandlerManager {
             console.error('[audio:loadMultipleTracks] Error loading', filePath, ':', error);
           }
         }
-        
+
         console.log('[audio:loadMultipleTracks] Complete - loaded', results.filter(r => r.success).length, 'of', filePaths.length);
         return { total: filePaths.length, loaded: results.filter(r => r.success).length, results };
       } catch (error) {
@@ -1254,12 +1282,12 @@ class IPCHandlerManager {
       try {
         console.log('[audio:play] Sending play request to audio service...');
         const response = await fetch('http://127.0.0.1:3001/api/mixer/play-all', { method: 'POST' });
-        
+
         if (!response.ok) {
           console.error('[audio:play] HTTP Error:', response.status, response.statusText);
           return;
         }
-        
+
         const data = await response.json();
         console.log('[audio:play] Response:', data);
       } catch (error) {
@@ -1311,15 +1339,15 @@ class IPCHandlerManager {
     this.ipcMain.handle('audio:preloadAllTracks', async (_event) => {
       try {
         console.log('[audio:preloadAllTracks] Preloading all tracks...');
-        const response = await fetch('http://127.0.0.1:3001/api/tracks/preload-all', { 
-          method: 'POST' 
+        const response = await fetch('http://127.0.0.1:3001/api/tracks/preload-all', {
+          method: 'POST'
         });
-        
+
         if (!response.ok) {
           console.error('[audio:preloadAllTracks] HTTP Error:', response.status, response.statusText);
           return { success: false, error: `HTTP ${response.status}` };
         }
-        
+
         const data = await response.json();
         console.log('[audio:preloadAllTracks] Response:', data);
         return data;
@@ -1332,15 +1360,15 @@ class IPCHandlerManager {
     this.ipcMain.handle('audio:preloadTrack', async (_event, trackId: string) => {
       try {
         console.log('[audio:preloadTrack] Preloading track:', trackId);
-        const response = await fetch(`http://127.0.0.1:3001/api/tracks/${trackId}/preload`, { 
-          method: 'POST' 
+        const response = await fetch(`http://127.0.0.1:3001/api/tracks/${trackId}/preload`, {
+          method: 'POST'
         });
-        
+
         if (!response.ok) {
           console.error('[audio:preloadTrack] HTTP Error:', response.status, response.statusText);
           return { success: false, error: `HTTP ${response.status}` };
         }
-        
+
         const data = await response.json();
         console.log('[audio:preloadTrack] Response:', data);
         return data;
@@ -1485,8 +1513,8 @@ class IPCHandlerManager {
    * Display Service handlers
    */
   private registerDisplayServiceHandlers(): void {
-    this.ipcMain.handle('display:videoSlide', async (_event, path: string, duration?: number) => {
-      return await this.services.displayService.displayVideoSlide(path, duration);
+    this.ipcMain.handle('display:videoSlide', async (_event, path: string, duration?: number, loop?: boolean) => {
+      return await this.services.displayService.displayVideoSlide(path, duration, loop);
     });
 
     this.ipcMain.handle('display:slide', async (_event, content: any) => {
@@ -1568,8 +1596,8 @@ class IPCHandlerManager {
         windowName === 'audience'
           ? this.services.audienceWindow
           : windowName === 'confidence'
-          ? this.services.confidenceWindow
-          : this.services.lowerThirdsWindow;
+            ? this.services.confidenceWindow
+            : this.services.lowerThirdsWindow;
       return await this.services.windowService.toggleWindow(getWindow);
     });
 
@@ -1578,8 +1606,8 @@ class IPCHandlerManager {
         windowName === 'audience'
           ? this.services.audienceWindow
           : windowName === 'confidence'
-          ? this.services.confidenceWindow
-          : this.services.lowerThirdsWindow;
+            ? this.services.confidenceWindow
+            : this.services.lowerThirdsWindow;
       return await this.services.windowService.setAlwaysOnTop(getWindow, alwaysOnTop);
     });
 
@@ -1773,7 +1801,7 @@ class IPCHandlerManager {
         // Check if folder exists
         const fs = require('fs-extra');
         const path = require('path');
-        
+
         if (!(await fs.pathExists(folderPath))) {
           console.warn('[ipc-handlers] Folder does not exist:', folderPath);
           return { slides: [], tracks: [] };
@@ -1797,7 +1825,7 @@ class IPCHandlerManager {
         for (const file of files) {
           const lower = file.toLowerCase();
           const fullPath = path.join(folderPath, file);
-          
+
           if (imageExts.some(ext => lower.endsWith(ext))) {
             imageFiles.push(fullPath);
           } else if (videoExts.some(ext => lower.endsWith(ext))) {

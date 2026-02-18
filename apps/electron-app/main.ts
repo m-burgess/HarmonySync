@@ -184,7 +184,7 @@ class ElectronApplication {
   private lowerThirdsWindow: BrowserWindow | null = null;
   private displayServiceInstance: any = null;
   private windowServiceInstance: any = null;
-  private serviceManager: ServiceProcessManager;  private serviceOrderManagerReady: boolean = false;
+  private serviceManager: ServiceProcessManager; private serviceOrderManagerReady: boolean = false;
   private pendingServiceOrderItems: any[] | null = null;
   constructor() {
     this.serviceManager = new ServiceProcessManager();
@@ -204,7 +204,7 @@ class ElectronApplication {
       ipcMain.on('service-order-manager-ready', () => {
         console.log('[Application] Service order manager is ready');
         this.serviceOrderManagerReady = true;
-        
+
         // If we have pending items, send them now
         if (this.pendingServiceOrderItems && this.mainWindow && !this.mainWindow.isDestroyed()) {
           console.log('[Application] Sending pending service order items:', this.pendingServiceOrderItems.length);
@@ -433,9 +433,9 @@ class ElectronApplication {
    */
   private createAudienceWindow(): void {
     this.audienceWindow = this.createSecondaryWindow({
-      width: 1920,
-      height: 1080,
-      frame: false,
+      width: 960,
+      height: 540,
+      frame: true,
       show: false,
     });
 
@@ -447,9 +447,9 @@ class ElectronApplication {
    */
   private createConfidenceWindow(): void {
     this.confidenceWindow = this.createSecondaryWindow({
-      width: 1920,
-      height: 1080,
-      frame: false,
+      width: 960,
+      height: 540,
+      frame: true,
       show: false,
     });
 
@@ -465,9 +465,9 @@ class ElectronApplication {
    */
   private createLowerThirdsWindow(): void {
     this.lowerThirdsWindow = this.createSecondaryWindow({
-      width: 1920,
-      height: 1080,
-      frame: false,
+      width: 960,
+      height: 540,
+      frame: true,
       transparent: true,
       alwaysOnTop: true,
       show: false,
@@ -546,7 +546,7 @@ class ElectronApplication {
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       const settings = await appSettingsService.getServiceOrderSettings();
-      
+
       if (!settings?.autoImportOnStartup || !settings?.watchFolder) {
         console.log('[Application] Auto-load disabled or no watch folder configured');
         return;
@@ -558,7 +558,7 @@ class ElectronApplication {
       const fs = require('fs-extra');
       const entries = await fs.readdir(settings.watchFolder, { withFileTypes: true });
       const serviceFolder = entries.find((entry: any) => entry.isDirectory());
-      
+
       if (!serviceFolder) {
         console.log('[Application] No service order folders found');
         return;
@@ -566,11 +566,11 @@ class ElectronApplication {
 
       const folderPath = require('path').join(settings.watchFolder, serviceFolder.name);
       console.log(`[Application] Found service order folder: ${serviceFolder.name}`);
-      
+
       try {
         // Parse the service order items directly from the folder
         const items = await serviceOrderImporter.parseItems(folderPath);
-        
+
         if (items.length > 0) {
           const itemsToSend = items.map((item: any) => ({
             id: item.id,
@@ -639,13 +639,13 @@ class ElectronApplication {
   public async shutdown(): Promise<void> {
     console.log('[Application] Shutting down services...');
     await this.serviceManager.stopAllServices();
-    
+
     try {
       await httpServer.stop();
     } catch (error) {
       console.error('[Application] Error stopping HTTP server:', error);
     }
-    
+
     try {
       await remoteControlService.stop();
     } catch (error) {

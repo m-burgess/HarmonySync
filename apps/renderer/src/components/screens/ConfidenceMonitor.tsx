@@ -47,37 +47,29 @@ const ConfidenceMonitor = () => {
 
   // Event listeners for slide display
   useEffect(() => {
-    const unlistenDisplay = event.listen('display-confidence-slide', async (e: any) => {
-      console.log('Confidence: display-confidence-slide event received:', e.payload);
+    const unlistenLyrics = event.listen('display-confidence-lyrics', (e: any) => {
+      console.log('Confidence: display-confidence-lyrics event received:', e.payload);
       const { current, next } = e.payload;
-      
-      // Handle smooth transition for current slide if it's lyrics or image
-      if (current && confidenceDisplayRef.current) {
-        if (current.type === 'lyrics') {
-          const content: LyricsContent = { type: 'lyrics', text: (current as any).text || [] };
-          await lyricTransitionManager.transitionTo(content as any, confidenceDisplayRef.current);
-        } else if (current.type === 'image') {
-          const content: ImageContent = { type: 'image', path: (current as any).path, name: (current as any).name };
-          await lyricTransitionManager.transitionTo(content as any, confidenceDisplayRef.current);
-        }
-      }
-      
-      setCurrentSlide(current);
-      setNextSlide(next);
-      setIsImageDisplay(current && current.type === 'image');
-      if (current && current.type !== 'video') {
-        setVideoCountdown(null);
-      }
+
+      // Update state directly with simple content
+      // current and next are string[]
+      const currentContent: LyricsContent = { type: 'lyrics', text: current || [] };
+      const nextContent: LyricsContent = { type: 'lyrics', text: next || [] };
+
+      setCurrentSlide(currentContent);
+      setNextSlide(nextContent);
+      setIsImageDisplay(false);
+      setVideoCountdown(null);
     });
 
     const unlistenClear = event.listen('clear-confidence-display', async () => {
       console.log('Confidence: clear-confidence-display event received');
-      
+
       // Smooth transition to clear confidence display
       if (confidenceDisplayRef.current) {
         await lyricTransitionManager.clear(confidenceDisplayRef.current);
       }
-      
+
       setCurrentSlide(null);
       setNextSlide(null);
       setIsImageDisplay(false);
@@ -125,7 +117,7 @@ const ConfidenceMonitor = () => {
     });
 
     return () => {
-      unlistenDisplay();
+      unlistenLyrics();
       unlistenClear();
       unlistenVideoProgress();
       unlistenTimerStart();
@@ -142,19 +134,19 @@ const ConfidenceMonitor = () => {
   // Calculate timer display values
   const getTimerDisplay = () => {
     if (!timer.active || timer.total === 0) return null;
-    
+
     const remaining = Math.max(0, timer.total - timer.elapsed);
     const minutes = Math.floor(remaining / 60);
     const seconds = (remaining % 60).toString().padStart(2, '0');
     const percentage = (timer.elapsed / timer.total) * 100;
-    
+
     let colorClass = '';
     if (percentage >= 90) {
       colorClass = 'timer-critical';
     } else if (percentage >= 75) {
       colorClass = 'timer-warning';
     }
-    
+
     return { time: `${minutes}:${seconds}`, colorClass };
   };
 
@@ -170,39 +162,62 @@ const ConfidenceMonitor = () => {
       {/* Main Content Area - Black Background, Single Column */}
       <div className="monitor-main-content">
         {/* Lyrics Mode: Display current and next lyrics */}
-        {isLyricsMode && (
-          <div className="lyrics-display">
-            <div 
-              className="current-lyrics"
-              ref={confidenceDisplayRef}
-              style={{
-                transition: 'opacity 200ms ease-in-out',
-              }}
-            />
-            {nextSlide && nextSlide.type === 'lyrics' && (
-              <div className="next-lyrics">
-                <h4>NEXT:</h4>
-                <div className="next-lyrics-text">
-                  {Array.isArray((nextSlide as LyricsContent).text) && (nextSlide as LyricsContent).text
-                    .slice(0, 2)
-                    .map((line: string, index: number) => (
-                      <div key={index}>{line}</div>
-                    ))}
-                </div>
+        {/* Always render lyrics container but toggle visibility to preserve transitions */}
+        <div
+          className="lyrics-display"
+          style={{
+            display: isLyricsMode ? 'flex' : 'none',
+            flexDirection: 'column',
+            height: '100%'
+          }}
+        >
+          <div className="current-lyrics" ref={confidenceDisplayRef}>
+            {isLyricsMode && currentSlide && (currentSlide as any).text && (
+              <div className="lyrics-content" style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '100%',
+                height: '100%'
+              }}>
+                {Array.isArray((currentSlide as any).text) && (currentSlide as any).text.map((line: string, i: number) => (
+                  <div key={i} className="lyric-line" style={{
+                    fontSize: 'min(5vw, 8vh)', // Slightly smaller than audience
+                    fontWeight: 'bold',
+                    margin: '0.2em 0',
+                    textAlign: 'center',
+                    color: '#ffff00' // Yellow for high visibility
+                  }}>
+                    {line}
+                  </div>
+                ))}
               </div>
             )}
           </div>
-        )}
+          {nextSlide && nextSlide.type === 'lyrics' && (
+            <div className="next-lyrics">
+              <h4>NEXT:</h4>
+              <div className="next-lyrics-text">
+                {Array.isArray((nextSlide as LyricsContent).text) && (nextSlide as LyricsContent).text
+                  .slice(0, 2)
+                  .map((line: string, index: number) => (
+                    <div key={index}>{line}</div>
+                  ))}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Image Mode: Display full image */}
-        {isImageDisplay && !isLyricsMode && (
-          <div 
-            className="image-display"
-            ref={confidenceDisplayRef}
-            style={{
-              transition: 'opacity 200ms ease-in-out',
-            }}
-          />
+        {isImageDisplay && !isLyricsMode && currentSlide && (currentSlide as any).path && (
+          <div className="image-display" ref={confidenceDisplayRef}>
+            <img
+              src={(currentSlide as any).path}
+              alt={(currentSlide as any).name}
+              style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+            />
+          </div>
         )}
 
         {/* Video Mode: Display countdown large in center */}
@@ -214,12 +229,7 @@ const ConfidenceMonitor = () => {
 
         {/* Default/Empty State */}
         {!isLyricsMode && !isImageDisplay && !isVideoMode && (
-          <div 
-            ref={confidenceDisplayRef}
-            style={{
-              transition: 'opacity 200ms ease-in-out',
-            }}
-          />
+          <div ref={confidenceDisplayRef} />
         )}
       </div>
 

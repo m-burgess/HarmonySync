@@ -1,11 +1,9 @@
-// Export the Node.js audio service (lightweight, ~67MB memory usage)
-export * from './audio-nodejs';
-export * from './nodejs-audio-client';
-export * from './song-transition';
+// Audio utilities barrel export
+// Legacy audio-nodejs and nodejs-audio-client have been removed
+// Audio playback is now handled by RemoteAudioMixer -> Go Engine
 
 // Keep cache utilities
 export * from './cache';
-// export * from './streaming-audio'; // Web Audio API streaming
 
 // Re-export the generated typed audio API client for convenient imports
 export * as audioApi from '../api';

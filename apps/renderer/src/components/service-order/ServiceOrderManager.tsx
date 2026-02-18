@@ -1,12 +1,3 @@
-/**
- * ServiceOrderManager - MVVM Refactored View Component
- * 
- * This component is refactored to use MVVM architecture:
- * - All business logic moved to ServiceOrderViewModel
- * - Component wrapped with observer() to react to ViewModel changes
- * - No useState/useEffect for business state
- * - Pure presentation logic only (~130 lines vs original 735 lines)
- */
 import React, { useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
 import { runInAction } from 'mobx';
@@ -15,7 +6,6 @@ import { ArrowDownTrayIcon, CheckCircleIcon, PencilIcon } from '@heroicons/react
 import Button from '../ui/Button.tsx';
 import { VSCodeInput } from '../VSCodeUI.tsx';
 import LyricsFetcher from './LyricsFetcher';
-import { onPlaybackComplete, offPlaybackComplete, setCrossfadeDuration } from '../../utils/audio';
 
 // Type definitions
 interface ServiceOrderItem {
@@ -53,6 +43,7 @@ interface ServiceOrderViewModel {
   toggleAutoplay: () => void;
   addFolders: () => Promise<void>;
   isSongPreloaded: (item: ServiceOrderItem) => boolean;
+  isSongPreloading: (item: ServiceOrderItem) => boolean;
   openLyricsFetcher: (item: ServiceOrderItem) => void;
   editLyrics: (item: ServiceOrderItem) => void;
   preloadSong: (item: ServiceOrderItem) => void;
@@ -66,10 +57,10 @@ interface ServiceOrderManagerProps {
   setCurrentLyrics: (lyrics: string | null) => void;
 }
 
-const ServiceOrderManager: React.FC<ServiceOrderManagerProps> = observer(({ 
-  setAllSlides, 
-  setAllTracks, 
-  setCurrentLyrics 
+const ServiceOrderManager: React.FC<ServiceOrderManagerProps> = observer(({
+  setAllSlides,
+  setAllTracks,
+  setCurrentLyrics
 }) => {
   const viewModel = getViewModel('serviceOrderViewModel') as ServiceOrderViewModel;
 
@@ -85,9 +76,10 @@ const ServiceOrderManager: React.FC<ServiceOrderManagerProps> = observer(({
       viewModel.handlePlaybackComplete();
     };
 
-    onPlaybackComplete(handlePlaybackComplete);
+    // Listen for playback complete events via custom DOM events
+    window.addEventListener('playbackComplete', handlePlaybackComplete);
     return () => {
-      offPlaybackComplete(handlePlaybackComplete);
+      window.removeEventListener('playbackComplete', handlePlaybackComplete);
     };
   }, [viewModel]);
 
@@ -106,7 +98,7 @@ const ServiceOrderManager: React.FC<ServiceOrderManagerProps> = observer(({
   // Listen for service order loaded events (from imported services)
   useEffect(() => {
     console.log('[ServiceOrderManager] Setting up service order loaded listener...');
-    
+
     const handleServiceOrderLoaded = (event: any, data: { serviceOrder: ServiceOrderItem[] }) => {
       console.log('[ServiceOrderManager] Service order loaded event received!', data.serviceOrder);
       // Use runInAction to properly update MobX observable
@@ -118,7 +110,7 @@ const ServiceOrderManager: React.FC<ServiceOrderManagerProps> = observer(({
 
     const cleanup = (window as any).electronAPI?.onServiceOrderLoaded?.(handleServiceOrderLoaded);
     console.log('[ServiceOrderManager] Listener registered:', !!cleanup);
-    
+
     return () => {
       console.log('[ServiceOrderManager] Cleaning up listener');
       cleanup?.();
@@ -137,15 +129,10 @@ const ServiceOrderManager: React.FC<ServiceOrderManagerProps> = observer(({
     }
   };
 
-  // Handle crossfade duration change
+  // Handle crossfade duration change (set via ViewModel which talks to Go engine)
   const handleCrossfadeDurationChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const duration = parseInt(e.target.value);
     viewModel.setCrossfadeDuration(duration);
-    try {
-      await setCrossfadeDuration(duration);
-    } catch (error) {
-      console.error('Failed to set crossfade duration:', error);
-    }
   };
 
   return (
@@ -211,10 +198,10 @@ const ServiceOrderManager: React.FC<ServiceOrderManagerProps> = observer(({
           const isPreloaded = viewModel.isSongPreloaded(item);
           const isCurrentSong = viewModel.currentSongIndex === index;
           const isLoading = viewModel.loadingProgress > 0 && viewModel.loadingProgress < 100 && viewModel.loadingMessage.includes(item.name);
-          
+
           return (
-            <li 
-              key={item.id || `fallback-${index}`} 
+            <li
+              key={item.id || `fallback-${index}`}
               className={`service-order-item ${isLoading ? 'loading' : ''}`}
               onClick={() => handleServiceOrderItemClickWithIndex(item, index)}
             >
@@ -227,7 +214,7 @@ const ServiceOrderManager: React.FC<ServiceOrderManagerProps> = observer(({
                     {/* Fetch Lyrics Button */}
                     {!item.lyrics && (
                       <Button
-                        onClick={(e) => { 
+                        onClick={(e) => {
                           e.stopPropagation();
                           viewModel.openLyricsFetcher(item);
                         }}
@@ -238,12 +225,12 @@ const ServiceOrderManager: React.FC<ServiceOrderManagerProps> = observer(({
                       >
                       </Button>
                     )}
-                    
+
                     {/* Edit Lyrics Button */}
                     {item.lyrics && (
                       <Button
-                        onClick={(e) => { 
-                          e.stopPropagation(); 
+                        onClick={(e) => {
+                          e.stopPropagation();
                           viewModel.editLyrics(item);
                         }}
                         title="Edit lyrics"
@@ -253,25 +240,35 @@ const ServiceOrderManager: React.FC<ServiceOrderManagerProps> = observer(({
                       >
                       </Button>
                     )}
-                    
-                    {/* Preload Button - Only for songs */}
+
+                    {/* Song Preload Status Indicator */}
                     {item.type === 'song' && (
-                    <Button
-                      onClick={(e) => { 
-                        e.stopPropagation(); 
-                        viewModel.preloadSong(item);
-                      }}
-                      title={isPreloaded ? "Song is preloaded and ready" : "Preload song"}
-                      variant={isPreloaded ? 'success' : 'secondary'}
-                      size="small"
-                      icon={isPreloaded ? <CheckCircleIcon className="w-4 h-4" /> : <ArrowDownTrayIcon className="w-4 h-4" />}
-                    >
-                      {isPreloaded ? (
-                        <span>Ready</span>
-                      ) : (
-                        <span>Preload</span>
-                      )}
-                    </Button>
+                      <span
+                        title={
+                          isPreloaded
+                            ? 'Song is preloaded and ready'
+                            : viewModel.isSongPreloading(item)
+                              ? 'Loading into memory...'
+                              : ''
+                        }
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          padding: '2px 6px',
+                          fontSize: '0.75rem',
+                          color: isPreloaded ? '#22c55e' : 'var(--text-secondary)',
+                          opacity: isPreloaded || viewModel.isSongPreloading(item) ? 1 : 0,
+                          transition: 'opacity 0.3s ease',
+                        }}
+                      >
+                        {isPreloaded ? (
+                          <CheckCircleIcon className="w-4 h-4" />
+                        ) : viewModel.isSongPreloading(item) ? (
+                          <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="12" cy="12" r="10" strokeDasharray="31.4 31.4" strokeLinecap="round" />
+                          </svg>
+                        ) : null}
+                      </span>
                     )}
                   </div>
                 )}
@@ -280,7 +277,7 @@ const ServiceOrderManager: React.FC<ServiceOrderManagerProps> = observer(({
           );
         })}
       </ul>
-      
+
       {/* Lyrics Fetcher Modal (disabled) */}
     </div>
   );

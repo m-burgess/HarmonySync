@@ -2,16 +2,16 @@
   "compilerOptions": {
     /* Language and Environment */
     "target": "ES2020",
-    "lib": ["ES2020"],
+    "lib": [
+      "ES2020"
+    ],
     "module": "commonjs",
     "downlevelIteration": true,
-    
     /* Module Resolution */
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    
     /* Type Checking */
     "strict": true,
     "noImplicitAny": true,
@@ -25,7 +25,6 @@
     "noUnusedParameters": false,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
-    
     /* Emit */
     "outDir": "./dist",
     "rootDir": "./",
@@ -33,7 +32,6 @@
     "declarationMap": true,
     "sourceMap": true,
     "removeComments": false,
-    
     /* Interop Constraints */
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
@@ -41,12 +39,8 @@
   "include": [
     "server.ts",
     "audioMixer.ts",
+    "goEngineAdapter.ts",
     "audioTrack.ts",
-    "ffmpegMixer.ts",
-    "smoke-test.ts",
-    "test-integration.ts",
-    "test-preload.ts",
-    "test-load.ts",
     "node-wav.d.ts"
   ],
   "exclude": [

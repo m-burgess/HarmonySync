@@ -38,6 +38,11 @@ interface IAudioService {
   cleanup(): Promise<void>;
   loadTracks(folderPath: string): Promise<{ tracks?: AudioTrackInfo[] }>;
   preloadAllTracks(): Promise<void>;
+  // Multi-song preloading
+  preloadSong(songId: string, folderPath: string, trackFiles: string[]): Promise<void>;
+  switchSong(songId: string): void;
+  isSongPreloaded(songId: string): boolean;
+  clearSong(songId: string): void;
 }
 
 interface IDisplayService {
@@ -65,7 +70,6 @@ interface ServiceItem {
   audioFileCount?: number;
   files?: string[];
 }
-}
 
 export class ServiceOrderViewModel extends BaseViewModel implements Partial<IServiceOrderViewModel> {
   protected readonly viewModelName = 'ServiceOrderViewModel';
@@ -77,11 +81,12 @@ export class ServiceOrderViewModel extends BaseViewModel implements Partial<ISer
   public currentLoadedFolder: string | null = null;
   public autoplayEnabled: boolean = false;
   public preloadedSongs: Set<string> = new Set();
+  public preloadingSongs: Set<string> = new Set();
   public isLoading: boolean = false;
   public loadingProgress: number = 0;
   public loadingMessage: string = '';
   public error: string | null = null;
-  public selectedSongForLyrics: string | null = null;
+  public selectedSongForLyrics: ServiceItem | null = null;
   public currentBackgroundCssContent: string = '';
   public isFirstLoad: boolean = true;
   public crossfadeDuration: number = 3000; // 3 seconds default
@@ -113,6 +118,7 @@ export class ServiceOrderViewModel extends BaseViewModel implements Partial<ISer
       currentLoadedFolder: observable,
       autoplayEnabled: observable,
       preloadedSongs: observable,
+      preloadingSongs: observable,
       isLoading: observable,
       loadingProgress: observable,
       loadingMessage: observable,
@@ -185,6 +191,11 @@ export class ServiceOrderViewModel extends BaseViewModel implements Partial<ISer
     return this.preloadedSongs.has(item.id || item.path);
   }
 
+  // Check if a song is currently being preloaded
+  public isSongPreloading(item: ServiceItem): boolean {
+    return this.preloadingSongs.has(item.id || item.path);
+  }
+
   // Actions: Add folders to service order
   public async addFolders(): Promise<void> {
     this.isLoading = true;
@@ -221,7 +232,7 @@ export class ServiceOrderViewModel extends BaseViewModel implements Partial<ISer
         // Auto-preload if it's a song folder with audio files
         if (item.type === 'song' && item.hasAudio) {
           this.log(`[addFolders] Auto-preloading detected song folder: ${item.name}`);
-          
+
           // Trigger preload asynchronously (don't wait for completion)
           this.preloadSong(item).catch(error => {
             this.logError(`[addFolders] Auto-preload failed for ${item.name}:`, error);
@@ -276,16 +287,47 @@ export class ServiceOrderViewModel extends BaseViewModel implements Partial<ISer
     });
 
     try {
-      // Determine if we should use crossfade
-      // NOTE: Crossfade is not reliably implemented yet, so always do a clean stop/cleanup.
-      const shouldUseCrossfade = false;
+      const songId = item.id || item.path;
 
-      if (!shouldUseCrossfade) {
-        // First load or no previous tracks - clear everything
-        await this.audioService.stop();
-        await this.audioService.cleanup();
-        this.log('🧹 Tracks cleared, proceeding with fresh load');
+      // If this song is already preloaded in the Go engine, instant-switch!
+      if (item.type === 'song' && this.audioService.isSongPreloaded(songId)) {
+        this.log(`⚡ Song "${item.name}" is preloaded — instant switch`);
+        this.audioService.switchSong(songId);
+
+        // Clear displays and load slides
+        await this.displayService.clearAll();
+        const result = await this.slideService.loadFromFolder(item.path);
+        const allSlides = (result.slides || []) as Array<{ type?: string; path?: string; duration?: number }>;
+        const videoSlides = allSlides.filter(slide => slide?.type === 'video');
+
+        this.log(`[loadItem-Preloaded] Loaded ${allSlides.length} slides total. Video slides found: ${videoSlides.length}`);
+
+        if (videoSlides.length > 0 && videoSlides[0]?.path) {
+          this.log(`[loadItem-Preloaded] Attempting to auto-play background video: ${videoSlides[0].path}`);
+          await this.displayService.displayVideoSlide(videoSlides[0].path, videoSlides[0].duration);
+        } else {
+          this.log('[loadItem-Preloaded] No video slides found.');
+        }
+
+        runInAction(() => {
+          this.isLoading = false;
+          this.isFirstLoad = false;
+          this.loadingMessage = '';
+          this.loadingProgress = 100;
+        });
+
+        // Load lyrics
+        const lyrics = await this.serviceOrderService.loadLyrics(item.path);
+        runInAction(() => { item.lyrics = lyrics || undefined; });
+
+        return { slides: item.type === 'song' ? [] : allSlides, tracks: result.tracks || [] };
       }
+
+      // Not preloaded — full load path (legacy fallback)
+      this.log(`⏳ Song "${item.name}" not preloaded — full load`);
+      await this.audioService.stop();
+      await this.audioService.cleanup();
+      this.log('🧹 Tracks cleared, proceeding with fresh load');
 
       // Clear displays
       await this.displayService.clearAll();
@@ -298,11 +340,21 @@ export class ServiceOrderViewModel extends BaseViewModel implements Partial<ISer
       const allSlides = (result.slides || []) as Array<{ type?: string; path?: string; duration?: number }>;
       const videoSlides = allSlides.filter(slide => slide?.type === 'video');
 
+      this.log(`[loadItem] Loaded ${allSlides.length} slides total. Video slides found: ${videoSlides.length}`);
+      if (videoSlides.length > 0) {
+        this.log(`[loadItem] First video slide: ${JSON.stringify(videoSlides[0])}`);
+      }
+
       if (item.type === 'song' && videoSlides.length > 0) {
         const firstVideo = videoSlides[0];
         if (firstVideo?.path) {
+          this.log(`[loadItem] Attempting to auto-play background video: ${firstVideo.path}`);
           await this.displayService.displayVideoSlide(firstVideo.path, firstVideo.duration);
+        } else {
+          this.logWarn('[loadItem] Video slide found but path is missing');
         }
+      } else if (item.type === 'song') {
+        this.log('[loadItem] No video slides found for this song.');
       }
 
       runInAction(() => {
@@ -317,7 +369,6 @@ export class ServiceOrderViewModel extends BaseViewModel implements Partial<ISer
         const lyrics = await this.serviceOrderService.loadLyrics(item.path);
         runInAction(() => {
           item.lyrics = lyrics || undefined;
-          this.selectedSongForLyrics = lyrics || null;
         });
         this.log('📜 Loaded lyrics for song:', item.name);
       } else {
@@ -342,66 +393,63 @@ export class ServiceOrderViewModel extends BaseViewModel implements Partial<ISer
     }
   }
 
-  // Actions: Preload a song
+  // Actions: Preload a song into the Go engine (background, non-blocking)
   public async preloadSong(item: ServiceItem): Promise<void> {
     if (!item || item.type !== 'song') {
       this.logWarn('Preload called for non-song item:', item);
       return;
     }
 
+    const songId = item.id || item.path;
+
+    // Already preloaded?
+    if (this.preloadedSongs.has(songId)) {
+      this.log(`⚡ ${item.name} already preloaded — skipping`);
+      return;
+    }
+
     runInAction(() => {
+      this.preloadingSongs.add(songId);
       this.loadingMessage = `Preloading ${item.name}...`;
       this.loadingProgress = 0;
     });
 
     try {
-      const tracks = item.tracks || [];
-      if (tracks.length === 0) {
-        this.logWarn('No tracks to preload for:', item);
+      // Collect audio file paths from the item
+      const trackFiles = (item.tracks || []).map(t => t.file_path);
+      if (trackFiles.length === 0 && item.files) {
+        // Fallback: use the files array if tracks haven't been populated
+        const audioExtensions = ['.mp3', '.wav', '.ogg', '.flac', '.m4a'];
+        trackFiles.push(...item.files.filter(f => audioExtensions.some(ext => f.toLowerCase().endsWith(ext))));
+      }
+
+      if (trackFiles.length === 0) {
+        this.logWarn('No audio files to preload for:', item.name);
         runInAction(() => {
-          this.loadingMessage = `No tracks found for ${item.name}`;
+          this.loadingMessage = `No audio files found for ${item.name}`;
         });
-        setTimeout(() => {
-          runInAction(() => {
-            this.loadingMessage = '';
-            this.loadingProgress = 0;
-          });
-        }, 1500);
+        setTimeout(() => runInAction(() => { this.loadingMessage = ''; this.loadingProgress = 0; }), 1500);
         return;
       }
 
-      // Load tracks in audio service
-      this.log(`[preloadSong] Loading ${tracks.length} tracks from ${item.path}`);
-      
-      try {
-        // Load tracks into audio service
-        await this.audioService.loadTracks(item.path);
-        
-        runInAction(() => {
-          this.loadingProgress = 50;
-          this.loadingMessage = `Loading tracks for ${item.name}...`;
-        });
-        
-        // Trigger preload of all tracks
-        await this.audioService.preloadAllTracks();
-        
-        runInAction(() => {
-          this.loadingProgress = 100;
-          this.loadingMessage = `✓ ${item.name} ready (${tracks.length} tracks preloaded)`;
-          this.preloadedSongs.add(item.id || item.path);
-        });
-        
-        this.log(`[preloadSong] Successfully preloaded ${tracks.length} tracks for ${item.name}`);
-      } catch (error) {
-        this.logError('[preloadSong] Error loading/preloading tracks:', error);
-        runInAction(() => {
-          this.loadingMessage = `Preload failed for ${item.name}`;
-        });
-      }
-    } catch (error) {
-      this.logError('Error preloading song:', error);
+      this.log(`🔄 Preloading ${trackFiles.length} tracks for "${item.name}" → Go engine`);
+
+      // Send to backend for Go engine preloading
+      await this.audioService.preloadSong(songId, item.path, trackFiles);
+
       runInAction(() => {
-        this.loadingMessage = 'Error during preload';
+        this.loadingProgress = 100;
+        this.loadingMessage = `✓ ${item.name} ready (${trackFiles.length} tracks preloaded)`;
+        this.preloadedSongs.add(songId);
+        this.preloadingSongs.delete(songId);
+      });
+
+      this.log(`✅ Preloaded ${item.name} (${trackFiles.length} tracks buffered in Go engine)`);
+    } catch (error) {
+      this.logError(`Preload failed for ${item.name}:`, error);
+      runInAction(() => {
+        this.loadingMessage = `Preload failed for ${item.name}`;
+        this.preloadingSongs.delete(songId);
       });
     }
 
@@ -516,7 +564,7 @@ export class ServiceOrderViewModel extends BaseViewModel implements Partial<ISer
       runInAction(() => {
         const index = this.serviceOrder.findIndex(si => si.id === item.id);
         if (index !== -1) {
-          this.serviceOrder[index] = { ...this.serviceOrder[index], lyrics };
+          this.serviceOrder[index] = { ...this.serviceOrder[index], lyrics: lyrics ?? undefined };
         }
         this.selectedSongForLyrics = null;
       });
@@ -567,8 +615,8 @@ export class ServiceOrderViewModel extends BaseViewModel implements Partial<ISer
   }
 
   // Direct state setter for App.jsx compatibility (to be phased out)
-  public setSelectedSongForLyrics(lyrics: string | null): void {
-    this.selectedSongForLyrics = lyrics;
+  public setSelectedSongForLyrics(item: ServiceItem | null): void {
+    this.selectedSongForLyrics = item;
   }
 
   // Interface methods implementation

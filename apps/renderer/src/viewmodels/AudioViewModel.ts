@@ -22,7 +22,6 @@ import { BaseViewModel } from '../base/BaseViewModel';
 import type { IAudioViewModel } from '../types/viewmodels';
 import type { IAudioService } from '../types/services';
 import type { AudioTrack, MemoryUsage, TransposeProgress, MixerConfig } from '../types';
-import { initializeAudioService } from '../utils/audio/audio-nodejs';
 
 export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
   protected readonly viewModelName = 'AudioViewModel';
@@ -213,8 +212,8 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
     try {
       const response = await this.audioService.loadTracks(folderPath);
       // Handle both array response and {tracks: []} object response
-      const tracksArray: AudioTrack[] = Array.isArray(response) 
-        ? response 
+      const tracksArray: AudioTrack[] = Array.isArray(response)
+        ? response
         : ((response as any)?.tracks || []);
 
       runInAction(() => {
@@ -297,27 +296,8 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
   // Actions: Playback controls
   public async play(): Promise<void> {
     try {
-      // Trigger playback on the service
+      // Trigger playback on the service (goes through Go engine)
       await this.audioService.play();
-
-      // Wait for backend readiness signal before updating UI state
-      const audioClient = await initializeAudioService().catch(() => null);
-      if (audioClient) {
-        await new Promise<void>((resolve) => {
-          const timeout = setTimeout(() => {
-            audioClient.off('playbackReady', onReady);
-            resolve();
-          }, 5000);
-
-          const onReady = () => {
-            clearTimeout(timeout);
-            audioClient.off('playbackReady', onReady);
-            resolve();
-          };
-
-          audioClient.on('playbackReady', onReady);
-        });
-      }
 
       runInAction(() => {
         this.isPlaying = true;
@@ -609,8 +589,8 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
     });
 
     try {
-      // Use frontend Web Audio API scheduling instead of backend
-      await this.audioService.playAllTracksFrontendScheduled(this.tracks);
+      // Use standard play - Go engine handles synchronized playback
+      await this.audioService.play();
       runInAction(() => {
         this.isPlaying = true;
         this.isPaused = false;
@@ -823,7 +803,7 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
       // Read the new directory to get track paths
       const entries = await fs.readDir(outputDir);
       const audioFiles = entries
-        .filter((e: { children?: unknown; name: string }) => 
+        .filter((e: { children?: unknown; name: string }) =>
           e.children === undefined &&
           (e.name.endsWith('.mp3') ||
             e.name.endsWith('.wav') ||
@@ -949,7 +929,7 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
             };
           });
         });
-        
+
         // Store unlisten function for cleanup
         this.transposeUnlisten = unlisten;
         this.addSubscription(unlisten);
@@ -1040,14 +1020,14 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
     // Note: Using 'any' is pragmatic here since tracks come from different sources (service order, 
     // file system, etc.) with inconsistent property names. Runtime checks provide safety.
     const trackObj = track as any;
-    
+
     // Check standard AudioTrack.path first
     if (typeof trackObj.path === 'string' && trackObj.path) return trackObj.path;
-    
+
     // Check alternative property names from different sources
     if (typeof trackObj.file_path === 'string' && trackObj.file_path) return trackObj.file_path;
     if (typeof trackObj.filePath === 'string' && trackObj.filePath) return trackObj.filePath;
-    
+
     return undefined;
   }
 
@@ -1060,7 +1040,7 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
     // Set tracks in state first - they should be in state even if service loading fails
     // This allows the UI to display track information and mixer controls
     this.setTracks(tracks);
-    
+
     // If we have tracks with file paths, load them into the audio service in one batch
     if (tracks.length > 0) {
       try {
@@ -1068,15 +1048,20 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
         const trackPaths = tracks
           .map(t => this.getTrackFilePath(t))
           .filter((path): path is string => path !== undefined);
-        
+
         if (trackPaths.length > 0) {
           this.log('Loading', trackPaths.length, 'tracks into audio service');
+
+          // Debug service identity
+          const serviceName = (this.audioService as any).serviceName || 'Unknown';
+          console.log(`[AudioViewModel] Using audio service: ${serviceName}`);
+
           const result = await this.audioService.loadMultipleTracks(trackPaths);
           this.log('Tracks loaded:', result.loaded, 'of', result.total);
-          
+
           if (result.loaded < result.total) {
             const failedCount = result.total - result.loaded;
-            this.logError(`Track loading incomplete: ${failedCount} of ${result.total} tracks failed to load`, 
+            this.logError(`Track loading incomplete: ${failedCount} of ${result.total} tracks failed to load`,
               new Error(`Partial load failure: ${failedCount}/${result.total} failed`));
           }
         }

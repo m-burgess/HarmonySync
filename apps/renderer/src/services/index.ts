@@ -6,20 +6,19 @@
 import { container } from '../di/Container';
 import { IpcService } from './IpcService';
 import { EventBusService } from './EventBusService';
-import { AudioService } from './AudioService';
 import { FileService } from './FileService';
 import { DisplayService } from './DisplayService';
 import { SlideService } from './SlideService';
 import { ServiceOrderService } from './ServiceOrderService';
 import { TimerService } from './TimerService';
+import { WebAudioService } from './WebAudioService';
 
-export { IpcService, EventBusService, AudioService, FileService, DisplayService, SlideService, ServiceOrderService, TimerService };
+export { IpcService, EventBusService, WebAudioService, FileService, DisplayService, SlideService, ServiceOrderService, TimerService };
 export { EVENT_TYPES } from './EventBusService';
 
 // Default exports for backward compatibility
 export { default as IpcServiceDefault } from './IpcService';
 export { default as EventBusServiceDefault } from './EventBusService';
-export { default as AudioServiceDefault } from './AudioService';
 export { default as FileServiceDefault } from './FileService';
 export { default as DisplayServiceDefault } from './DisplayService';
 export { default as SlideServiceDefault } from './SlideService';
@@ -38,7 +37,8 @@ export function setupServices(): void {
   container.register('ipcService', IpcService, [], true);
 
   // Register domain services (depend on IPC service)
-  container.register('audioService', AudioService, ['ipcService'], true);
+  // Use WebAudioService instead of native AudioService
+  container.register('audioService', WebAudioService, ['ipcService'], true);
   container.register('fileService', FileService, ['ipcService'], true);
   container.register('displayService', DisplayService, ['ipcService'], true);
   container.register('slideService', SlideService, ['ipcService'], true);

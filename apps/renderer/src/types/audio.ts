@@ -29,7 +29,7 @@ export interface Track {
   duration?: number; // Duration in seconds
   isPlaying: boolean;
   isPaused: boolean;
-  panValue: number;
+  pan: number;
   volume: number;
   isMuted?: boolean;
   // Web Audio API nodes (optional)

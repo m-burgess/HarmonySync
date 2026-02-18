@@ -17,10 +17,33 @@ const LowerThirdsScreen = () => {
   }, []);
 
   return (
-    <div className="lower-thirds-container">
-      <div className="lower-thirds-text">
-        <p>{line1}</p>
-        <p>{line2}</p>
+    <div className="lower-thirds-container" style={{
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'flex-end', // Align to bottom
+      alignItems: 'center',
+      width: '100vw',
+      height: '100vh',
+      padding: '5vmin',
+      boxSizing: 'border-box',
+      overflow: 'hidden'
+    }}>
+      <div className="lower-thirds-text" style={{
+        background: 'rgba(0, 0, 0, 0.7)',
+        padding: '2vmin 4vmin',
+        borderRadius: '1vmin',
+        width: '80%',   // Limit width
+        textAlign: 'center'
+      }}>
+        {line1 && <p style={{ fontSize: 'min(3vw, 5vh)', margin: '0 0 1vmin 0', color: '#aaa' }}>{line1}</p>}
+        {line2 && <p style={{
+          fontSize: 'min(5vw, 8vh)',
+          margin: 0,
+          color: 'white',
+          fontWeight: 'bold',
+          lineHeight: '1.2',
+          whiteSpace: 'pre-wrap' // Preserve newlines
+        }}>{line2}</p>}
       </div>
     </div>
   );

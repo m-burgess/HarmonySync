@@ -36,6 +36,7 @@ interface ISlideService {
 
 interface IDisplayService {
   showSlide(slide: Slide): Promise<void>;
+  displayVideoSlide(path: string, duration?: number): Promise<void>;
 }
 
 interface ServiceStructure {
@@ -374,7 +375,7 @@ export class SlideViewModel extends BaseViewModel implements ISlideViewModel {
       // Handle fromIndex, toIndex
       const fromIndex = arg1;
       const toIndex = arg2!;
-      
+
       if (fromIndex === toIndex) return;
       if (fromIndex < 0 || fromIndex >= this.slides.length) return;
       if (toIndex < 0 || toIndex >= this.slides.length) return;

@@ -24,6 +24,10 @@ interface ElectronAPI {
   mkdir: (path: string) => Promise<void>;
   copyFile: (src: string, dest: string) => Promise<void>;
 
+  // Audio file operations
+  readAudioFile: (path: string) => Promise<ArrayBuffer>;
+  getAudioFiles: (folderPath: string) => Promise<string[]>;
+
   // Database operations
   dbQuery: (query: string, params?: any[]) => Promise<any[]>;
   dbRun: (query: string, params?: any[]) => Promise<any>;
@@ -177,6 +181,10 @@ class ElectronAPIBuilder {
       exists: (path: string) => ipcRenderer.invoke('fs:exists', path),
       mkdir: (path: string) => ipcRenderer.invoke('fs:mkdir', path),
       copyFile: (src: string, dest: string) => ipcRenderer.invoke('fs:copyFile', src, dest),
+
+      // Audio file operations
+      readAudioFile: (path: string) => ipcRenderer.invoke('audio:readFile', path),
+      getAudioFiles: (folderPath: string) => ipcRenderer.invoke('audio:getFiles', folderPath),
 
       // Database operations
       dbQuery: (query: string, params?: any[]) => ipcRenderer.invoke('db:query', query, params),

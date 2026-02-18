@@ -36,14 +36,14 @@ export interface ElectronAPI {
   on?: (channel: string, callback: (...args: unknown[]) => void) => void;
   once?: (channel: string, callback: (...args: unknown[]) => void) => void;
   removeListener?: (channel: string, callback: (...args: unknown[]) => void) => void;
-  
+
   // IPC
   receive: (channel: string, callback: (data: unknown) => void) => (() => void) | undefined;
-  
+
   // Dialog
   openDirectory: (options?: { multiple?: boolean }) => Promise<string[] | string | null>;
   openFile: (filters?: Array<{ name: string; extensions: string[] }>) => Promise<string | null>;
-  
+
   // File system
   readFile: (path: string) => Promise<string>;
   writeFile: (path: string, content: string) => Promise<void>;
@@ -51,25 +51,29 @@ export interface ElectronAPI {
   exists: (path: string) => Promise<boolean>;
   mkdir: (path: string) => Promise<void>;
   copyFile: (source: string, destination: string) => Promise<void>;
-  
+
   // Database
   dbQuery: (query: string, params?: unknown[]) => Promise<unknown>;
   dbRun: (query: string, params?: unknown[]) => Promise<unknown>;
   dbGet: (query: string, params?: unknown[]) => Promise<unknown>;
   dbAll: (query: string, params?: unknown[]) => Promise<unknown[]>;
-  
+
+  // Audio File System
+  getAudioFiles: (folderPath: string) => Promise<string[]>;
+  readAudioFile: (path: string) => Promise<ArrayBuffer>;
+
   // FFmpeg
   convertToOgg: (inputPath: string, outputDir: string) => Promise<string>;
   transposeAudio: (songPath: string, semitones: number) => Promise<string>;
   getVideoMetadata: (path: string) => Promise<unknown>;
   transcodeVideo: (inputPath: string) => Promise<string>;
   generateThumbnail: (videoPath: string) => Promise<string>;
-  
+
   // Display
   displayVideoSlide: (path: string, duration: number) => Promise<void>;
   displaySlide: (content: unknown) => Promise<void>;
   displayBlackScreen: () => Promise<void>;
-  
+
   // Windows
   showAudienceWindow: () => Promise<void>;
   hideAudienceWindow: () => Promise<void>;
@@ -80,32 +84,32 @@ export interface ElectronAPI {
   openPreserviceMusicWindow: () => Promise<void>;
   closePreserviceMusicWindow: () => Promise<void>;
   openSchedulerWindow: () => Promise<void>;
-  
+
   // MIDI
   getMidiDevices: () => Promise<string[]>;
   sendMidiNote: (device: string, note: number, velocity: number, duration: number) => Promise<void>;
-  
+
   // Lyrics
   searchLyrics: (title: string, artist: string) => Promise<unknown[]>;
   fetchLyrics: (songId: string) => Promise<unknown>;
-  
+
   // Google Drive
   googleDriveAuth: () => Promise<unknown>;
   googleDriveListFiles: (folderId: string) => Promise<unknown[]>;
   googleDriveDownloadFile: (fileId: string, destination: string) => Promise<void>;
   googleDriveSyncFolder: (folderId: string, localPath: string) => Promise<void>;
-  
+
   // HTTP Server
   getHttpServerUrl: () => Promise<string>;
-  
+
   // CSS
   generateBackgroundCss: (path: string) => Promise<string>;
-  
+
   // Settings
   getDisplays: () => Promise<unknown[]>;
   getAudioDevices: () => Promise<unknown[]>;
   getSettingsPath: () => Promise<string>;
-  
+
   // Display Configuration
   displayConfigGetAll: () => Promise<DisplayConfig[]>;
   displayConfigGet: (id: string) => Promise<DisplayConfig>;
@@ -114,7 +118,7 @@ export interface ElectronAPI {
   displayConfigDelete: (id: string) => Promise<void>;
   displayConfigReorder: (orderedIds: string[]) => Promise<void>;
   displayConfigGetEnabled: () => Promise<DisplayConfig[]>;
-  
+
   // Slide Import
   onSlidesImportProgress?: (callback: (data: { message?: string; current?: number; total?: number }) => void) => (() => void) | undefined;
   validateSlideFile?: (path: string) => Promise<{ valid: boolean; message?: string }>;
@@ -123,6 +127,12 @@ export interface ElectronAPI {
   importPowerpointSlides?: (file: string, options: { dpi: number; format: 'png' | 'jpeg' }) => Promise<Array<{ name: string; type: string; path: string }>>;
   importSlidesFromZip?: (file: string, options: { dpi: number; format: 'png' | 'jpeg'; deleteZip?: boolean; importSlidesOnly?: boolean }) => Promise<{ slides?: unknown[]; servicePath?: string }>;
   scanServiceFolder?: (path: string) => Promise<{ servicePath?: string; slides?: unknown[]; songs?: unknown[] }>;
+
+  // Send to specific window
+  sendToAudience?: (channel: string, data: unknown) => Promise<void>;
+  sendToConfidence?: (channel: string, data: unknown) => Promise<void>;
+  sendToLowerThirds?: (channel: string, data: unknown) => Promise<void>;
+
   sendToMain?: (channel: string, data: unknown) => void;
 }
 
@@ -134,7 +144,7 @@ declare global {
     __electronAPI_PERMANENT_CACHE?: ElectronAPI;
     __preloadReady?: boolean;
   }
-  
+
   // For globalThis type safety
   var electronAPI: ElectronAPI | undefined;
   var __electronAPICached: ElectronAPI | undefined;
@@ -190,30 +200,30 @@ async function getElectronAPI(): Promise<ElectronAPI> {
   if (cachedElectronAPI) {
     return cachedElectronAPI;
   }
-  
+
   // If we're not in a browser environment, fail immediately
   if (typeof globalWindow === 'undefined' || !globalWindow || typeof globalWindow !== 'object') {
     console.error('[electron-adapter] Not in browser context');
     throw new Error('electronAPI not available - not in browser context');
   }
-  
+
   // CRITICAL: Check for immediately available API from multiple sources
   console.log('[electron-adapter] Checking for electronAPI...');
   console.log('[electron-adapter] - globalWindow:', typeof globalWindow);
-  
+
   if (hasElectronAPI(globalWindow)) {
     console.log('[electron-adapter] - globalWindow.__electronAPICached:', typeof globalWindow.__electronAPICached);
     console.log('[electron-adapter] - globalWindow.electronAPI:', typeof globalWindow.electronAPI);
     console.log('[electron-adapter] - globalWindow.__preloadReady:', globalWindow.__preloadReady);
     console.log('[electron-adapter] - globalWindow.__electronAPI_PERMANENT_CACHE:', typeof globalWindow.__electronAPI_PERMANENT_CACHE);
-    
+
     // Try permanent cache first (most reliable)
     if (globalWindow.__electronAPI_PERMANENT_CACHE) {
       cachedElectronAPI = globalWindow.__electronAPI_PERMANENT_CACHE;
       console.log('[electron-adapter] ✅ Using permanent cache');
       return cachedElectronAPI;
     }
-    
+
     if (globalWindow.__electronAPICached) {
       cachedElectronAPI = globalWindow.__electronAPICached;
       // Store in permanent cache
@@ -221,7 +231,7 @@ async function getElectronAPI(): Promise<ElectronAPI> {
       console.log('[electron-adapter] ✅ Using __electronAPICached (stored in permanent cache)');
       return cachedElectronAPI;
     }
-    
+
     if (globalWindow.electronAPI) {
       cachedElectronAPI = globalWindow.electronAPI;
       console.log('[electron-adapter] ✅ Using globalWindow.electronAPI');
@@ -231,12 +241,12 @@ async function getElectronAPI(): Promise<ElectronAPI> {
       return cachedElectronAPI;
     }
   }
-  
+
   // If not immediately available, wait for it (with timeout)
   console.warn('[electron-adapter] ⚠️ electronAPI not immediately available, waiting...');
   let attempts = 0;
   const maxAttempts = 50; // 5 seconds total
-  
+
   while (attempts < maxAttempts) {
     if (hasElectronAPI(globalWindow)) {
       // Check permanent cache first
@@ -259,23 +269,23 @@ async function getElectronAPI(): Promise<ElectronAPI> {
         return cachedElectronAPI;
       }
     }
-    
+
     await new Promise(resolve => setTimeout(resolve, 100));
     attempts++;
   }
-  
+
   // Final diagnostic before failing
   console.error('[electron-adapter] ❌ Timeout! Final state:');
   console.error('[electron-adapter] - typeof globalWindow:', typeof globalWindow);
   console.error('[electron-adapter] - globalWindow === window:', globalWindow === (typeof window !== 'undefined' ? window : null));
-  
+
   if (typeof globalWindow === 'object' && globalWindow !== null) {
     const keys = Object.keys(globalWindow);
     console.error('[electron-adapter] - globalWindow keys with "electron":', keys.filter(k => k.includes('electron')));
     console.error('[electron-adapter] - globalWindow keys with "preload":', keys.filter(k => k.includes('preload')));
     console.error('[electron-adapter] - All globalWindow keys (sample):', keys.slice(0, 20));
   }
-  
+
   throw new Error('electronAPI not available - timeout after 5 seconds');
 }
 
@@ -360,7 +370,7 @@ export const event = {
       const win = globalThis.window as Window;
       const handler = (data: unknown) => callback({ payload: data as T });
       const cleanup = win.electronAPI!.receive(eventName, handler);
-      const removeIpc = cleanup || (() => {});
+      const removeIpc = cleanup || (() => { });
       return () => {
         removeLocal();
         removeIpc();
@@ -368,19 +378,27 @@ export const event = {
     }
     return removeLocal;
   },
-  
+
   emit: (eventName: string, payload: unknown): void => {
     const safePayload = cloneEventPayload(payload);
     emitLocal(eventName, safePayload);
 
-    if (!isElectronRuntime()) return;
+    if (!isElectronRuntime()) {
+      console.log('[Adapter] Not Electron runtime, skipping IPC');
+      return;
+    }
     const win = globalThis.window as Window;
     const api = win.electronAPI || win.__electronAPICached;
-    if (!api) return;
+    if (!api) {
+      console.error('[Adapter] Electron API missing!');
+      return;
+    }
+    console.log(`[Adapter] Processing emit: ${eventName}`);
 
     const audienceEvents = new Set([
       'set-background',
       'display-lyric-slide',
+      'display-lyrics', // Added new event
       'display-image-slide',
       'clear-lyric-display',
       'navigate',
@@ -390,6 +408,7 @@ export const event = {
     ]);
     const confidenceEvents = new Set([
       'display-confidence-slide',
+      'display-confidence-lyrics', // Added new event
       'clear-confidence-display',
       'video-progress'
     ]);
@@ -401,12 +420,18 @@ export const event = {
     ]);
 
     if (audienceEvents.has(eventName) && api.sendToAudience) {
+      console.log(`[Adapter] Sending ${eventName} to Audience`, safePayload);
       api.sendToAudience(eventName, safePayload);
+    } else if (audienceEvents.has(eventName)) {
+      console.warn(`[Adapter] SKIPPING ${eventName} to Audience - sendToAudience missing!`);
     }
+
     if (confidenceEvents.has(eventName) && api.sendToConfidence) {
+      console.log(`[Adapter] Sending ${eventName} to Confidence`, safePayload);
       api.sendToConfidence(eventName, safePayload);
     }
     if (lowerThirdsEvents.has(eventName) && api.sendToLowerThirds) {
+      console.log(`[Adapter] Sending ${eventName} to LowerThirds`, safePayload);
       api.sendToLowerThirds(eventName, safePayload);
     }
     if (mainEvents.has(eventName) && api.sendToMain) {
@@ -447,7 +472,7 @@ export const fs = {
       throw error;
     }
   },
-  
+
   writeTextFile: async (path: string, content: string): Promise<void> => {
     try {
       const api = await getElectronAPI();
@@ -457,7 +482,7 @@ export const fs = {
       throw error;
     }
   },
-  
+
   readDir: async (path: string): Promise<DirEntry[]> => {
     try {
       const api = await getElectronAPI();
@@ -467,7 +492,7 @@ export const fs = {
       throw error;
     }
   },
-  
+
   exists: async (path: string): Promise<boolean> => {
     try {
       const api = await getElectronAPI();
@@ -477,7 +502,7 @@ export const fs = {
       throw error;
     }
   },
-  
+
   mkdir: async (path: string): Promise<void> => {
     try {
       const api = await getElectronAPI();
@@ -487,7 +512,7 @@ export const fs = {
       throw error;
     }
   },
-  
+
   copyFile: async (source: string, destination: string): Promise<void> => {
     try {
       const api = await getElectronAPI();
@@ -584,7 +609,7 @@ async function invokeElectronCommand(command: string, args: unknown[], api?: Ele
       return await api.dbGet(a[0] as string, a[1] as unknown[] | undefined);
     case 'db_all':
       return await api.dbAll(a[0] as string, a[1] as unknown[] | undefined);
-    
+
     // FFmpeg operations
     case 'convert_to_ogg':
       return await api.convertToOgg(a[0] as string, a[1] as string);
@@ -596,7 +621,7 @@ async function invokeElectronCommand(command: string, args: unknown[], api?: Ele
       return await api.transcodeVideo((a[0] as { inputPath?: string })?.inputPath || (a[0] as string));
     case 'generate_thumbnail':
       return await api.generateThumbnail((a[0] as { videoPath?: string; path?: string })?.videoPath || (a[0] as { path?: string })?.path || (a[0] as string));
-    
+
     // Display operations
     case 'display_video_slide':
       if (a[0] && typeof a[0] === 'object') {
@@ -608,7 +633,7 @@ async function invokeElectronCommand(command: string, args: unknown[], api?: Ele
       return await api.displaySlide(a[0]);
     case 'display_black_screen':
       return await api.displayBlackScreen();
-    
+
     // Window operations
     case 'show_audience_window':
       return await api.showAudienceWindow();
@@ -628,19 +653,19 @@ async function invokeElectronCommand(command: string, args: unknown[], api?: Ele
       return await api.closePreserviceMusicWindow();
     case 'open_scheduler_window':
       return await api.openSchedulerWindow();
-    
+
     // MIDI operations
     case 'get_midi_devices':
       return await api.getMidiDevices();
     case 'send_midi_note':
       return await api.sendMidiNote(a[0] as string, a[1] as number, a[2] as number, a[3] as number);
-    
+
     // Lyrics
     case 'search_lyrics':
       return await api.searchLyrics(a[0] as string, a[1] as string);
     case 'fetch_lyrics':
       return await api.fetchLyrics(a[0] as string);
-    
+
     // Google Drive
     case 'gdrive_auth':
       return await api.googleDriveAuth();
@@ -650,15 +675,15 @@ async function invokeElectronCommand(command: string, args: unknown[], api?: Ele
       return await api.googleDriveDownloadFile(a[0] as string, a[1] as string);
     case 'gdrive_sync_folder':
       return await api.googleDriveSyncFolder(a[0] as string, a[1] as string);
-    
+
     // HTTP Server
     case 'get_http_server_url':
       return await api.getHttpServerUrl();
-    
+
     // CSS generation
     case 'generate_background_css':
       return await api.generateBackgroundCss(a[0] as string);
-    
+
     // Settings
     case 'settings:getDisplays':
       return await api.getDisplays();
@@ -666,7 +691,7 @@ async function invokeElectronCommand(command: string, args: unknown[], api?: Ele
       return await api.getAudioDevices();
     case 'settings:getSettingsPath':
       return await api.getSettingsPath();
-    
+
     // Display Configuration
     case 'displayConfig:getAll':
       return await api.displayConfigGetAll();
@@ -682,7 +707,7 @@ async function invokeElectronCommand(command: string, args: unknown[], api?: Ele
       return await api.displayConfigReorder(a[0] as string[]);
     case 'displayConfig:getEnabled':
       return await api.displayConfigGetEnabled();
-    
+
     default:
       console.warn(`Unknown command: ${command}`);
       throw new Error(`Command not implemented: ${command}`);

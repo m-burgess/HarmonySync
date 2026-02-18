@@ -101,6 +101,11 @@ export interface IAudioService extends IService {
   onTransposeProgress(callback: (event: unknown, progress: unknown) => void): void;
   onTransposeComplete(callback: (event: unknown, result: TransposeResult) => void): void;
   onTransposeError(callback: (event: unknown, error: Error) => void): void;
+  // Multi-song preloading
+  preloadSong(songId: string, folderPath: string, trackFiles: string[]): Promise<void>;
+  switchSong(songId: string): void;
+  isSongPreloaded(songId: string): boolean;
+  clearSong(songId: string): void;
 }
 
 /**

@@ -77,27 +77,34 @@ const MixerSidebar = observer(({ allTracks, isLoadingTracks }: MixerSidebarProps
               Load a song to see tracks
             </div>
           ) : (
-            <div className="mixer-track-stack">
+            <div className="mixer-track-stack space-y-2 p-2">
               {viewModel.sortedTracks.map((track: Track, index: number) => (
-                <Button
+                <div
                   key={track.id}
-                  onClick={() => viewModel.toggleMute(index)}
-                  className={`mixer-track-item ${viewModel.muteStates[track.id] ? 'muted' : ''}`}
-                  variant="ghost"
-                  size="small"
-                  title={track.name}
+                  className={`mixer-track-item flex flex-col p-2 rounded bg-gray-800 border ${viewModel.muteStates[track.id] ? 'border-red-900 bg-opacity-50' : 'border-gray-700'}`}
                 >
-                  <span className="mixer-track-icon">
-                    {viewModel.muteStates[track.id] ? '🔇' : '🔊'}
-                  </span>
-                  <span className="mixer-track-name">
-                    {(track.name || `Track ${index + 1}`)
-                      .replace(/\.(mp3|wav|ogg|m4a|flac)$/i, '')
-                      .replace(/[-_]/g, ' ')
-                      .trim()
-                    }
-                  </span>
-                </Button>
+                  <div className="flex items-center justify-between mb-2">
+                    <span
+                      className="mixer-track-name text-xs font-medium truncate flex-1 mr-2"
+                      title={track.name}
+                    >
+                      {(track.name || `Track ${index + 1}`)
+                        .replace(/\.(mp3|wav|ogg|m4a|flac)$/i, '')
+                        .replace(/[-_]/g, ' ')
+                        .trim()
+                      }
+                    </span>
+                    <Button
+                      onClick={() => viewModel.toggleMute(index)}
+                      className={`w-6 h-6 flex items-center justify-center p-0 ${viewModel.muteStates[track.id] ? 'text-red-500' : 'text-green-500'}`}
+                      variant="ghost"
+                      size="small"
+                      title={viewModel.muteStates[track.id] ? "Unmute" : "Mute"}
+                    >
+                      {viewModel.muteStates[track.id] ? '🔇' : '🔊'}
+                    </Button>
+                  </div>
+                </div>
               ))}
             </div>
           )}

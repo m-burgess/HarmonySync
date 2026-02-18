@@ -22,7 +22,7 @@ import type { Display, DisplayWindow, Slide } from '../types';
  */
 export class DisplayService extends BaseService implements IDisplayService {
   protected readonly serviceName = 'DisplayService';
-  
+
   private readonly ipc: IIpcService;
 
   /**
@@ -126,13 +126,13 @@ export class DisplayService extends BaseService implements IDisplayService {
   /**
    * Display a video directly on the audience screen
    */
-  public async displayVideoSlide(path: string, duration?: number): Promise<void> {
+  public async displayVideoSlide(path: string, duration?: number, loop?: boolean): Promise<void> {
     try {
-      await this.ipc.invoke('display:videoSlide', path, duration);
+      await this.ipc.invoke('display:videoSlide', path, duration, loop);
     } catch (error) {
       this.logWarn('display:videoSlide failed, falling back to direct audience send', error);
       try {
-        await this.ipc.invoke('send:audience', 'display-video-slide', path);
+        await this.ipc.invoke('send:audience', 'display-video-slide', { path, loop });
         if (duration !== undefined) {
           await this.ipc.invoke('send:confidence', 'start-video-countdown', duration);
         }

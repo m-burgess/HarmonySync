@@ -16,8 +16,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { observer } from 'mobx-react-lite';
 import { core, event } from './electron-adapter';
-import { 
-  PresentationChartBarIcon, 
+import {
+  PresentationChartBarIcon,
   CogIcon,
   AdjustmentsHorizontalIcon,
   MusicalNoteIcon,
@@ -26,7 +26,7 @@ import {
 
 import './styles/App.css';
 import './styles/vscode-theme.css';
-import { 
+import {
   ActivityBarIcon
 } from './components/VSCodeUI.tsx';
 import ServiceOrderManager from './components/service-order/ServiceOrderManager.tsx';
@@ -66,19 +66,19 @@ const App = observer(() => {
   // Resizable layout state
   const DEFAULT_SIDEBAR_WIDTH = 300;
   const DEFAULT_MIXER_WIDTH = 300;
-  
+
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const stored = localStorage.getItem('rp_sidebarWidth');
     const v = stored ? parseInt(stored, 10) : NaN;
     return isNaN(v) ? DEFAULT_SIDEBAR_WIDTH : v;
   });
-  
+
   const [mixerWidth, setMixerWidth] = useState(() => {
     const stored = localStorage.getItem('rp_mixerWidth');
     const v = stored ? parseInt(stored, 10) : NaN;
     return isNaN(v) ? DEFAULT_MIXER_WIDTH : v;
   });
-  
+
   const draggingRef = useRef<{ type: string; startX: number; startWidth: number } | null>(null);
   const rafRef = useRef<number | null>(null);
 
@@ -156,7 +156,7 @@ const App = observer(() => {
     e.preventDefault();
     const startX = e.type.startsWith('touch') ? (e as React.TouchEvent).touches[0].clientX : (e as React.MouseEvent).clientX;
     const startWidth = sidebarWidth;
-    
+
     draggingRef.current = { type: 'sidebar', startX, startWidth };
     document.body.style.userSelect = 'none';
     document.body.style.cursor = 'ew-resize';
@@ -205,7 +205,7 @@ const App = observer(() => {
     e.preventDefault();
     const startX = e.type.startsWith('touch') ? (e as React.TouchEvent).touches[0].clientX : (e as React.MouseEvent).clientX;
     const startWidth = mixerWidth;
-    
+
     draggingRef.current = { type: 'mixer', startX, startWidth };
     document.body.style.userSelect = 'none';
     document.body.style.cursor = 'ew-resize';
@@ -317,33 +317,33 @@ const App = observer(() => {
     <div className="h-screen w-screen bg-gray-900 text-gray-300 vscode-ui-font flex" ref={containerRef}>
       {/* VS Code Activity Bar */}
       <div className="vscode-activity-bar">
-        <ActivityBarIcon 
-          icon={<PresentationChartBarIcon className="w-8 h-8" />} 
-          label="Service Order" 
+        <ActivityBarIcon
+          icon={<PresentationChartBarIcon className="w-8 h-8" />}
+          label="Service Order"
           active={true}
         />
 
-        <ActivityBarIcon 
-          icon={<MusicalNoteIcon className="w-8 h-8" />} 
-          label="Audio/MIDI Settings" 
+        <ActivityBarIcon
+          icon={<MusicalNoteIcon className="w-8 h-8" />}
+          label="Audio/MIDI Settings"
           onClick={() => setIsAudioSettingsOpen(true)}
         />
 
-        <ActivityBarIcon 
-          icon={<CogIcon className="w-8 h-8" />} 
-          label="Display Settings" 
+        <ActivityBarIcon
+          icon={<CogIcon className="w-8 h-8" />}
+          label="Display Settings"
           onClick={() => setIsDisplaySettingsOpen(true)}
         />
 
-        <ActivityBarIcon 
-          icon={<AdjustmentsHorizontalIcon className="w-8 h-8" />} 
-          label="Preferences" 
+        <ActivityBarIcon
+          icon={<AdjustmentsHorizontalIcon className="w-8 h-8" />}
+          label="Preferences"
           onClick={() => setIsPreferencesOpen(true)}
         />
 
-        <ActivityBarIcon 
-          icon={<ClockIcon className="w-8 h-8" />} 
-          label="Timers" 
+        <ActivityBarIcon
+          icon={<ClockIcon className="w-8 h-8" />}
+          label="Timers"
           onClick={() => setIsTimerPanelOpen(true)}
           badge={timerViewModel.runningTimers.length > 0 ? timerViewModel.runningTimers.length : null}
         />
@@ -356,13 +356,13 @@ const App = observer(() => {
       {/* Main Layout: Service Order Sidebar + Slide Editor */}
       <div className="flex-1 flex">
         {/* Service Order Sidebar */}
-        <div 
+        <div
           className="vscode-sidebar bg-gray-800 border-r border-gray-700"
           style={{ width: `${sidebarWidth}px` }}
         >
-          <ServiceOrderManager 
-            setAllSlides={handleSetAllSlides} 
-            setAllTracks={handleSetAllTracks} 
+          <ServiceOrderManager
+            setAllSlides={handleSetAllSlides}
+            setAllTracks={handleSetAllTracks}
             setIsLoadingTracks={handleSetIsLoadingTracks}
             setCurrentLyrics={handleSetCurrentLyrics}
           />
@@ -381,13 +381,15 @@ const App = observer(() => {
           {/* Slide Editor or Lyrics Column */}
           <div className="flex-1 overflow-hidden">
             {serviceOrderViewModel.selectedSongForLyrics ? (
-              <LyricsColumn lyrics={serviceOrderViewModel.selectedSongForLyrics} />
+              <LyricsColumn lyrics={serviceOrderViewModel.selectedSongForLyrics.lyrics || null} />
+            ) : serviceOrderViewModel.currentSong && serviceOrderViewModel.currentSong.type === 'song' && serviceOrderViewModel.currentSong.lyrics ? (
+              <LyricsColumn lyrics={serviceOrderViewModel.currentSong.lyrics} />
             ) : (
-              <SlideManager 
-                allSlides={slideViewModel.slides} 
-                setAllSlides={handleSetAllSlides} 
-                selectedSlide={slideViewModel.selectedSlide} 
-                setSelectedSlide={handleSetSelectedSlide} 
+              <SlideManager
+                allSlides={slideViewModel.slides}
+                setAllSlides={handleSetAllSlides}
+                selectedSlide={slideViewModel.selectedSlide}
+                setSelectedSlide={handleSetSelectedSlide}
               />
             )}
           </div>
@@ -402,9 +404,9 @@ const App = observer(() => {
 
           {/* Mixer Sidebar */}
           <div style={{ width: `${mixerWidth}px`, minWidth: '200px', maxWidth: '600px' }}>
-            <MixerSidebar 
-              allTracks={audioViewModel.tracks} 
-              isLoadingTracks={audioViewModel.isLoading} 
+            <MixerSidebar
+              allTracks={audioViewModel.tracks}
+              isLoadingTracks={audioViewModel.isLoading}
             />
           </div>
         </div>

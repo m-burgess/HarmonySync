@@ -1,10 +1,10 @@
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
 import { v4 as uuidv4 } from 'uuid';
-import { AudioTrack, getAudic, AudioTrackState } from './audioTrack';
+import { AudioTrack, AudioTrackState } from './audioTrack';
 import type { Server as SocketIOServer } from 'socket.io';
-import FFmpegMixer, { TrackInput } from './ffmpegMixer';
+import path from 'path';
+import { audioEngine } from './goEngineAdapter';
+
+// Removed native module load attempt as we are using Go engine now
 
 export interface Song {
     id: string;
@@ -64,8 +64,8 @@ export class AudioMixer {
     public crossfadeDuration: number;
     public activeCrossfade: CrossfadeInfo | null;
     public io: SocketIOServer | null;
-    private ffmpegMixer: FFmpegMixer;
-    public useSingleProcessMixing: boolean;
+
+
 
     constructor(io: SocketIOServer | null = null) {
         this.tracks = new Map<string, AudioTrack>();
@@ -74,19 +74,11 @@ export class AudioMixer {
         this.masterVolume = 1.0;
         this.isPlaying = false;
         this.speaker = null;
-        this.mixedStream = null;
-        this.crossfadeDuration = 3000; // 3 seconds default crossfade
         this.activeCrossfade = null;
+        this.crossfadeDuration = 3000;
         this.io = io;
-        this.ffmpegMixer = new FFmpegMixer();
-        // Enable single-process mixing to eliminate drift (can be disabled if needed)
-        this.useSingleProcessMixing = FFmpegMixer.isAvailable();
-        
-        if (this.useSingleProcessMixing) {
-            console.log('✅ FFmpeg mixer available - drift elimination enabled');
-        } else {
-            console.log('⚠️  FFmpeg not found - using legacy multi-process playback');
-        }
+
+        console.log('✅ Go Audio Engine Adapter initialized');
     }
 
     async loadTrack(filePath: string, name: string | null = null): Promise<string> {
@@ -100,14 +92,23 @@ export class AudioMixer {
         const trackId: string = uuidv4();
         const trackName: string = name || path.basename(filePath, path.extname(filePath));
         console.log(`✅ Loading new track: "${trackName}" (ID: ${trackId})`);
+
+        // Delegate to Go Engine
+        audioEngine.loadTrack(trackId, filePath);
+
         const track = new AudioTrack(trackId, trackName, filePath, 0, 2, 44100);
-        const loaded: boolean = await track.loadMetadata();
-        if (!loaded) {
-            throw new Error(`Failed to load track: ${filePath}`);
+        // We still load metadata for frontend display, but engine handles playback
+        try {
+            await track.loadMetadata();
+        } catch (e) {
+            console.warn(`Failed to load metadata for ${filePath}, using defaults`);
         }
+
         this.tracks.set(trackId, track);
         console.log(`Loaded track: ${trackName} (${track.duration.toFixed(2)}s)`);
-        this.applyDefaultPanningToTrack(track);
+        // Re-evaluate panning for ALL tracks (not just this one)
+        // because the presence of click/guide/metronome tracks affects everyone
+        this.applyDefaultPanning();
         return trackId;
     }
 
@@ -134,7 +135,7 @@ export class AudioMixer {
 
         console.log(`🔄 Preloading track: ${track.name}`);
         const success = await track.preload();
-        
+
         if (this.io) {
             this.io.emit('mixer_state_changed', this.getMixerState());
         }
@@ -149,29 +150,131 @@ export class AudioMixer {
         console.log(`🔄 Preloading all ${this.tracks.size} tracks...`);
         const preloadPromises = Array.from(this.tracks.values()).map(track => track.preload());
         await Promise.all(preloadPromises);
-        
+
         if (this.io) {
             this.io.emit('mixer_state_changed', this.getMixerState());
         }
-        
+
         console.log(`✅ All tracks preloaded`);
     }
 
     clearAllTracks(): void {
         console.log('🧹 Clearing all tracks');
         this.stopAllTracks();
-        for (const track of this.tracks.values()) {
-            track.stop();
-            track.cleanupPreloadedResources();
-        }
+
+        audioEngine.clearAllTracks();
+
         this.tracks.clear();
         this.songs.clear();
+        this.preloadedSongTracks.clear();
         this.currentSongId = null;
+
         if (this.io) {
             this.io.emit('tracks_cleared');
             this.io.emit('mixer_state_changed', this.getMixerState());
         }
         console.log('✅ All tracks and songs cleared');
+    }
+
+    // ─── Multi-Song Preloading ───────────────────────────────────
+
+    /**
+     * Map of songId -> Map<trackId, AudioTrack> for songs preloaded in Go engine
+     */
+    public preloadedSongTracks: Map<string, Map<string, AudioTrack>> = new Map();
+
+    /**
+     * Preload all tracks for a song into the Go engine without activating it.
+     * The tracks are decoded + buffered in memory, ready for instant switching.
+     */
+    async preloadSongTracks(songId: string, folderPath: string, trackFiles: string[]): Promise<void> {
+        if (this.preloadedSongTracks.has(songId)) {
+            console.log(`⚡ Song ${songId} already preloaded — skipping`);
+            return;
+        }
+
+        console.log(`🔄 Preloading song ${songId} (${trackFiles.length} tracks) from ${folderPath}`);
+        const songTrackMap = new Map<string, AudioTrack>();
+
+        for (const filePath of trackFiles) {
+            const trackId = uuidv4();
+            const trackName = path.basename(filePath, path.extname(filePath));
+
+            // Load into Go engine under this song's group
+            audioEngine.loadSongTrack(songId, trackId, filePath);
+
+            const track = new AudioTrack(trackId, trackName, filePath, 0, 2, 44100);
+            try {
+                await track.loadMetadata();
+            } catch (e) {
+                console.warn(`Failed to load metadata for ${filePath}, using defaults`);
+            }
+
+            songTrackMap.set(trackId, track);
+            console.log(`  📦 Preloaded: ${trackName} → ${trackId}`);
+        }
+
+        this.preloadedSongTracks.set(songId, songTrackMap);
+        console.log(`✅ Song ${songId} preloaded (${songTrackMap.size} tracks buffered)`);
+    }
+
+    /**
+     * Check if a song is preloaded and ready for instant switching
+     */
+    isSongPreloaded(songId: string): boolean {
+        return this.preloadedSongTracks.has(songId);
+    }
+
+    /**
+     * Switch to a preloaded song instantly.
+     * Tells Go engine to activate the song group, updates local state.
+     */
+    switchSong(songId: string): void {
+        if (!this.preloadedSongTracks.has(songId)) {
+            console.error(`❌ Song ${songId} is not preloaded — cannot switch`);
+            return;
+        }
+
+        console.log(`⚡ Switching to preloaded song: ${songId}`);
+
+        // Tell Go engine to swap active song
+        audioEngine.activateSong(songId);
+
+        // Update local track state to point to this song's tracks
+        this.tracks.clear();
+        const songTrackMap = this.preloadedSongTracks.get(songId)!;
+        for (const [trackId, track] of songTrackMap) {
+            this.tracks.set(trackId, track);
+        }
+
+        this.currentSongId = songId;
+        this.isPlaying = false;
+
+        // Apply auto-panning for the new active song
+        this.applyDefaultPanning();
+
+        if (this.io) {
+            this.io.emit('mixer_state_changed', this.getMixerState());
+        }
+
+        console.log(`✅ Switched to song ${songId} (${songTrackMap.size} tracks active)`);
+    }
+
+    /**
+     * Remove one preloaded song from Go engine memory
+     */
+    clearSong(songId: string): void {
+        audioEngine.clearSong(songId);
+        this.preloadedSongTracks.delete(songId);
+
+        // If clearing the active song, also clear local state
+        if (this.currentSongId === songId) {
+            this.tracks.clear();
+            this.currentSongId = null;
+            this.isPlaying = false;
+        }
+
+        console.log(`🧹 Cleared song ${songId} from memory`);
     }
 
     // Song management methods
@@ -206,28 +309,33 @@ export class AudioMixer {
             console.log(`⚠️  Song ${song.name} is already playing`);
             return;
         }
+
         console.log(`▶️  Playing song: ${song.name}`);
-        const activeTracks: AudioTrack[] = [];
-        for (const trackId of song.trackIds) {
-            const track = this.tracks.get(trackId);
-            if (track && !track.isMuted) activeTracks.push(track);
+
+        // Mute all tracks first (except those in this song)
+        // Or better: Unmute song tracks, mute others.
+        // Actually, Go engine just plays everything that is volume > 0 and not mute.
+        // So we must ensure only song tracks are active.
+
+        const songTrackIds = new Set(song.trackIds);
+
+        for (const track of this.tracks.values()) {
+            if (songTrackIds.has(track.id)) {
+                // Ensure it's unmuted and has volume
+                if (!track.isMuted) {
+                    audioEngine.setTrackMute(track.id, false);
+                    audioEngine.setTrackVolume(track.id, track.volume);
+                }
+                track.isPlaying = true;
+            } else {
+                // Mute/Stop others
+                audioEngine.setTrackVolume(track.id, 0);
+                track.isPlaying = false;
+            }
         }
-        if (activeTracks.length === 0) {
-            console.log('⚠️  No tracks to play in song');
-            return;
-        }
-        const clickTrack = activeTracks.find(track =>
-            track.name.toLowerCase().includes('click') ||
-            track.name.toLowerCase().includes('metronome') ||
-            track.name.toLowerCase().includes('guide')
-        );
-        if (clickTrack) {
-            console.log(`🎯 Using ${clickTrack.name} as master clock for song`);
-            this.startMasterClockPlayback(activeTracks, clickTrack);
-        } else {
-            console.log('🎵 Using synchronized simultaneous playback for song');
-            this.startSynchronizedSimultaneousPlayback(activeTracks);
-        }
+
+        audioEngine.play();
+
         song.isPlaying = true;
         this.currentSongId = songId;
         this.isPlaying = true;
@@ -284,34 +392,52 @@ export class AudioMixer {
 
     playTrack(trackId: string): boolean {
         const track = this.tracks.get(trackId);
-        if (track) { track.play(); return true; }
+        if (track) {
+            // Ensure track is unmuted in engine
+            audioEngine.setTrackMute(trackId, false);
+            audioEngine.setTrackVolume(trackId, track.volume);
+
+            track.play();
+            audioEngine.play();
+            this.isPlaying = true;
+            return true;
+        }
         return false;
     }
 
     stopTrack(trackId: string): boolean {
         const track = this.tracks.get(trackId);
-        if (track) { track.stop(); return true; }
+        if (track) {
+            // Mute track in engine
+            audioEngine.setTrackMute(trackId, true);
+
+            track.stop();
+
+            // Check if any other tracks are playing
+            const anyPlaying = Array.from(this.tracks.values()).some(t => t.isPlaying);
+            if (!anyPlaying) {
+                audioEngine.stop();
+                this.isPlaying = false;
+            }
+            return true;
+        }
         return false;
     }
 
     async playAllTracks(): Promise<void> {
         if (this.currentSongId) { this.playSong(this.currentSongId); return; }
-        this.stopAllTracks();
-        await new Promise(resolve => setTimeout(resolve, 100));
-        const activeTracks: AudioTrack[] = [];
-        for (const track of this.tracks.values()) if (!track.isMuted) activeTracks.push(track);
-        if (activeTracks.length === 0) { console.log('⚠️  No tracks to play'); return; }
-        console.log(`▶️  Playing ${activeTracks.length} tracks in sync`);
-        
-        // Use single-process FFmpeg mixing to eliminate drift
-        if (this.useSingleProcessMixing) {
-            console.log('🎵 Using single-process FFmpeg mixer (eliminates drift)');
-            await this.startFFmpegMixedPlayback(activeTracks);
-        } else {
-            console.log('🎵 Using synchronized simultaneous playback (legacy)');
-            await this.startSynchronizedSimultaneousPlayback(activeTracks);
+
+        // Unmute all tracks that aren't explicitly muted
+        for (const track of this.tracks.values()) {
+            if (!track.isMuted) {
+                audioEngine.setTrackMute(track.id, false);
+                audioEngine.setTrackVolume(track.id, track.volume);
+            }
+            track.isPlaying = true;
         }
-        
+
+        console.log('▶️  Playing all loaded tracks via Go Engine');
+        audioEngine.play();
         this.isPlaying = true;
     }
 
@@ -319,272 +445,56 @@ export class AudioMixer {
      * Start playback using single FFmpeg process for perfect synchronization
      * This eliminates drift by using a single clock for all tracks
      */
-    private async startFFmpegMixedPlayback(tracks: AudioTrack[]): Promise<void> {
-        try {
-            console.log('🔄 Preparing tracks for FFmpeg mixing...');
-            
-            // Prepare all tracks (convert to WAV if needed)
-            const preparedTracks = await Promise.all(
-                tracks.map(async track => ({
-                    track,
-                    audioFilePath: await this.prepareTrackForPlayback(track)
-                }))
-            );
-            
-            console.log(`✅ All tracks prepared`);
-            
-            // Build TrackInput array for FFmpegMixer
-            const trackInputs: TrackInput[] = preparedTracks.map(({ track, audioFilePath }) => ({
-                filePath: audioFilePath,
-                volume: track.volume,
-                pan: track.pan,
-                isMuted: track.isMuted,
-                name: track.name
-            }));
-            
-            // Start mixed playback
-            const success = await this.ffmpegMixer.startMixedPlayback(trackInputs);
-            
-            if (success) {
-                // Mark all tracks as playing
-                // Note: When using FFmpegMixer, individual tracks don't have audioProcess
-                // instances. The isPlaying flag indicates they're part of the mixed playback.
-                tracks.forEach(track => {
-                    track.isPlaying = true;
-                });
-                console.log(`✅ FFmpeg mixer started successfully`);
-            } else {
-                throw new Error('FFmpeg mixer failed to start');
-            }
-            
-        } catch (error) {
-            console.error('❌ Error in FFmpeg mixed playback:', error);
-            console.log('🔄 Falling back to synchronized simultaneous playback');
-            await this.startSynchronizedSimultaneousPlayback(tracks);
-        }
-    }
+    // Old playback methods removed in favor of Go Engine
 
-    async startMasterClockPlayback(tracks: AudioTrack[], masterTrack: AudioTrack): Promise<void> {
-        try {
-            console.log(`🎯 Master clock designated: ${masterTrack.name}`);
-            console.log(`🔍 Master track path: ${masterTrack.filePath}`);
-            console.log(`🎵 Starting ALL tracks simultaneously (including master clock)...`);
-            
-            // Log track durations for debugging
-            console.log('📊 Track durations:');
-            tracks.forEach(track => {
-                console.log(`  - ${track.name}: ${track.duration?.toFixed(2) ?? 'unknown'}s`);
-            });
-            
-            // Prepare all tracks first before scheduling
-            console.log('🔄 Preparing all tracks...');
-            const prepareStartTime = Date.now();
-            const preparedTracks = await Promise.all(tracks.map(async track => ({ track, audioFilePath: await this.prepareTrackForPlayback(track) })));
-            const prepareTime = Date.now() - prepareStartTime;
-            console.log(`✅ All tracks prepared in ${prepareTime}ms`);
-            
-            // Use a larger buffer to ensure all tracks are ready before playback starts
-            // This prevents drift by giving enough time for all audio processes to initialize
-            const schedulingBufferMs = 500; // Increased from 250ms to 500ms for better synchronization
-            const startAtMs = Date.now() + schedulingBufferMs;
-            
-            console.log(`⏰ Scheduling playback to start at +${schedulingBufferMs}ms from now`);
-            const startTime: number = Date.now();
-            const allTrackPromises: Promise<void>[] = preparedTracks.map(({ track, audioFilePath }) => this.startPreparedTrackAt(track, audioFilePath, startAtMs));
-            const results: PromiseSettledResult<void>[] = await Promise.allSettled(allTrackPromises);
-            const totalTime: number = Date.now() - startTime;
-            const failedTracks = results.filter(r => r.status === 'rejected');
-            const succeededTracks = results.filter(r => r.status === 'fulfilled');
-            if (failedTracks.length > 0) {
-                console.warn(`⚠️ ${failedTracks.length} track(s) failed to start:`);
-                results.forEach((result, index) => { if (result.status === 'rejected') { const trackName = tracks[index]?.name || `Track ${index}`; console.error(`   - ${trackName}: ${result.reason}`); } });
-            }
-            if (succeededTracks.length === 0) throw new Error('All tracks failed to start');
-            console.log(`✅ ${succeededTracks.length}/${tracks.length} tracks started simultaneously in ${totalTime}ms`);
-            console.log(`✅ Master clock (${masterTrack.name}) and slave tracks are now playing in sync`);
-            
-            // Verify synchronization after a brief delay
-            setTimeout(() => {
-                if (!masterTrack.isPlaying) {
-                    console.warn('⚠️ Warning: Master clock may have failed to start');
-                } else {
-                    console.log('✅ Master clock verified playing');
-                }
-            }, 100);
-        } catch (error) {
-            console.error('❌ Error in master clock playback:', error);
-            console.log('🔄 Falling back to synchronized simultaneous playback');
-            await this.startSynchronizedSimultaneousPlayback(tracks);
-        }
-    }
-
-    async startSynchronizedSimultaneousPlayback(tracks: AudioTrack[]): Promise<void> {
-        try {
-            // Log track information for debugging
-            console.log('📊 Preparing synchronized playback for tracks:');
-            tracks.forEach(track => {
-                console.log(`  - ${track.name}: ${track.duration?.toFixed(2) ?? 'unknown'}s`);
-            });
-            
-            // Prepare all tracks first before scheduling
-            console.log('🔄 Preparing all tracks for synchronized playback...');
-            const prepareStartTime = Date.now();
-            const preparedTracks = await Promise.all(tracks.map(async track => ({ track, audioFilePath: await this.prepareTrackForPlayback(track) })));
-            const prepareTime = Date.now() - prepareStartTime;
-            console.log(`✅ All tracks prepared in ${prepareTime}ms`);
-            
-            // Use a larger scheduling buffer to prevent drift
-            // This gives all audio processes enough time to initialize before playback
-            const schedulingBufferMs = 300; // Increased from 50ms to 300ms for better sync
-            const startAtMs = Date.now() + schedulingBufferMs;
-            
-            console.log(`⏰ Scheduling synchronized playback to start at +${schedulingBufferMs}ms from now`);
-            
-            if (this.io) {
-                this.io.emit('playback_ready', { trackCount: preparedTracks.length, startAtMs, schedulingBufferMs });
-            }
-            const startTime: number = Date.now();
-            const promises: Promise<void>[] = preparedTracks.map(({ track, audioFilePath }) => this.startPreparedTrackAt(track, audioFilePath, startAtMs));
-            const results: PromiseSettledResult<void>[] = await Promise.allSettled(promises);
-            const totalTime: number = Date.now() - startTime;
-            const failedTracks = results.filter(r => r.status === 'rejected');
-            const succeededTracks = results.filter(r => r.status === 'fulfilled');
-            if (failedTracks.length > 0) {
-                console.warn(`⚠️ ${failedTracks.length} track(s) failed to start:`);
-                results.forEach((result, index) => { if (result.status === 'rejected') { const trackName = tracks[index]?.name || `Track ${index}`; console.error(`   - ${trackName}: ${result.reason}`); } });
-            }
-            if (succeededTracks.length === 0) throw new Error('All tracks failed to start');
-            console.log(`✅ ${succeededTracks.length}/${tracks.length} tracks started simultaneously in ${totalTime}ms`);
-            
-            // Verify all tracks are playing
-            setTimeout(() => {
-                const playingCount = tracks.filter(t => t.isPlaying).length;
-                console.log(`🎵 Verification: ${playingCount}/${tracks.length} tracks confirmed playing`);
-            }, 200);
-        } catch (error) {
-            console.error('❌ Error in synchronized playback:', error);
-            throw error;
-        }
-    }
-
-    startTrackWithClock(track: AudioTrack, isMaster: boolean): Promise<void> {
-        return new Promise<void>(async (resolve, reject) => {
-            if (track.isPlaying) { resolve(); return; }
-            try { const audioFilePath = await this.prepareTrackForPlayback(track); await this.startPreparedTrack(track, audioFilePath); resolve(); } catch (error) { console.error(`❌ Error in startTrackWithClock for ${track.name}:`, error); reject(error); }
-        });
-    }
-
-    private async prepareTrackForPlayback(track: AudioTrack): Promise<string> {
-        if (track.audic) { try { track.audic.destroy(); } catch (error) { console.error(`⚠️ Error cleaning up existing audic for ${track.name}:`, error); } track.audic = null; }
-        if (track.audioProcess) { try { track.audioProcess.kill('SIGTERM'); } catch (error) { console.error(`⚠️ Error cleaning up existing audio process for ${track.name}:`, error); } track.audioProcess = null; }
-        if (track.tempFilePath && fs.existsSync(track.tempFilePath)) { try { fs.unlinkSync(track.tempFilePath); } catch (error) { console.error(`⚠️ Error cleaning up existing temp file for ${track.name}:`, error); } track.tempFilePath = null; }
-        const fileExt = path.extname(track.filePath).toLowerCase();
-        const isClickOrGuide: boolean = track.name.toLowerCase().includes('click') || track.name.toLowerCase().includes('guide') || track.name.toLowerCase().includes('metronome');
-        const pan: number = isClickOrGuide ? -1 : 1; track.pan = pan;
-        let audioFilePath = track.filePath;
-        if (fileExt !== '.wav') {
-            console.log(`🎵 Converting ${track.name} to WAV via FFmpeg (format: ${fileExt})`);
-            const tempDir = os.tmpdir(); const tempFileName = `harmony_${track.id}_${Date.now()}.wav`; audioFilePath = path.join(tempDir, tempFileName); track.tempFilePath = audioFilePath;
-            const { spawn } = require('child_process');
-            const ffmpegProcess = spawn('ffmpeg', ['-i', track.filePath, '-f', 'wav', '-y', audioFilePath], { stdio: ['ignore', 'ignore', 'pipe'] });
-            await new Promise<void>((resolve, reject) => {
-                ffmpegProcess.on('close', (code: number) => { if (code === 0) { console.log(`✅ FFmpeg conversion complete for ${track.name}`); resolve(); } else { reject(new Error(`FFmpeg exited with code ${code}`)); } });
-                ffmpegProcess.on('error', (error: Error) => { console.error(`❌ FFmpeg error during conversion for ${track.name}:`, error); reject(error); });
-            });
-        }
-        return audioFilePath;
-    }
-
-    private async startPreparedTrack(track: AudioTrack, audioFilePath: string): Promise<void> {
-        if (this.commandExists('ffplay')) {
-            const ffplayPath = this.getCommandPath('ffplay');
-            const volumePercent = Math.round((track.isMuted ? 0 : track.volume) * 100);
-            const clampedPan = Math.max(-1, Math.min(1, track.pan));
-            const angle = ((clampedPan + 1) * Math.PI) / 4; // 0 to pi/2
-            const leftGain = Math.cos(angle); const rightGain = Math.sin(angle);
-            const panFilter = `pan=stereo|c0=${leftGain.toFixed(4)}*c0|c1=${rightGain.toFixed(4)}*c1`;
-            const args = ['-nodisp','-autoexit','-loglevel','error','-volume',String(volumePercent),'-seek_interval','0'];
-            if (clampedPan !== 0) args.push('-af', panFilter);
-            args.push(audioFilePath);
-            const { spawn } = require('child_process');
-            track.audioProcess = spawn(ffplayPath, args, { stdio: ['ignore','ignore','ignore'] });
-            track.isPlaying = true; console.log(`▶️ Playing ${track.name} (ffplay)`);
-            const audioProcess = track.audioProcess; if (audioProcess) { audioProcess.on('close', () => { track.isPlaying = false; if (track.tempFilePath && fs.existsSync(track.tempFilePath)) { try { fs.unlinkSync(track.tempFilePath); console.log(`🗑️ Cleaned up: ${track.tempFilePath}`); } catch (e) {} } }); }
-            return;
-        }
-        const AudicCtor = getAudic();
-        if (AudicCtor) {
-            track.audic = new AudicCtor(audioFilePath) as any;
-            (track.audic as any).volume = track.isMuted ? 0 : track.volume;
-            (track.audic as any).play();
-            track.isPlaying = true;
-            console.log(`▶️ Playing ${track.name} (audic)`);
-            const durationSecondsRaw = Number(track.duration);
-            const durationSeconds = Number.isFinite(durationSecondsRaw) && durationSecondsRaw > 0 ? durationSecondsRaw : 245;
-            console.log(`⚠️ Using timeout-based track ending for ${track.name} (duration: ${durationSeconds.toFixed(2)}s)`);
-            setTimeout(() => {
-                console.log(`✅ Track ended (timeout): ${track.name}`);
-                track.isPlaying = false;
-                if (track.tempFilePath && fs.existsSync(track.tempFilePath)) { try { fs.unlinkSync(track.tempFilePath); console.log(`🗑️ Cleaned up: ${track.tempFilePath}`); } catch (e) {} }
-            }, durationSeconds * 1000);
-        } else {
-            console.warn('Audic not available; skipping playback fallback');
-        }
-    }
-
-    private async startPreparedTrackAt(track: AudioTrack, audioFilePath: string, startAtMs: number): Promise<void> {
-        const delayMs = Math.max(0, startAtMs - Date.now());
-        if (delayMs > 0) await new Promise(resolve => setTimeout(resolve, delayMs));
-        await this.startPreparedTrack(track, audioFilePath);
-    }
-
-    commandExists(cmd: string): boolean {
-        try {
-            if (process.platform === 'win32') { require('child_process').execSync(`where ${cmd}`, { stdio: 'ignore' }); } else { require('child_process').execSync(`which ${cmd}`, { stdio: 'ignore' }); }
-            return true;
-        } catch (error) {
-            return false;
-        }
-    }
-
-    getCommandPath(cmd: string): string {
-        try {
-            if (process.platform === 'win32') { const result: string = require('child_process').execSync(`where ${cmd}`, { encoding: 'utf8' }); return result.trim().split('\n')[0]; } else { const result: string = require('child_process').execSync(`which ${cmd}`, { encoding: 'utf8' }); return result.trim(); }
-        } catch (error) { return cmd; }
-    }
-
-    startTrackWithDelay(track: AudioTrack, delayMs: number): Promise<void> {
-        return new Promise<void>((resolve) => { setTimeout(async () => { try { await this.startTrackWithClock(track, false); resolve(); } catch (error) { console.error(`❌ Failed to start delayed track ${track.name}:`, error); resolve(); } }, delayMs); });
-    }
-
-    checkCommand(cmd: string): boolean {
-        try { require('child_process').execSync(`which ${cmd}`, { stdio: 'ignore' }); return true; } catch (error) { return false; }
-    }
 
     stopAllTracks(): void {
-        console.log('🛑 Stopping all tracks');
-        
-        // Stop FFmpeg mixer if using single-process mixing
-        if (this.ffmpegMixer.isCurrentlyPlaying()) {
-            console.log('🛑 Stopping FFmpeg mixer');
-            this.ffmpegMixer.stop();
-        }
-        
-        if (this.currentSongId) { this.stopSong(this.currentSongId); return; }
+        console.log('🛑 Stopping all tracks (Go Engine)');
+        audioEngine.stop();
+
         for (const track of this.tracks.values()) {
-            if (track.audioProcess) { try { track.audioProcess.kill('SIGTERM'); console.log(`⏹️ Stopped track: ${track.name}`); } catch (error) { console.error(`❌ Error stopping track ${track.name}:`, error); } }
-            if (track.audic) { try { track.audic.destroy(); console.log(`⏹️ Stopped track: ${track.name}`); } catch (error) { console.error(`❌ Error stopping track ${track.name}:`, error); } }
-            if (track.tempFilePath && fs.existsSync(track.tempFilePath)) { try { fs.unlinkSync(track.tempFilePath); console.log(`🗑️ Cleaned up temp file: ${track.tempFilePath}`); } catch (error) { console.error(`❌ Failed to clean up temp file ${track.tempFilePath}:`, error); } }
-            track.isPlaying = false; track.audioProcess = null; track.audic = null; track.tempFilePath = null;
+            track.isPlaying = false;
         }
         this.isPlaying = false;
+
         if (this.io) this.io.emit('mixer_state_changed', this.getMixerState());
     }
 
-    setTrackVolume(trackId: string, volume: number): boolean { const track = this.tracks.get(trackId); if (track) { track.setVolume(volume); return true; } return false; }
-    setTrackPan(trackId: string, pan: number): boolean { const track = this.tracks.get(trackId); if (track) { track.setPan(pan); return true; } return false; }
-    setTrackMute(trackId: string, muted: boolean): boolean { const track = this.tracks.get(trackId); if (track) { track.setMute(muted); return true; } return false; }
-    setMasterVolume(volume: number): void { this.masterVolume = Math.max(0, Math.min(2, volume)); }
+    setTrackVolume(trackId: string, volume: number): boolean {
+        const track = this.tracks.get(trackId);
+        if (track) {
+            track.setVolume(volume);
+            audioEngine.setTrackVolume(trackId, volume);
+            return true;
+        }
+        return false;
+    }
+    setTrackPan(trackId: string, pan: number): boolean {
+        const track = this.tracks.get(trackId);
+        if (track) {
+            track.setPan(pan);
+            audioEngine.setTrackPan(trackId, pan);
+            return true;
+        }
+        return false;
+    }
+    setTrackMute(trackId: string, muted: boolean): boolean {
+        const track = this.tracks.get(trackId);
+        if (track) {
+            track.setMute(muted);
+            audioEngine.setTrackMute(trackId, muted);
+            return true;
+        }
+        return false;
+    }
+    setMasterVolume(volume: number): void {
+        this.masterVolume = Math.max(0, Math.min(2, volume));
+        // Go engine master volume default logic for now
+        // Iterate and set
+        for (const track of this.tracks.values()) {
+            audioEngine.setTrackVolume(track.id, track.isMuted ? 0 : track.volume * this.masterVolume);
+        }
+    }
 
     getMixerState(): MixerState { return { masterVolume: this.masterVolume, isPlaying: this.isPlaying, currentSongId: this.currentSongId, songs: this.getAllSongs(), tracks: Array.from(this.tracks.values()).map(track => track.getState()), memoryUsage: this.getMemoryUsage() }; }
 
@@ -632,22 +542,43 @@ export class AudioMixer {
         } catch (error) { console.error('❌ Error during crossfade performance:', error); this.activeCrossfade = null; throw error; }
     }
 
+    /**
+     * Check if a track name is a "special" track (click, guide, metronome)
+     * that should be panned left for in-ear monitoring.
+     */
+    private isMonitorTrack(name: string): boolean {
+        const lower = name.toLowerCase();
+        return lower.includes('click') || lower.includes('guide') || lower.includes('metronome');
+    }
+
+    /**
+     * Apply default panning to ALL tracks based on naming convention:
+     * - If any click/guide/metronome tracks exist:
+     *   - Those tracks → 100% left (-1.0) for in-ear monitors
+     *   - All other tracks → 100% right (+1.0) for house speakers
+     * - If no special tracks exist: all tracks stay stereo center (0.0)
+     */
     applyDefaultPanning(): void {
         const trackArray: AudioTrack[] = Array.from(this.tracks.values());
-        const hasClickOrGuide: boolean = trackArray.some(track => track.name.toLowerCase().includes('click') || track.name.toLowerCase().includes('guide'));
+        const hasMonitorTracks: boolean = trackArray.some(t => this.isMonitorTrack(t.name));
+
+        console.log(`🎛️ Auto-panning: ${hasMonitorTracks ? 'Monitor tracks detected — splitting L/R' : 'No monitor tracks — stereo center'}`);
+
         for (const track of trackArray) {
-            const lowerName: string = track.name.toLowerCase(); let panValue: number = 0;
-            if (hasClickOrGuide) { if (lowerName.includes('click') || lowerName.includes('guide')) panValue = -1; else panValue = 1; }
+            let panValue: number = 0; // default: stereo center
+            if (hasMonitorTracks) {
+                panValue = this.isMonitorTrack(track.name) ? -1 : 1;
+            }
             track.setPan(panValue);
+            // Propagate to Go engine
+            audioEngine.setTrackPan(track.id, panValue);
+            console.log(`🎛️ Track "${track.name}" pan → ${panValue}`);
         }
     }
 
     applyDefaultPanningToTrack(track: AudioTrack): void {
-        const trackArray: AudioTrack[] = Array.from(this.tracks.values());
-        const hasClickOrGuide: boolean = trackArray.some(t => t.name.toLowerCase().includes('click') || t.name.toLowerCase().includes('guide'));
-        const lowerName: string = track.name.toLowerCase(); let panValue: number = 0;
-        if (hasClickOrGuide) { if (lowerName.includes('click') || lowerName.includes('guide')) panValue = -1; else panValue = 1; }
-        track.setPan(panValue);
+        // Delegate to full re-evaluation (since one track's presence affects all)
+        this.applyDefaultPanning();
     }
 }
 

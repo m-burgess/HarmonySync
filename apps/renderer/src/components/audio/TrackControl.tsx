@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { setTrackMute } from '../../utils/audio';
 import TrackControlCard from './TrackControlCard';
 import type { Track } from '../../types/audio';
 
@@ -18,17 +17,12 @@ const TrackControl: React.FC<TrackControlProps> = ({ track, onMuteToggle }) => {
 
   const handleMuteToggle = async (_trackId: string, newMuteState: boolean): Promise<void> => {
     console.log(`🔇 [TrackControl] Toggle mute for track ${track.name}: ${newMuteState}`);
-    console.log(`🔍 [TrackControl] Track object:`, track);
-    console.log(`🔍 [TrackControl] Track ID: ${track.id}, New mute state: ${newMuteState}`);
-    
+
     try {
-      // Update audio service
-      await setTrackMute(track, newMuteState);
-      
       // Update local state
       setIsMuted(newMuteState);
-      
-      // Notify parent component
+
+      // Notify parent component (which handles the service call via Go engine)
       if (onMuteToggle) {
         onMuteToggle(track, newMuteState);
       }

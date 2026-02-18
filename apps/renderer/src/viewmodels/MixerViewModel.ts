@@ -24,6 +24,8 @@ import type { AudioTrack } from '../types';
 // Service interface
 interface IAudioService {
   setTrackMute(trackIndex: number, muted: boolean): Promise<void>;
+  setTrackVolume(trackIndex: number, volume: number): Promise<void>;
+  setTrackPan(trackIndex: number, pan: number): Promise<void>;
   play(): Promise<void>;
   stop(): Promise<void>;
   onStateChange(callback: (event: unknown, state: { isPlaying: boolean }) => void): void;
@@ -44,8 +46,8 @@ export class MixerViewModel extends BaseViewModel implements IMixerViewModel {
   public hasUnsavedChanges: boolean = false;
   public isSaving: boolean = false;
 
-  // Track priority for sorting
-  private readonly TRACK_PRIORITY: string[] = ['click', 'guide'];
+  // Track priority keywords for sorting (order matters: click first, guide second, metronome third)
+  private readonly TRACK_PRIORITY: string[] = ['click', 'guide', 'metronome'];
 
   // Service
   private audioService: IAudioService;
@@ -142,32 +144,34 @@ export class MixerViewModel extends BaseViewModel implements IMixerViewModel {
   }
 
   /**
-   * Sort tracks by priority
+   * Get the priority index for a track name using keyword matching.
+   * Returns the index of the first matching priority keyword, or -1.
+   */
+  private getTrackPriority(name: string): number {
+    const lower = name.toLowerCase();
+    return this.TRACK_PRIORITY.findIndex(keyword => lower.includes(keyword));
+  }
+
+  /**
+   * Sort tracks: Click first, Guide second, Metronome third, then A-Z
    */
   private sortTracks(a: AudioTrack, b: AudioTrack): number {
-    const aName = (a.name || a.track_name || '').toLowerCase();
-    const bName = (b.name || b.track_name || '').toLowerCase();
-
-    const aIndex = this.TRACK_PRIORITY.indexOf(aName);
-    const bIndex = this.TRACK_PRIORITY.indexOf(bName);
+    const aPriority = this.getTrackPriority(a.name || '');
+    const bPriority = this.getTrackPriority(b.name || '');
 
     // Both are priority tracks
-    if (aIndex !== -1 && bIndex !== -1) {
-      return aIndex - bIndex;
+    if (aPriority !== -1 && bPriority !== -1) {
+      return aPriority - bPriority;
     }
 
     // Only a is priority
-    if (aIndex !== -1) {
-      return -1;
-    }
+    if (aPriority !== -1) return -1;
 
     // Only b is priority
-    if (bIndex !== -1) {
-      return 1;
-    }
+    if (bPriority !== -1) return 1;
 
     // Neither is priority, sort alphabetically
-    return aName.localeCompare(bName);
+    return (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase());
   }
 
   // Actions: Set tracks
@@ -311,16 +315,36 @@ export class MixerViewModel extends BaseViewModel implements IMixerViewModel {
   public async setTrackVolume(trackIndex: number, volume: number): Promise<void> {
     const track = this.tracks[trackIndex];
     if (track) {
-      track.volume = volume;
-      this.hasUnsavedChanges = true;
+      // Update local state immediately for responsiveness
+      runInAction(() => {
+        track.volume = volume;
+        this.hasUnsavedChanges = true;
+      });
+
+      // Call service
+      try {
+        await this.audioService.setTrackVolume(trackIndex, volume);
+      } catch (error) {
+        this.handleError('Set volume', error);
+      }
     }
   }
 
   public async setTrackPan(trackIndex: number, pan: number): Promise<void> {
     const track = this.tracks[trackIndex];
     if (track) {
-      track.pan = pan;
-      this.hasUnsavedChanges = true;
+      // Update local state immediately
+      runInAction(() => {
+        track.pan = pan;
+        this.hasUnsavedChanges = true;
+      });
+
+      // Call service
+      try {
+        await this.audioService.setTrackPan(trackIndex, pan);
+      } catch (error) {
+        this.handleError('Set pan', error);
+      }
     }
   }
 

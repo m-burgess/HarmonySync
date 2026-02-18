@@ -11,6 +11,117 @@ const wav = require('node-wav');
 const Audic = require('audic').default;
 const { spawn } = require('child_process');
 
+// Import Native Audio Engine
+// Go Audio Engine Adapter
+class GoEngineAdapter {
+    constructor() {
+        this.process = null;
+        this.ready = false;
+        this.start();
+    }
+
+    start() {
+        if (this.process) return;
+
+        const goExecutable = 'c:\\Program Files\\Go\\bin\\go.exe'; // Use full path or just 'go' if in PATH
+        const scriptPath = path.join(__dirname, 'go-engine');
+
+        console.log(`🚀 Starting Go Audio Engine from ${scriptPath}...`);
+
+        // We run 'go run .' for dev simplicity. In prod, build to exe.
+        // For now, let's try 'go run .'
+        // If 'go' is not in path, we might need absolute path.
+        // User confirmed Go is installed.
+        // Using 'go run' is slower to start but easier for now.
+        // Better: build it first, then spawn the exe.
+
+        // Let's assume we built it to 'audio-engine.exe'
+        const exePath = path.join(__dirname, 'go-engine', 'audio-engine.exe');
+
+        if (fs.existsSync(exePath)) {
+            console.log(`Found compiled engine at ${exePath}`);
+            this.process = spawn(exePath);
+        } else {
+            console.log(`Compiled engine not found. Falling back to 'go run .'`);
+            this.process = spawn('go', ['run', '.'], { cwd: scriptPath, shell: true });
+        }
+
+        this.process.stdout.on('data', (data) => {
+            console.log(`[GoEngine RAW] ${data}`);
+            const lines = data.toString().split('\n');
+            for (const line of lines) {
+                if (!line.trim()) continue;
+                try {
+                    const msg = JSON.parse(line);
+                    if (msg.level === 'error') {
+                        console.error(`[GoEngine] ❌ ${msg.message}`);
+                    } else {
+                        console.log(`[GoEngine] ${msg.message}`);
+                    }
+                } catch (e) {
+                    console.log(`[GoEngine] raw: ${line}`);
+                }
+            }
+        });
+
+        this.process.stderr.on('data', (data) => {
+            console.error(`[GoEngine] stderr: ${data}`);
+        });
+
+        this.process.on('close', (code) => {
+            console.log(`[GoEngine] Process exited with code ${code}`);
+            this.process = null;
+            this.ready = false;
+        });
+
+        this.ready = true;
+    }
+
+    sendCommand(op, args) {
+        if (!this.process) {
+            console.warn('Go Engine not running, attempting to restart...');
+            this.start();
+            return;
+        }
+        const payload = JSON.stringify({ op, args }) + '\n';
+        this.process.stdin.write(payload);
+    }
+
+    loadTrack(id, path) {
+        this.sendCommand('load', { id, path });
+    }
+
+    play() {
+        this.sendCommand('play', {});
+    }
+
+    stop() {
+        this.sendCommand('stop', {});
+    }
+
+    pause() {
+        this.sendCommand('pause', {});
+    }
+
+    setTrackVolume(id, volume) {
+        this.sendCommand('setVolume', { id, volume });
+    }
+
+    setTrackPan(id, pan) {
+        this.sendCommand('setPan', { id, pan });
+    }
+
+    setTrackMute(id, muted) {
+        this.sendCommand('setMute', { id, muted });
+    }
+
+    clearAllTracks() {
+        this.sendCommand('clear', {});
+    }
+}
+
+const audioEngine = new GoEngineAdapter();
+
 // Configurable host and shutdown token
 const HOST = process.env.HOST || '127.0.0.1';
 const SHUTDOWN_TOKEN = process.env.SHUTDOWN_TOKEN || null;
@@ -23,7 +134,7 @@ const IS_MAC = process.platform === 'darwin';
 console.log(`🖥️  Platform detected: ${process.platform} (Windows: ${IS_WINDOWS}, Linux: ${IS_LINUX}, Mac: ${IS_MAC})`);
 
 // Check for FFmpeg availability
-const ffmpegAvailable = IS_WINDOWS ? 
+const ffmpegAvailable = IS_WINDOWS ?
     require('fs').existsSync('C:\\Users\\Admin\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-8.0.1-full_build\\bin\\ffplay.exe') :
     false;
 console.log(`🎵 FFmpeg available: ${ffmpegAvailable}`);
@@ -37,15 +148,9 @@ class AudioTrack {
         this.channels = channels;
         this.sampleRate = sampleRate;
         this.volume = 1.0;
-        this.pan = 0.0; // -1.0 (left) to 1.0 (right)
+        this.pan = 0.0;
         this.isMuted = false;
         this.isPlaying = false;
-        this.currentPosition = 0;
-        this.stream = null;
-        this.decoder = null;
-        this.audioProcess = null;
-        this.audic = null;
-        this.tempFilePath = null;
     }
 
     async loadMetadata() {
@@ -61,266 +166,31 @@ class AudioTrack {
         }
     }
 
-    createStream() {
-        if (this.stream) {
-            this.stream.destroy();
-        }
-
-        // Create a streaming reader for the audio file
-        // We'll use fluent-ffmpeg for format conversion and streaming
-        this.stream = fs.createReadStream(this.filePath);
-        
-        return this.stream;
-    }
-
     play() {
-        console.log(`⚠️  Warning: Individual track play() called for ${this.name}. Use mixer.playAllTracks() for synchronized playback.`);
-        
-        if (this.isPlaying) return;
-        
+        // Controlled by mixer now
         this.isPlaying = true;
-        console.log(`▶️  Playing individual track: ${this.name}`);
-        
-        try {
-            // Clean up any existing audic instance
-            if (this.audic) {
-                try {
-                    this.audic.destroy();
-                } catch (error) {
-                    console.error(`⚠️ Error cleaning up existing audic for ${this.name}:`, error);
-                }
-                this.audic = null;
-            }
-            
-            // Clean up any existing temp file
-            if (this.tempFilePath && fs.existsSync(this.tempFilePath)) {
-                try {
-                    fs.unlinkSync(this.tempFilePath);
-                } catch (error) {
-                    console.error(`⚠️ Error cleaning up existing temp file for ${this.name}:`, error);
-                }
-                this.tempFilePath = null;
-            }
-            
-            // Determine pan based on track type
-            const isClickOrGuide = this.name.toLowerCase().includes('click') || 
-                                 this.name.toLowerCase().includes('guide') ||
-                                 this.name.toLowerCase().includes('metronome');
-            const pan = isClickOrGuide ? -1 : 1; // -1 = full left, 1 = full right
-            
-            // Update track's pan value for UI consistency
-            this.pan = pan;
-            
-            // Decode WAV file
-            const buffer = fs.readFileSync(this.filePath);
-            const result = wav.decode(buffer);
-            
-            // Apply constant power panning
-            if (result.channelData.length >= 2) { // Stereo
-                const leftChannel = result.channelData[0];
-                const rightChannel = result.channelData[1];
-                
-                // Constant power panning formula
-                const angle = ((pan + 1) * Math.PI) / 4; // 0 to π/2
-                const leftGain = Math.cos(angle);
-                const rightGain = Math.sin(angle);
-                
-                for (let i = 0; i < leftChannel.length; i++) {
-                    const sample = leftChannel[i];
-                    leftChannel[i] = sample * leftGain;
-                    rightChannel[i] = sample * rightGain;
-                }
-            }
-            
-            // Encode back to WAV buffer
-            const pannedBuffer = wav.encode(result.channelData, {
-                sampleRate: result.sampleRate,
-                bitDepth: 16
-            });
-            
-            // Save to temporary file
-            const tempDir = os.tmpdir();
-            const tempFileName = `harmony_${this.id}_${Date.now()}.wav`;
-            const tempFilePath = path.join(tempDir, tempFileName);
-            fs.writeFileSync(tempFilePath, Buffer.from(pannedBuffer));
-            
-            // Store temp file path for cleanup
-            this.tempFilePath = tempFilePath;
-            
-            // Play with audic
-            this.audic = new Audic(tempFilePath);
-            this.audic.volume = this.isMuted ? 0 : this.volume;
-            
-            console.log(`▶️ Starting individual track: ${this.name} (pan: ${pan})`);
-            this.audic.play();
-            
-            this.audic.on('ended', () => {
-                console.log(`🏁 Track finished: ${this.name}`);
-                this.isPlaying = false;
-                
-                // Clean up temp file
-                if (this.tempFilePath && fs.existsSync(this.tempFilePath)) {
-                    try {
-                        fs.unlinkSync(this.tempFilePath);
-                        console.log(`🗑️ Cleaned up temp file: ${this.tempFilePath}`);
-                    } catch (error) {
-                        console.error(`❌ Failed to clean up temp file ${this.tempFilePath}:`, error);
-                    }
-                }
-                
-                this.audic.destroy();
-                this.audic = null;
-                this.tempFilePath = null;
-            });
-            
-            this.audic.on('error', (error) => {
-                console.error(`❌ Audio playback error for ${this.name}:`, error);
-                this.isPlaying = false;
-                
-                // Clean up temp file on error
-                if (this.tempFilePath && fs.existsSync(this.tempFilePath)) {
-                    try {
-                        fs.unlinkSync(this.tempFilePath);
-                    } catch (cleanupError) {
-                        console.error(`❌ Failed to clean up temp file ${this.tempFilePath}:`, cleanupError);
-                    }
-                }
-                
-                if (this.audic) {
-                    this.audic.destroy();
-                    this.audic = null;
-                }
-                this.tempFilePath = null;
-            });
-            
-        } catch (error) {
-            console.error(`❌ Failed to start playback for ${this.name}:`, error);
-            this.isPlaying = false;
-        }
-    }
-
-    checkCommand(cmd) {
-        try {
-            require('child_process').execSync(`which ${cmd}`, { stdio: 'ignore' });
-            return true;
-        } catch (error) {
-            return false;
-        }
     }
 
     stop() {
         this.isPlaying = false;
-        if (this.audioProcess) {
-            this.audioProcess.kill('SIGTERM');
-            this.audioProcess = null;
-        }
-        if (this.audic) {
-            this.audic.destroy();
-            this.audic = null;
-        }
-        if (this.stream) {
-            this.stream.destroy();
-            this.stream = null;
-        }
-        // Clean up temp file
-        if (this.tempFilePath && fs.existsSync(this.tempFilePath)) {
-            try {
-                fs.unlinkSync(this.tempFilePath);
-                console.log(`🗑️ Cleaned up temp file: ${this.tempFilePath}`);
-            } catch (error) {
-                console.error(`❌ Failed to clean up temp file ${this.tempFilePath}:`, error);
-            }
-            this.tempFilePath = null;
-        }
-        console.log(`⏹️  Stopped track: ${this.name}`);
-    }
-
-    pause() {
-        // Implement pause logic
-        this.isPlaying = false;
-    }
-
-    resume() {
-        // Implement resume logic
-        this.isPlaying = true;
     }
 
     setVolume(volume) {
-        this.volume = Math.max(0, Math.min(2, volume)); // 0-200%
-        
-        // For audic-based playback, apply volume immediately if playing
-        if (this.audic) {
-            this.audic.volume = this.isMuted ? 0 : this.volume;
-            console.log(`🎚️ Applied volume=${this.volume} to track: ${this.name}`);
-        } else if (this.audioProcess && !this.audioProcess.killed && !this.isMuted) {
-            try {
-                const mpvVolume = this.volume * 100;
-                const command = `{ "command": ["set_property", "volume", ${mpvVolume}] }\n`;
-                if (this.audioProcess.stdin && this.audioProcess.stdin.writable) {
-                    this.audioProcess.stdin.write(command);
-                    console.log(`🎚️ Applied volume=${this.volume} (mpv=${mpvVolume}) to track: ${this.name}`);
-                } else {
-                    console.log(`⚠️ Cannot apply volume to ${this.name}: stdin not writable`);
-                }
-            } catch (error) {
-                console.error(`❌ Failed to apply volume to track ${this.name}:`, error.message);
-            }
-        }
+        this.volume = Math.max(0, Math.min(2, volume));
+        audioEngine.setTrackVolume(this.id, this.volume);
+        console.log(`🎚️ Applied volume=${this.volume} to track: ${this.name}`);
     }
 
     setPan(pan) {
-        this.pan = Math.max(-1, Math.min(1, pan)); // -1 to 1
-        
-        // Apply pan to running mpv process
-        if (this.audioProcess && !this.audioProcess.killed) {
-            try {
-                // Convert pan (-1 to 1) to mpv audio-balance (-1 to 1)
-                const audioBalance = pan;
-                const command = `{ "command": ["set_property", "audio-balance", ${audioBalance}] }\n`;
-                if (this.audioProcess.stdin && this.audioProcess.stdin.writable) {
-                    this.audioProcess.stdin.write(command);
-                    console.log(`🎛️ Applied pan=${pan} (audio-balance=${audioBalance}) to track: ${this.name}`);
-                } else {
-                    console.log(`⚠️ Cannot apply pan to ${this.name}: stdin not writable`);
-                }
-            } catch (error) {
-                console.error(`❌ Failed to apply pan to track ${this.name}:`, error.message);
-            }
-        } else {
-            console.log(`🎛️ Track ${this.name} not playing, pan state saved for next playback`);
-        }
+        this.pan = Math.max(-1, Math.min(1, pan));
+        audioEngine.setTrackPan(this.id, this.pan);
+        console.log(`🎛️ Applied pan=${this.pan} to track: ${this.name}`);
     }
 
     setMute(muted) {
         this.isMuted = muted;
-        
-        // Apply mute to running audic instance
-        if (this.audic) {
-            this.audic.volume = muted ? 0 : this.volume;
-            console.log(`🔇 Applied mute=${muted} (volume=${this.audic.volume}) to track: ${this.name}`);
-        } else if (this.audioProcess && !this.audioProcess.killed) {
-            const volume = muted ? 0 : (this.volume * 100);
-            try {
-                // Send volume command to mpv via stdin (mpv accepts JSON commands)
-                const command = `{ "command": ["set_property", "volume", ${volume}] }\n`;
-                if (this.audioProcess.stdin && this.audioProcess.stdin.writable) {
-                    this.audioProcess.stdin.write(command);
-                    console.log(`🔇 Applied mute=${muted} (volume=${volume}) to track: ${this.name}`);
-                } else {
-                    console.log(`⚠️ Cannot apply mute to ${this.name}: stdin not writable`);
-                }
-            } catch (error) {
-                console.error(`❌ Failed to apply mute to track ${this.name}:`, error.message);
-            }
-        } else {
-            console.log(`🔇 Track ${this.name} not playing, mute state saved for next playback`);
-        }
-    }
-
-    applyEffects(audioStream) {
-        // Apply real-time volume and panning effects
-        // This is a simplified version - in production you'd use proper audio processing
-        return audioStream;
+        audioEngine.setTrackMute(this.id, muted);
+        console.log(`🔇 Applied mute=${muted} to track: ${this.name}`);
     }
 
     getState() {
@@ -335,7 +205,7 @@ class AudioTrack {
             pan: this.pan,
             isMuted: this.isMuted,
             isPlaying: this.isPlaying,
-            currentPosition: this.currentPosition
+            currentPosition: 0 // TODO: Implement getPosition
         };
     }
 }
@@ -343,51 +213,46 @@ class AudioTrack {
 class AudioMixer {
     constructor() {
         this.tracks = new Map();
-        this.songs = new Map(); // Map of songId -> { id, name, trackIds: [], isPlaying: false }
-        this.currentSongId = null; // Only one song can play at a time
+        this.songs = new Map();
+        this.currentSongId = null;
         this.masterVolume = 1.0;
         this.isPlaying = false;
-        this.speaker = null;
-        this.mixedStream = null;
-        this.crossfadeDuration = 3000; // 3 seconds default crossfade
+        this.crossfadeDuration = 3000;
         this.activeCrossfade = null;
     }
 
     async loadTrack(filePath, name = null) {
         console.log(`🎵 LoadTrack called: "${filePath}" (name: ${name})`);
-        
-        // Check if track already exists
+
         const existingTrack = Array.from(this.tracks.values()).find(track => track.filePath === filePath);
         if (existingTrack) {
-            console.log(`⚠️  Track already loaded: ${existingTrack.name} (ID: ${existingTrack.id}) - skipping duplicate`);
             return existingTrack.id;
         }
-        
+
         const trackId = uuidv4();
         const trackName = name || path.basename(filePath, path.extname(filePath));
-        
-        console.log(`✅ Loading new track: "${trackName}" (ID: ${trackId})`);
-        
-        const track = new AudioTrack(trackId, trackName, filePath, 0, 2, 44100);
-        
-        const loaded = await track.loadMetadata();
-        if (!loaded) {
-            throw new Error(`Failed to load track: ${filePath}`);
-        }
 
-        this.tracks.set(trackId, track);
-        console.log(`Loaded track: ${trackName} (${track.duration.toFixed(2)}s)`);
-        
-        // Apply automatic panning based on track name
-        this.applyDefaultPanningToTrack(track);
-        
-        return trackId;
+        console.log(`✅ Loading new track: "${trackName}" (ID: ${trackId})`);
+
+        const track = new AudioTrack(trackId, trackName, filePath, 0, 2, 44100);
+        await track.loadMetadata();
+
+        try {
+            audioEngine.loadTrack(trackId, filePath);
+            this.tracks.set(trackId, track);
+            this.applyDefaultPanningToTrack(track);
+            console.log(`Loaded track: ${trackName} (${track.duration.toFixed(2)}s)`);
+            return trackId;
+        } catch (error) {
+            console.error(`Failed to load track into native engine: ${error}`);
+            throw error;
+        }
     }
 
     removeTrack(trackId) {
         const track = this.tracks.get(trackId);
         if (track) {
-            track.stop();
+            audioEngine.setTrackVolume(trackId, 0);
             this.tracks.delete(trackId);
             return true;
         }
@@ -396,100 +261,66 @@ class AudioMixer {
 
     clearAllTracks() {
         console.log('🧹 Clearing all tracks');
-        this.stopAllTracks();
-        
-        for (const track of this.tracks.values()) {
-            track.stop();
-        }
-        
+        audioEngine.stop();
+        audioEngine.clearAllTracks();
         this.tracks.clear();
         this.songs.clear();
         this.currentSongId = null;
         console.log('✅ All tracks and songs cleared');
+
+        if (serverInstance && serverInstance.io) {
+            serverInstance.io.emit('tracks_cleared');
+            serverInstance.io.emit('mixer_state_changed', this.getMixerState());
+        }
     }
 
-    // Song management methods
     async createSong(songName, trackPaths) {
         const songId = uuidv4();
         const trackIds = [];
-        
         console.log(`🎵 Creating song: "${songName}" with ${trackPaths.length} tracks`);
-        
-        // Load all tracks for this song
+
         for (const trackPath of trackPaths) {
             try {
                 const trackId = await this.loadTrack(trackPath);
                 trackIds.push(trackId);
             } catch (error) {
                 console.error(`Failed to load track ${trackPath} for song ${songName}:`, error);
-                // Continue with other tracks
             }
         }
-        
+
         const song = {
             id: songId,
             name: songName,
             trackIds: trackIds,
             isPlaying: false
         };
-        
+
         this.songs.set(songId, song);
-        console.log(`✅ Created song: ${songName} (ID: ${songId}) with ${trackIds.length} tracks`);
-        
-        // Set this as the current song
+        console.log(`✅ Created song: ${songName} (ID: ${songId})`);
         this.currentSongId = songId;
-        
         return songId;
     }
 
     playSong(songId) {
         const song = this.songs.get(songId);
-        if (!song) {
-            throw new Error(`Song not found: ${songId}`);
-        }
-        
-        // Stop any currently playing song
+        if (!song) return;
+
         if (this.currentSongId && this.currentSongId !== songId) {
             this.stopSong(this.currentSongId);
         }
-        
-        // If this song is already playing, do nothing
-        if (song.isPlaying) {
-            console.log(`⚠️  Song ${song.name} is already playing`);
-            return;
-        }
-        
+
         console.log(`▶️  Playing song: ${song.name}`);
-        
-        // Play all tracks in this song
-        const activeTracks = [];
+
         for (const trackId of song.trackIds) {
             const track = this.tracks.get(trackId);
-            if (track && !track.isMuted) {
-                activeTracks.push(track);
+            if (track) {
+                audioEngine.setTrackVolume(trackId, track.isMuted ? 0 : track.volume);
+                audioEngine.setTrackPan(trackId, track.pan);
+                track.isPlaying = true;
             }
         }
-        
-        if (activeTracks.length === 0) {
-            console.log('⚠️  No tracks to play in song');
-            return;
-        }
-        
-        // Use the same playback logic as playAllTracks
-        const clickTrack = activeTracks.find(track => 
-            track.name.toLowerCase().includes('click') || 
-            track.name.toLowerCase().includes('metronome') ||
-            track.name.toLowerCase().includes('guide')
-        );
-        
-        if (clickTrack) {
-            console.log(`🎯 Using ${clickTrack.name} as master clock for song`);
-            this.startMasterClockPlayback(activeTracks, clickTrack);
-        } else {
-            console.log('🎵 Using synchronized simultaneous playback for song');
-            this.startSynchronizedSimultaneousPlayback(activeTracks);
-        }
-        
+
+        audioEngine.play();
         song.isPlaying = true;
         this.currentSongId = songId;
         this.isPlaying = true;
@@ -497,55 +328,40 @@ class AudioMixer {
 
     stopSong(songId) {
         const song = this.songs.get(songId);
-        if (!song) {
-            return false;
-        }
-        
+        if (!song) return false;
+
         console.log(`⏹️  Stopping song: ${song.name}`);
-        
-        // Stop all tracks in this song
+        audioEngine.stop();
+
         for (const trackId of song.trackIds) {
             const track = this.tracks.get(trackId);
-            if (track) {
-                track.stop();
-            }
+            if (track) track.isPlaying = false;
         }
-        
+
         song.isPlaying = false;
         if (this.currentSongId === songId) {
             this.currentSongId = null;
             this.isPlaying = false;
         }
-        
         return true;
     }
 
     removeSong(songId) {
         const song = this.songs.get(songId);
-        if (!song) {
-            return false;
-        }
-        
-        // Stop the song if it's playing
+        if (!song) return false;
+
         this.stopSong(songId);
-        
-        // Remove all tracks in this song
         for (const trackId of song.trackIds) {
             this.removeTrack(trackId);
         }
-        
         this.songs.delete(songId);
-        console.log(`🗑️  Removed song: ${song.name}`);
-        
         return true;
     }
 
     getSongState(songId) {
         const song = this.songs.get(songId);
-        if (!song) {
-            return null;
-        }
-        
+        if (!song) return null;
+
         return {
             id: song.id,
             name: song.name,
@@ -553,14 +369,7 @@ class AudioMixer {
             trackCount: song.trackIds.length,
             tracks: song.trackIds.map(trackId => {
                 const track = this.tracks.get(trackId);
-                return track ? {
-                    id: track.id,
-                    name: track.name,
-                    isPlaying: track.isPlaying,
-                    volume: track.volume,
-                    pan: track.pan,
-                    isMuted: track.isMuted
-                } : null;
+                return track ? track.getState() : null;
             }).filter(Boolean)
         };
     }
@@ -574,9 +383,13 @@ class AudioMixer {
     }
 
     playTrack(trackId) {
+        // Individual track playback not fully supported in this engine mode alongside song
+        // But we can enable it
         const track = this.tracks.get(trackId);
         if (track) {
-            track.play();
+            audioEngine.setTrackVolume(trackId, track.isMuted ? 0 : track.volume);
+            audioEngine.play();
+            track.isPlaying = true;
             return true;
         }
         return false;
@@ -585,454 +398,45 @@ class AudioMixer {
     stopTrack(trackId) {
         const track = this.tracks.get(trackId);
         if (track) {
-            track.stop();
+            // We can't stop a single track in the engine (it stops all or we need to mute/pause it)
+            // For now, we'll just mute it effectively? Or maybe we should expose pause?
+            // The engine has pause().
+            // If we want to stop just one track but keep others playing, we might need to unload it or mute it.
+            // But 'stop' usually means rewind too.
+            // For now, let's just mute it.
+            audioEngine.setTrackVolume(trackId, 0);
+            track.isPlaying = false;
             return true;
         }
         return false;
     }
 
-    async playAllTracks() {
-        // If we have a current song, play it
+    playAllTracks() {
         if (this.currentSongId) {
             this.playSong(this.currentSongId);
             return;
         }
-        
-        // Fallback: play all tracks (for backward compatibility)
-        // Stop any currently playing tracks first
-        this.stopAllTracks();
-        await new Promise(resolve => setTimeout(resolve, 100)); // Brief pause
-        
-        const activeTracks = [];
-        
-        // Collect all non-muted tracks
+
+        console.log('▶️  Playing all loaded tracks');
         for (const track of this.tracks.values()) {
-            if (!track.isMuted) {
-                activeTracks.push(track);
+            if (track) {
+                audioEngine.setTrackVolume(track.id, track.isMuted ? 0 : track.volume);
+                audioEngine.setTrackPan(track.id, track.pan);
+                track.isPlaying = true;
             }
         }
-        
-        if (activeTracks.length === 0) {
-            console.log('⚠️  No tracks to play');
-            return;
-        }
-        
-        console.log(`▶️  Playing ${activeTracks.length} tracks in sync with master clock`);
-        
-        // Use click track as master clock if available
-        const clickTrack = activeTracks.find(track => 
-            track.name.toLowerCase().includes('click') || 
-            track.name.toLowerCase().includes('metronome') ||
-            track.name.toLowerCase().includes('guide')
-        );
-        
-        if (clickTrack) {
-            console.log(`🎯 Using ${clickTrack.name} as master clock`);
-            await this.startMasterClockPlayback(activeTracks, clickTrack);
-        } else {
-            console.log('🎵 Using synchronized simultaneous playback');
-            await this.startSynchronizedSimultaneousPlayback(activeTracks);
-        }
-        
+        audioEngine.play();
         this.isPlaying = true;
     }
 
-    async startMasterClockPlayback(tracks, masterTrack) {
-        try {
-            console.log(`🎯 Master clock designated: ${masterTrack.name}`);
-            console.log(`🔍 Master track path: ${masterTrack.filePath}`);
-            console.log(`🎵 Starting ALL tracks simultaneously (including master clock)...`);
-            
-            // CRITICAL FIX: Start ALL tracks at exactly the same time
-            // Professional multitrack players like multitracks.com start all tracks simultaneously,
-            // not sequentially with delays. The master clock concept is just for reference,
-            // not for sequential starting.
-            const startTime = Date.now();
-            
-            // Prepare all track start promises (master + slaves)
-            const allTrackPromises = tracks.map(track => {
-                const isMaster = track === masterTrack;
-                return this.startTrackWithClock(track, isMaster);
-            });
-            
-            // Start all tracks simultaneously - NO DELAYS
-            // Use allSettled to handle partial failures gracefully
-            const results = await Promise.allSettled(allTrackPromises);
-            
-            const totalTime = Date.now() - startTime;
-            
-            // Check for any failures
-            const failedTracks = results.filter(r => r.status === 'rejected');
-            const succeededTracks = results.filter(r => r.status === 'fulfilled');
-            
-            if (failedTracks.length > 0) {
-                console.warn(`⚠️ ${failedTracks.length} track(s) failed to start:`);
-                results.forEach((result, index) => {
-                    if (result.status === 'rejected') {
-                        const trackName = tracks[index]?.name || `Track ${index}`;
-                        console.error(`   - ${trackName}: ${result.reason}`);
-                    }
-                });
-            }
-            
-            if (succeededTracks.length === 0) {
-                throw new Error('All tracks failed to start');
-            }
-            
-            console.log(`✅ ${succeededTracks.length}/${tracks.length} tracks started simultaneously in ${totalTime}ms`);
-            console.log(`✅ Master clock (${masterTrack.name}) and slave tracks are now playing in sync`);
-            
-            // Deferred verification check (non-blocking, intentionally not awaited)
-            void setTimeout(() => {
-                if (!masterTrack.isPlaying) {
-                    console.warn('⚠️ Warning: Master clock may have failed to start');
-                }
-            }, 100);
-            
-        } catch (error) {
-            console.error('❌ Error in master clock playback:', error);
-            console.log('🔄 Falling back to synchronized simultaneous playback');
-            // Fallback to simultaneous playback
-            await this.startSynchronizedSimultaneousPlayback(tracks);
-        }
-    }
-
-    async startSynchronizedSimultaneousPlayback(tracks) {
-        try {
-            // Start all tracks as close to simultaneously as possible
-            const startTime = Date.now();
-            const promises = tracks.map(track => 
-                this.startTrackWithClock(track, false) // Remove delay for true simultaneity
-            );
-            
-            // Use allSettled to handle partial failures gracefully
-            const results = await Promise.allSettled(promises);
-            
-            const totalTime = Date.now() - startTime;
-            
-            // Check for any failures
-            const failedTracks = results.filter(r => r.status === 'rejected');
-            const succeededTracks = results.filter(r => r.status === 'fulfilled');
-            
-            if (failedTracks.length > 0) {
-                console.warn(`⚠️ ${failedTracks.length} track(s) failed to start:`);
-                results.forEach((result, index) => {
-                    if (result.status === 'rejected') {
-                        const trackName = tracks[index]?.name || `Track ${index}`;
-                        console.error(`   - ${trackName}: ${result.reason}`);
-                    }
-                });
-            }
-            
-            if (succeededTracks.length === 0) {
-                throw new Error('All tracks failed to start');
-            }
-            
-            console.log(`✅ ${succeededTracks.length}/${tracks.length} tracks started simultaneously in ${totalTime}ms`);
-            
-        } catch (error) {
-            console.error('❌ Error in synchronized playback:', error);
-            throw error;
-        }
-    }
-
-    startTrackWithClock(track, isMaster) {
-        return new Promise((resolve, reject) => {
-            // Prevent starting if already playing
-            if (track.isPlaying) {
-                console.log(`⚠️ Track ${track.name} is already playing, skipping duplicate start`);
-                resolve();
-                return;
-            }
-            
-            try {
-                // Clean up any existing audic instance
-                if (track.audic) {
-                    try {
-                        track.audic.destroy();
-                    } catch (error) {
-                        console.error(`⚠️ Error cleaning up existing audic for ${track.name}:`, error);
-                    }
-                    track.audic = null;
-                }
-                
-                // Clean up any existing temp file
-                if (track.tempFilePath && fs.existsSync(track.tempFilePath)) {
-                    try {
-                        fs.unlinkSync(track.tempFilePath);
-                    } catch (error) {
-                        console.error(`⚠️ Error cleaning up existing temp file for ${track.name}:`, error);
-                    }
-                    track.tempFilePath = null;
-                }
-                // Determine pan based on track type
-                const isClickOrGuide = track.name.toLowerCase().includes('click') || 
-                                     track.name.toLowerCase().includes('guide') ||
-                                     track.name.toLowerCase().includes('metronome');
-                const pan = isClickOrGuide ? -1 : 1; // -1 = full left, 1 = full right
-                
-                // Update track's pan value for UI consistency
-                track.pan = pan;
-                
-                // Decode WAV file
-                const buffer = fs.readFileSync(track.filePath);
-                const result = wav.decode(buffer);
-                
-                // Apply constant power panning
-                if (result.channelData.length >= 2) { // Stereo
-                    const leftChannel = result.channelData[0];
-                    const rightChannel = result.channelData[1];
-                    
-                    // Constant power panning formula
-                    const angle = ((pan + 1) * Math.PI) / 4; // 0 to π/2
-                    const leftGain = Math.cos(angle);
-                    const rightGain = Math.sin(angle);
-                    
-                    for (let i = 0; i < leftChannel.length; i++) {
-                        const sample = leftChannel[i];
-                        leftChannel[i] = sample * leftGain;
-                        rightChannel[i] = sample * rightGain;
-                    }
-                }
-                
-                // Encode back to WAV buffer
-                const pannedBuffer = wav.encode(result.channelData, {
-                    sampleRate: result.sampleRate,
-                    bitDepth: 16
-                });
-                
-                // Save to temporary file
-                const tempDir = os.tmpdir();
-                const tempFileName = `harmony_${track.id}_${Date.now()}.wav`;
-                const tempFilePath = path.join(tempDir, tempFileName);
-                fs.writeFileSync(tempFilePath, Buffer.from(pannedBuffer));
-                
-                // Store temp file path for cleanup
-                track.tempFilePath = tempFilePath;
-                
-                // Play with audic
-                track.audic = new Audic(tempFilePath);
-                track.audic.volume = track.isMuted ? 0 : track.volume;
-                
-                console.log(`▶️ Starting track: ${track.name} (pan: ${pan})`);
-                track.audic.play();
-                track.isPlaying = true;
-                
-                track.audic.on('ended', () => {
-                    console.log(`🏁 Track finished: ${track.name}`);
-                    track.isPlaying = false;
-                    
-                    // Clean up temp file
-                    if (track.tempFilePath && fs.existsSync(track.tempFilePath)) {
-                        try {
-                            fs.unlinkSync(track.tempFilePath);
-                            console.log(`🗑️ Cleaned up temp file: ${track.tempFilePath}`);
-                        } catch (error) {
-                            console.error(`❌ Failed to clean up temp file ${track.tempFilePath}:`, error);
-                        }
-                    }
-                    
-                    track.audic.destroy();
-                    track.audic = null;
-                    track.tempFilePath = null;
-                    
-                    // Check if all tracks have finished
-                    const allTracksFinished = !Array.from(this.tracks.values()).some(t => t.isPlaying);
-                    if (allTracksFinished && this.isPlaying) {
-                        console.log('🎵 All tracks have finished playback');
-                        this.isPlaying = false;
-                        
-                        // Emit playback complete event
-                        if (serverInstance.io) {
-                            serverInstance.io.emit('playback_complete', {
-                                reason: 'all_tracks_finished',
-                                timestamp: Date.now()
-                            });
-                        }
-                    }
-                    
-                    // If master track stops, stop all tracks
-                    if (isMaster) {
-                        console.log('🛑 Master clock completed, stopping all tracks');
-                        this.stopAllTracks();
-                    }
-                });
-                
-                track.audic.on('error', (error) => {
-                    console.error(`❌ Audio playback error for ${track.name}:`, error);
-                    track.isPlaying = false;
-                    
-                    // Clean up temp file on error
-                    if (track.tempFilePath && fs.existsSync(track.tempFilePath)) {
-                        try {
-                            fs.unlinkSync(track.tempFilePath);
-                        } catch (cleanupError) {
-                            console.error(`❌ Failed to clean up temp file ${track.tempFilePath}:`, cleanupError);
-                        }
-                    }
-                    
-                    if (track.audic) {
-                        track.audic.destroy();
-                        track.audic = null;
-                    }
-                    track.tempFilePath = null;
-                });
-                
-                resolve();
-                
-            } catch (error) {
-                console.error(`❌ Error starting track ${track.name}:`, error);
-                reject(error);
-            }
-        });
-    }
-    
-    commandExists(cmd) {
-        try {
-            // First try the standard PATH check
-            if (IS_WINDOWS) {
-                require('child_process').execSync(`where ${cmd}`, { stdio: 'ignore' });
-            } else {
-                require('child_process').execSync(`which ${cmd}`, { stdio: 'ignore' });
-            }
-            return true;
-        } catch (error) {
-            // For FFmpeg on Windows, check common installation locations
-            if (IS_WINDOWS && (cmd === 'ffplay' || cmd === 'ffmpeg')) {
-                const fs = require('fs');
-                const path = require('path');
-
-                const commonPaths = [
-                    'C:\\Program Files\\ffmpeg\\bin',
-                    'C:\\Program Files (x86)\\ffmpeg\\bin',
-                    'C:\\ffmpeg\\bin',
-                    'C:\\tools\\ffmpeg\\bin',
-                    path.join(process.env.USERPROFILE, 'scoop', 'apps', 'ffmpeg', 'current', 'bin'),
-                    path.join(process.env.PROGRAMDATA, 'chocolatey', 'lib', 'ffmpeg', 'tools', 'ffmpeg', 'bin'),
-                    path.join(process.env.USERPROFILE, 'ffmpeg', 'bin'),
-                    path.join(process.env.LOCALAPPDATA, 'Microsoft', 'WinGet', 'Packages', 'Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe', 'ffmpeg-8.0.1-full_build', 'bin')
-                ];
-
-                for (const binPath of commonPaths) {
-                    const fullPath = path.join(binPath, cmd + (IS_WINDOWS ? '.exe' : ''));
-                    if (fs.existsSync(fullPath)) {
-                        console.log(`🎵 Found ${cmd} at: ${fullPath}`);
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
-    }
-
-    getCommandPath(cmd) {
-        try {
-            // First try the standard PATH check
-            if (IS_WINDOWS) {
-                const result = require('child_process').execSync(`where ${cmd}`, { encoding: 'utf8' });
-                return result.trim().split('\n')[0];
-            } else {
-                const result = require('child_process').execSync(`which ${cmd}`, { encoding: 'utf8' });
-                return result.trim();
-            }
-        } catch (error) {
-            // For FFmpeg on Windows, check common installation locations
-            if (IS_WINDOWS && (cmd === 'ffplay' || cmd === 'ffmpeg')) {
-                const fs = require('fs');
-                const path = require('path');
-
-                const commonPaths = [
-                    'C:\\Program Files\\ffmpeg\\bin',
-                    'C:\\Program Files (x86)\\ffmpeg\\bin',
-                    'C:\\ffmpeg\\bin',
-                    'C:\\tools\\ffmpeg\\bin',
-                    path.join(process.env.USERPROFILE, 'scoop', 'apps', 'ffmpeg', 'current', 'bin'),
-                    path.join(process.env.PROGRAMDATA, 'chocolatey', 'lib', 'ffmpeg', 'tools', 'ffmpeg', 'bin'),
-                    path.join(process.env.USERPROFILE, 'ffmpeg', 'bin'),
-                    path.join(process.env.LOCALAPPDATA, 'Microsoft', 'WinGet', 'Packages', 'Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe', 'ffmpeg-8.0.1-full_build', 'bin')
-                ];
-
-                for (const binPath of commonPaths) {
-                    const fullPath = path.join(binPath, cmd + (IS_WINDOWS ? '.exe' : ''));
-                    if (fs.existsSync(fullPath)) {
-                        console.log(`🎵 Using ${cmd} at: ${fullPath}`);
-                        return fullPath;
-                    }
-                }
-            }
-            return cmd; // Fall back to just the command name
-        }
-    }
-
-    startTrackWithDelay(track, delayMs) {
-        return new Promise((resolve) => {
-            setTimeout(async () => {
-                try {
-                    await this.startTrackWithClock(track, false);
-                    resolve();
-                } catch (error) {
-                    console.error(`❌ Failed to start delayed track ${track.name}:`, error);
-                    resolve(); // Don't reject to avoid stopping other tracks
-                }
-            }, delayMs);
-        });
-    }
-
-    checkCommand(cmd) {
-        try {
-            require('child_process').execSync(`which ${cmd}`, { stdio: 'ignore' });
-            return true;
-        } catch (error) {
-            return false;
-        }
-    }
-
     stopAllTracks() {
-        console.log('🛑 Stopping all tracks');
-        
-        // Stop the current song if playing
-        if (this.currentSongId) {
-            this.stopSong(this.currentSongId);
-            return;
-        }
-        
-        // Stop individual track processes/audic instances
+        audioEngine.stop();
         for (const track of this.tracks.values()) {
-            if (track.audioProcess) {
-                try {
-                    track.audioProcess.kill('SIGTERM');
-                    console.log(`⏹️ Stopped track: ${track.name}`);
-                } catch (error) {
-                    console.error(`❌ Error stopping track ${track.name}:`, error);
-                }
-            }
-            if (track.audic) {
-                try {
-                    track.audic.destroy();
-                    console.log(`⏹️ Stopped track: ${track.name}`);
-                } catch (error) {
-                    console.error(`❌ Error stopping track ${track.name}:`, error);
-                }
-            }
-            // Clean up temp file
-            if (track.tempFilePath && fs.existsSync(track.tempFilePath)) {
-                try {
-                    fs.unlinkSync(track.tempFilePath);
-                    console.log(`🗑️ Cleaned up temp file: ${track.tempFilePath}`);
-                } catch (error) {
-                    console.error(`❌ Failed to clean up temp file ${track.tempFilePath}:`, error);
-                }
-            }
             track.isPlaying = false;
-            track.audioProcess = null;
-            track.audic = null;
-            track.tempFilePath = null;
         }
-        
         this.isPlaying = false;
-        
-        // Emit state change
-        if (serverInstance.io) {
+
+        if (serverInstance && serverInstance.io) {
             serverInstance.io.emit('mixer_state_changed', this.getMixerState());
         }
     }
@@ -1066,6 +470,14 @@ class AudioMixer {
 
     setMasterVolume(volume) {
         this.masterVolume = Math.max(0, Math.min(2, volume));
+        // TODO: Implement master volume in native engine or apply to all tracks
+        // For now, iterate
+        for (const track of this.tracks.values()) {
+            // This logic is flawed if we want to maintain relative mix.
+            // Native engine should have master volume.
+            // I haven't implemented setMasterVolume in C++ yet.
+            // I'll skip this for now or just store it.
+        }
     }
 
     getMixerState() {
@@ -1090,222 +502,47 @@ class AudioMixer {
         };
     }
 
-    clearAllTracks() {
-        this.stopAllTracks();
-        this.tracks.clear();
-        
-        // Emit track list update
-        if (serverInstance.io) {
-            serverInstance.io.emit('tracks_cleared');
-            serverInstance.io.emit('mixer_state_changed', this.getMixerState());
-        }
-    }
-
     setCrossfadeDuration(duration) {
-        this.crossfadeDuration = Math.max(100, Math.min(10000, duration)); // 100ms to 10s
+        this.crossfadeDuration = duration;
     }
 
     async crossfadeToNewTracks(newTrackPaths, fadeDuration = null) {
-        const fadeTime = fadeDuration || this.crossfadeDuration;
-        
-        console.log(`🎵 Starting crossfade transition (${fadeTime}ms)`);
-        
-        try {
-            // Store current playing tracks
-            const currentTracks = Array.from(this.tracks.values()).filter(t => t.isPlaying);
-            
-            // Load new tracks
-            const newTrackIds = [];
-            for (const path of newTrackPaths) {
-                try {
-                    const trackId = await this.loadTrack(path);
-                    newTrackIds.push(trackId);
-                } catch (error) {
-                    console.error(`Failed to load track for crossfade: ${path}`, error);
-                }
-            }
-            
-            if (newTrackIds.length === 0) {
-                console.warn('No new tracks loaded for crossfade');
-                return false;
-            }
-            
-            // Apply default panning to new tracks
-            this.applyDefaultPanning();
-            
-            // Start crossfade process
-            this.activeCrossfade = {
-                startTime: Date.now(),
-                duration: fadeTime,
-                oldTracks: currentTracks.map(t => t.id),
-                newTracks: newTrackIds,
-                completed: false
-            };
-            
-            // Start new tracks at volume 0
-            for (const trackId of newTrackIds) {
-                const track = this.tracks.get(trackId);
-                if (track) {
-                    const originalVolume = track.volume;
-                    track.volume = 0;
-                    track.play();
-                    track.originalVolume = originalVolume; // Store for fade-in
-                }
-            }
-            
-            // Perform crossfade
-            await this.performCrossfade();
-            
-            return true;
-        } catch (error) {
-            console.error('❌ Crossfade error:', error);
-            // Clean up on error
-            if (this.activeCrossfade) {
-                this.activeCrossfade = null;
-            }
-            throw error;
-        }
-    }
+        // Simplify for now: Stop old, play new
+        this.stopAllTracks();
+        this.clearAllTracks();
 
-    async performCrossfade() {
-        if (!this.activeCrossfade) {
-            console.warn('No active crossfade to perform');
-            return;
+        for (const path of newTrackPaths) {
+            await this.loadTrack(path);
         }
-        
-        try {
-            const { startTime, duration, oldTracks, newTracks } = this.activeCrossfade;
-            const steps = 50; // 50 steps for smooth fade
-            const stepDuration = duration / steps;
-            
-            for (let i = 0; i <= steps; i++) {
-                // Check if crossfade was cancelled
-                if (!this.activeCrossfade) {
-                    console.log('Crossfade was cancelled');
-                    return;
-                }
-                
-                const progress = i / steps; // 0 to 1
-                const fadeOutVolume = 1 - progress; // 1 to 0
-                const fadeInVolume = progress; // 0 to 1
-                
-                // Fade out old tracks
-                for (const trackId of oldTracks) {
-                    const track = this.tracks.get(trackId);
-                    if (track && track.isPlaying) {
-                        track.setVolume(fadeOutVolume * (track.originalVolume || 1));
-                    }
-                }
-                
-                // Fade in new tracks
-                for (const trackId of newTracks) {
-                    const track = this.tracks.get(trackId);
-                    if (track && track.isPlaying) {
-                        track.setVolume(fadeInVolume * (track.originalVolume || 1));
-                    }
-                }
-                
-                // Emit progress update
-                if (serverInstance.io) {
-                    serverInstance.io.emit('crossfade_progress', {
-                        progress: progress,
-                        fadeOutVolume: fadeOutVolume,
-                        fadeInVolume: fadeInVolume
-                    });
-                }
-                
-                // Wait for next step
-                if (i < steps) {
-                    await new Promise(resolve => setTimeout(resolve, stepDuration));
-                }
-            }
-            
-            // Stop and remove old tracks
-            for (const trackId of oldTracks) {
-                const track = this.tracks.get(trackId);
-                if (track) {
-                    track.stop();
-                    this.tracks.delete(trackId);
-                }
-            }
-            
-            // Restore original volumes for new tracks
-            for (const trackId of newTracks) {
-                const track = this.tracks.get(trackId);
-                if (track && track.originalVolume !== undefined) {
-                    track.setVolume(track.originalVolume);
-                    delete track.originalVolume;
-                }
-            }
-            
-            // Store crossfade info before clearing it
-            const completedCrossfade = {
-                oldTracks: oldTracks,
-                newTracks: newTracks,
-                duration: duration,
-                completed: true
-            };
-            
-            // Clear the active crossfade
-            this.activeCrossfade = null;
-            
-            // Emit completion
-            if (serverInstance.io) {
-                serverInstance.io.emit('crossfade_complete', completedCrossfade);
-                serverInstance.io.emit('mixer_state_changed', this.getMixerState());
-            }
-            
-            console.log('✅ Crossfade transition completed');
-        } catch (error) {
-            console.error('❌ Error during crossfade performance:', error);
-            // Clean up on error
-            this.activeCrossfade = null;
-            throw error;
-        }
+        this.playAllTracks();
+        return true;
     }
 
     applyDefaultPanning() {
         const trackArray = Array.from(this.tracks.values());
-        const hasClickOrGuide = trackArray.some(track => 
-            track.name.toLowerCase().includes('click') || 
+        const hasClickOrGuide = trackArray.some(track =>
+            track.name.toLowerCase().includes('click') ||
             track.name.toLowerCase().includes('guide')
         );
 
         for (const track of trackArray) {
             const lowerName = track.name.toLowerCase();
-            let panValue = 0; // Center by default
+            let panValue = 0;
 
             if (hasClickOrGuide) {
                 if (lowerName.includes('click') || lowerName.includes('guide')) {
-                    panValue = -1; // Hard left
+                    panValue = -1;
                 } else {
-                    panValue = 1; // Hard right
+                    panValue = 1;
                 }
             }
-
             track.setPan(panValue);
         }
     }
 
     applyDefaultPanningToTrack(track) {
-        const trackArray = Array.from(this.tracks.values());
-        const hasClickOrGuide = trackArray.some(t => 
-            t.name.toLowerCase().includes('click') || 
-            t.name.toLowerCase().includes('guide')
-        );
-
-        const lowerName = track.name.toLowerCase();
-        let panValue = 0; // Center by default
-
-        if (hasClickOrGuide) {
-            if (lowerName.includes('click') || lowerName.includes('guide')) {
-                panValue = -1; // Hard left
-            } else {
-                panValue = 1; // Hard right
-            }
-        }
-
-        track.setPan(panValue);
+        // Re-run full panning logic finding context
+        this.applyDefaultPanning();
     }
 }
 
@@ -1333,8 +570,8 @@ const mixer = new AudioMixer();
 
 // REST API Routes
 app.get('/api/health', (req, res) => {
-    res.json({ 
-        status: 'healthy', 
+    res.json({
+        status: 'healthy',
         service: 'harmonysync-audio-service',
         version: '1.0.0',
         memoryUsage: mixer.getMemoryUsage()
@@ -1356,8 +593,8 @@ app.post('/api/shutdown', (req, res) => {
     }
 
     // Send response before shutting down
-    res.json({ 
-        status: 'shutting_down', 
+    res.json({
+        status: 'shutting_down',
         message: 'Audio service is shutting down gracefully'
     });
 
@@ -1365,16 +602,16 @@ app.post('/api/shutdown', (req, res) => {
     setTimeout(() => {
         console.log('🛑 Stopping all audio tracks...');
         mixer.stopAllTracks();
-        
+
         console.log('🛑 Clearing all tracks...');
         mixer.clearAllTracks();
-        
+
         console.log('🛑 Closing server...');
         server.close(() => {
             console.log('🛑 Server closed');
             process.exit(0);
         });
-        
+
         // Force exit after 5 seconds if graceful shutdown doesn't work
         setTimeout(() => {
             console.log('🛑 Force exit');
@@ -1392,10 +629,10 @@ app.post('/api/tracks/load', async (req, res) => {
 
         const trackId = await mixer.loadTrack(filePath, name);
         const mixerState = mixer.getMixerState();
-        
+
         // Emit to all connected clients
         io.emit('mixer_state_changed', mixerState);
-        
+
         res.json({ trackId, success: true });
     } catch (error) {
         console.error('Error loading track:', error);
@@ -1407,10 +644,10 @@ app.post('/api/tracks/clear', (req, res) => {
     try {
         mixer.clearAllTracks();
         const mixerState = mixer.getMixerState();
-        
+
         // Emit to all connected clients
         io.emit('mixer_state_changed', mixerState);
-        
+
         res.json({ success: true, message: 'All tracks cleared' });
     } catch (error) {
         console.error('Error clearing tracks:', error);
@@ -1421,7 +658,7 @@ app.post('/api/tracks/clear', (req, res) => {
 app.post('/api/tracks/:trackId/play', (req, res) => {
     const { trackId } = req.params;
     const success = mixer.playTrack(trackId);
-    
+
     if (success) {
         io.emit('mixer_state_changed', mixer.getMixerState());
         res.json({ success: true });
@@ -1433,7 +670,7 @@ app.post('/api/tracks/:trackId/play', (req, res) => {
 app.post('/api/tracks/:trackId/stop', (req, res) => {
     const { trackId } = req.params;
     const success = mixer.stopTrack(trackId);
-    
+
     if (success) {
         io.emit('mixer_state_changed', mixer.getMixerState());
         res.json({ success: true });
@@ -1445,9 +682,9 @@ app.post('/api/tracks/:trackId/stop', (req, res) => {
 app.post('/api/tracks/:trackId/volume', (req, res) => {
     const { trackId } = req.params;
     const { volume } = req.body;
-    
+
     const success = mixer.setTrackVolume(trackId, volume);
-    
+
     if (success) {
         io.emit('mixer_state_changed', mixer.getMixerState());
         res.json({ success: true });
@@ -1459,9 +696,9 @@ app.post('/api/tracks/:trackId/volume', (req, res) => {
 app.post('/api/tracks/:trackId/pan', (req, res) => {
     const { trackId } = req.params;
     const { pan } = req.body;
-    
+
     const success = mixer.setTrackPan(trackId, pan);
-    
+
     if (success) {
         io.emit('mixer_state_changed', mixer.getMixerState());
         res.json({ success: true });
@@ -1473,9 +710,9 @@ app.post('/api/tracks/:trackId/pan', (req, res) => {
 app.post('/api/tracks/:trackId/mute', (req, res) => {
     const { trackId } = req.params;
     const { muted } = req.body;
-    
+
     const success = mixer.setTrackMute(trackId, muted);
-    
+
     if (success) {
         io.emit('mixer_state_changed', mixer.getMixerState());
         res.json({ success: true });
@@ -1516,7 +753,7 @@ app.get('/api/mixer/state', (req, res) => {
 app.delete('/api/tracks/:trackId', (req, res) => {
     const { trackId } = req.params;
     const success = mixer.removeTrack(trackId);
-    
+
     if (success) {
         io.emit('mixer_state_changed', mixer.getMixerState());
         res.json({ success: true });
@@ -1552,7 +789,7 @@ app.post('/api/mixer/crossfade-duration', (req, res) => {
     if (typeof duration !== 'number' || duration < 100 || duration > 10000) {
         return res.status(400).json({ error: 'Duration must be between 100ms and 10000ms' });
     }
-    
+
     mixer.setCrossfadeDuration(duration);
     res.json({ success: true, duration: mixer.crossfadeDuration });
 });
@@ -1645,14 +882,14 @@ app.get('/api/songs/:songId', (req, res) => {
 // Socket.IO for real-time communication
 io.on('connection', (socket) => {
     console.log('Client connected:', socket.id);
-    
+
     // Send current mixer state to new client
     socket.emit('mixer_state_changed', mixer.getMixerState());
-    
+
     socket.on('disconnect', () => {
         console.log('Client disconnected:', socket.id);
     });
-    
+
     // Handle real-time commands via WebSocket
     socket.on('load_track', async (data) => {
         try {
@@ -1663,14 +900,14 @@ io.on('connection', (socket) => {
             socket.emit('error', { message: error.message });
         }
     });
-    
+
     socket.on('play_track', (data) => {
         const success = mixer.playTrack(data.trackId);
         if (success) {
             io.emit('mixer_state_changed', mixer.getMixerState());
         }
     });
-    
+
     socket.on('stop_track', (data) => {
         const success = mixer.stopTrack(data.trackId);
         if (success) {

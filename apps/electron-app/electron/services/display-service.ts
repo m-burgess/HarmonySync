@@ -55,15 +55,16 @@ export class DisplayService extends BaseElectronService implements IDisplayServi
    * Display video slide on audience and confidence windows
    * @param path - Path to video file
    * @param duration - Video duration in seconds (optional)
+   * @param loop - Whether to loop the video (optional)
    */
-  public async displayVideoSlide(path: string, duration?: number): Promise<void> {
+  public async displayVideoSlide(path: string, duration?: number, loop?: boolean): Promise<void> {
     try {
       const audWin = this.getAudienceWindow();
       const confWin = this.getConfidenceWindow();
 
       if (audWin && !audWin.isDestroyed()) {
-        audWin.webContents.send('display-video-slide', path);
-        this.log('debug', `Sent video slide to audience window: ${path}`);
+        audWin.webContents.send('display-video-slide', { path, loop });
+        this.log('debug', `Sent video slide to audience window: ${path} (loop: ${loop})`);
       }
 
       if (confWin && !confWin.isDestroyed() && duration !== undefined) {
@@ -277,11 +278,11 @@ export class DisplayService extends BaseElectronService implements IDisplayServi
    */
   public getAvailableWindowsCount(): number {
     let count = 0;
-    
+
     if (this.isWindowAvailable('audience')) count++;
     if (this.isWindowAvailable('confidence')) count++;
     if (this.isWindowAvailable('lower-thirds')) count++;
-    
+
     return count;
   }
 

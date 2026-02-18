@@ -20,7 +20,7 @@ const IS_MAC: boolean = process.platform === 'darwin';
 console.log(`🖥️  Platform detected: ${process.platform} (Windows: ${IS_WINDOWS}, Linux: ${IS_LINUX}, Mac: ${IS_MAC})`);
 
 // Check for FFmpeg availability
-const ffmpegAvailable: boolean = IS_WINDOWS ? 
+const ffmpegAvailable: boolean = IS_WINDOWS ?
     fs.existsSync('C:\\Users\\Admin\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-8.0.1-full_build\\bin\\ffplay.exe') :
     false;
 console.log(`🎵 FFmpeg available: ${ffmpegAvailable}`);
@@ -57,6 +57,26 @@ app.use(express.json());
 
 // Global mixer instance (pass io for event emissions)
 const mixer: AudioMixer = new AudioMixer(io);
+
+// Logging setup
+// Logging setup
+// __dirname is .../apps/harmonysync-audio-service/dist
+// ../ -> .../apps/harmonysync-audio-service
+// ../../ -> .../apps
+// ../../../ -> .../RustPresenter (Project Root)
+const LOG_FILE = path.join(__dirname, '../../../ErrorLog.txt');
+
+const logToFile = (message: string) => {
+    const timestamp = new Date().toISOString();
+    const logLine = `[${timestamp}] ${message}\n`;
+    fs.appendFile(LOG_FILE, logLine, (err) => {
+        if (err) console.error('Failed to write to log file:', err);
+    });
+};
+
+// Initial log
+logToFile('=== Audio Service Started ===');
+logToFile(`Platform: ${process.platform}, FFmpeg: ${ffmpegAvailable}`);
 
 const isGenericTrackName = (name: string): boolean => {
     if (!name) return true;
@@ -106,8 +126,8 @@ const emitMixerStateChanged = (): void => {
 
 // REST API Routes
 app.get('/api/health', (_req: Request, res: Response): void => {
-    res.json({ 
-        status: 'healthy', 
+    res.json({
+        status: 'healthy',
         service: 'harmonysync-audio-service',
         version: '1.0.0',
         memoryUsage: mixer.getMemoryUsage()
@@ -130,8 +150,8 @@ app.post('/api/shutdown', (req: Request, res: Response): void => {
     }
 
     // Send response before shutting down
-    res.json({ 
-        status: 'shutting_down', 
+    res.json({
+        status: 'shutting_down',
         message: 'Audio service is shutting down gracefully'
     });
 
@@ -139,16 +159,16 @@ app.post('/api/shutdown', (req: Request, res: Response): void => {
     setTimeout(() => {
         console.log('🛑 Stopping all audio tracks...');
         mixer.stopAllTracks();
-        
+
         console.log('🛑 Clearing all tracks...');
         mixer.clearAllTracks();
-        
+
         console.log('🛑 Closing server...');
         server.close(() => {
             console.log('🛑 Server closed');
             process.exit(0);
         });
-        
+
         // Force exit after 5 seconds if graceful shutdown doesn't work
         setTimeout(() => {
             console.log('🛑 Force exit');
@@ -162,11 +182,11 @@ app.post('/api/tracks/load', async (req: Request, res: Response): Promise<void> 
         console.log('[/api/tracks/load] Request received');
         console.log('[/api/tracks/load] Request body:', JSON.stringify(req.body));
         console.log('[/api/tracks/load] Content-Type:', req.headers['content-type']);
-        
+
         const { filePath, name } = req.body;
         console.log('[/api/tracks/load] Extracted filePath:', filePath);
         console.log('[/api/tracks/load] Extracted name:', name);
-        
+
         if (!filePath) {
             console.error('[/api/tracks/load] ERROR: filePath is required but was not provided in request body');
             res.status(400).json({ error: 'filePath is required' });
@@ -174,10 +194,10 @@ app.post('/api/tracks/load', async (req: Request, res: Response): Promise<void> 
         }
 
         const trackId: string = await mixer.loadTrack(filePath, name);
-        
+
         // Emit to all connected clients
         emitMixerStateChanged();
-        
+
         console.log('[/api/tracks/load] Track loaded successfully:', trackId);
         res.json({ trackId, success: true });
     } catch (error) {
@@ -189,10 +209,10 @@ app.post('/api/tracks/load', async (req: Request, res: Response): Promise<void> 
 app.post('/api/tracks/clear', (_req: Request, res: Response): void => {
     try {
         mixer.clearAllTracks();
-        
+
         // Emit to all connected clients
         emitMixerStateChanged();
-        
+
         res.json({ success: true, message: 'All tracks cleared' });
     } catch (error) {
         console.error('Error clearing tracks:', error);
@@ -204,10 +224,10 @@ app.post('/api/tracks/preload-all', async (_req: Request, res: Response): Promis
     try {
         console.log('[/api/tracks/preload-all] Preloading all tracks...');
         await mixer.preloadAllTracks();
-        
+
         // Emit to all connected clients
         emitMixerStateChanged();
-        
+
         console.log('[/api/tracks/preload-all] All tracks preloaded successfully');
         res.json({ success: true, message: 'All tracks preloaded' });
     } catch (error) {
@@ -220,17 +240,17 @@ app.post('/api/tracks/:id/preload', async (req: Request, res: Response): Promise
     try {
         const trackId: string = req.params.id;
         console.log(`[/api/tracks/${trackId}/preload] Preloading track...`);
-        
+
         const success = await mixer.preloadTrack(trackId);
-        
+
         if (!success) {
             res.status(500).json({ error: 'Failed to preload track' });
             return;
         }
-        
+
         // Emit to all connected clients
         emitMixerStateChanged();
-        
+
         console.log(`[/api/tracks/${trackId}/preload] Track preloaded successfully`);
         res.json({ success: true, message: 'Track preloaded' });
     } catch (error) {
@@ -242,7 +262,7 @@ app.post('/api/tracks/:id/preload', async (req: Request, res: Response): Promise
 app.post('/api/tracks/:trackId/play', (req: Request, res: Response): void => {
     const { trackId } = req.params;
     const success: boolean = mixer.playTrack(trackId);
-    
+
     if (success) {
         emitMixerStateChanged();
         res.json({ success: true });
@@ -254,7 +274,7 @@ app.post('/api/tracks/:trackId/play', (req: Request, res: Response): void => {
 app.post('/api/tracks/:trackId/stop', (req: Request, res: Response): void => {
     const { trackId } = req.params;
     const success: boolean = mixer.stopTrack(trackId);
-    
+
     if (success) {
         emitMixerStateChanged();
         res.json({ success: true });
@@ -266,9 +286,9 @@ app.post('/api/tracks/:trackId/stop', (req: Request, res: Response): void => {
 app.post('/api/tracks/:trackId/volume', (req: Request, res: Response): void => {
     const { trackId } = req.params;
     const { volume } = req.body;
-    
+
     const success: boolean = mixer.setTrackVolume(trackId, volume);
-    
+
     if (success) {
         emitMixerStateChanged();
         res.json({ success: true });
@@ -280,9 +300,9 @@ app.post('/api/tracks/:trackId/volume', (req: Request, res: Response): void => {
 app.post('/api/tracks/:trackId/pan', (req: Request, res: Response): void => {
     const { trackId } = req.params;
     const { pan } = req.body;
-    
+
     const success: boolean = mixer.setTrackPan(trackId, pan);
-    
+
     if (success) {
         emitMixerStateChanged();
         res.json({ success: true });
@@ -294,9 +314,9 @@ app.post('/api/tracks/:trackId/pan', (req: Request, res: Response): void => {
 app.post('/api/tracks/:trackId/mute', (req: Request, res: Response): void => {
     const { trackId } = req.params;
     const { muted } = req.body;
-    
+
     const success: boolean = mixer.setTrackMute(trackId, muted);
-    
+
     if (success) {
         emitMixerStateChanged();
         res.json({ success: true });
@@ -409,7 +429,7 @@ app.get('/api/mixer/state', (_req: Request, res: Response): void => {
 app.delete('/api/tracks/:trackId', (req: Request, res: Response): void => {
     const { trackId } = req.params;
     const success: boolean = mixer.removeTrack(trackId);
-    
+
     if (success) {
         emitMixerStateChanged();
         res.json({ success: true });
@@ -447,7 +467,7 @@ app.post('/api/mixer/crossfade-duration', (req: Request, res: Response): void =>
         res.status(400).json({ error: 'Duration must be between 100ms and 10000ms' });
         return;
     }
-    
+
     mixer.setCrossfadeDuration(duration);
     res.json({ success: true, duration: mixer.crossfadeDuration });
 });
@@ -572,32 +592,49 @@ interface SetTrackVolumeData {
 // Socket.IO for real-time communication
 io.on('connection', (socket: Socket): void => {
     console.log('Client connected:', socket.id);
-    
+
     // Send current mixer state to new client
     socket.emit('mixer_state_changed', normalizeMixerState(mixer.getMixerState()));
-    
+
     socket.on('disconnect', (): void => {
         console.log('Client disconnected:', socket.id);
     });
-    
+
     // Handle real-time commands via WebSocket
-    socket.on('load_track', async (data: LoadTrackData): Promise<void> => {
+    socket.on('client_log', (message: string) => {
+        logToFile(`[CLIENT] ${message}`);
+    });
+
+    socket.on('load_track', async (data: LoadTrackData & { requestId?: string }): Promise<void> => {
+        const logMsg = `[Socket] load_track received for ${data.filePath} (req: ${data.requestId})`;
+        console.log(logMsg);
+        logToFile(logMsg);
+
         try {
             const trackId: string = await mixer.loadTrack(data.filePath, data.name);
             emitMixerStateChanged();
-            socket.emit('track_loaded', { trackId, success: true });
+
+            const successMsg = `[Socket] Track loaded ${trackId}, emitting track_loaded`;
+            console.log(successMsg);
+            logToFile(successMsg);
+
+            socket.emit('track_loaded', { trackId, success: true, requestId: data.requestId });
         } catch (error) {
-            socket.emit('error', { message: (error as Error).message });
+            const errorMsg = `[Socket] Load error: ${(error as Error).message}`;
+            console.error(errorMsg);
+            logToFile(errorMsg);
+
+            socket.emit('error', { message: (error as Error).message, requestId: data.requestId });
         }
     });
-    
+
     socket.on('play_track', (data: PlayTrackData): void => {
         const success: boolean = mixer.playTrack(data.trackId);
         if (success) {
             emitMixerStateChanged();
         }
     });
-    
+
     socket.on('stop_track', (data: StopTrackData): void => {
         const success: boolean = mixer.stopTrack(data.trackId);
         if (success) {
@@ -663,6 +700,33 @@ io.on('connection', (socket: Socket): void => {
         } catch (error) {
             socket.emit('error', { message: (error as Error).message });
         }
+    });
+
+    // ─── Multi-Song Preloading Events ─────────────────────────
+
+    socket.on('preload_song', async (data: { songId: string; folderPath: string; trackFiles: string[] }): Promise<void> => {
+        console.log(`🔄 Preloading song ${data.songId} (${data.trackFiles.length} tracks)`);
+        try {
+            await mixer.preloadSongTracks(data.songId, data.folderPath, data.trackFiles);
+            socket.emit('song_preloaded', { songId: data.songId, success: true });
+            emitMixerStateChanged();
+        } catch (error) {
+            socket.emit('error', { message: (error as Error).message });
+        }
+    });
+
+    socket.on('switch_song', (data: { songId: string }): void => {
+        console.log(`⚡ Switching to song ${data.songId}`);
+        mixer.switchSong(data.songId);
+        emitMixerStateChanged();
+        socket.emit('song_switched', { songId: data.songId, success: true });
+    });
+
+    socket.on('clear_song', (data: { songId: string }): void => {
+        console.log(`🧹 Clearing song ${data.songId}`);
+        mixer.clearSong(data.songId);
+        emitMixerStateChanged();
+        socket.emit('song_cleared', { songId: data.songId, success: true });
     });
 });
 
