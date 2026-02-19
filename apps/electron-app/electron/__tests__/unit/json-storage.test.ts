@@ -3,7 +3,10 @@ import path from 'path';
 import os from 'os';
 import { createTempDir, trackService, cleanupAll } from '../test-utils';
 
+console.log('DEBUG: Top level of json-storage.test.ts');
+
 describe('JSONStorageService', () => {
+  fs.writeFileSync('test_debug.log', 'DEBUG: Starting JSONStorageService tests\n');
   let tempDir: string;
   let JSONStorageService: any;
 

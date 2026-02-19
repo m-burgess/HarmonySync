@@ -104,7 +104,7 @@ export class YouTubeService extends BaseElectronService implements IYouTubeServi
   public async getInfo(url: string): Promise<{ videoId: string | null; embedUrl: string; thumbnailUrl: string }> {
     try {
       const videoId = this.extractYouTubeId(url);
-      
+
       if (!videoId) {
         throw new Error('Invalid YouTube URL');
       }
@@ -358,29 +358,6 @@ export class YouTubeService extends BaseElectronService implements IYouTubeServi
     return seconds;
   }
 
-  /**
-   * @deprecated Use jsonStorage.addYouTubeLink() directly
-   */
-  public async addYouTubeLink(_unusedDb: unknown, _presentationPath: string, _url: string): Promise<never> {
-    this.log('warn', 'addYouTubeLink is deprecated. Use jsonStorage.addYouTubeLink() instead.');
-    throw new Error('youtube-service.addYouTubeLink is deprecated. Use jsonStorage.addYouTubeLink() instead.');
-  }
-
-  /**
-   * @deprecated Use jsonStorage.getYouTubeLinks() directly
-   */
-  public async getYouTubeLinks(_unusedDb: unknown, _presentationPath: string): Promise<never> {
-    this.log('warn', 'getYouTubeLinks is deprecated. Use jsonStorage.getYouTubeLinks() instead.');
-    throw new Error('youtube-service.getYouTubeLinks is deprecated. Use jsonStorage.getYouTubeLinks() instead.');
-  }
-
-  /**
-   * @deprecated Use jsonStorage.deleteYouTubeLink() directly
-   */
-  public async deleteYouTubeLink(_unusedDb: unknown, _presentationPath: string, _url: string): Promise<never> {
-    this.log('warn', 'deleteYouTubeLink is deprecated. Use jsonStorage.deleteYouTubeLink() instead.');
-    throw new Error('youtube-service.deleteYouTubeLink is deprecated. Use jsonStorage.deleteYouTubeLink() instead.');
-  }
 }
 
 // Export for backward compatibility
@@ -400,17 +377,6 @@ export async function validateForYouTube(videoPath: string): Promise<YouTubeVali
   return defaultInstance.validateForYouTube(videoPath);
 }
 
-export async function addYouTubeLink(_unusedDb: unknown, _presentationPath: string, _url: string): Promise<never> {
-  return defaultInstance.addYouTubeLink(_unusedDb, _presentationPath, _url);
-}
-
-export async function getYouTubeLinks(_unusedDb: unknown, _presentationPath: string): Promise<never> {
-  return defaultInstance.getYouTubeLinks(_unusedDb, _presentationPath);
-}
-
-export async function deleteYouTubeLink(_unusedDb: unknown, _presentationPath: string, _url: string): Promise<never> {
-  return defaultInstance.deleteYouTubeLink(_unusedDb, _presentationPath, _url);
-}
 
 export function extractYouTubeId(url: string): string | null {
   return defaultInstance.extractYouTubeId(url);

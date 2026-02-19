@@ -89,10 +89,6 @@ export interface IFileManager extends IService {
 }
 
 export interface IStorageService extends IService {
-  query(query: string, params?: any[]): Promise<any[]>;
-  run(query: string, params?: any[]): Promise<any>;
-  get(query: string, params?: any[]): Promise<any>;
-  all(query: string, params?: any[]): Promise<any[]>;
 }
 
 export interface ICloudStorageService extends IService {

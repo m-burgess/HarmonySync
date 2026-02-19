@@ -85,7 +85,7 @@ export class JSONStorageService extends BaseElectronService implements IStorageS
     this.macros = [];
     this.gdriveSyncConfig = [];
     this.appSettings = {};
-    
+
     this.log('info', 'JSON storage closed');
   }
 
@@ -138,7 +138,7 @@ export class JSONStorageService extends BaseElectronService implements IStorageS
    */
   public async createScheduledEvent(event: Partial<ScheduledEvent>): Promise<ScheduledEvent> {
     this.ensureInitialized();
-    
+
     const newEvent: ScheduledEvent = {
       id: Date.now().toString(),
       title: event.title || 'Untitled Event',
@@ -155,7 +155,7 @@ export class JSONStorageService extends BaseElectronService implements IStorageS
 
     this.scheduledEvents.push(newEvent);
     await this.saveScheduledEvents();
-    
+
     this.log('info', `Created scheduled event: ${newEvent.id}`);
     return newEvent;
   }
@@ -165,7 +165,7 @@ export class JSONStorageService extends BaseElectronService implements IStorageS
    */
   public async updateScheduledEvent(event: Partial<ScheduledEvent> & { id: string }): Promise<ScheduledEvent | null> {
     this.ensureInitialized();
-    
+
     const index = this.scheduledEvents.findIndex(e => e.id === event.id);
     if (index !== -1) {
       this.scheduledEvents[index] = {
@@ -177,7 +177,7 @@ export class JSONStorageService extends BaseElectronService implements IStorageS
       this.log('info', `Updated scheduled event: ${event.id}`);
       return this.scheduledEvents[index];
     }
-    
+
     this.log('warn', `Scheduled event not found: ${event.id}`);
     return null;
   }
@@ -187,16 +187,16 @@ export class JSONStorageService extends BaseElectronService implements IStorageS
    */
   public async deleteScheduledEvent(id: string): Promise<boolean> {
     this.ensureInitialized();
-    
+
     const initialLength = this.scheduledEvents.length;
     this.scheduledEvents = this.scheduledEvents.filter(e => e.id !== id);
-    
+
     if (this.scheduledEvents.length < initialLength) {
       await this.saveScheduledEvents();
       this.log('info', `Deleted scheduled event: ${id}`);
       return true;
     }
-    
+
     this.log('warn', `Scheduled event not found: ${id}`);
     return false;
   }
@@ -280,7 +280,7 @@ export class JSONStorageService extends BaseElectronService implements IStorageS
    */
   public async createMacro(macro: Partial<Macro>): Promise<Macro> {
     this.ensureInitialized();
-    
+
     const newMacro: Macro = {
       id: Date.now().toString(),
       name: macro.name || 'Untitled Macro',
@@ -294,7 +294,7 @@ export class JSONStorageService extends BaseElectronService implements IStorageS
 
     this.macros.push(newMacro);
     await this.saveMacros();
-    
+
     this.log('info', `Created macro: ${newMacro.id}`);
     return newMacro;
   }
@@ -304,7 +304,7 @@ export class JSONStorageService extends BaseElectronService implements IStorageS
    */
   public async updateMacro(macro: Partial<Macro> & { id: string }): Promise<Macro | null> {
     this.ensureInitialized();
-    
+
     const index = this.macros.findIndex(m => m.id === macro.id);
     if (index !== -1) {
       this.macros[index] = {
@@ -316,7 +316,7 @@ export class JSONStorageService extends BaseElectronService implements IStorageS
       this.log('info', `Updated macro: ${macro.id}`);
       return this.macros[index];
     }
-    
+
     this.log('warn', `Macro not found: ${macro.id}`);
     return null;
   }
@@ -326,16 +326,16 @@ export class JSONStorageService extends BaseElectronService implements IStorageS
    */
   public async deleteMacro(id: string): Promise<boolean> {
     this.ensureInitialized();
-    
+
     const initialLength = this.macros.length;
     this.macros = this.macros.filter(m => m.id !== id);
-    
+
     if (this.macros.length < initialLength) {
       await this.saveMacros();
       this.log('info', `Deleted macro: ${id}`);
       return true;
     }
-    
+
     this.log('warn', `Macro not found: ${id}`);
     return false;
   }
@@ -381,7 +381,7 @@ export class JSONStorageService extends BaseElectronService implements IStorageS
    */
   public async addGDriveSyncFolder(folderId: string, localPath: string): Promise<GDriveSyncConfig[]> {
     this.ensureInitialized();
-    
+
     const existing = this.gdriveSyncConfig.find(c => c.folder_id === folderId);
     if (existing) {
       existing.local_path = localPath;
@@ -395,7 +395,7 @@ export class JSONStorageService extends BaseElectronService implements IStorageS
         enabled: true
       });
     }
-    
+
     await this.saveGDriveSyncConfig();
     this.log('info', `Added/updated GDrive sync folder: ${folderId}`);
     return this.gdriveSyncConfig;
@@ -406,7 +406,7 @@ export class JSONStorageService extends BaseElectronService implements IStorageS
    */
   public async updateGDriveSyncStatus(folderId: string, lastSync: string): Promise<boolean> {
     this.ensureInitialized();
-    
+
     const config = this.gdriveSyncConfig.find(c => c.folder_id === folderId);
     if (config) {
       config.last_sync = lastSync;
@@ -421,10 +421,10 @@ export class JSONStorageService extends BaseElectronService implements IStorageS
    */
   public async removeGDriveSyncFolder(folderId: string): Promise<boolean> {
     this.ensureInitialized();
-    
+
     const initialLength = this.gdriveSyncConfig.length;
     this.gdriveSyncConfig = this.gdriveSyncConfig.filter(c => c.folder_id !== folderId);
-    
+
     if (this.gdriveSyncConfig.length < initialLength) {
       await this.saveGDriveSyncConfig();
       this.log('info', `Removed GDrive sync folder: ${folderId}`);
@@ -588,44 +588,6 @@ export class JSONStorageService extends BaseElectronService implements IStorageS
       this.log('error', `Error saving song metadata to ${songPath}:`, error);
       return false;
     }
-  }
-
-  // ==================== Compatibility Layer ====================
-
-  /**
-   * Generic query method (compatibility layer)
-   * @deprecated Use specific methods instead
-   */
-  public async query(_sql: string, _params: any[] = []): Promise<any[]> {
-    this.log('warn', 'Generic query() called - this should be refactored to use specific methods');
-    return [];
-  }
-
-  /**
-   * Generic run method (compatibility layer)
-   * @deprecated Use specific methods instead
-   */
-  public async run(_sql: string, _params: any[] = []): Promise<any> {
-    this.log('warn', 'Generic run() called - this should be refactored to use specific methods');
-    return { changes: 0 };
-  }
-
-  /**
-   * Generic get method (compatibility layer)
-   * @deprecated Use specific methods instead
-   */
-  public async get(_sql: string, _params: any[] = []): Promise<any> {
-    this.log('warn', 'Generic get() called - this should be refactored to use specific methods');
-    return null;
-  }
-
-  /**
-   * Generic all method (compatibility layer)
-   * @deprecated Use specific methods instead
-   */
-  public async all(_sql: string, _params: any[] = []): Promise<any[]> {
-    this.log('warn', 'Generic all() called - this should be refactored to use specific methods');
-    return [];
   }
 
   /**

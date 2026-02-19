@@ -1,0 +1,46 @@
+[
+    {
+        "op": "loadSongTrack",
+        "args": {
+            "songId": "songA",
+            "trackId": "t1",
+            "path": "C:\\Users\\Admin\\Desktop\\Projects\\RustPresenter\\apps\\harmonysync-audio-service\\go-engine\\test-tone.wav"
+        }
+    },
+    {
+        "op": "activateSong",
+        "args": {
+            "songId": "songA"
+        }
+    },
+    {
+        "op": "play",
+        "args": {}
+    },
+    {
+        "op": "loadSongTrack",
+        "args": {
+            "songId": "songB",
+            "trackId": "t1",
+            "path": "C:\\Users\\Admin\\Desktop\\Projects\\RustPresenter\\apps\\harmonysync-audio-service\\go-engine\\test-tone.wav"
+        }
+    },
+    {
+        "op": "loadSongTrack",
+        "args": {
+            "songId": "songB",
+            "trackId": "t2",
+            "path": "C:\\Users\\Admin\\Desktop\\Projects\\RustPresenter\\apps\\harmonysync-audio-service\\go-engine\\test-tone.wav"
+        }
+    },
+    {
+        "op": "activateSong",
+        "args": {
+            "songId": "songB"
+        }
+    },
+    {
+        "op": "stop",
+        "args": {}
+    }
+]

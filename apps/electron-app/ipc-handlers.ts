@@ -63,7 +63,6 @@ class IPCHandlerManager {
   public registerAll(): void {
     this.registerDialogHandlers();
     this.registerFileSystemHandlers();
-    this.registerDatabaseHandlers();
     this.registerFFmpegHandlers();
     this.registerVideoServiceHandlers();
     this.registerYouTubeServiceHandlers();
@@ -160,26 +159,6 @@ class IPCHandlerManager {
     });
   }
 
-  /**
-   * Database handlers (legacy compatibility)
-   */
-  private registerDatabaseHandlers(): void {
-    this.ipcMain.handle('db:query', async (_event, query: string, params?: any[]) => {
-      return await this.services.jsonStorage.query(query, params);
-    });
-
-    this.ipcMain.handle('db:run', async (_event, query: string, params?: any[]) => {
-      return await this.services.jsonStorage.run(query, params);
-    });
-
-    this.ipcMain.handle('db:get', async (_event, query: string, params?: any[]) => {
-      return await this.services.jsonStorage.get(query, params);
-    });
-
-    this.ipcMain.handle('db:all', async (_event, query: string, params?: any[]) => {
-      return await this.services.jsonStorage.all(query, params);
-    });
-  }
 
   /**
    * FFmpeg handlers

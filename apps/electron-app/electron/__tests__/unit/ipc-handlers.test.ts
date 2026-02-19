@@ -21,7 +21,6 @@ describe('IPC Handler registration', () => {
     expect(handlers.size).toBeGreaterThan(0);
     expect(handlers.has('dialog:openDirectory')).toBe(true);
     expect(handlers.has('fs:readFile')).toBe(true);
-    expect(handlers.has('db:query')).toBe(true);
     expect(handlers.has('ffmpeg:convertToOgg')).toBe(true);
     expect(handlers.has('video:getMetadata')).toBe(true);
     expect(handlers.has('youtube:extractId')).toBe(true);
