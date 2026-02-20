@@ -596,6 +596,38 @@ export class JSONStorageService extends BaseElectronService implements IStorageS
   public getStoragePath(): string {
     return this.storagePath;
   }
+  /**
+   * Generic Read Method
+   * Reads data from a JSON file based on the key
+   */
+  public async read(key: string): Promise<any> {
+    const filePath = path.join(this.storagePath, `${key}.json`);
+    try {
+      this.ensureInitialized();
+      if (await fs.pathExists(filePath)) {
+        return await fs.readJson(filePath);
+      }
+      return null;
+    } catch (error) {
+      this.log('error', `Error reading ${key}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Generic Write Method
+   * Writes data to a JSON file based on the key
+   */
+  public async write(key: string, data: any): Promise<void> {
+    const filePath = path.join(this.storagePath, `${key}.json`);
+    try {
+      this.ensureInitialized();
+      await fs.writeJson(filePath, data, { spaces: 2 });
+    } catch (error) {
+      this.log('error', `Error writing ${key}:`, error);
+      throw error;
+    }
+  }
 }
 
 // Export singleton instance

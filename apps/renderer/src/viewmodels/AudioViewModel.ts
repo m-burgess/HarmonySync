@@ -21,7 +21,7 @@ import { makeObservable, observable, action, computed, runInAction } from 'mobx'
 import { BaseViewModel } from '../base/BaseViewModel';
 import type { IAudioViewModel } from '../types/viewmodels';
 import type { IAudioService } from '../types/services';
-import type { AudioTrack, MemoryUsage, TransposeProgress, MixerConfig } from '../types';
+import type { AudioTrack, MemoryUsage, MixerConfig } from '../types';
 
 export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
   protected readonly viewModelName = 'AudioViewModel';
@@ -39,19 +39,13 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
   public audioServiceStatus: 'connecting' | 'connected' | 'error' = 'connecting';
   public serviceError: string | null = null;
   public isStartingService: boolean = false;
-  public isTransposeModalOpen: boolean = false;
-  public transposeProgress: TransposeProgress = {
-    currentFile: '',
-    totalFiles: 0,
-    completedFiles: 0,
-    message: '',
-  };
+
   public isOperationInProgress: boolean = false;
   public globalVolume: number = 1.0;
 
   // Private fields
   private audioService: IAudioService;
-  private transposeUnlisten: (() => void) | null = null;
+
 
   constructor(audioService: IAudioService) {
     super();
@@ -71,8 +65,7 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
       audioServiceStatus: observable,
       serviceError: observable,
       isStartingService: observable,
-      isTransposeModalOpen: observable,
-      transposeProgress: observable,
+
       isOperationInProgress: observable,
       globalVolume: observable,
       hasTracksLoaded: computed,
@@ -80,7 +73,7 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
       formattedDuration: computed,
       progressPercentage: computed,
       loadSong: action,
-      transpose: action,
+
       play: action,
       pause: action,
       stop: action,
@@ -100,15 +93,12 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
       goToBeginning: action,
       setGlobalVolume: action,
       startAudioService: action,
-      transposeAudio: action,
-      openTransposeModal: action,
-      closeTransposeModal: action,
+
       updateCurrentDirectoryFromTracks: action,
-      setupTransposeProgressListener: action,
-      cleanupTransposeListener: action,
+
       setTracks: action,
       setIsLoading: action,
-      transposeAndLoad: action,
+
       loadTracksIntoService: action,
     });
   }
@@ -125,7 +115,7 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
    * Cleanup ViewModel - unsubscribe from events
    */
   protected override onDispose(): void {
-    this.cleanupTransposeListener();
+
     this.audioService.stopMemoryMonitoring();
   }
 
@@ -262,36 +252,7 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
     }
   }
 
-  // Actions: Transpose
-  public async transpose(semitones: number): Promise<void> {
-    if (!this.currentSongPath) {
-      this.error = 'No song loaded';
-      return;
-    }
 
-    this.isLoading = true;
-    this.error = null;
-
-    try {
-      const result = await this.audioService.transpose(this.currentSongPath, semitones);
-
-      if (result.success) {
-        // Reload tracks from transposed folder
-        await this.loadSong(result.outputPath);
-      } else {
-        runInAction(() => {
-          this.error = 'Transpose failed';
-          this.isLoading = false;
-        });
-      }
-    } catch (error) {
-      this.handleError('Transpose', error);
-      runInAction(() => {
-        this.error = error instanceof Error ? error.message : String(error);
-        this.isLoading = false;
-      });
-    }
-  }
 
   // Actions: Playback controls
   public async play(): Promise<void> {
@@ -745,151 +706,11 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
 
   // Actions: Transpose with modal and progress tracking
 
-  public async transposeAudio(
-    semitones: number,
-    currentDirectory: string,
-    allTracksData: AudioTrack[]
-  ): Promise<{ success: boolean; outputDir?: string; loadedTracks?: AudioTrack[]; error?: string }> {
-    if (!currentDirectory) {
-      this.logError('No directory loaded to transpose');
-      runInAction(() => {
-        this.error = 'Please load audio files first before transposing';
-      });
-      return { success: false, error: 'No directory loaded' };
-    }
 
-    if (!allTracksData || allTracksData.length === 0) {
-      this.logError('No tracks loaded');
-      runInAction(() => {
-        this.error = 'No tracks loaded to transpose';
-      });
-      return { success: false, error: 'No tracks loaded' };
-    }
-
-    this.log(`🎵 Starting transposition: ${semitones} semitones`);
-
-    runInAction(() => {
-      this.isTransposeModalOpen = true;
-      this.transposeProgress = {
-        currentFile: '',
-        totalFiles: 0,
-        completedFiles: 0,
-        message: 'Starting transposition...',
-      };
-    });
-
-    try {
-      // TODO: Refactor to inject electron-adapter through services
-      // Dynamic imports in ViewModels create tight coupling to platform-specific modules
-      // Consider injecting these dependencies through services to improve testability
-      const adapter = await import('../electron-adapter');
-      const { core, fs } = adapter;
-
-      // Call the audio transposition command
-      const outputDir = await core.invoke('transpose_audio_files', {
-        directory: currentDirectory,
-        semitones: semitones,
-      }) as string;
-
-      this.log('✅ Transposition complete! Output directory:', outputDir);
-
-      // Stop current audio and clear tracks
-      await this.audioService.stopAllAudio();
-      await this.audioService.clearTracks();
-
-      // Load the new transposed tracks
-      this.log('🔄 Loading transposed tracks from:', outputDir);
-
-      // Read the new directory to get track paths
-      const entries = await fs.readDir(outputDir);
-      const audioFiles = entries
-        .filter((e: { children?: unknown; name: string }) =>
-          e.children === undefined &&
-          (e.name.endsWith('.mp3') ||
-            e.name.endsWith('.wav') ||
-            e.name.endsWith('.ogg') ||
-            e.name.endsWith('.m4a') ||
-            e.name.endsWith('.flac'))
-        )
-        .sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name));
-
-      const trackPaths = audioFiles.map((f: { name: string }) => `${outputDir}/${f.name}`);
-
-      // Add the new tracks as a song
-      const results = await this.audioService.addTracks(trackPaths) as Array<{
-        success: boolean;
-        path?: string;
-        trackId?: string;
-        name?: string;
-      }>;
-
-      // Update the tracks in the UI
-      const loadedTracks: AudioTrack[] = results
-        .filter((result) => result.success && result.path && result.trackId)
-        .map((result) => {
-          // Extract filename without extension using cross-platform string operations
-          const path = result.path!;
-          const lastSeparator = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
-          const fileName = path.substring(lastSeparator + 1);
-          const lastDot = fileName.lastIndexOf('.');
-          const fallbackName = lastDot > 0 ? fileName.substring(0, lastDot) : fileName;
-          const trackName = this.resolveTrackName({ name: result.name, path: result.path }) || fallbackName;
-
-          return {
-            id: result.trackId!,
-            path: result.path!,
-            name: trackName,
-            duration: 0, // Will be updated by audio service
-            volume: 0.7,
-            pan: 0,
-            muted: false,
-          };
-        });
-
-      // Emit event to update tracks in parent component
-      adapter.event.emit('tracks-updated', loadedTracks);
-
-      // Update current directory
-      runInAction(() => {
-        this.currentSongPath = outputDir;
-        this.transposeProgress = {
-          ...this.transposeProgress,
-          message: 'Transposition complete! New tracks loaded.',
-        };
-      });
-
-      return { success: true, outputDir, loadedTracks };
-    } catch (error) {
-      this.logError('❌ Failed to transpose audio files:', error);
-      runInAction(() => {
-        this.transposeProgress = {
-          ...this.transposeProgress,
-          message: `Error: ${error}`,
-        };
-        this.error = `Failed to transpose audio files: ${error}`;
-      });
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
-    }
-  }
 
   // Actions: Open/Close transpose modal
 
-  public openTransposeModal(): void {
-    this.isTransposeModalOpen = true;
-  }
 
-
-  public closeTransposeModal(): void {
-    runInAction(() => {
-      this.isTransposeModalOpen = false;
-      this.transposeProgress = {
-        currentFile: '',
-        totalFiles: 0,
-        completedFiles: 0,
-        message: '',
-      };
-    });
-  }
 
   // Actions: Update current directory from loaded tracks
 
@@ -908,51 +729,11 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
 
   // Actions: Setup transpose progress listener
 
-  public setupTransposeProgressListener(): void {
-    // Import and setup listener asynchronously
-    import('../electron-adapter')
-      .then((adapter) => {
-        const unlisten = adapter.event.listen('transpose-progress', (e: { payload: unknown }) => {
-          this.log('Transpose progress:', e.payload);
-          runInAction(() => {
-            const payload = e.payload as {
-              current_file?: string;
-              total_files?: number;
-              completed_files?: number;
-              message?: string;
-            };
-            this.transposeProgress = {
-              currentFile: payload.current_file || '',
-              totalFiles: payload.total_files || 0,
-              completedFiles: payload.completed_files || 0,
-              message: payload.message || '',
-            };
-          });
-        });
 
-        // Store unlisten function for cleanup
-        this.transposeUnlisten = unlisten;
-        this.addSubscription(unlisten);
-      })
-      .catch((error: unknown) => {
-        this.logError('Failed to setup transpose progress listener', error);
-      });
-  }
-
-  // Cleanup transpose listener
-
-  public cleanupTransposeListener(): void {
-    if (this.transposeUnlisten) {
-      this.transposeUnlisten();
-      this.transposeUnlisten = null;
-    }
-  }
 
   // Interface method implementation
 
-  public async transposeAndLoad(semitones: number): Promise<void> {
-    await this.transpose(semitones);
-  }
+
 
   // Private helpers
   private formatTime(seconds: number): string {
@@ -1056,13 +837,40 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
           const serviceName = (this.audioService as any).serviceName || 'Unknown';
           console.log(`[AudioViewModel] Using audio service: ${serviceName}`);
 
-          const result = await this.audioService.loadMultipleTracks(trackPaths);
-          this.log('Tracks loaded:', result.loaded, 'of', result.total);
+          // Clear existing tracks first to ensure clean state
+          await this.audioService.clearTracks();
 
-          if (result.loaded < result.total) {
-            const failedCount = result.total - result.loaded;
-            this.logError(`Track loading incomplete: ${failedCount} of ${result.total} tracks failed to load`,
-              new Error(`Partial load failure: ${failedCount}/${result.total} failed`));
+          // Determine song name from the folder of the first track
+          let songName = 'Unknown Song';
+          try {
+            const firstPath = trackPaths[0];
+            const normalized = firstPath.replace(/\\/g, '/');
+            const lastSlash = normalized.lastIndexOf('/');
+            if (lastSlash > 0) {
+              const dirPath = normalized.substring(0, lastSlash);
+              const dirName = dirPath.substring(dirPath.lastIndexOf('/') + 1);
+              songName = dirName || 'Unknown Song';
+            }
+          } catch (e) {
+            console.warn('Failed to determine song name from path', e);
+          }
+
+          console.log(`[AudioViewModel] Creating song "${songName}" with ${trackPaths.length} tracks`);
+
+          // Use createSong to properly register the song in the backend
+          // This ensures currentSongId is set, which is required for transposition
+          try {
+            const songId = await this.audioService.createSong(songName, trackPaths);
+            this.log('Song created successfully with ID:', songId);
+
+            // We don't need to manually check for failed loads here as createSong throws or returns ID
+            // The backend handles the loading and reporting
+          } catch (createError) {
+            console.error('Failed to create song:', createError);
+            // Fallback to loadMultipleTracks if createSong fails (compatibility)
+            this.log('Falling back to loadMultipleTracks');
+            const result = await this.audioService.loadMultipleTracks(trackPaths);
+            this.log('Tracks loaded (fallback):', result.loaded, 'of', result.total);
           }
         }
       } catch (error) {

@@ -171,12 +171,7 @@ class IPCHandlerManager {
       });
     });
 
-    this.ipcMain.handle('ffmpeg:transposeAudio', async (_event, songPath: string, semitones: number) => {
-      return await this.services.ffmpegService.transposeAudio(songPath, semitones, (tracks: any) => {
-        const win = this.services.mainWindow();
-        if (win) win.webContents.send('tracks-updated', tracks);
-      });
-    });
+
 
     this.ipcMain.handle('ffmpeg:getVideoMetadata', async (_event, videoPath: string) => {
       return await this.services.ffmpegService.getVideoMetadata(videoPath);
@@ -1137,12 +1132,7 @@ class IPCHandlerManager {
       });
     });
 
-    this.ipcMain.handle('audio:transposeAudio', async (_event, songPath: string, semitones: number) => {
-      return await this.services.audioService.transposeAudio(songPath, semitones, (tracks: any) => {
-        const win = this.services.mainWindow();
-        if (win) win.webContents.send('tracks-updated', tracks);
-      });
-    });
+
 
     this.ipcMain.handle('audio:ensureSync', async (_event, audioFiles: string[]) => {
       return await this.services.audioService.ensureAudioSync(audioFiles);
@@ -1243,19 +1233,7 @@ class IPCHandlerManager {
       }
     });
 
-    this.ipcMain.handle('audio:transpose', async (_event, sourcePath: string, semitones: number) => {
-      try {
-        const response = await fetch('http://127.0.0.1:3001/api/transpose', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sourcePath, semitones }),
-        });
-        return await response.json();
-      } catch (error) {
-        console.error('[audio:transpose] Error:', error);
-        return { success: false };
-      }
-    });
+
 
     this.ipcMain.handle('audio:play', async (_event) => {
       try {

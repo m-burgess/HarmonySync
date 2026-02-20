@@ -603,6 +603,13 @@ export class ServiceOrderViewModel extends BaseViewModel implements Partial<ISer
         this.serviceOrder.push(...(serviceStructure.songs || []));
       });
       this.log(`[ServiceOrderViewModel] Added ${serviceStructure.songs.length} songs from service to service order`);
+
+      // Auto-preload all imported songs
+      serviceStructure.songs.forEach(song => {
+        if (song.type === 'song' && !this.isSongPreloaded(song)) {
+          this.preloadSong(song).catch(e => this.logWarn(`Failed to auto-preload ${song.name}`, e));
+        }
+      });
     }
   }
 

@@ -64,6 +64,41 @@ const MixerSidebar = observer(({ allTracks, isLoadingTracks }: MixerSidebarProps
               aria-label="Stop all tracks"
             />
           </div>
+
+          {/* Transposition Controls */}
+          <div className="mixer-controls-group flex items-center space-x-1 ml-4 bg-gray-800 rounded p-1">
+            <Button
+              onClick={() => viewModel.transpose(viewModel.currentTransposition - 1)}
+              disabled={!viewModel.hasTracks || viewModel.isTransposing}
+              title="Transpose Down"
+              size="small"
+              variant="secondary"
+              className="w-6 h-6 p-0 flex items-center justify-center text-xs"
+            >
+              -
+            </Button>
+            <span className="text-xs font-mono w-8 text-center" title="Semitones">
+              {viewModel.isTransposing ? '...' : (
+                viewModel.currentTransposition > 0 ? `+${viewModel.currentTransposition}` : viewModel.currentTransposition
+              )}
+            </span>
+            <Button
+              onClick={() => viewModel.transpose(viewModel.currentTransposition + 1)}
+              disabled={!viewModel.hasTracks || viewModel.isTransposing}
+              title="Transpose Up"
+              size="small"
+              variant="secondary"
+              className="w-6 h-6 p-0 flex items-center justify-center text-xs"
+            >
+              +
+            </Button>
+          </div>
+
+          {viewModel.isTransposing && (
+            <div className="ml-2 text-xs text-yellow-500 animate-pulse">
+              Transposing...
+            </div>
+          )}
         </div>
 
         {/* Tracks List */}
@@ -95,7 +130,7 @@ const MixerSidebar = observer(({ allTracks, isLoadingTracks }: MixerSidebarProps
                       }
                     </span>
                     <Button
-                      onClick={() => viewModel.toggleMute(index)}
+                      onClick={() => viewModel.toggleMute(track.id)}
                       className={`w-6 h-6 flex items-center justify-center p-0 ${viewModel.muteStates[track.id] ? 'text-red-500' : 'text-green-500'}`}
                       variant="ghost"
                       size="small"

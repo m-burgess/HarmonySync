@@ -14,7 +14,7 @@ import type {
   Slide,
   Song,
   ServiceOrderFolder,
-  TransposeResult,
+
   Timer,
 } from './models';
 import type { EventType, EventHandler, UnsubscribeFunction } from './events';
@@ -66,7 +66,7 @@ export interface IEventBusService extends IService {
  */
 export interface IAudioService extends IService {
   loadTracks(folderPath: string): Promise<AudioTrack[]>;
-  transpose(sourcePath: string, semitones: number): Promise<TransposeResult>;
+
   play(): Promise<void>;
   stop(): Promise<void>;
   pause(): Promise<void>;
@@ -98,10 +98,9 @@ export interface IAudioService extends IService {
   onPlaybackStarted(callback: (event: unknown) => void): void;
   onPlaybackStopped(callback: (event: unknown) => void): void;
   onPlaybackPaused(callback: (event: unknown) => void): void;
-  onTransposeProgress(callback: (event: unknown, progress: unknown) => void): void;
-  onTransposeComplete(callback: (event: unknown, result: TransposeResult) => void): void;
   onTransposeError(callback: (event: unknown, error: Error) => void): void;
   // Multi-song preloading
+  createSong(name: string, trackPaths: string[]): Promise<string>;
   preloadSong(songId: string, folderPath: string, trackFiles: string[]): Promise<void>;
   switchSong(songId: string): void;
   isSongPreloaded(songId: string): boolean;

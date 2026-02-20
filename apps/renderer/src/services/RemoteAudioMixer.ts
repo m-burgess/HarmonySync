@@ -1,328 +1,335 @@
-import { io, Socket } from 'socket.io-client';
+// import { v4 as uuidv4 } from 'uuid'; // Removed to avoid conflict with local polyfill
 
-// Types previously imported from WebAudioMixer (now deleted)
+// Types matching Go Media Engine
+export interface TrackInfo {
+    id: string;
+    path: string;
+    duration: number;
+}
+
+export interface SongInfo {
+    id: string;
+    tracks: TrackInfo[];
+}
+
 export interface AudioTrackInfo {
     track_name: string;
     file_path: string;
 }
 
-export interface TrackState {
+export interface AudioTrackState {
     id: string;
     name: string;
     filePath: string;
     isPlaying: boolean;
-    isPreloaded: boolean;
     volume: number;
     pan: number;
     isMuted: boolean;
     duration: number;
+    isPreloaded: boolean; // Added for compatibility
 }
 
-// Define the state structure matching the backend
-interface BackendTrackState {
-    id: string;
-    name: string;
-    filePath: string;
-    duration: number;
-    volume: number;
-    pan: number;
-    isMuted: boolean;
+export interface MixerState {
     isPlaying: boolean;
-}
-
-interface BackendMixerState {
-    masterVolume: number;
-    isPlaying: boolean;
-    tracks: BackendTrackState[];
+    activeSongId: string | null;
+    tracks: AudioTrackState[];
+    transposition?: number;
+    loadingProgress?: { current: number; total: number; songId: string };
 }
 
 export class RemoteAudioMixer {
-    private socket: Socket;
-    private tracks: Map<string, TrackState> = new Map();
-    private masterVolume: number = 1.0;
-    private isPlaying: boolean = false;
+    private ws: WebSocket | null = null;
+    private baseUrl = 'http://localhost:3001';
+    private wsUrl = 'ws://localhost:3001/ws';
+
+    private state: MixerState = {
+        isPlaying: false,
+        activeSongId: null,
+        tracks: []
+    };
+
+    // Song ID -> Song Info
+    private songs: Map<string, SongInfo> = new Map();
+    private stateListeners: ((event: string, state: MixerState) => void)[] = [];
 
     constructor() {
-        // Connect to the Audio Service (Node.js + Go sidecar)
-        this.socket = io('http://localhost:3001');
-
-        this.setupSocketListeners();
+        this.connect();
     }
 
-    private setupSocketListeners() {
-        this.socket.on('connect', () => {
-            console.log('[RemoteAudioMixer] Connected to Audio Service');
-        });
+    private connect() {
+        console.log('[RemoteAudioMixer] Connecting to Go Media Engine...');
+        this.ws = new WebSocket(this.wsUrl);
 
-        this.socket.on('disconnect', () => {
-            console.log('[RemoteAudioMixer] Disconnected from Audio Service');
-        });
+        this.ws.onopen = () => {
+            console.log('[RemoteAudioMixer] Connected');
+        };
 
-        this.socket.on('mixer_state_changed', (state: BackendMixerState) => {
-            this.updateLocalState(state);
-        });
+        this.ws.onmessage = (event) => {
+            try {
+                const msg = JSON.parse(event.data);
+                this.handleMessage(msg);
+            } catch (e) {
+                console.error('[RemoteAudioMixer] Failed to parse message:', event.data);
+            }
+        };
 
-        this.socket.on('error', (err: any) => {
-            console.error('[RemoteAudioMixer] Socket error:', err);
-        });
+        this.ws.onclose = () => {
+            console.log('[RemoteAudioMixer] Disconnected. Reconnecting in 3s...');
+            setTimeout(() => this.connect(), 3000);
+        };
+
+        this.ws.onerror = (err) => {
+            console.error('[RemoteAudioMixer] WebSocket error:', err);
+        };
     }
 
-    private updateLocalState(state: BackendMixerState) {
-        this.masterVolume = state.masterVolume;
-        this.isPlaying = state.isPlaying;
+    private handleMessage(msg: any) {
+        console.log('[RemoteAudioMixer] Received:', msg);
 
-        // Sync tracks
-        // For now, let's just replace our local state with the backend state
-        this.tracks.clear();
-        state.tracks.forEach(t => {
-            this.tracks.set(t.id, {
-                id: t.id,
-                name: t.name,
-                filePath: t.filePath,
-                isPlaying: t.isPlaying,
-                isPreloaded: true, // Remote engine handles it
-                volume: t.volume,
-                pan: t.pan,
-                isMuted: t.isMuted,
-                duration: t.duration || 0 // Backend might not send duration yet
-            });
-        });
+        switch (msg.type) {
+            case 'audio_play':
+                this.state.isPlaying = true;
+                break;
+            case 'audio_pause':
+                this.state.isPlaying = false;
+                break;
+            case 'audio_stop':
+                this.state.isPlaying = false;
+                break;
+            case 'audio_song_activated':
+                this.state.activeSongId = msg.songId;
+                // Re-hydrate tracks from our local cache of songs
+                if (this.songs.has(msg.songId)) {
+                    const song = this.songs.get(msg.songId)!;
+                    this.state.tracks = song.tracks.map(t => ({
+                        id: t.id,
+                        name: this.getFilename(t.path),
+                        filePath: t.path,
+                        isPlaying: this.state.isPlaying,
+                        volume: 1.0, // Default for now
+                        pan: 0.0,
+                        isMuted: false,
+                        duration: t.duration,
+                        isPreloaded: true
+                    }));
+                }
+                break;
+            case 'audio_volume_changed':
+                const track = this.state.tracks.find(t => t.id === msg.trackId);
+                if (track) {
+                    track.volume = msg.volume;
+                }
+                break;
+            case 'audio_cleared':
+                this.state.tracks = [];
+                this.state.activeSongId = null;
+                this.state.isPlaying = false;
+                break;
+            case 'audio_song_transposed':
+                if (this.state.activeSongId === msg.songId) {
+                    this.state.transposition = msg.semitones;
+                }
+                break;
+            case 'audio_load_progress':
+                this.state.loadingProgress = {
+                    songId: msg.songId,
+                    current: msg.current,
+                    total: msg.total
+                };
+                this.notifyListeners('progress');
+                return;
+        }
+
+        this.notifyListeners('state_changed');
     }
+
+    public onStateChange(callback: (event: string, state: MixerState) => void): void {
+        this.stateListeners.push(callback);
+        callback('initial_state', this.state);
+    }
+
+    private notifyListeners(event: string) {
+        this.stateListeners.forEach(cb => cb(event, this.state));
+    }
+
+    // --- API Methods ---
 
     async loadTracks(folderPath: string): Promise<{ tracks?: AudioTrackInfo[] }> {
-        console.log(`[RemoteAudioMixer] Loading tracks from: ${folderPath}`);
-
-        try {
-            if (!window.electronAPI) {
-                throw new Error('Electron API is not available');
-            }
-            const audioFiles = await window.electronAPI.getAudioFiles(folderPath);
-            return this.loadFiles(audioFiles);
-        } catch (error) {
-            console.error('[RemoteAudioMixer] Error loading tracks:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Wait for socket connection, reconnecting if needed.
-     */
-    private async ensureConnected(): Promise<void> {
-        if (this.socket.connected) return;
-
-        console.log('[RemoteAudioMixer] Socket not connected, waiting for connection...');
-        this.socket.connect(); // trigger reconnect
-
-        return new Promise<void>((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('Socket connection timeout after 5s'));
-            }, 5000);
-
-            this.socket.once('connect', () => {
-                clearTimeout(timeout);
-                console.log('[RemoteAudioMixer] Socket reconnected');
-                resolve();
-            });
-        });
-    }
-
-    async loadFiles(filePaths: string[]): Promise<{ tracks?: AudioTrackInfo[] }> {
-        if (!filePaths || filePaths.length === 0) {
+        if (!window.electronAPI) {
+            console.error('Electron API not available');
             return { tracks: [] };
         }
-
-        console.log(`[RemoteAudioMixer] Loading ${filePaths.length} files...`);
-
-        // Ensure we have an active socket connection
-        await this.ensureConnected();
-
-        // Clear current tracks on backend (Await completion!)
-        await this.clearAllTracks();
-
-        const trackInfos: AudioTrackInfo[] = [];
-
-        // Load each file
-        const promises = filePaths.map(filePath => {
-            return new Promise<void>((resolve, _reject) => {
-                const name = this.getTrackNameFromPath(filePath);
-                const requestId = Math.random().toString(36).substring(7);
-
-                const cleanup = () => {
-                    this.socket.off('track_loaded', onSuccess);
-                    this.socket.off('error', onError);
-                };
-
-                const onSuccess = (data: any) => {
-                    const msg = `[RemoteAudioMixer] track_loaded evt: req=${data.requestId} vs my=${requestId}`;
-                    console.log(msg);
-                    this.socket.emit('client_log', msg);
-
-                    if (data.requestId === requestId) {
-                        cleanup();
-                        trackInfos.push({
-                            track_name: name,
-                            file_path: filePath
-                        });
-                        resolve();
-                    }
-                };
-
-                const onError = (err: any) => {
-                    const msg = `[RemoteAudioMixer] error evt: req=${err.requestId} vs my=${requestId} - ${err.message}`;
-                    console.error(msg);
-                    this.socket.emit('client_log', msg);
-
-                    if (err.requestId === requestId) {
-                        cleanup();
-                        console.error(`[RemoteAudioMixer] Failed to load ${name}:`, err);
-                        // We resolve anyway to allow other tracks to load
-                        resolve();
-                    }
-                };
-
-                this.socket.on('track_loaded', onSuccess);
-                this.socket.on('error', onError);
-
-                // Timeout fallback
-                setTimeout(() => {
-                    cleanup();
-                    console.warn(`[RemoteAudioMixer] Timeout loading ${name} (req=${requestId})`);
-                    resolve();
-                }, 10000);
-
-                this.socket.emit('load_track', { filePath, name, requestId });
-            });
-        });
-
-        await Promise.all(promises);
-
-        return { tracks: trackInfos };
+        const files = await window.electronAPI.getAudioFiles(folderPath);
+        // loadFiles returns promises of tracks? No, it returns Promise<{tracks...}>
+        return this.loadFiles(files);
     }
 
-    private getTrackNameFromPath(filePath: string): string {
-        const fileName = filePath.split(/[\\/]/).pop() || filePath;
-        return fileName.replace(/\.[^.]+$/, '');
+    async loadFiles(filePaths: string[]): Promise<{ tracks: AudioTrackInfo[] }> {
+        if (!filePaths.length) return { tracks: [] };
+
+        const songId = uuidv4();
+        const tracks: TrackInfo[] = filePaths.map(path => ({
+            id: uuidv4(),
+            path: path,
+            duration: 0
+        }));
+
+        const payload = {
+            id: songId,
+            tracks: tracks
+        };
+
+        console.log(`[RemoteAudioMixer] Creating song ${songId}`);
+
+        try {
+            const res = await fetch(`${this.baseUrl}/api/songs/create`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+
+            this.songs.set(songId, { id: songId, tracks });
+
+            return {
+                tracks: tracks.map(t => ({
+                    track_name: this.getFilename(t.path),
+                    file_path: t.path
+                }))
+            };
+
+        } catch (e) {
+            console.error('[RemoteAudioMixer] Failed to create song:', e);
+            throw e;
+        }
     }
 
     async play(): Promise<void> {
-        await fetch('http://localhost:3001/api/mixer/play-all', { method: 'POST' });
+        await fetch(`${this.baseUrl}/api/mixer/play`, { method: 'POST' });
     }
 
-    stop(): void {
-        fetch('http://localhost:3001/api/mixer/stop-all', { method: 'POST' }).catch(console.error);
+    async pause(): Promise<void> {
+        await fetch(`${this.baseUrl}/api/mixer/pause`, { method: 'POST' });
     }
 
-    setTrackVolume(trackId: string, volume: number): boolean {
-        this.socket.emit('set_track_volume', { trackId, volume });
-        return true;
+    async stop(): Promise<void> {
+        await fetch(`${this.baseUrl}/api/mixer/stop`, { method: 'POST' });
     }
 
-    setTrackPan(trackId: string, pan: number): boolean {
-        this.socket.emit('set_track_pan', { trackId, pan });
-        return true;
-    }
-
-    setTrackMute(trackId: string, muted: boolean): boolean {
-        this.socket.emit('set_track_mute', { trackId, muted });
-        return true;
-    }
-
-    setMasterVolume(volume: number): void {
-        fetch('http://localhost:3001/api/mixer/master-volume', {
+    setTrackVolume(trackId: string, volume: number) {
+        fetch(`${this.baseUrl}/api/mixer/volume`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ volume })
-        }).catch(console.error);
+            body: JSON.stringify({ trackId, volume })
+        }).catch(e => console.error(e));
+
+        const track = this.state.tracks.find(t => t.id === trackId);
+        if (track) {
+            track.volume = volume;
+            this.notifyListeners('local_update');
+        }
     }
 
-    // ─── Multi-Song Preloading ─────────────────────────────────
+    setTrackPan(trackId: string, pan: number) {
+        console.warn('setTrackPan not fully implemented in client');
+    }
 
-    private preloadedSongIds: Set<string> = new Set();
+    setTrackMute(trackId: string, muted: boolean) {
+        fetch(`${this.baseUrl}/api/mixer/mute`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ trackId, muted })
+        }).catch(e => console.error(e));
 
-    /**
-     * Preload a song's tracks into the Go engine in the background.
-     * Returns a promise that resolves when all tracks are decoded and buffered.
-     */
-    async preloadSong(songId: string, folderPath: string, trackFiles: string[]): Promise<void> {
-        if (this.preloadedSongIds.has(songId)) {
-            console.log(`⚡ Song ${songId} already preloaded`);
-            return;
+        const track = this.state.tracks.find(t => t.id === trackId);
+        if (track) {
+            track.isMuted = muted;
+            this.notifyListeners('local_update');
         }
+    }
 
-        await this.ensureConnected();
+    setMasterVolume(volume: number) {
+        console.warn('setMasterVolume not fully implemented in client');
+    }
 
-        return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error(`Preload timeout for song ${songId}`));
-            }, 120000); // 2 min timeout for large songs
-
-            this.socket.once('song_preloaded', (data: { songId: string; success: boolean }) => {
-                clearTimeout(timeout);
-                if (data.songId === songId && data.success) {
-                    this.preloadedSongIds.add(songId);
-                    resolve();
-                } else {
-                    reject(new Error(`Preload failed for song ${songId}`));
-                }
-            });
-
-            this.socket.emit('preload_song', { songId, folderPath, trackFiles });
+    async transposeSong(songId: string, semitones: number): Promise<void> {
+        await fetch(`${this.baseUrl}/api/songs/transpose`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ songId, semitones })
         });
     }
 
-    /**
-     * Instantly switch to a preloaded song. No loading delay.
-     */
+    async preloadSong(songId: string, folderPath: string, trackFiles: string[]): Promise<void> {
+        const tracks: TrackInfo[] = trackFiles.map(f => ({
+            id: uuidv4(),
+            path: `${folderPath}/${f}`, // construct path
+            duration: 0
+        }));
+
+        const payload = { id: songId, tracks };
+        await fetch(`${this.baseUrl}/api/songs/create`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        this.songs.set(songId, { id: songId, tracks });
+    }
+
     switchSong(songId: string): void {
-        this.socket.emit('switch_song', { songId });
+        console.warn('switchSong not fully implemented - requires explicit activate endpoint or play');
     }
 
-    /**
-     * Check if a song is preloaded and ready for instant switching
-     */
     isSongPreloaded(songId: string): boolean {
-        return this.preloadedSongIds.has(songId);
+        return this.songs.has(songId);
     }
 
-    /**
-     * Free one song's memory from the Go engine
-     */
     clearSong(songId: string): void {
-        this.socket.emit('clear_song', { songId });
-        this.preloadedSongIds.delete(songId);
+        this.songs.delete(songId);
+    }
+
+    async preloadAllTracks(): Promise<void> { }
+
+    async createSong(name: string, trackPaths: string[]): Promise<string> {
+        const songId = uuidv4();
+        const tracks: TrackInfo[] = trackPaths.map(path => ({
+            id: uuidv4(),
+            path: path,
+            duration: 0
+        }));
+
+        await fetch(`${this.baseUrl}/api/songs/create`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: songId, tracks })
+        });
+
+        this.songs.set(songId, { id: songId, tracks });
+        return songId;
     }
 
     async clearAllTracks(): Promise<void> {
-        try {
-            await fetch('http://localhost:3001/api/mixer/clear', { method: 'DELETE' });
-            this.tracks.clear();
-            this.preloadedSongIds.clear();
-        } catch (e) {
-            console.error(e);
-        }
-    }
-
-    // Required by WebAudioService but can be no-op or implemented
-    async replaceTrackBuffer(_trackId: string, _newFilePath: string): Promise<boolean> {
-        console.warn('[RemoteAudioMixer] replaceTrackBuffer not fully implemented');
-        return false;
-    }
-
-    async preloadAllTracks(): Promise<void> {
-        // No-op, handled by backend
+        await this.stop();
     }
 
     cleanup(): void {
-        this.stop();
-        this.socket.disconnect();
+        this.ws?.close();
+    }
+
+    private getFilename(path: string): string {
+        return path.split(/[\\/]/).pop() || path;
     }
 
     getState() {
-        return {
-            isPlaying: this.isPlaying,
-            masterVolume: this.masterVolume,
-            trackCount: this.tracks.size,
-            tracks: Array.from(this.tracks.values())
-        };
+        return this.state;
     }
+}
+
+function uuidv4() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
 }

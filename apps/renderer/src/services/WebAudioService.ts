@@ -1,6 +1,6 @@
 import { BaseService } from '../base/BaseService';
 import type { IAudioService, IIpcService } from '../types/services';
-import type { AudioTrack, MemoryUsage, MixerConfig, TransposeResult } from '../types';
+import type { AudioTrack, MemoryUsage, MixerConfig } from '../types';
 import { RemoteAudioMixer } from './RemoteAudioMixer';
 
 /**
@@ -13,20 +13,15 @@ export class WebAudioService extends BaseService implements IAudioService {
     protected readonly serviceName = 'WebAudioService';
 
     private mixer: RemoteAudioMixer;
-    private ipc: IIpcService;
     private isPlaying: boolean = false;
 
-    constructor(ipcService: IIpcService) {
+    constructor(_ipcService: IIpcService) {
         super();
-        this.ipc = ipcService;
         this.mixer = new RemoteAudioMixer();
 
         // Listen for mixer events
         window.addEventListener('audioPlaybackComplete', () => {
             this.isPlaying = false;
-            // Emit event compatible with old service
-            // We might need to implement an event emitter if BaseService doesn't provide one generic enough
-            // or use the IPC mock to send "events" to listeners
         });
     }
 
@@ -57,62 +52,13 @@ export class WebAudioService extends BaseService implements IAudioService {
         }
     }
 
-    // Helper to find track ID from name (since mixer generates IDs)
-    // private getTrackIdByName(name: string): string {
-    //   const state = this.mixer.getState();
-    //   const track = state.tracks.find(t => t.name === name);
-    //   return track ? track.id : '';
-    // }
-
-    /**
-     * Transpose audio files (Not implemented in Web Audio yet)
-     */
     /**
      * Transpose audio files
      */
-    public async transpose(sourcePath: string, semitones: number): Promise<TransposeResult> {
-        console.log(`[WebAudioService] Transposing ${sourcePath} by ${semitones} semitones...`);
-
-        try {
-            // 1. Call IPC to perform transposition (FFmpeg backend)
-            // The IPC handler is 'audio:transposeAudio', not 'audio:transpose' based on ipc-handlers.ts
-            // Wait, I need to check ipc-handlers.ts again.
-            // ipc-handlers.ts has 'ffmpeg:transposeAudio' (line 195) and 'audio:transposeAudio' (line 1157) and 'audio:transpose' (line 1263).
-            // 'audio:transpose' calls http://127.0.0.1:3001/api/transpose.
-            // 'audio:transposeAudio' calls services.audioService.transposeAudio.
-            // 'ffmpeg:transposeAudio' calls services.ffmpegService.transposeAudio.
-
-            // I should use 'audio:transposeAudio' as it seems to be the main one, OR 'audio:transpose' if it's the new service.
-            // Given I'm in the renderer, I should use the one exposed via IPC.
-            // Let's use 'audio:transposeAudio' as it seems to map to the internal service which uses FFmpeg directly.
-
-            const result = await this.ipc.invoke('audio:transposeAudio', sourcePath, semitones) as TransposeResult;
-
-            if (result.success && result.outputPath) {
-                // 2. Find the track that corresponds to this source path
-                const state = this.mixer.getState();
-                const track = state.tracks.find(t => t.filePath === sourcePath);
-
-                if (track) {
-                    // 3. Replace buffer in mixer
-                    const success = await this.mixer.replaceTrackBuffer(track.id, result.outputPath);
-                    if (!success) {
-                        console.error('[WebAudioService] Failed to replace track buffer in mixer');
-                    }
-                } else {
-                    console.warn(`[WebAudioService] Track not found for path: ${sourcePath}`);
-                }
-            }
-
-            return result;
-        } catch (error) {
-            return {
-                success: false,
-                outputPath: '',
-                error: error instanceof Error ? error.message : String(error)
-            };
-        }
+    public transposeSong(songId: string, semitones: number): void {
+        this.mixer.transposeSong(songId, semitones);
     }
+
 
     /**
      * Start playback
@@ -294,14 +240,18 @@ export class WebAudioService extends BaseService implements IAudioService {
         }
     }
 
+    public onTransposeError(_callback: (event: unknown, error: Error) => void): void { }
+
+    public async createSong(name: string, trackPaths: string[]): Promise<string> {
+        return this.mixer.createSong(name, trackPaths);
+    }
     public onDurationUpdate(_callback: (event: unknown, duration: number) => void): void { }
     public onPlaybackStarted(_callback: (event: unknown) => void): void { }
     public onPlaybackStopped(_callback: (event: unknown) => void): void { }
     public onPlaybackPaused(_callback: (event: unknown) => void): void { }
-    public onTransposeProgress(_callback: (event: unknown, progress: unknown) => void): void { }
-    public onTransposeComplete(_callback: (event: unknown, result: TransposeResult) => void): void { }
-    public onTransposeError(_callback: (event: unknown, error: Error) => void): void { }
-    public onStateChange(_callback: (event: unknown, state: { isPlaying: boolean; isPaused: boolean }) => void): void { }
+    public onStateChange(callback: (event: unknown, state: any) => void): void {
+        this.mixer.onStateChange(callback);
+    }
 
     public async startAudioServiceFromApp(): Promise<unknown> { return true; }
 
@@ -322,7 +272,7 @@ export class WebAudioService extends BaseService implements IAudioService {
     }
 
     public async clearTracks(): Promise<void> {
-        // Mixer handles this on loadTracks
+        await this.mixer.clearAllTracks();
     }
 
     public async addTracks(_trackPaths: string[]): Promise<unknown[]> {

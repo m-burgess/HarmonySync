@@ -28,7 +28,8 @@ interface IAudioService {
   setTrackPan(trackIndex: number, pan: number): Promise<void>;
   play(): Promise<void>;
   stop(): Promise<void>;
-  onStateChange(callback: (event: unknown, state: { isPlaying: boolean }) => void): void;
+  onStateChange(callback: (event: unknown, state: any) => void): void;
+  transposeSong(songId: string, semitones: number): void;
 }
 
 export class MixerViewModel extends BaseViewModel implements IMixerViewModel {
@@ -45,6 +46,10 @@ export class MixerViewModel extends BaseViewModel implements IMixerViewModel {
   public currentSongPath: string | null = null;
   public hasUnsavedChanges: boolean = false;
   public isSaving: boolean = false;
+  public currentTransposition: number = 0;
+  public isTransposing: boolean = false;
+
+  public currentSongId: string | null = null;
 
   // Track priority keywords for sorting (order matters: click first, guide second, metronome third)
   private readonly TRACK_PRIORITY: string[] = ['click', 'guide', 'metronome'];
@@ -67,6 +72,9 @@ export class MixerViewModel extends BaseViewModel implements IMixerViewModel {
       currentSongPath: observable,
       hasUnsavedChanges: observable,
       isSaving: observable,
+      currentTransposition: observable,
+      isTransposing: observable,
+      currentSongId: observable,
       hasTracks: computed,
       sortedTracks: computed,
       canPlay: computed,
@@ -88,6 +96,7 @@ export class MixerViewModel extends BaseViewModel implements IMixerViewModel {
       resetAllTracks: action,
       saveConfig: action,
       loadConfig: action,
+      transpose: action,
     });
   }
 
@@ -103,9 +112,41 @@ export class MixerViewModel extends BaseViewModel implements IMixerViewModel {
    */
   private setupListeners(): void {
     // Listen for state changes
-    this.audioService.onStateChange((_event: unknown, state: { isPlaying: boolean }) => {
+    this.audioService.onStateChange((_event: unknown, state: any) => {
+      // console.log('[MixerViewModel] onStateChange:', state);
       runInAction(() => {
         this.isPlaying = state.isPlaying;
+
+        // Ensure we catch the ID update
+        const newId = state.currentSongId;
+        if (newId !== undefined) {
+          if (newId !== this.currentSongId) {
+            console.log(`[MixerViewModel] Updating currentSongId: ${this.currentSongId} -> ${newId}`);
+            this.currentSongId = newId || null;
+          }
+        }
+
+        // Sync transposition
+        if (state.transposition !== undefined) {
+          this.currentTransposition = state.transposition;
+        }
+
+        // Sync loading progress
+        if (state.loadingProgress) {
+          // We could expose this as an observable if the UI needs it
+          // For now, let's just log it or maybe update a status string?
+          // "Loading 5/17"
+          // The user wanted to SEE progress.
+          // Let's add a public property `loadingStatus` to the VM?
+          // Or just assume `isLoadingTracks` is boolean.
+          // Let's add `loadingStatus` string.
+          console.log(`[MixerViewModel] Loading: ${state.loadingProgress.current}/${state.loadingProgress.total}`);
+        }
+
+        // If we were transposing, we can stop the loading state
+        if (this.isTransposing) {
+          this.isTransposing = false;
+        }
       });
     });
   }
@@ -193,30 +234,38 @@ export class MixerViewModel extends BaseViewModel implements IMixerViewModel {
   }
 
   // Actions: Toggle track mute
-  public async toggleMute(trackIndex: number): Promise<boolean> {
-    const track = this.tracks[trackIndex];
-    if (!track) {
-      this.logError('Track not found at index:', trackIndex);
+  public async toggleMute(trackId: string): Promise<boolean> {
+    const originalIndex = this.tracks.findIndex(t => t.id === trackId);
+    if (originalIndex === -1) {
+      this.logError('Track not found with ID:', trackId);
       return false;
     }
 
-    const trackId = track.id;
     const currentMuteState = this.muteStates[trackId] ?? false;
     const newMuteState = !currentMuteState;
 
     try {
-      // Update local state (audio service muting handled separately if needed)
+      // Update local state immediately
       runInAction(() => {
         this.muteStates[trackId] = newMuteState;
 
         // Also update track object if it has muted property
-        const trackObj = this.tracks.find(t => t.id === trackId);
+        const trackObj = this.tracks[originalIndex];
         if (trackObj) {
           trackObj.muted = newMuteState;
         }
 
         this.hasUnsavedChanges = true;
       });
+
+      // Call service (if needed, though currently service state might not be synced immediately)
+      // If service expects index, pass originalIndex
+      // this.audioService.setTrackMute(originalIndex, newMuteState); 
+      // Note: AudioService might not implement this fully yet based on previous code comments, 
+      // but we should call it if available.
+      if (this.audioService.setTrackMute) {
+        await this.audioService.setTrackMute(originalIndex, newMuteState);
+      }
 
       return true;
     } catch (error) {
@@ -312,9 +361,11 @@ export class MixerViewModel extends BaseViewModel implements IMixerViewModel {
   }
 
   // Interface method implementations
-  public async setTrackVolume(trackIndex: number, volume: number): Promise<void> {
-    const track = this.tracks[trackIndex];
-    if (track) {
+  public async setTrackVolume(trackId: string, volume: number): Promise<void> {
+    const originalIndex = this.tracks.findIndex(t => t.id === trackId);
+
+    if (originalIndex !== -1) {
+      const track = this.tracks[originalIndex];
       // Update local state immediately for responsiveness
       runInAction(() => {
         track.volume = volume;
@@ -323,16 +374,18 @@ export class MixerViewModel extends BaseViewModel implements IMixerViewModel {
 
       // Call service
       try {
-        await this.audioService.setTrackVolume(trackIndex, volume);
+        await this.audioService.setTrackVolume(originalIndex, volume);
       } catch (error) {
         this.handleError('Set volume', error);
       }
     }
   }
 
-  public async setTrackPan(trackIndex: number, pan: number): Promise<void> {
-    const track = this.tracks[trackIndex];
-    if (track) {
+  public async setTrackPan(trackId: string, pan: number): Promise<void> {
+    const originalIndex = this.tracks.findIndex(t => t.id === trackId);
+
+    if (originalIndex !== -1) {
+      const track = this.tracks[originalIndex];
       // Update local state immediately
       runInAction(() => {
         track.pan = pan;
@@ -341,18 +394,22 @@ export class MixerViewModel extends BaseViewModel implements IMixerViewModel {
 
       // Call service
       try {
-        await this.audioService.setTrackPan(trackIndex, pan);
+        await this.audioService.setTrackPan(originalIndex, pan);
       } catch (error) {
         this.handleError('Set pan', error);
       }
     }
   }
 
-  public async toggleSolo(trackIndex: number): Promise<void> {
-    const track = this.tracks[trackIndex];
-    if (track) {
-      track.solo = !track.solo;
-      this.hasUnsavedChanges = true;
+  public async toggleSolo(trackId: string): Promise<void> {
+    const originalIndex = this.tracks.findIndex(t => t.id === trackId);
+
+    if (originalIndex !== -1) {
+      const track = this.tracks[originalIndex];
+      runInAction(() => {
+        track.solo = !track.solo;
+        this.hasUnsavedChanges = true;
+      });
     }
   }
 
@@ -361,15 +418,19 @@ export class MixerViewModel extends BaseViewModel implements IMixerViewModel {
     this.hasUnsavedChanges = true;
   }
 
-  public async resetTrack(trackIndex: number): Promise<void> {
-    const track = this.tracks[trackIndex];
-    if (track) {
-      track.volume = 1.0;
-      track.pan = 0;
-      track.muted = false;
-      track.solo = false;
-      this.muteStates[track.id] = false;
-      this.hasUnsavedChanges = true;
+  public async resetTrack(trackId: string): Promise<void> {
+    const originalIndex = this.tracks.findIndex(t => t.id === trackId);
+
+    if (originalIndex !== -1) {
+      const track = this.tracks[originalIndex];
+      runInAction(() => {
+        track.volume = 1.0;
+        track.pan = 0;
+        track.muted = false;
+        track.solo = false;
+        this.muteStates[track.id] = false;
+        this.hasUnsavedChanges = true;
+      });
     }
   }
 
@@ -420,11 +481,79 @@ export class MixerViewModel extends BaseViewModel implements IMixerViewModel {
     }
   }
 
-  /**
-   * Handle errors and update error state
-   */
-  protected override onError(_operation: string, errorMessage: string): void {
-    this.error = errorMessage;
+  public async transpose(semitones: number): Promise<void> {
+    if (!this.currentSongPath && !this.hasTracks) {
+      this.logWarn('Cannot transpose: no song loaded');
+      return;
+    }
+
+    // We need the current song ID. 
+    // Since we don't strictly track song ID in ViewModel (only songPath/tracks), 
+    // and `currentSongPath` might not be the ID used by backend?
+    // The backend uses `currentSongId`. 
+    // However, `RemoteAudioMixer` stores `getState()`.
+
+    // Ideally we should get the current song ID from state.
+    // For now, let's assume the service handles "current song" if we don't pass ID? Or we pass ID.
+    // RemoteAudioMixer `transposeSong` needs ID.
+
+    // HACK: We can ask the service for the current song ID if we don't have it locally matched.
+    // Or we rely on the fact that we loaded a song.
+
+    // Let's iterate: updating `this.audioService.transposeSong` to take `songId`.
+    // But ViewModel doesn't know `songId` easily unless we sync it from backend state.
+
+    // Let's assume we can get it from the service state via `onStateChange` (which we partially did).
+    // Or we expose a getter on the service?
+
+    // Actually, `RemoteAudioMixer` knows `currentSongId` if we update it.
+    // But `IAudioService` in ViewModel is generic.
+
+    // Solution: Pass the `songId` if we have it, or rely on service to use current.
+    // But `RemoteAudioMixer` is just a class. handling generic ID.
+
+    // Let's update `setupListeners` to store `currentSongId`.
+    this.isTransposing = true;
+
+    // We need songId. Let's assume we can get it or we passed it in previously.
+    // The `state` object in `setupListeners` has `currentSongId`.
+    // I should create a property for it.
+
+    // Wait, I can't access `this.currentSongId` inside `transpose` if I haven't defined it.
+    // I need to add `currentSongId` to ViewModel.
+
+    // For now, let's just trigger it sending the current song if possible, or fail if no ID ? 
+    // I'll add `currentSongId` to ViewModel property in a separate tool call if needed, 
+    // or assume I can get it from `state`.
+
+    // Actually, I can allow `transpose` to take an ID, or I can store `currentSongId` in ViewModel.
+    // I will use `this.currentSongId` which I will add to the class in next step if I missed it, 
+    // actually I haven't added `currentSongId` to the class properties list in the previous replace.
+
+    // Let's check the previous replace... I added `currentTransposition` and `isTransposing`.
+    // I did NOT add `currentSongId`. 
+
+    // I will add `public currentSongId: string | null = null;` to the class properties
+    // AND update `setupListeners` to sync it.
+
+    // But first, let's just add the method stub that uses `this.currentSongId` (assuming existence)
+    // and I will fix the property definition in the next step.
+
+    if (this.currentSongId) {
+      this.audioService.transposeSong(this.currentSongId, semitones);
+    } else {
+      this.logWarn('No current song ID to transpose');
+      this.isTransposing = false;
+    }
+  }
+
+  // Handle errors and update error state
+  protected override onError(operation: string, errorMessage: string): void {
+    // console.error(`[MixerViewModel] Error in ${operation}: ${errorMessage}`);
+    runInAction(() => {
+      this.error = errorMessage;
+      this.isTransposing = false;
+    });
   }
 }
 

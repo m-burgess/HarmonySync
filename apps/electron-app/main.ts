@@ -100,7 +100,12 @@ class ServiceProcessManager {
   ): Promise<void> {
     return new Promise((resolve, reject) => {
       let resolved = false;
-      const serviceProcess = spawn('node', [servicePath], {
+      const isExecutable = servicePath.endsWith('.exe') || (!servicePath.endsWith('.js') && !servicePath.endsWith('.ts'));
+
+      const cmd = isExecutable ? servicePath : 'node';
+      const args = isExecutable ? [] : [servicePath];
+
+      const serviceProcess = spawn(cmd, args, {
         env: {
           ...process.env,
           ...env,
@@ -506,33 +511,29 @@ class ElectronApplication {
    */
   private async startExternalServices(): Promise<void> {
     // In dev mode, services are already running from the monorepo pnpm dev command
-    if (isDev) {
-      console.log('[Application] Skipping external service startup in dev mode (already running)');
-      return;
-    }
+    // However, we now spawn the Go Media Engine from Electron even in dev mode
+    // if (isDev) {
+    //   console.log('[Application] Skipping external service startup in dev mode (already running)');
+    //   return;
+    // }
 
     console.log('[Application] Starting external services...');
 
-    // Start audio service
-    await this.serviceManager.startService(
-      'Audio Service',
-      path.join(__dirname, '../../harmonysync-audio-service/server.js'),
-      { PORT: '3001', HOST: '127.0.0.1' }
-    );
+    // Start Go Media Engine (Audio, Video, Image)
+    const mediaEnginePath = path.join(__dirname, '../../media-engine/harmonysync-media-engine.exe');
 
-    // Start video service
-    await this.serviceManager.startService(
-      'Video Service',
-      path.join(__dirname, '../../harmonysync-video-service/dist/server.js'),
-      { PORT: '3002', HOST: '127.0.0.1' }
-    );
-
-    // Start image service
-    await this.serviceManager.startService(
-      'Image Service',
-      path.join(__dirname, '../../harmonysync-image-service/server.js'),
-      { PORT: '3003', HOST: '127.0.0.1', MAX_CONCURRENT_JOBS: '3' }
-    );
+    if (fs.existsSync(mediaEnginePath)) {
+      console.log('[Application] Spawning Go Media Engine:', mediaEnginePath);
+      await this.serviceManager.startService(
+        'Media Engine',
+        mediaEnginePath, // In startService, we are spawning 'node' currently. Need to change this.
+        { PORT: '3001' }
+      );
+    } else {
+      console.error('[Application] Go Media Engine binary not found at:', mediaEnginePath);
+      // Fallback or Error?
+      // Since we removed node services, we must error if not found.
+    }
 
     console.log('[Application] External services started');
   }

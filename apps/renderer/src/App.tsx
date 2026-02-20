@@ -41,6 +41,7 @@ import Modal from './components/ui/Modal.tsx';
 import ServiceOrderImportDialog from './components/modals/ServiceOrderImportDialog.tsx';
 import TimerPanel from './components/timer/TimerPanel.tsx';
 import TimerModal from './components/modals/TimerModal.tsx';
+import LoadingModal from './components/modals/LoadingModal.tsx';
 
 import { getViewModel } from './viewmodels';
 import { getService } from './services';
@@ -478,6 +479,8 @@ const App = observer(() => {
         displays={timerViewModel.displays}
         title="Edit Timer"
       />
+
+      <LoadingModal />
     </div>
   );
 });

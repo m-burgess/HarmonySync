@@ -10,7 +10,7 @@ import type {
   MemoryUsage,
   Slide,
   ServiceOrderFolder,
-  TransposeProgress,
+
   Timer,
 } from './models';
 
@@ -46,8 +46,7 @@ export interface IAudioViewModel extends IViewModel {
   audioServiceStatus: 'connecting' | 'connected' | 'error';
   serviceError: string | null;
   isStartingService: boolean;
-  isTransposeModalOpen: boolean;
-  transposeProgress: TransposeProgress;
+
   isOperationInProgress: boolean;
   globalVolume: number;
 
@@ -63,9 +62,7 @@ export interface IAudioViewModel extends IViewModel {
   unmuteTrack(trackIndex: number): Promise<void>;
   toggleTrackMute(trackIndex: number): Promise<void>;
   setGlobalVolume(volume: number): Promise<void>;
-  openTransposeModal(): void;
-  closeTransposeModal(): void;
-  transposeAndLoad(semitones: number): Promise<void>;
+
   saveMixerConfig(): Promise<void>;
   loadMixerConfig(): Promise<void>;
   startAudioService(): Promise<void>;
@@ -170,12 +167,13 @@ export interface IMixerViewModel extends IViewModel {
   error: string | null;
 
   // Actions
-  setTrackVolume(trackIndex: number, volume: number): Promise<void>;
-  setTrackPan(trackIndex: number, pan: number): Promise<void>;
-  toggleMute(trackIndex: number): Promise<boolean>;
-  toggleSolo(trackIndex: number): Promise<void>;
+  // Actions
+  setTrackVolume(trackId: string, volume: number): Promise<void>;
+  setTrackPan(trackId: string, pan: number): Promise<void>;
+  toggleMute(trackId: string): Promise<boolean>;
+  toggleSolo(trackId: string): Promise<void>;
   setGlobalVolume(volume: number): Promise<void>;
-  resetTrack(trackIndex: number): Promise<void>;
+  resetTrack(trackId: string): Promise<void>;
   resetAllTracks(): Promise<void>;
   saveConfig(): Promise<void>;
   loadConfig(songPath: string): Promise<void>;

@@ -5735,3 +5735,1384 @@
 [2026-02-18T22:30:32.309Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=f1psxw vs my=f1psxw
 [2026-02-18T22:30:32.309Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=f1psxw vs my=5tlokr
 [2026-02-18T22:30:32.309Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5tlokr vs my=5tlokr
+[2026-02-19T13:21:00.636Z] === Audio Service Started ===
+[2026-02-19T13:21:00.638Z] Platform: win32, FFmpeg: true
+[2026-02-19T13:21:59.047Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\AG 1.wav (req: 6fxo5c)
+[2026-02-19T13:21:59.064Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\AG 2.wav (req: 3pdbgh)
+[2026-02-19T13:21:59.065Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Bass.wav (req: 2hbfwf)
+[2026-02-19T13:21:59.065Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\BGVS.wav (req: so7j0u)
+[2026-02-19T13:21:59.065Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Choir.wav (req: 0d1vbq)
+[2026-02-19T13:21:59.066Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Click Track.wav (req: aztfzk)
+[2026-02-19T13:21:59.066Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Drums.wav (req: x7gdoy)
+[2026-02-19T13:21:59.066Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\EG 1.wav (req: 707ue8)
+[2026-02-19T13:21:59.066Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\EG 2.wav (req: yesfjc)
+[2026-02-19T13:21:59.067Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\EG 3.wav (req: og65ah)
+[2026-02-19T13:21:59.067Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\EG 4.wav (req: smbdmv)
+[2026-02-19T13:21:59.067Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\EG Group.wav (req: h942ki)
+[2026-02-19T13:21:59.067Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\FX.wav (req: e6d8eh)
+[2026-02-19T13:21:59.068Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Guide.wav (req: 2rva4i)
+[2026-02-19T13:21:59.068Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Keys 1.wav (req: zgc5t63)
+[2026-02-19T13:21:59.068Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Loop.wav (req: bwdcy4)
+[2026-02-19T13:21:59.068Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Piano.wav (req: b42xp)
+[2026-02-19T13:21:59.097Z] [Socket] Track loaded ca423045-d126-4d80-a969-aefb81f2d6b0, emitting track_loaded
+[2026-02-19T13:21:59.102Z] [Socket] Track loaded 171ce561-eeec-46cc-b336-7b65165fb95d, emitting track_loaded
+[2026-02-19T13:21:59.103Z] [Socket] Track loaded cb4fdf4a-eeb2-421c-b63b-a3de2ff0fe26, emitting track_loaded
+[2026-02-19T13:21:59.104Z] [Socket] Track loaded cc0e0bb5-461e-4ae0-9da6-7b3a8201bcd8, emitting track_loaded
+[2026-02-19T13:21:59.105Z] [Socket] Track loaded 919bafae-ac3c-4dbf-99a6-89813918770a, emitting track_loaded
+[2026-02-19T13:21:59.110Z] [Socket] Track loaded 854f1da6-3a84-43ff-b80e-d319a99be014, emitting track_loaded
+[2026-02-19T13:21:59.115Z] [Socket] Track loaded cee87252-d9c3-4963-94a4-ea3aeaf83e19, emitting track_loaded
+[2026-02-19T13:21:59.118Z] [Socket] Track loaded 2b544933-3ab4-40d8-88f0-d16622d235a2, emitting track_loaded
+[2026-02-19T13:21:59.120Z] [Socket] Track loaded 95c88a9b-17e1-49f0-be32-a4532cb29509, emitting track_loaded
+[2026-02-19T13:21:59.122Z] [Socket] Track loaded a9799e4f-5e31-485b-854b-a77b91a538f2, emitting track_loaded
+[2026-02-19T13:21:59.127Z] [Socket] Track loaded 52c9d6c2-66cc-4606-b7b4-f5347fd171c0, emitting track_loaded
+[2026-02-19T13:21:59.135Z] [Socket] Track loaded 4023510b-1f73-4bbe-817a-09875661d20b, emitting track_loaded
+[2026-02-19T13:21:59.140Z] [Socket] Track loaded 8f1c1113-c68b-4941-834d-ac139c9948d6, emitting track_loaded
+[2026-02-19T13:21:59.143Z] [Socket] Track loaded a084c7fc-394d-48d4-ad77-38ce4664dc10, emitting track_loaded
+[2026-02-19T13:21:59.148Z] [Socket] Track loaded b2134d78-3726-482e-92fc-42e5acc3f338, emitting track_loaded
+[2026-02-19T13:21:59.157Z] [Socket] Track loaded 1fc078e3-107f-4bca-8320-2c136f1ea96e, emitting track_loaded
+[2026-02-19T13:21:59.159Z] [Socket] Track loaded dc656553-8a87-45b5-ab61-797166912d85, emitting track_loaded
+[2026-02-19T13:21:59.174Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6fxo5c vs my=6fxo5c
+[2026-02-19T13:21:59.224Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6fxo5c vs my=3pdbgh
+[2026-02-19T13:21:59.224Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6fxo5c vs my=2hbfwf
+[2026-02-19T13:21:59.224Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6fxo5c vs my=0d1vbq
+[2026-02-19T13:21:59.224Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6fxo5c vs my=so7j0u
+[2026-02-19T13:21:59.224Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6fxo5c vs my=aztfzk
+[2026-02-19T13:21:59.224Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6fxo5c vs my=yesfjc
+[2026-02-19T13:21:59.224Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6fxo5c vs my=x7gdoy
+[2026-02-19T13:21:59.224Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6fxo5c vs my=og65ah
+[2026-02-19T13:21:59.224Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6fxo5c vs my=707ue8
+[2026-02-19T13:21:59.224Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6fxo5c vs my=e6d8eh
+[2026-02-19T13:21:59.224Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6fxo5c vs my=h942ki
+[2026-02-19T13:21:59.224Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6fxo5c vs my=smbdmv
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6fxo5c vs my=zgc5t63
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6fxo5c vs my=2rva4i
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6fxo5c vs my=bwdcy4
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=3pdbgh vs my=3pdbgh
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=3pdbgh vs my=2hbfwf
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6fxo5c vs my=b42xp
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=3pdbgh vs my=so7j0u
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=3pdbgh vs my=aztfzk
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=3pdbgh vs my=x7gdoy
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=3pdbgh vs my=yesfjc
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=3pdbgh vs my=0d1vbq
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=3pdbgh vs my=og65ah
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=3pdbgh vs my=smbdmv
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=3pdbgh vs my=e6d8eh
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=3pdbgh vs my=zgc5t63
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=3pdbgh vs my=2rva4i
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=3pdbgh vs my=b42xp
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2hbfwf vs my=2hbfwf
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=3pdbgh vs my=h942ki
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2hbfwf vs my=so7j0u
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=3pdbgh vs my=bwdcy4
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2hbfwf vs my=aztfzk
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=3pdbgh vs my=707ue8
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2hbfwf vs my=x7gdoy
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2hbfwf vs my=0d1vbq
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2hbfwf vs my=og65ah
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2hbfwf vs my=707ue8
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2hbfwf vs my=smbdmv
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2hbfwf vs my=yesfjc
+[2026-02-19T13:21:59.226Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2hbfwf vs my=2rva4i
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2hbfwf vs my=e6d8eh
+[2026-02-19T13:21:59.226Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2hbfwf vs my=zgc5t63
+[2026-02-19T13:21:59.226Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2hbfwf vs my=b42xp
+[2026-02-19T13:21:59.226Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2hbfwf vs my=bwdcy4
+[2026-02-19T13:21:59.225Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2hbfwf vs my=h942ki
+[2026-02-19T13:21:59.226Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=so7j0u vs my=so7j0u
+[2026-02-19T13:21:59.226Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=so7j0u vs my=x7gdoy
+[2026-02-19T13:21:59.226Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=so7j0u vs my=aztfzk
+[2026-02-19T13:21:59.226Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=so7j0u vs my=707ue8
+[2026-02-19T13:21:59.226Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=so7j0u vs my=yesfjc
+[2026-02-19T13:21:59.226Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=so7j0u vs my=og65ah
+[2026-02-19T13:21:59.226Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=so7j0u vs my=smbdmv
+[2026-02-19T13:21:59.226Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=so7j0u vs my=h942ki
+[2026-02-19T13:21:59.226Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=so7j0u vs my=e6d8eh
+[2026-02-19T13:21:59.226Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=so7j0u vs my=2rva4i
+[2026-02-19T13:21:59.226Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=so7j0u vs my=zgc5t63
+[2026-02-19T13:21:59.226Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=so7j0u vs my=b42xp
+[2026-02-19T13:21:59.226Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=so7j0u vs my=bwdcy4
+[2026-02-19T13:21:59.226Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=0d1vbq vs my=aztfzk
+[2026-02-19T13:21:59.226Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=0d1vbq vs my=x7gdoy
+[2026-02-19T13:21:59.226Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=0d1vbq vs my=707ue8
+[2026-02-19T13:21:59.226Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=0d1vbq vs my=yesfjc
+[2026-02-19T13:21:59.226Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=0d1vbq vs my=og65ah
+[2026-02-19T13:21:59.226Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=0d1vbq vs my=smbdmv
+[2026-02-19T13:21:59.226Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=0d1vbq vs my=e6d8eh
+[2026-02-19T13:21:59.226Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=0d1vbq vs my=h942ki
+[2026-02-19T13:21:59.226Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=0d1vbq vs my=2rva4i
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=0d1vbq vs my=bwdcy4
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=0d1vbq vs my=b42xp
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=0d1vbq vs my=zgc5t63
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=aztfzk vs my=aztfzk
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=aztfzk vs my=x7gdoy
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=aztfzk vs my=707ue8
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=aztfzk vs my=og65ah
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=aztfzk vs my=yesfjc
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=aztfzk vs my=e6d8eh
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=aztfzk vs my=h942ki
+[2026-02-19T13:21:59.226Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=0d1vbq vs my=0d1vbq
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=aztfzk vs my=2rva4i
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=aztfzk vs my=smbdmv
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=aztfzk vs my=zgc5t63
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=aztfzk vs my=b42xp
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=aztfzk vs my=bwdcy4
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=707ue8 vs my=x7gdoy
+[2026-02-19T13:21:59.226Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=so7j0u vs my=0d1vbq
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=707ue8 vs my=yesfjc
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=707ue8 vs my=smbdmv
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=707ue8 vs my=og65ah
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=707ue8 vs my=e6d8eh
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=707ue8 vs my=2rva4i
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=707ue8 vs my=zgc5t63
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=707ue8 vs my=bwdcy4
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=707ue8 vs my=h942ki
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=x7gdoy vs my=x7gdoy
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=707ue8 vs my=b42xp
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=x7gdoy vs my=yesfjc
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=x7gdoy vs my=og65ah
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=707ue8 vs my=707ue8
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=x7gdoy vs my=h942ki
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=x7gdoy vs my=e6d8eh
+[2026-02-19T13:21:59.228Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=x7gdoy vs my=zgc5t63
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=x7gdoy vs my=smbdmv
+[2026-02-19T13:21:59.228Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=x7gdoy vs my=bwdcy4
+[2026-02-19T13:21:59.228Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=yesfjc vs my=yesfjc
+[2026-02-19T13:21:59.227Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=x7gdoy vs my=2rva4i
+[2026-02-19T13:21:59.228Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=yesfjc vs my=og65ah
+[2026-02-19T13:21:59.228Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=yesfjc vs my=smbdmv
+[2026-02-19T13:21:59.228Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=x7gdoy vs my=b42xp
+[2026-02-19T13:21:59.228Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=yesfjc vs my=2rva4i
+[2026-02-19T13:21:59.228Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=yesfjc vs my=e6d8eh
+[2026-02-19T13:21:59.228Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=yesfjc vs my=h942ki
+[2026-02-19T13:21:59.228Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=yesfjc vs my=zgc5t63
+[2026-02-19T13:21:59.228Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=yesfjc vs my=bwdcy4
+[2026-02-19T13:21:59.228Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=og65ah vs my=og65ah
+[2026-02-19T13:21:59.228Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=og65ah vs my=smbdmv
+[2026-02-19T13:21:59.228Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=og65ah vs my=h942ki
+[2026-02-19T13:21:59.228Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=og65ah vs my=2rva4i
+[2026-02-19T13:21:59.228Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=og65ah vs my=e6d8eh
+[2026-02-19T13:21:59.228Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=og65ah vs my=zgc5t63
+[2026-02-19T13:21:59.229Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=og65ah vs my=bwdcy4
+[2026-02-19T13:21:59.229Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=smbdmv vs my=smbdmv
+[2026-02-19T13:21:59.229Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=smbdmv vs my=h942ki
+[2026-02-19T13:21:59.229Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=smbdmv vs my=zgc5t63
+[2026-02-19T13:21:59.229Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=og65ah vs my=b42xp
+[2026-02-19T13:21:59.229Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=smbdmv vs my=e6d8eh
+[2026-02-19T13:21:59.229Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=smbdmv vs my=bwdcy4
+[2026-02-19T13:21:59.229Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=smbdmv vs my=2rva4i
+[2026-02-19T13:21:59.229Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=smbdmv vs my=b42xp
+[2026-02-19T13:21:59.229Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2rva4i vs my=e6d8eh
+[2026-02-19T13:21:59.229Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2rva4i vs my=2rva4i
+[2026-02-19T13:21:59.229Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2rva4i vs my=h942ki
+[2026-02-19T13:21:59.229Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2rva4i vs my=zgc5t63
+[2026-02-19T13:21:59.229Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=e6d8eh vs my=h942ki
+[2026-02-19T13:21:59.229Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2rva4i vs my=bwdcy4
+[2026-02-19T13:21:59.229Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2rva4i vs my=b42xp
+[2026-02-19T13:21:59.229Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=e6d8eh vs my=e6d8eh
+[2026-02-19T13:21:59.229Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=e6d8eh vs my=zgc5t63
+[2026-02-19T13:21:59.229Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=e6d8eh vs my=bwdcy4
+[2026-02-19T13:21:59.229Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=e6d8eh vs my=b42xp
+[2026-02-19T13:21:59.229Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=bwdcy4 vs my=h942ki
+[2026-02-19T13:21:59.229Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=bwdcy4 vs my=zgc5t63
+[2026-02-19T13:21:59.229Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=bwdcy4 vs my=bwdcy4
+[2026-02-19T13:21:59.229Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=bwdcy4 vs my=b42xp
+[2026-02-19T13:21:59.229Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=h942ki vs my=h942ki
+[2026-02-19T13:21:59.229Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=h942ki vs my=zgc5t63
+[2026-02-19T13:21:59.229Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=h942ki vs my=b42xp
+[2026-02-19T13:21:59.228Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=yesfjc vs my=b42xp
+[2026-02-19T13:21:59.229Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=zgc5t63 vs my=zgc5t63
+[2026-02-19T13:21:59.229Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=zgc5t63 vs my=b42xp
+[2026-02-19T13:21:59.229Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=b42xp vs my=b42xp
+[2026-02-19T13:22:52.117Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\03 Come Alive\bass-Come Alive.mp3 (req: qwj0hm)
+[2026-02-19T13:22:52.123Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\03 Come Alive\drums-Come Alive.mp3 (req: qb3mf)
+[2026-02-19T13:22:52.123Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\03 Come Alive\Full band instrumental-Come Alive.mp3 (req: 6sqb2d)
+[2026-02-19T13:22:52.124Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\03 Come Alive\vocals-Come Alive.mp3 (req: htqep)
+[2026-02-19T13:22:52.124Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\03 Come Alive\other-Come Alive.mp3 (req: 363cys)
+[2026-02-19T13:22:52.142Z] [Socket] Track loaded 3c432265-90b8-4ca3-88a7-ae5d95bfa3ca, emitting track_loaded
+[2026-02-19T13:22:52.145Z] [Socket] Track loaded 01bbdc57-6bcf-4aaa-87a7-f5aa07849b25, emitting track_loaded
+[2026-02-19T13:22:52.146Z] [Socket] Track loaded 144c8470-2ea8-4614-8ced-fba06f4fef1e, emitting track_loaded
+[2026-02-19T13:22:52.147Z] [Socket] Track loaded ee334117-a66b-407d-b7c4-efbaf971fd70, emitting track_loaded
+[2026-02-19T13:22:52.150Z] [Socket] Track loaded 49adca36-6829-4ca7-8384-74fe521b8893, emitting track_loaded
+[2026-02-19T13:22:52.158Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qwj0hm vs my=qwj0hm
+[2026-02-19T13:22:52.165Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qwj0hm vs my=363cys
+[2026-02-19T13:22:52.164Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qwj0hm vs my=qb3mf
+[2026-02-19T13:22:52.165Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qwj0hm vs my=htqep
+[2026-02-19T13:22:52.165Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qb3mf vs my=qb3mf
+[2026-02-19T13:22:52.165Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qb3mf vs my=6sqb2d
+[2026-02-19T13:22:52.165Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qwj0hm vs my=6sqb2d
+[2026-02-19T13:22:52.165Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qb3mf vs my=htqep
+[2026-02-19T13:22:52.165Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6sqb2d vs my=htqep
+[2026-02-19T13:22:52.165Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6sqb2d vs my=6sqb2d
+[2026-02-19T13:22:52.165Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=363cys vs my=363cys
+[2026-02-19T13:22:52.165Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6sqb2d vs my=363cys
+[2026-02-19T13:22:52.165Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qb3mf vs my=363cys
+[2026-02-19T13:22:52.165Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=363cys vs my=htqep
+[2026-02-19T13:22:52.174Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=htqep vs my=htqep
+[2026-02-19T13:23:21.432Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\06 How Great Thou Art-XI-G\AG.wav (req: 1mbfv6)
+[2026-02-19T13:23:21.442Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\06 How Great Thou Art-XI-G\Bass.wav (req: r8jdqw)
+[2026-02-19T13:23:21.442Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\06 How Great Thou Art-XI-G\BGVS.wav (req: s7xlj4)
+[2026-02-19T13:23:21.443Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\06 How Great Thou Art-XI-G\Click Track.wav (req: 538hhd)
+[2026-02-19T13:23:21.443Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\06 How Great Thou Art-XI-G\Drums.wav (req: c5t4u)
+[2026-02-19T13:23:21.443Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\06 How Great Thou Art-XI-G\EG 1.wav (req: r7yc0x)
+[2026-02-19T13:23:21.443Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\06 How Great Thou Art-XI-G\EG 2.wav (req: ps5l37)
+[2026-02-19T13:23:21.443Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\06 How Great Thou Art-XI-G\EG 3.wav (req: qn9xfe)
+[2026-02-19T13:23:21.443Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\06 How Great Thou Art-XI-G\EG 4.wav (req: ob10es)
+[2026-02-19T13:23:21.443Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\06 How Great Thou Art-XI-G\EG 5.wav (req: vit7f8)
+[2026-02-19T13:23:21.443Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\06 How Great Thou Art-XI-G\EG 6.wav (req: hxao5k)
+[2026-02-19T13:23:21.444Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\06 How Great Thou Art-XI-G\Guide.wav (req: a2eeg4)
+[2026-02-19T13:23:21.444Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\06 How Great Thou Art-XI-G\Keys 1.wav (req: j24ngx)
+[2026-02-19T13:23:21.444Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\06 How Great Thou Art-XI-G\Keys 2.wav (req: qhmwvc)
+[2026-02-19T13:23:21.444Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\06 How Great Thou Art-XI-G\Piano.wav (req: 8bln8q)
+[2026-02-19T13:23:21.444Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\06 How Great Thou Art-XI-G\Synth Bass.wav (req: 6x5om)
+[2026-02-19T13:23:21.444Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\06 How Great Thou Art-XI-G\Loop.wav (req: kkh43c)
+[2026-02-19T13:23:21.445Z] [Socket] Track loaded 110756ac-5aff-443d-867f-368cdf73ec4e, emitting track_loaded
+[2026-02-19T13:23:21.465Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=1mbfv6 vs my=1mbfv6
+[2026-02-19T13:23:21.470Z] [Socket] Track loaded 52d2075c-7d43-4ad6-bccc-4f251bb1acfe, emitting track_loaded
+[2026-02-19T13:23:21.470Z] [Socket] Track loaded 3758c3f7-ed9e-46aa-91e9-4de927518c16, emitting track_loaded
+[2026-02-19T13:23:21.471Z] [Socket] Track loaded aec53028-7b4e-419f-b65c-3b580a43daa3, emitting track_loaded
+[2026-02-19T13:23:21.471Z] [Socket] Track loaded 39ff35c3-6262-4a74-928e-958a68e649dc, emitting track_loaded
+[2026-02-19T13:23:21.472Z] [Socket] Track loaded 9816f6cc-802a-4009-8714-78576f455686, emitting track_loaded
+[2026-02-19T13:23:21.473Z] [Socket] Track loaded 55f70cee-21be-47d3-b9b2-f1b1a4c81abf, emitting track_loaded
+[2026-02-19T13:23:21.474Z] [Socket] Track loaded 9593af18-f5b0-49c0-878d-84b496051101, emitting track_loaded
+[2026-02-19T13:23:21.472Z] [Socket] Track loaded 8f362301-40ff-4b0f-809b-29011b2d27bc, emitting track_loaded
+[2026-02-19T13:23:21.475Z] [Socket] Track loaded 26eafbef-4efe-4ebc-96a9-a63c7c6355fb, emitting track_loaded
+[2026-02-19T13:23:21.488Z] [Socket] Track loaded e3767959-094a-4b27-ad60-56eb423390cb, emitting track_loaded
+[2026-02-19T13:23:21.490Z] [Socket] Track loaded 7700507b-6c56-4f83-ace5-22483118b044, emitting track_loaded
+[2026-02-19T13:23:21.491Z] [Socket] Track loaded 9edc9b94-c4fd-4d40-8ca7-f6f39ab3535e, emitting track_loaded
+[2026-02-19T13:23:21.492Z] [Socket] Track loaded 2a19e8a8-ac71-401c-8d3b-12a6b7bebe6f, emitting track_loaded
+[2026-02-19T13:23:21.494Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=1mbfv6 vs my=r8jdqw
+[2026-02-19T13:23:21.495Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=1mbfv6 vs my=s7xlj4
+[2026-02-19T13:23:21.495Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=1mbfv6 vs my=538hhd
+[2026-02-19T13:23:21.495Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=1mbfv6 vs my=c5t4u
+[2026-02-19T13:23:21.495Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=1mbfv6 vs my=r7yc0x
+[2026-02-19T13:23:21.495Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=1mbfv6 vs my=qn9xfe
+[2026-02-19T13:23:21.495Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=1mbfv6 vs my=a2eeg4
+[2026-02-19T13:23:21.495Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=1mbfv6 vs my=hxao5k
+[2026-02-19T13:23:21.495Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=1mbfv6 vs my=j24ngx
+[2026-02-19T13:23:21.495Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=1mbfv6 vs my=qhmwvc
+[2026-02-19T13:23:21.495Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=1mbfv6 vs my=kkh43c
+[2026-02-19T13:23:21.495Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=1mbfv6 vs my=8bln8q
+[2026-02-19T13:23:21.495Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=1mbfv6 vs my=ps5l37
+[2026-02-19T13:23:21.495Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=1mbfv6 vs my=vit7f8
+[2026-02-19T13:23:21.495Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=1mbfv6 vs my=6x5om
+[2026-02-19T13:23:21.495Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=1mbfv6 vs my=ob10es
+[2026-02-19T13:23:21.507Z] [Socket] Track loaded 77857eaf-05af-43ce-b984-0acf589f6489, emitting track_loaded
+[2026-02-19T13:23:21.509Z] [Socket] Track loaded 21be5ed0-1481-4fa9-b27e-692af17f68c1, emitting track_loaded
+[2026-02-19T13:23:21.519Z] [Socket] Track loaded e1f41b29-e374-4fe8-9ee1-503e5795ef4d, emitting track_loaded
+[2026-02-19T13:23:21.524Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=s7xlj4 vs my=r8jdqw
+[2026-02-19T13:23:21.560Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=s7xlj4 vs my=c5t4u
+[2026-02-19T13:23:21.560Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=s7xlj4 vs my=s7xlj4
+[2026-02-19T13:23:21.560Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=s7xlj4 vs my=ob10es
+[2026-02-19T13:23:21.560Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=s7xlj4 vs my=r7yc0x
+[2026-02-19T13:23:21.560Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=s7xlj4 vs my=ps5l37
+[2026-02-19T13:23:21.560Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=s7xlj4 vs my=vit7f8
+[2026-02-19T13:23:21.560Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=s7xlj4 vs my=538hhd
+[2026-02-19T13:23:21.560Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=s7xlj4 vs my=qn9xfe
+[2026-02-19T13:23:21.560Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=s7xlj4 vs my=j24ngx
+[2026-02-19T13:23:21.560Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=s7xlj4 vs my=kkh43c
+[2026-02-19T13:23:21.560Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=s7xlj4 vs my=8bln8q
+[2026-02-19T13:23:21.560Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=s7xlj4 vs my=6x5om
+[2026-02-19T13:23:21.560Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=s7xlj4 vs my=hxao5k
+[2026-02-19T13:23:21.560Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=s7xlj4 vs my=a2eeg4
+[2026-02-19T13:23:21.560Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=c5t4u vs my=r8jdqw
+[2026-02-19T13:23:21.560Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=c5t4u vs my=r7yc0x
+[2026-02-19T13:23:21.560Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=c5t4u vs my=c5t4u
+[2026-02-19T13:23:21.560Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=c5t4u vs my=538hhd
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=c5t4u vs my=vit7f8
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=c5t4u vs my=ob10es
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=c5t4u vs my=qn9xfe
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=c5t4u vs my=a2eeg4
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=c5t4u vs my=j24ngx
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=c5t4u vs my=ps5l37
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=c5t4u vs my=hxao5k
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=c5t4u vs my=6x5om
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=c5t4u vs my=qhmwvc
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=538hhd vs my=538hhd
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=c5t4u vs my=kkh43c
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=538hhd vs my=r8jdqw
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=538hhd vs my=qn9xfe
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=c5t4u vs my=8bln8q
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=538hhd vs my=r7yc0x
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=538hhd vs my=ob10es
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=538hhd vs my=ps5l37
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=538hhd vs my=vit7f8
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=538hhd vs my=hxao5k
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=538hhd vs my=qhmwvc
+[2026-02-19T13:23:21.560Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=s7xlj4 vs my=qhmwvc
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=538hhd vs my=a2eeg4
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=538hhd vs my=j24ngx
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=538hhd vs my=8bln8q
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=538hhd vs my=kkh43c
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ps5l37 vs my=r7yc0x
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ps5l37 vs my=ps5l37
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ps5l37 vs my=ob10es
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ps5l37 vs my=r8jdqw
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ps5l37 vs my=vit7f8
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=538hhd vs my=6x5om
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ps5l37 vs my=qn9xfe
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ps5l37 vs my=qhmwvc
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ps5l37 vs my=j24ngx
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ps5l37 vs my=kkh43c
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ps5l37 vs my=8bln8q
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ps5l37 vs my=a2eeg4
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ps5l37 vs my=6x5om
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ob10es vs my=r8jdqw
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ob10es vs my=qn9xfe
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ps5l37 vs my=hxao5k
+[2026-02-19T13:23:21.561Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ob10es vs my=r7yc0x
+[2026-02-19T13:23:21.562Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ob10es vs my=ob10es
+[2026-02-19T13:23:21.562Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ob10es vs my=a2eeg4
+[2026-02-19T13:23:21.562Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ob10es vs my=vit7f8
+[2026-02-19T13:23:21.562Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ob10es vs my=qhmwvc
+[2026-02-19T13:23:21.562Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ob10es vs my=j24ngx
+[2026-02-19T13:23:21.562Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ob10es vs my=8bln8q
+[2026-02-19T13:23:21.562Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ob10es vs my=6x5om
+[2026-02-19T13:23:21.562Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ob10es vs my=hxao5k
+[2026-02-19T13:23:21.562Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=r7yc0x vs my=r7yc0x
+[2026-02-19T13:23:21.562Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ob10es vs my=kkh43c
+[2026-02-19T13:23:21.562Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=r7yc0x vs my=qn9xfe
+[2026-02-19T13:23:21.562Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=r7yc0x vs my=r8jdqw
+[2026-02-19T13:23:21.562Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=r7yc0x vs my=hxao5k
+[2026-02-19T13:23:21.562Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=r7yc0x vs my=a2eeg4
+[2026-02-19T13:23:21.562Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=r7yc0x vs my=j24ngx
+[2026-02-19T13:23:21.562Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=r7yc0x vs my=8bln8q
+[2026-02-19T13:23:21.562Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=r7yc0x vs my=vit7f8
+[2026-02-19T13:23:21.562Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=r7yc0x vs my=6x5om
+[2026-02-19T13:23:21.562Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=r7yc0x vs my=qhmwvc
+[2026-02-19T13:23:21.562Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=r7yc0x vs my=kkh43c
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hxao5k vs my=vit7f8
+[2026-02-19T13:23:21.562Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hxao5k vs my=r8jdqw
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hxao5k vs my=qn9xfe
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hxao5k vs my=a2eeg4
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hxao5k vs my=hxao5k
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hxao5k vs my=qhmwvc
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hxao5k vs my=kkh43c
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hxao5k vs my=6x5om
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hxao5k vs my=8bln8q
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=j24ngx vs my=qn9xfe
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=j24ngx vs my=r8jdqw
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=j24ngx vs my=a2eeg4
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=j24ngx vs my=vit7f8
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hxao5k vs my=j24ngx
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=j24ngx vs my=qhmwvc
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=j24ngx vs my=j24ngx
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=j24ngx vs my=8bln8q
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=j24ngx vs my=6x5om
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=r8jdqw vs my=r8jdqw
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=r8jdqw vs my=qn9xfe
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=j24ngx vs my=kkh43c
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=r8jdqw vs my=qhmwvc
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=r8jdqw vs my=vit7f8
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=r8jdqw vs my=a2eeg4
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=r8jdqw vs my=kkh43c
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=r8jdqw vs my=8bln8q
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=kkh43c vs my=vit7f8
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=r8jdqw vs my=6x5om
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=kkh43c vs my=qn9xfe
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=kkh43c vs my=kkh43c
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=kkh43c vs my=a2eeg4
+[2026-02-19T13:23:21.563Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=kkh43c vs my=qhmwvc
+[2026-02-19T13:23:21.564Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=kkh43c vs my=8bln8q
+[2026-02-19T13:23:21.564Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8bln8q vs my=a2eeg4
+[2026-02-19T13:23:21.564Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8bln8q vs my=8bln8q
+[2026-02-19T13:23:21.564Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=kkh43c vs my=6x5om
+[2026-02-19T13:23:21.564Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8bln8q vs my=qhmwvc
+[2026-02-19T13:23:21.564Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8bln8q vs my=vit7f8
+[2026-02-19T13:23:21.564Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6x5om vs my=qn9xfe
+[2026-02-19T13:23:21.564Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8bln8q vs my=qn9xfe
+[2026-02-19T13:23:21.564Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8bln8q vs my=6x5om
+[2026-02-19T13:23:21.564Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6x5om vs my=vit7f8
+[2026-02-19T13:23:21.564Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6x5om vs my=6x5om
+[2026-02-19T13:23:21.564Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6x5om vs my=a2eeg4
+[2026-02-19T13:23:21.564Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=a2eeg4 vs my=qn9xfe
+[2026-02-19T13:23:21.564Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=a2eeg4 vs my=vit7f8
+[2026-02-19T13:23:21.564Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=a2eeg4 vs my=a2eeg4
+[2026-02-19T13:23:21.564Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=a2eeg4 vs my=qhmwvc
+[2026-02-19T13:23:21.564Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qn9xfe vs my=vit7f8
+[2026-02-19T13:23:21.564Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6x5om vs my=qhmwvc
+[2026-02-19T13:23:21.564Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qn9xfe vs my=qn9xfe
+[2026-02-19T13:23:21.564Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qn9xfe vs my=qhmwvc
+[2026-02-19T13:23:21.564Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vit7f8 vs my=vit7f8
+[2026-02-19T13:23:21.564Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qhmwvc vs my=qhmwvc
+[2026-02-19T13:23:21.564Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vit7f8 vs my=qhmwvc
+[2026-02-19T13:25:04.243Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\AG 1.wav (req: vs6ki)
+[2026-02-19T13:25:04.246Z] [Socket] Track loaded 23f2f021-f008-491d-972d-4f1f36acc5d6, emitting track_loaded
+[2026-02-19T13:25:04.250Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\AG 2.wav (req: 8yp4bn)
+[2026-02-19T13:25:04.251Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Bass.wav (req: kz6s1s)
+[2026-02-19T13:25:04.251Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\BGVS.wav (req: 4dilcv)
+[2026-02-19T13:25:04.251Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Choir.wav (req: 2nfac)
+[2026-02-19T13:25:04.251Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Click Track.wav (req: by9hhs)
+[2026-02-19T13:25:04.252Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\EG 1.wav (req: ber4)
+[2026-02-19T13:25:04.252Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\EG 2.wav (req: clixes)
+[2026-02-19T13:25:04.252Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\EG 3.wav (req: wd7qoo)
+[2026-02-19T13:25:04.252Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Drums.wav (req: bfz7qm)
+[2026-02-19T13:25:04.252Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\EG 4.wav (req: lusmdn)
+[2026-02-19T13:25:04.252Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\FX.wav (req: bleao)
+[2026-02-19T13:25:04.252Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\EG Group.wav (req: tuv5w)
+[2026-02-19T13:25:04.252Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Guide.wav (req: s042r)
+[2026-02-19T13:25:04.253Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Keys 1.wav (req: cc9rss)
+[2026-02-19T13:25:04.253Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Loop.wav (req: 37rshu)
+[2026-02-19T13:25:04.253Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Piano.wav (req: vo7n9b)
+[2026-02-19T13:25:04.258Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vs6ki vs my=vs6ki
+[2026-02-19T13:25:04.258Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vs6ki vs my=8yp4bn
+[2026-02-19T13:25:04.258Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vs6ki vs my=kz6s1s
+[2026-02-19T13:25:04.258Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vs6ki vs my=2nfac
+[2026-02-19T13:25:04.258Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vs6ki vs my=by9hhs
+[2026-02-19T13:25:04.258Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vs6ki vs my=bfz7qm
+[2026-02-19T13:25:04.258Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vs6ki vs my=clixes
+[2026-02-19T13:25:04.258Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vs6ki vs my=ber4
+[2026-02-19T13:25:04.258Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vs6ki vs my=lusmdn
+[2026-02-19T13:25:04.258Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vs6ki vs my=tuv5w
+[2026-02-19T13:25:04.258Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vs6ki vs my=bleao
+[2026-02-19T13:25:04.258Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vs6ki vs my=s042r
+[2026-02-19T13:25:04.258Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vs6ki vs my=cc9rss
+[2026-02-19T13:25:04.258Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vs6ki vs my=37rshu
+[2026-02-19T13:25:04.258Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vs6ki vs my=vo7n9b
+[2026-02-19T13:25:04.258Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vs6ki vs my=4dilcv
+[2026-02-19T13:25:04.258Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vs6ki vs my=wd7qoo
+[2026-02-19T13:25:04.277Z] [Socket] Track loaded 6da60069-508c-4a46-b755-0630082a838e, emitting track_loaded
+[2026-02-19T13:25:04.278Z] [Socket] Track loaded 8b2310b1-e10b-4db5-8bc9-54411745f225, emitting track_loaded
+[2026-02-19T13:25:04.278Z] [Socket] Track loaded 721376b7-fd4d-4b5f-a1fd-11a7d5998d7d, emitting track_loaded
+[2026-02-19T13:25:04.279Z] [Socket] Track loaded 33b809e9-da5c-45f6-bc1b-0a5cf5045919, emitting track_loaded
+[2026-02-19T13:25:04.282Z] [Socket] Track loaded ce804be1-1270-4af6-895a-a1bbc0affc58, emitting track_loaded
+[2026-02-19T13:25:04.279Z] [Socket] Track loaded 64be49b3-8d2a-41d8-a3c7-16a09074fb6e, emitting track_loaded
+[2026-02-19T13:25:04.283Z] [Socket] Track loaded 7cc9d291-a4b5-40d4-87cb-870062afdda2, emitting track_loaded
+[2026-02-19T13:25:04.282Z] [Socket] Track loaded 273a2fad-3fbe-4687-b6b8-0a035b19f4f5, emitting track_loaded
+[2026-02-19T13:25:04.284Z] [Socket] Track loaded da23bc78-fcf2-41fe-a80b-ea3a579e6892, emitting track_loaded
+[2026-02-19T13:25:04.285Z] [Socket] Track loaded 0c0ace91-2c52-4d47-a97d-2bb28cc894e3, emitting track_loaded
+[2026-02-19T13:25:04.286Z] [Socket] Track loaded 8b317ed2-ddf4-4874-9962-f5eb1675bb0e, emitting track_loaded
+[2026-02-19T13:25:04.284Z] [Socket] Track loaded 9bad5e3f-53bb-4d35-94d6-0f7f52fe4977, emitting track_loaded
+[2026-02-19T13:25:04.287Z] [Socket] Track loaded d66014e0-64ad-4918-a81b-4d3def10ef3d, emitting track_loaded
+[2026-02-19T13:25:04.287Z] [Socket] Track loaded 4f0a0c8d-5747-493e-8aa0-23311842232b, emitting track_loaded
+[2026-02-19T13:25:04.288Z] [Socket] Track loaded ca0aab88-3b43-49a8-9f1c-0d4daaaf3d69, emitting track_loaded
+[2026-02-19T13:25:04.289Z] [Socket] Track loaded 346218f9-3579-4827-b3c0-9f22fc1cb542, emitting track_loaded
+[2026-02-19T13:25:04.303Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8yp4bn vs my=8yp4bn
+[2026-02-19T13:25:04.329Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8yp4bn vs my=kz6s1s
+[2026-02-19T13:25:04.329Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8yp4bn vs my=by9hhs
+[2026-02-19T13:25:04.329Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8yp4bn vs my=4dilcv
+[2026-02-19T13:25:04.329Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8yp4bn vs my=2nfac
+[2026-02-19T13:25:04.329Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8yp4bn vs my=bfz7qm
+[2026-02-19T13:25:04.329Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8yp4bn vs my=ber4
+[2026-02-19T13:25:04.329Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8yp4bn vs my=wd7qoo
+[2026-02-19T13:25:04.329Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8yp4bn vs my=clixes
+[2026-02-19T13:25:04.329Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8yp4bn vs my=lusmdn
+[2026-02-19T13:25:04.329Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8yp4bn vs my=s042r
+[2026-02-19T13:25:04.329Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8yp4bn vs my=cc9rss
+[2026-02-19T13:25:04.329Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8yp4bn vs my=37rshu
+[2026-02-19T13:25:04.329Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=kz6s1s vs my=kz6s1s
+[2026-02-19T13:25:04.329Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8yp4bn vs my=vo7n9b
+[2026-02-19T13:25:04.330Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=kz6s1s vs my=2nfac
+[2026-02-19T13:25:04.330Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=kz6s1s vs my=by9hhs
+[2026-02-19T13:25:04.329Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=kz6s1s vs my=4dilcv
+[2026-02-19T13:25:04.330Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=kz6s1s vs my=bfz7qm
+[2026-02-19T13:25:04.330Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=kz6s1s vs my=wd7qoo
+[2026-02-19T13:25:04.330Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=kz6s1s vs my=lusmdn
+[2026-02-19T13:25:04.330Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=kz6s1s vs my=ber4
+[2026-02-19T13:25:04.330Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=kz6s1s vs my=clixes
+[2026-02-19T13:25:04.330Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=kz6s1s vs my=tuv5w
+[2026-02-19T13:25:04.330Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=kz6s1s vs my=s042r
+[2026-02-19T13:25:04.330Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=kz6s1s vs my=37rshu
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=kz6s1s vs my=vo7n9b
+[2026-02-19T13:25:04.329Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8yp4bn vs my=tuv5w
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=by9hhs vs my=4dilcv
+[2026-02-19T13:25:04.330Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=kz6s1s vs my=cc9rss
+[2026-02-19T13:25:04.329Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8yp4bn vs my=bleao
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=by9hhs vs my=bfz7qm
+[2026-02-19T13:25:04.330Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=kz6s1s vs my=bleao
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=by9hhs vs my=by9hhs
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=by9hhs vs my=ber4
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=by9hhs vs my=lusmdn
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=by9hhs vs my=wd7qoo
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=by9hhs vs my=tuv5w
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=by9hhs vs my=clixes
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=by9hhs vs my=bleao
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=by9hhs vs my=s042r
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=by9hhs vs my=37rshu
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=by9hhs vs my=cc9rss
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=by9hhs vs my=vo7n9b
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=bfz7qm vs my=4dilcv
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=bfz7qm vs my=2nfac
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=bfz7qm vs my=ber4
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=bfz7qm vs my=clixes
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=bfz7qm vs my=bfz7qm
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=by9hhs vs my=2nfac
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=bfz7qm vs my=wd7qoo
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=bfz7qm vs my=tuv5w
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=bfz7qm vs my=lusmdn
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=bfz7qm vs my=s042r
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=bfz7qm vs my=cc9rss
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=bfz7qm vs my=37rshu
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=bfz7qm vs my=vo7n9b
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ber4 vs my=2nfac
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ber4 vs my=4dilcv
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=bfz7qm vs my=bleao
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ber4 vs my=ber4
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ber4 vs my=wd7qoo
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ber4 vs my=tuv5w
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ber4 vs my=lusmdn
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ber4 vs my=s042r
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ber4 vs my=bleao
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ber4 vs my=cc9rss
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ber4 vs my=vo7n9b
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=4dilcv vs my=2nfac
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=4dilcv vs my=wd7qoo
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=4dilcv vs my=clixes
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=4dilcv vs my=4dilcv
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=4dilcv vs my=tuv5w
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=4dilcv vs my=lusmdn
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=4dilcv vs my=bleao
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=4dilcv vs my=s042r
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=4dilcv vs my=cc9rss
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=4dilcv vs my=37rshu
+[2026-02-19T13:25:04.331Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ber4 vs my=clixes
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=4dilcv vs my=vo7n9b
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2nfac vs my=lusmdn
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2nfac vs my=clixes
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2nfac vs my=tuv5w
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2nfac vs my=wd7qoo
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2nfac vs my=bleao
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2nfac vs my=37rshu
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2nfac vs my=cc9rss
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=lusmdn vs my=lusmdn
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2nfac vs my=s042r
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2nfac vs my=vo7n9b
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=lusmdn vs my=tuv5w
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=lusmdn vs my=clixes
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=lusmdn vs my=bleao
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=lusmdn vs my=s042r
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=lusmdn vs my=wd7qoo
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=lusmdn vs my=37rshu
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ber4 vs my=37rshu
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=lusmdn vs my=vo7n9b
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=wd7qoo vs my=clixes
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2nfac vs my=2nfac
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=wd7qoo vs my=tuv5w
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=wd7qoo vs my=bleao
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=wd7qoo vs my=s042r
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=wd7qoo vs my=37rshu
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=bleao vs my=clixes
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=bleao vs my=tuv5w
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=wd7qoo vs my=cc9rss
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=bleao vs my=bleao
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=bleao vs my=cc9rss
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=lusmdn vs my=cc9rss
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=bleao vs my=s042r
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=bleao vs my=vo7n9b
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=tuv5w vs my=clixes
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=tuv5w vs my=tuv5w
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=tuv5w vs my=s042r
+[2026-02-19T13:25:04.332Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=wd7qoo vs my=wd7qoo
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=wd7qoo vs my=vo7n9b
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=tuv5w vs my=37rshu
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=tuv5w vs my=cc9rss
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=clixes vs my=clixes
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=clixes vs my=cc9rss
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=clixes vs my=s042r
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=clixes vs my=37rshu
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=clixes vs my=vo7n9b
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=s042r vs my=s042r
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=s042r vs my=cc9rss
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=s042r vs my=vo7n9b
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=s042r vs my=37rshu
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=37rshu vs my=cc9rss
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=37rshu vs my=37rshu
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=37rshu vs my=vo7n9b
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=tuv5w vs my=vo7n9b
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=bleao vs my=37rshu
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vo7n9b vs my=cc9rss
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vo7n9b vs my=vo7n9b
+[2026-02-19T13:25:04.333Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=cc9rss vs my=cc9rss
+[2026-02-19T13:25:16.262Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\03 Come Alive\bass-Come Alive.mp3 (req: uc15ue)
+[2026-02-19T13:25:16.268Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\03 Come Alive\Full band instrumental-Come Alive.mp3 (req: 88hn5f)
+[2026-02-19T13:25:16.268Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\03 Come Alive\other-Come Alive.mp3 (req: 0e9nu8)
+[2026-02-19T13:25:16.268Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\03 Come Alive\vocals-Come Alive.mp3 (req: nrzloj)
+[2026-02-19T13:25:16.267Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\03 Come Alive\drums-Come Alive.mp3 (req: hsmx97)
+[2026-02-19T13:25:16.276Z] [Socket] Track loaded cb9f6d71-3311-4c56-88ea-d7137c4a082d, emitting track_loaded
+[2026-02-19T13:25:16.278Z] [Socket] Track loaded e2963453-c928-42f1-99f4-32b08a8f1b53, emitting track_loaded
+[2026-02-19T13:25:16.279Z] [Socket] Track loaded 6e9d796b-dc5d-422a-9448-cd6d01ac5547, emitting track_loaded
+[2026-02-19T13:25:16.279Z] [Socket] Track loaded 0ca29914-e0ea-4cbb-8385-19ae8dc5577d, emitting track_loaded
+[2026-02-19T13:25:16.280Z] [Socket] Track loaded e1f662fc-6172-4e53-9f39-3641dfd7a78f, emitting track_loaded
+[2026-02-19T13:25:16.288Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=uc15ue vs my=uc15ue
+[2026-02-19T13:25:16.292Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=uc15ue vs my=hsmx97
+[2026-02-19T13:25:16.292Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=uc15ue vs my=nrzloj
+[2026-02-19T13:25:16.292Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=uc15ue vs my=88hn5f
+[2026-02-19T13:25:16.292Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=88hn5f vs my=88hn5f
+[2026-02-19T13:25:16.292Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=88hn5f vs my=hsmx97
+[2026-02-19T13:25:16.292Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=nrzloj vs my=0e9nu8
+[2026-02-19T13:25:16.292Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=88hn5f vs my=0e9nu8
+[2026-02-19T13:25:16.292Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=nrzloj vs my=hsmx97
+[2026-02-19T13:25:16.292Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=nrzloj vs my=nrzloj
+[2026-02-19T13:25:16.292Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=88hn5f vs my=nrzloj
+[2026-02-19T13:25:16.292Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=uc15ue vs my=0e9nu8
+[2026-02-19T13:25:16.292Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hsmx97 vs my=hsmx97
+[2026-02-19T13:25:16.292Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=0e9nu8 vs my=hsmx97
+[2026-02-19T13:25:16.292Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=0e9nu8 vs my=0e9nu8
+[2026-02-19T13:25:18.172Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\AG 1.wav (req: mpc8cd)
+[2026-02-19T13:25:18.176Z] [Socket] Track loaded 99201d75-8b09-4fe7-aa20-14b0eeae8aa9, emitting track_loaded
+[2026-02-19T13:25:18.177Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\AG 2.wav (req: czyoxr)
+[2026-02-19T13:25:18.178Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Bass.wav (req: 9rw09k)
+[2026-02-19T13:25:18.178Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Choir.wav (req: w894xt)
+[2026-02-19T13:25:18.178Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\BGVS.wav (req: o3418)
+[2026-02-19T13:25:18.178Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Click Track.wav (req: aawxl)
+[2026-02-19T13:25:18.178Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Drums.wav (req: c2ggwb)
+[2026-02-19T13:25:18.178Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\EG 1.wav (req: 75d9sv)
+[2026-02-19T13:25:18.179Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\EG 2.wav (req: 5xycyt)
+[2026-02-19T13:25:18.179Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\EG Group.wav (req: 1lc0p)
+[2026-02-19T13:25:18.179Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\EG 3.wav (req: 21b5a)
+[2026-02-19T13:25:18.179Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\EG 4.wav (req: a4muh)
+[2026-02-19T13:25:18.179Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\FX.wav (req: 2gw15)
+[2026-02-19T13:25:18.179Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Guide.wav (req: y448b8)
+[2026-02-19T13:25:18.180Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Keys 1.wav (req: ofrzkk)
+[2026-02-19T13:25:18.180Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Piano.wav (req: bofhl5)
+[2026-02-19T13:25:18.180Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Loop.wav (req: jlgmgh)
+[2026-02-19T13:25:18.194Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=mpc8cd vs my=mpc8cd
+[2026-02-19T13:25:18.199Z] [Socket] Track loaded d4f2f9e9-499a-4078-ae54-5cb85a62e65a, emitting track_loaded
+[2026-02-19T13:25:18.200Z] [Socket] Track loaded 2b86f3ad-09a7-426a-a76f-84dc5d83c6d9, emitting track_loaded
+[2026-02-19T13:25:18.200Z] [Socket] Track loaded 21bea953-376a-4561-a28f-670f2340f723, emitting track_loaded
+[2026-02-19T13:25:18.201Z] [Socket] Track loaded dade8951-c7e9-4bab-828b-6c219624adce, emitting track_loaded
+[2026-02-19T13:25:18.202Z] [Socket] Track loaded b65f34a1-ccab-4b20-81f5-c8521fd070ff, emitting track_loaded
+[2026-02-19T13:25:18.203Z] [Socket] Track loaded 005992e7-7cf1-40ef-9838-05a1a91fa55a, emitting track_loaded
+[2026-02-19T13:25:18.200Z] [Socket] Track loaded b734a3ec-7af9-4a24-89a0-74225d38aaab, emitting track_loaded
+[2026-02-19T13:25:18.203Z] [Socket] Track loaded aec5f9cc-c102-40c6-bfdd-f79348fa0b7f, emitting track_loaded
+[2026-02-19T13:25:18.204Z] [Socket] Track loaded 58fb6785-7d9d-4706-9d70-828ee6779fd3, emitting track_loaded
+[2026-02-19T13:25:18.205Z] [Socket] Track loaded f12ed52b-abd7-4b3f-893c-1de83eec019e, emitting track_loaded
+[2026-02-19T13:25:18.205Z] [Socket] Track loaded 0225c8f5-4a3f-4ae8-87bb-e31554079d91, emitting track_loaded
+[2026-02-19T13:25:18.205Z] [Socket] Track loaded 389fd0bd-18ca-41a9-925e-0c74c931f808, emitting track_loaded
+[2026-02-19T13:25:18.206Z] [Socket] Track loaded a4c76f8e-356a-4554-85e0-9908c4f30109, emitting track_loaded
+[2026-02-19T13:25:18.207Z] [Socket] Track loaded c233ed00-d97c-4117-95ec-eac9e8e0c79c, emitting track_loaded
+[2026-02-19T13:25:18.208Z] [Socket] Track loaded c91061ec-6510-46d5-a6d2-31568d7467d2, emitting track_loaded
+[2026-02-19T13:25:18.209Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=mpc8cd vs my=o3418
+[2026-02-19T13:25:18.209Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=mpc8cd vs my=9rw09k
+[2026-02-19T13:25:18.209Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=mpc8cd vs my=czyoxr
+[2026-02-19T13:25:18.209Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=mpc8cd vs my=75d9sv
+[2026-02-19T13:25:18.209Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=mpc8cd vs my=21b5a
+[2026-02-19T13:25:18.209Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=mpc8cd vs my=w894xt
+[2026-02-19T13:25:18.209Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=mpc8cd vs my=5xycyt
+[2026-02-19T13:25:18.209Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=mpc8cd vs my=c2ggwb
+[2026-02-19T13:25:18.209Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=mpc8cd vs my=ofrzkk
+[2026-02-19T13:25:18.209Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=mpc8cd vs my=a4muh
+[2026-02-19T13:25:18.209Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=mpc8cd vs my=1lc0p
+[2026-02-19T13:25:18.209Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=mpc8cd vs my=aawxl
+[2026-02-19T13:25:18.209Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=mpc8cd vs my=2gw15
+[2026-02-19T13:25:18.209Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=mpc8cd vs my=jlgmgh
+[2026-02-19T13:25:18.209Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=mpc8cd vs my=y448b8
+[2026-02-19T13:25:18.209Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=mpc8cd vs my=bofhl5
+[2026-02-19T13:25:18.210Z] [Socket] Track loaded e31bb606-6070-4d62-b0e3-5f2a7673b4ea, emitting track_loaded
+[2026-02-19T13:25:18.226Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=czyoxr vs my=czyoxr
+[2026-02-19T13:25:18.265Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=czyoxr vs my=9rw09k
+[2026-02-19T13:25:18.265Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=czyoxr vs my=o3418
+[2026-02-19T13:25:18.265Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=czyoxr vs my=w894xt
+[2026-02-19T13:25:18.265Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=czyoxr vs my=aawxl
+[2026-02-19T13:25:18.265Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=czyoxr vs my=c2ggwb
+[2026-02-19T13:25:18.265Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=czyoxr vs my=75d9sv
+[2026-02-19T13:25:18.265Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=czyoxr vs my=21b5a
+[2026-02-19T13:25:18.265Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=czyoxr vs my=5xycyt
+[2026-02-19T13:25:18.265Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=czyoxr vs my=a4muh
+[2026-02-19T13:25:18.265Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=czyoxr vs my=2gw15
+[2026-02-19T13:25:18.265Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=czyoxr vs my=y448b8
+[2026-02-19T13:25:18.265Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=czyoxr vs my=1lc0p
+[2026-02-19T13:25:18.265Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=75d9sv vs my=9rw09k
+[2026-02-19T13:25:18.265Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=czyoxr vs my=jlgmgh
+[2026-02-19T13:25:18.265Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=czyoxr vs my=bofhl5
+[2026-02-19T13:25:18.265Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=75d9sv vs my=o3418
+[2026-02-19T13:25:18.265Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=czyoxr vs my=ofrzkk
+[2026-02-19T13:25:18.265Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=75d9sv vs my=aawxl
+[2026-02-19T13:25:18.265Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=75d9sv vs my=75d9sv
+[2026-02-19T13:25:18.265Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=75d9sv vs my=5xycyt
+[2026-02-19T13:25:18.265Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=75d9sv vs my=w894xt
+[2026-02-19T13:25:18.265Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=75d9sv vs my=c2ggwb
+[2026-02-19T13:25:18.265Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=75d9sv vs my=a4muh
+[2026-02-19T13:25:18.265Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=75d9sv vs my=2gw15
+[2026-02-19T13:25:18.265Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=75d9sv vs my=ofrzkk
+[2026-02-19T13:25:18.265Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=75d9sv vs my=1lc0p
+[2026-02-19T13:25:18.265Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=75d9sv vs my=21b5a
+[2026-02-19T13:25:18.265Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=75d9sv vs my=jlgmgh
+[2026-02-19T13:25:18.265Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=75d9sv vs my=bofhl5
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=w894xt vs my=9rw09k
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=w894xt vs my=w894xt
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=w894xt vs my=aawxl
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=w894xt vs my=5xycyt
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=w894xt vs my=21b5a
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=w894xt vs my=c2ggwb
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=w894xt vs my=a4muh
+[2026-02-19T13:25:18.265Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=75d9sv vs my=y448b8
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=w894xt vs my=o3418
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=w894xt vs my=2gw15
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=w894xt vs my=y448b8
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=w894xt vs my=ofrzkk
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5xycyt vs my=9rw09k
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=w894xt vs my=bofhl5
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5xycyt vs my=o3418
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=w894xt vs my=jlgmgh
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=w894xt vs my=1lc0p
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5xycyt vs my=c2ggwb
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5xycyt vs my=21b5a
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5xycyt vs my=a4muh
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5xycyt vs my=5xycyt
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5xycyt vs my=2gw15
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5xycyt vs my=y448b8
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5xycyt vs my=ofrzkk
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5xycyt vs my=1lc0p
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5xycyt vs my=bofhl5
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5xycyt vs my=jlgmgh
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=c2ggwb vs my=o3418
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=c2ggwb vs my=aawxl
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=c2ggwb vs my=9rw09k
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=c2ggwb vs my=21b5a
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=c2ggwb vs my=a4muh
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=c2ggwb vs my=c2ggwb
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=c2ggwb vs my=y448b8
+[2026-02-19T13:25:18.266Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5xycyt vs my=aawxl
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=c2ggwb vs my=2gw15
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=c2ggwb vs my=1lc0p
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=c2ggwb vs my=bofhl5
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=9rw09k vs my=o3418
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=c2ggwb vs my=jlgmgh
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=9rw09k vs my=1lc0p
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=9rw09k vs my=a4muh
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=9rw09k vs my=y448b8
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=9rw09k vs my=2gw15
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=9rw09k vs my=aawxl
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=9rw09k vs my=ofrzkk
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=9rw09k vs my=jlgmgh
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=c2ggwb vs my=ofrzkk
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=9rw09k vs my=bofhl5
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=a4muh vs my=o3418
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=a4muh vs my=aawxl
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=a4muh vs my=21b5a
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=a4muh vs my=2gw15
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=9rw09k vs my=9rw09k
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=a4muh vs my=a4muh
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=9rw09k vs my=21b5a
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=a4muh vs my=ofrzkk
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=a4muh vs my=bofhl5
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=y448b8 vs my=o3418
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=a4muh vs my=y448b8
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=a4muh vs my=1lc0p
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=y448b8 vs my=21b5a
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=y448b8 vs my=aawxl
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=y448b8 vs my=2gw15
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=y448b8 vs my=ofrzkk
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=y448b8 vs my=1lc0p
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=y448b8 vs my=jlgmgh
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=y448b8 vs my=bofhl5
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=y448b8 vs my=y448b8
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2gw15 vs my=o3418
+[2026-02-19T13:25:18.267Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=a4muh vs my=jlgmgh
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2gw15 vs my=1lc0p
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2gw15 vs my=aawxl
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2gw15 vs my=2gw15
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2gw15 vs my=ofrzkk
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=jlgmgh vs my=21b5a
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=jlgmgh vs my=aawxl
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2gw15 vs my=21b5a
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2gw15 vs my=jlgmgh
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2gw15 vs my=bofhl5
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=jlgmgh vs my=ofrzkk
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=jlgmgh vs my=bofhl5
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=jlgmgh vs my=1lc0p
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=jlgmgh vs my=jlgmgh
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ofrzkk vs my=o3418
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ofrzkk vs my=21b5a
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ofrzkk vs my=ofrzkk
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ofrzkk vs my=aawxl
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=jlgmgh vs my=o3418
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ofrzkk vs my=1lc0p
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=o3418 vs my=aawxl
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ofrzkk vs my=bofhl5
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=aawxl vs my=aawxl
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=o3418 vs my=1lc0p
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=o3418 vs my=o3418
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=aawxl vs my=21b5a
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=o3418 vs my=bofhl5
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=o3418 vs my=21b5a
+[2026-02-19T13:25:18.269Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=1lc0p vs my=21b5a
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=aawxl vs my=bofhl5
+[2026-02-19T13:25:18.268Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=aawxl vs my=1lc0p
+[2026-02-19T13:25:18.269Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=1lc0p vs my=1lc0p
+[2026-02-19T13:25:18.269Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=1lc0p vs my=bofhl5
+[2026-02-19T13:25:18.269Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=bofhl5 vs my=21b5a
+[2026-02-19T13:25:18.269Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=bofhl5 vs my=bofhl5
+[2026-02-19T13:25:18.269Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=21b5a vs my=21b5a
+[2026-02-19T13:28:31.550Z] === Audio Service Started ===
+[2026-02-19T13:28:31.554Z] Platform: win32, FFmpeg: true
+[2026-02-19T13:28:40.955Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\AG 1.wav (req: hebo6)
+[2026-02-19T13:28:40.965Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\AG 2.wav (req: pkadba)
+[2026-02-19T13:28:40.966Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Bass.wav (req: qs5f97)
+[2026-02-19T13:28:40.966Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\BGVS.wav (req: z22n6)
+[2026-02-19T13:28:40.966Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Choir.wav (req: 6tz3mc)
+[2026-02-19T13:28:40.967Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Click Track.wav (req: dfr6j)
+[2026-02-19T13:28:40.967Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Drums.wav (req: lsgmk)
+[2026-02-19T13:28:40.967Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\EG 1.wav (req: q1d35)
+[2026-02-19T13:28:40.968Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\EG 2.wav (req: mbk62as)
+[2026-02-19T13:28:40.968Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\EG 3.wav (req: 63776a)
+[2026-02-19T13:28:40.968Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\EG 4.wav (req: nvxlov)
+[2026-02-19T13:28:40.969Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\EG Group.wav (req: 5jbaoa)
+[2026-02-19T13:28:40.969Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\FX.wav (req: 1m5xhm)
+[2026-02-19T13:28:40.969Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Guide.wav (req: zj0xh7)
+[2026-02-19T13:28:40.969Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Keys 1.wav (req: 7aq80i)
+[2026-02-19T13:28:40.970Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Loop.wav (req: 5bhild)
+[2026-02-19T13:28:40.970Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Piano.wav (req: pqr4zl)
+[2026-02-19T13:28:41.006Z] [Socket] Track loaded 275fffac-9d9a-459c-878e-22e056c1d1fb, emitting track_loaded
+[2026-02-19T13:28:41.013Z] [Socket] Track loaded a642a9b3-7687-4090-8c6b-7145581e94ca, emitting track_loaded
+[2026-02-19T13:28:41.014Z] [Socket] Track loaded 47a95471-4ffc-4aeb-b083-5b52c0445889, emitting track_loaded
+[2026-02-19T13:28:41.012Z] [Socket] Track loaded 6521c4f6-ee3f-4b7b-86ee-db510877aae4, emitting track_loaded
+[2026-02-19T13:28:41.016Z] [Socket] Track loaded 8e8cadff-10f5-4f6e-9457-7696b06352b6, emitting track_loaded
+[2026-02-19T13:28:41.017Z] [Socket] Track loaded 36ef869d-6a17-4cd0-baf4-1aae7872a998, emitting track_loaded
+[2026-02-19T13:28:41.019Z] [Socket] Track loaded b354ef53-8bbe-4231-967b-55110da583a6, emitting track_loaded
+[2026-02-19T13:28:41.018Z] [Socket] Track loaded d6afa03e-65de-4ec2-8318-592de316d9e1, emitting track_loaded
+[2026-02-19T13:28:41.021Z] [Socket] Track loaded e8e732c4-d69a-4062-a832-90c9af91e48a, emitting track_loaded
+[2026-02-19T13:28:41.020Z] [Socket] Track loaded be9bfa50-36c4-439d-b23a-a7ee1283f58f, emitting track_loaded
+[2026-02-19T13:28:41.024Z] [Socket] Track loaded 30aa8d14-0f9d-4f47-94bc-4bf05470d606, emitting track_loaded
+[2026-02-19T13:28:41.033Z] [Socket] Track loaded 1e315de0-2232-4d23-a0cd-6043367fcca8, emitting track_loaded
+[2026-02-19T13:28:41.028Z] [Socket] Track loaded 48ff0fbb-3bde-4bfb-8513-40ea8817dfb0, emitting track_loaded
+[2026-02-19T13:28:41.042Z] [Socket] Track loaded ec9745d0-241b-45da-84fa-76df549ff03d, emitting track_loaded
+[2026-02-19T13:28:41.045Z] [Socket] Track loaded c9b1665a-12d9-4644-b1cc-0fa5b7bdab9c, emitting track_loaded
+[2026-02-19T13:28:41.047Z] [Socket] Track loaded 4b2d9858-6784-4cd1-af94-c2a6cb5116a9, emitting track_loaded
+[2026-02-19T13:28:41.049Z] [Socket] Track loaded 9698b957-c192-4634-9c2a-a06ffcce1ad8, emitting track_loaded
+[2026-02-19T13:28:41.080Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hebo6 vs my=hebo6
+[2026-02-19T13:28:41.129Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hebo6 vs my=pkadba
+[2026-02-19T13:28:41.129Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hebo6 vs my=qs5f97
+[2026-02-19T13:28:41.130Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hebo6 vs my=6tz3mc
+[2026-02-19T13:28:41.130Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hebo6 vs my=z22n6
+[2026-02-19T13:28:41.130Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hebo6 vs my=dfr6j
+[2026-02-19T13:28:41.130Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hebo6 vs my=mbk62as
+[2026-02-19T13:28:41.130Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hebo6 vs my=q1d35
+[2026-02-19T13:28:41.130Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hebo6 vs my=63776a
+[2026-02-19T13:28:41.130Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hebo6 vs my=nvxlov
+[2026-02-19T13:28:41.130Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hebo6 vs my=1m5xhm
+[2026-02-19T13:28:41.130Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hebo6 vs my=lsgmk
+[2026-02-19T13:28:41.130Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hebo6 vs my=5jbaoa
+[2026-02-19T13:28:41.131Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hebo6 vs my=7aq80i
+[2026-02-19T13:28:41.131Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hebo6 vs my=pqr4zl
+[2026-02-19T13:28:41.131Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=pkadba vs my=pkadba
+[2026-02-19T13:28:41.131Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=pkadba vs my=qs5f97
+[2026-02-19T13:28:41.131Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hebo6 vs my=5bhild
+[2026-02-19T13:28:41.131Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=pkadba vs my=lsgmk
+[2026-02-19T13:28:41.131Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=pkadba vs my=z22n6
+[2026-02-19T13:28:41.131Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=pkadba vs my=dfr6j
+[2026-02-19T13:28:41.131Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=pkadba vs my=mbk62as
+[2026-02-19T13:28:41.131Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=pkadba vs my=q1d35
+[2026-02-19T13:28:41.131Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=pkadba vs my=nvxlov
+[2026-02-19T13:28:41.131Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=pkadba vs my=6tz3mc
+[2026-02-19T13:28:41.131Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=pkadba vs my=5jbaoa
+[2026-02-19T13:28:41.130Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hebo6 vs my=zj0xh7
+[2026-02-19T13:28:41.131Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=pkadba vs my=1m5xhm
+[2026-02-19T13:28:41.132Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=pkadba vs my=pqr4zl
+[2026-02-19T13:28:41.132Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=pkadba vs my=7aq80i
+[2026-02-19T13:28:41.132Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=pkadba vs my=5bhild
+[2026-02-19T13:28:41.132Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qs5f97 vs my=qs5f97
+[2026-02-19T13:28:41.132Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qs5f97 vs my=z22n6
+[2026-02-19T13:28:41.132Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=pkadba vs my=zj0xh7
+[2026-02-19T13:28:41.132Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qs5f97 vs my=dfr6j
+[2026-02-19T13:28:41.132Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qs5f97 vs my=6tz3mc
+[2026-02-19T13:28:41.131Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=pkadba vs my=63776a
+[2026-02-19T13:28:41.132Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qs5f97 vs my=lsgmk
+[2026-02-19T13:28:41.132Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qs5f97 vs my=mbk62as
+[2026-02-19T13:28:41.132Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qs5f97 vs my=nvxlov
+[2026-02-19T13:28:41.132Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qs5f97 vs my=5jbaoa
+[2026-02-19T13:28:41.132Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qs5f97 vs my=63776a
+[2026-02-19T13:28:41.132Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qs5f97 vs my=zj0xh7
+[2026-02-19T13:28:41.133Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qs5f97 vs my=7aq80i
+[2026-02-19T13:28:41.133Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qs5f97 vs my=pqr4zl
+[2026-02-19T13:28:41.133Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qs5f97 vs my=5bhild
+[2026-02-19T13:28:41.133Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=z22n6 vs my=z22n6
+[2026-02-19T13:28:41.133Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=z22n6 vs my=6tz3mc
+[2026-02-19T13:28:41.132Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qs5f97 vs my=1m5xhm
+[2026-02-19T13:28:41.133Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=z22n6 vs my=lsgmk
+[2026-02-19T13:28:41.133Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=z22n6 vs my=dfr6j
+[2026-02-19T13:28:41.132Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qs5f97 vs my=q1d35
+[2026-02-19T13:28:41.133Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=z22n6 vs my=mbk62as
+[2026-02-19T13:28:41.133Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=z22n6 vs my=q1d35
+[2026-02-19T13:28:41.133Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=z22n6 vs my=63776a
+[2026-02-19T13:28:41.133Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=z22n6 vs my=zj0xh7
+[2026-02-19T13:28:41.133Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=z22n6 vs my=5jbaoa
+[2026-02-19T13:28:41.133Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=z22n6 vs my=1m5xhm
+[2026-02-19T13:28:41.133Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=z22n6 vs my=7aq80i
+[2026-02-19T13:28:41.133Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6tz3mc vs my=6tz3mc
+[2026-02-19T13:28:41.133Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=z22n6 vs my=pqr4zl
+[2026-02-19T13:28:41.133Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=z22n6 vs my=5bhild
+[2026-02-19T13:28:41.133Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6tz3mc vs my=dfr6j
+[2026-02-19T13:28:41.133Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6tz3mc vs my=lsgmk
+[2026-02-19T13:28:41.134Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6tz3mc vs my=q1d35
+[2026-02-19T13:28:41.134Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6tz3mc vs my=mbk62as
+[2026-02-19T13:28:41.134Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6tz3mc vs my=63776a
+[2026-02-19T13:28:41.134Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6tz3mc vs my=nvxlov
+[2026-02-19T13:28:41.134Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6tz3mc vs my=1m5xhm
+[2026-02-19T13:28:41.134Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6tz3mc vs my=zj0xh7
+[2026-02-19T13:28:41.134Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6tz3mc vs my=5bhild
+[2026-02-19T13:28:41.134Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6tz3mc vs my=pqr4zl
+[2026-02-19T13:28:41.134Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=dfr6j vs my=dfr6j
+[2026-02-19T13:28:41.134Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6tz3mc vs my=7aq80i
+[2026-02-19T13:28:41.134Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=dfr6j vs my=lsgmk
+[2026-02-19T13:28:41.134Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=dfr6j vs my=q1d35
+[2026-02-19T13:28:41.134Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=dfr6j vs my=mbk62as
+[2026-02-19T13:28:41.134Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=dfr6j vs my=63776a
+[2026-02-19T13:28:41.134Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=6tz3mc vs my=5jbaoa
+[2026-02-19T13:28:41.133Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=z22n6 vs my=nvxlov
+[2026-02-19T13:28:41.134Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=dfr6j vs my=nvxlov
+[2026-02-19T13:28:41.134Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=dfr6j vs my=1m5xhm
+[2026-02-19T13:28:41.134Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=dfr6j vs my=7aq80i
+[2026-02-19T13:28:41.134Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=dfr6j vs my=zj0xh7
+[2026-02-19T13:28:41.134Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=dfr6j vs my=5bhild
+[2026-02-19T13:28:41.135Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=dfr6j vs my=pqr4zl
+[2026-02-19T13:28:41.135Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=lsgmk vs my=lsgmk
+[2026-02-19T13:28:41.134Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=dfr6j vs my=5jbaoa
+[2026-02-19T13:28:41.135Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=lsgmk vs my=mbk62as
+[2026-02-19T13:28:41.135Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=lsgmk vs my=nvxlov
+[2026-02-19T13:28:41.135Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=lsgmk vs my=63776a
+[2026-02-19T13:28:41.135Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=lsgmk vs my=5jbaoa
+[2026-02-19T13:28:41.135Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=lsgmk vs my=zj0xh7
+[2026-02-19T13:28:41.135Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=lsgmk vs my=7aq80i
+[2026-02-19T13:28:41.135Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=q1d35 vs my=q1d35
+[2026-02-19T13:28:41.135Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=lsgmk vs my=1m5xhm
+[2026-02-19T13:28:41.135Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=lsgmk vs my=5bhild
+[2026-02-19T13:28:41.135Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=q1d35 vs my=mbk62as
+[2026-02-19T13:28:41.135Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=lsgmk vs my=pqr4zl
+[2026-02-19T13:28:41.135Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=q1d35 vs my=63776a
+[2026-02-19T13:28:41.135Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=q1d35 vs my=5jbaoa
+[2026-02-19T13:28:41.135Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=q1d35 vs my=nvxlov
+[2026-02-19T13:28:41.135Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=q1d35 vs my=zj0xh7
+[2026-02-19T13:28:41.135Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=lsgmk vs my=q1d35
+[2026-02-19T13:28:41.135Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=q1d35 vs my=7aq80i
+[2026-02-19T13:28:41.135Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=q1d35 vs my=5bhild
+[2026-02-19T13:28:41.136Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=mbk62as vs my=mbk62as
+[2026-02-19T13:28:41.136Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=mbk62as vs my=63776a
+[2026-02-19T13:28:41.136Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=mbk62as vs my=nvxlov
+[2026-02-19T13:28:41.136Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=mbk62as vs my=5jbaoa
+[2026-02-19T13:28:41.136Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=mbk62as vs my=1m5xhm
+[2026-02-19T13:28:41.136Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=mbk62as vs my=zj0xh7
+[2026-02-19T13:28:41.136Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=mbk62as vs my=7aq80i
+[2026-02-19T13:28:41.136Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=mbk62as vs my=5bhild
+[2026-02-19T13:28:41.135Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=q1d35 vs my=pqr4zl
+[2026-02-19T13:28:41.136Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=63776a vs my=63776a
+[2026-02-19T13:28:41.136Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=63776a vs my=nvxlov
+[2026-02-19T13:28:41.136Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=63776a vs my=5jbaoa
+[2026-02-19T13:28:41.136Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=mbk62as vs my=pqr4zl
+[2026-02-19T13:28:41.136Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=63776a vs my=1m5xhm
+[2026-02-19T13:28:41.136Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=63776a vs my=7aq80i
+[2026-02-19T13:28:41.136Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=63776a vs my=zj0xh7
+[2026-02-19T13:28:41.136Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=63776a vs my=pqr4zl
+[2026-02-19T13:28:41.136Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=63776a vs my=5bhild
+[2026-02-19T13:28:41.137Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=nvxlov vs my=nvxlov
+[2026-02-19T13:28:41.137Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=nvxlov vs my=5jbaoa
+[2026-02-19T13:28:41.137Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=nvxlov vs my=zj0xh7
+[2026-02-19T13:28:41.137Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=nvxlov vs my=7aq80i
+[2026-02-19T13:28:41.137Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=nvxlov vs my=1m5xhm
+[2026-02-19T13:28:41.137Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=nvxlov vs my=5bhild
+[2026-02-19T13:28:41.137Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=nvxlov vs my=pqr4zl
+[2026-02-19T13:28:41.137Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5jbaoa vs my=1m5xhm
+[2026-02-19T13:28:41.137Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5jbaoa vs my=zj0xh7
+[2026-02-19T13:28:41.137Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5jbaoa vs my=7aq80i
+[2026-02-19T13:28:41.137Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5jbaoa vs my=pqr4zl
+[2026-02-19T13:28:41.137Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5jbaoa vs my=5bhild
+[2026-02-19T13:28:41.137Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5jbaoa vs my=5jbaoa
+[2026-02-19T13:28:41.135Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=q1d35 vs my=1m5xhm
+[2026-02-19T13:28:41.138Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=1m5xhm vs my=zj0xh7
+[2026-02-19T13:28:41.138Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=1m5xhm vs my=7aq80i
+[2026-02-19T13:28:41.138Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=1m5xhm vs my=pqr4zl
+[2026-02-19T13:28:41.139Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=zj0xh7 vs my=zj0xh7
+[2026-02-19T13:28:41.139Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=zj0xh7 vs my=7aq80i
+[2026-02-19T13:28:41.139Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=zj0xh7 vs my=5bhild
+[2026-02-19T13:28:41.139Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=zj0xh7 vs my=pqr4zl
+[2026-02-19T13:28:41.138Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=1m5xhm vs my=5bhild
+[2026-02-19T13:28:41.139Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=7aq80i vs my=7aq80i
+[2026-02-19T13:28:41.139Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5bhild vs my=5bhild
+[2026-02-19T13:28:41.139Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=7aq80i vs my=pqr4zl
+[2026-02-19T13:28:41.139Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5bhild vs my=pqr4zl
+[2026-02-19T13:28:41.138Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=1m5xhm vs my=1m5xhm
+[2026-02-19T13:28:41.139Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=7aq80i vs my=5bhild
+[2026-02-19T13:28:41.139Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=pqr4zl vs my=pqr4zl
+[2026-02-19T13:32:24.199Z] === Audio Service Started ===
+[2026-02-19T13:32:24.210Z] Platform: win32, FFmpeg: true
+[2026-02-19T13:32:36.939Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\AG 1.wav (req: qfubv8)
+[2026-02-19T13:32:36.949Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\AG 2.wav (req: oo8w3p)
+[2026-02-19T13:32:36.950Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Bass.wav (req: vj8l4k)
+[2026-02-19T13:32:36.950Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\BGVS.wav (req: u95htb)
+[2026-02-19T13:32:36.951Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Choir.wav (req: ux2j98h)
+[2026-02-19T13:32:36.951Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Click Track.wav (req: 4m3i4d)
+[2026-02-19T13:32:36.951Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Drums.wav (req: li0ehl)
+[2026-02-19T13:32:36.952Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\EG 1.wav (req: 49an)
+[2026-02-19T13:32:36.952Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\EG 2.wav (req: 2lcpco)
+[2026-02-19T13:32:36.952Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\EG 3.wav (req: 8s2bc)
+[2026-02-19T13:32:36.952Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\EG 4.wav (req: beeyga)
+[2026-02-19T13:32:36.953Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\EG Group.wav (req: 14plne)
+[2026-02-19T13:32:36.953Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Guide.wav (req: s9cnbc)
+[2026-02-19T13:32:36.954Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Loop.wav (req: 3vzw29)
+[2026-02-19T13:32:36.954Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Piano.wav (req: tjxylq)
+[2026-02-19T13:32:36.954Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Keys 1.wav (req: tiaxit)
+[2026-02-19T13:32:36.953Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\FX.wav (req: 0tvoxj)
+[2026-02-19T13:32:36.981Z] [Socket] Track loaded cd33ffca-2a3d-4acb-993e-6694b1b758cb, emitting track_loaded
+[2026-02-19T13:32:36.991Z] [Socket] Track loaded c0bde07d-8c96-45ed-a2d6-97c05b5b678c, emitting track_loaded
+[2026-02-19T13:32:36.992Z] [Socket] Track loaded 250d14d5-0468-42cd-aa5d-78aed0f1c0f4, emitting track_loaded
+[2026-02-19T13:32:36.993Z] [Socket] Track loaded eae9ccf3-e131-4036-9bb7-6cd8de65a872, emitting track_loaded
+[2026-02-19T13:32:36.994Z] [Socket] Track loaded 9fd2a30e-4642-4a27-8c74-98860bab7076, emitting track_loaded
+[2026-02-19T13:32:36.995Z] [Socket] Track loaded 8df995fe-8f02-46d6-91ad-5e3ea4d40de2, emitting track_loaded
+[2026-02-19T13:32:36.996Z] [Socket] Track loaded 9f73894f-9b19-467a-8c7a-d6654790f1b7, emitting track_loaded
+[2026-02-19T13:32:36.998Z] [Socket] Track loaded 52c91f09-3ba3-4a71-9fcc-b8409231c788, emitting track_loaded
+[2026-02-19T13:32:36.999Z] [Socket] Track loaded a0fb0f95-0c20-4993-bab7-f69c69b68190, emitting track_loaded
+[2026-02-19T13:32:37.001Z] [Socket] Track loaded 0b46378a-7bd2-4d69-a02f-d0f9ac5ef812, emitting track_loaded
+[2026-02-19T13:32:37.002Z] [Socket] Track loaded 12e524a7-26d2-4a5c-8151-63487d111dbe, emitting track_loaded
+[2026-02-19T13:32:37.005Z] [Socket] Track loaded 410ae976-a42c-4178-a010-d61ccc9c099e, emitting track_loaded
+[2026-02-19T13:32:37.017Z] [Socket] Track loaded a174bb2f-f059-43d3-b689-43a4280b5423, emitting track_loaded
+[2026-02-19T13:32:37.019Z] [Socket] Track loaded 652756f6-b896-4c37-8c64-02087acc6aa8, emitting track_loaded
+[2026-02-19T13:32:37.027Z] [Socket] Track loaded 31fbb24a-9358-46ad-ba1b-442b289be700, emitting track_loaded
+[2026-02-19T13:32:37.029Z] [Socket] Track loaded b0ebfc1a-010c-4c88-a05b-d1c4de24bb68, emitting track_loaded
+[2026-02-19T13:32:37.031Z] [Socket] Track loaded 37fe9b7f-143c-45d6-82a0-4842cb8014dc, emitting track_loaded
+[2026-02-19T13:32:37.043Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qfubv8 vs my=qfubv8
+[2026-02-19T13:32:37.081Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qfubv8 vs my=oo8w3p
+[2026-02-19T13:32:37.081Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qfubv8 vs my=vj8l4k
+[2026-02-19T13:32:37.081Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qfubv8 vs my=4m3i4d
+[2026-02-19T13:32:37.081Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qfubv8 vs my=ux2j98h
+[2026-02-19T13:32:37.081Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qfubv8 vs my=49an
+[2026-02-19T13:32:37.081Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qfubv8 vs my=2lcpco
+[2026-02-19T13:32:37.081Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qfubv8 vs my=8s2bc
+[2026-02-19T13:32:37.081Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qfubv8 vs my=beeyga
+[2026-02-19T13:32:37.081Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qfubv8 vs my=14plne
+[2026-02-19T13:32:37.081Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qfubv8 vs my=0tvoxj
+[2026-02-19T13:32:37.081Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qfubv8 vs my=u95htb
+[2026-02-19T13:32:37.081Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qfubv8 vs my=s9cnbc
+[2026-02-19T13:32:37.081Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qfubv8 vs my=tiaxit
+[2026-02-19T13:32:37.081Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qfubv8 vs my=tjxylq
+[2026-02-19T13:32:37.081Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=oo8w3p vs my=oo8w3p
+[2026-02-19T13:32:37.081Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qfubv8 vs my=3vzw29
+[2026-02-19T13:32:37.081Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qfubv8 vs my=li0ehl
+[2026-02-19T13:32:37.081Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=oo8w3p vs my=vj8l4k
+[2026-02-19T13:32:37.082Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=oo8w3p vs my=ux2j98h
+[2026-02-19T13:32:37.082Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=oo8w3p vs my=4m3i4d
+[2026-02-19T13:32:37.082Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=oo8w3p vs my=u95htb
+[2026-02-19T13:32:37.082Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=oo8w3p vs my=li0ehl
+[2026-02-19T13:32:37.082Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=oo8w3p vs my=49an
+[2026-02-19T13:32:37.082Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=oo8w3p vs my=2lcpco
+[2026-02-19T13:32:37.082Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=oo8w3p vs my=8s2bc
+[2026-02-19T13:32:37.082Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=oo8w3p vs my=beeyga
+[2026-02-19T13:32:37.082Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=oo8w3p vs my=14plne
+[2026-02-19T13:32:37.082Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=oo8w3p vs my=0tvoxj
+[2026-02-19T13:32:37.082Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=oo8w3p vs my=s9cnbc
+[2026-02-19T13:32:37.082Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=oo8w3p vs my=3vzw29
+[2026-02-19T13:32:37.082Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=oo8w3p vs my=tiaxit
+[2026-02-19T13:32:37.082Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=oo8w3p vs my=tjxylq
+[2026-02-19T13:32:37.082Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=u95htb vs my=vj8l4k
+[2026-02-19T13:32:37.082Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=u95htb vs my=u95htb
+[2026-02-19T13:32:37.082Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=u95htb vs my=ux2j98h
+[2026-02-19T13:32:37.082Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=u95htb vs my=4m3i4d
+[2026-02-19T13:32:37.082Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=u95htb vs my=li0ehl
+[2026-02-19T13:32:37.083Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=u95htb vs my=2lcpco
+[2026-02-19T13:32:37.083Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=u95htb vs my=49an
+[2026-02-19T13:32:37.083Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=u95htb vs my=8s2bc
+[2026-02-19T13:32:37.083Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=u95htb vs my=beeyga
+[2026-02-19T13:32:37.083Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=u95htb vs my=14plne
+[2026-02-19T13:32:37.083Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=u95htb vs my=0tvoxj
+[2026-02-19T13:32:37.083Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=u95htb vs my=s9cnbc
+[2026-02-19T13:32:37.083Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=u95htb vs my=tiaxit
+[2026-02-19T13:32:37.083Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=u95htb vs my=3vzw29
+[2026-02-19T13:32:37.083Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=u95htb vs my=tjxylq
+[2026-02-19T13:32:37.083Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ux2j98h vs my=vj8l4k
+[2026-02-19T13:32:37.083Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ux2j98h vs my=ux2j98h
+[2026-02-19T13:32:37.083Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ux2j98h vs my=4m3i4d
+[2026-02-19T13:32:37.083Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ux2j98h vs my=49an
+[2026-02-19T13:32:37.083Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ux2j98h vs my=li0ehl
+[2026-02-19T13:32:37.083Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ux2j98h vs my=8s2bc
+[2026-02-19T13:32:37.083Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ux2j98h vs my=2lcpco
+[2026-02-19T13:32:37.083Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ux2j98h vs my=beeyga
+[2026-02-19T13:32:37.083Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ux2j98h vs my=14plne
+[2026-02-19T13:32:37.083Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ux2j98h vs my=s9cnbc
+[2026-02-19T13:32:37.083Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ux2j98h vs my=0tvoxj
+[2026-02-19T13:32:37.083Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ux2j98h vs my=3vzw29
+[2026-02-19T13:32:37.083Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ux2j98h vs my=tiaxit
+[2026-02-19T13:32:37.083Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=ux2j98h vs my=tjxylq
+[2026-02-19T13:32:37.083Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=4m3i4d vs my=vj8l4k
+[2026-02-19T13:32:37.084Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=4m3i4d vs my=li0ehl
+[2026-02-19T13:32:37.084Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=4m3i4d vs my=4m3i4d
+[2026-02-19T13:32:37.084Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=4m3i4d vs my=49an
+[2026-02-19T13:32:37.084Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=4m3i4d vs my=2lcpco
+[2026-02-19T13:32:37.084Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=4m3i4d vs my=beeyga
+[2026-02-19T13:32:37.084Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=4m3i4d vs my=14plne
+[2026-02-19T13:32:37.084Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=4m3i4d vs my=0tvoxj
+[2026-02-19T13:32:37.084Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=4m3i4d vs my=8s2bc
+[2026-02-19T13:32:37.084Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=4m3i4d vs my=tiaxit
+[2026-02-19T13:32:37.084Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=4m3i4d vs my=s9cnbc
+[2026-02-19T13:32:37.084Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=4m3i4d vs my=3vzw29
+[2026-02-19T13:32:37.084Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=4m3i4d vs my=tjxylq
+[2026-02-19T13:32:37.084Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vj8l4k vs my=49an
+[2026-02-19T13:32:37.084Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vj8l4k vs my=vj8l4k
+[2026-02-19T13:32:37.084Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vj8l4k vs my=li0ehl
+[2026-02-19T13:32:37.084Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vj8l4k vs my=2lcpco
+[2026-02-19T13:32:37.084Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vj8l4k vs my=beeyga
+[2026-02-19T13:32:37.084Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vj8l4k vs my=8s2bc
+[2026-02-19T13:32:37.084Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vj8l4k vs my=14plne
+[2026-02-19T13:32:37.084Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vj8l4k vs my=0tvoxj
+[2026-02-19T13:32:37.084Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vj8l4k vs my=s9cnbc
+[2026-02-19T13:32:37.084Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vj8l4k vs my=tiaxit
+[2026-02-19T13:32:37.084Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vj8l4k vs my=tjxylq
+[2026-02-19T13:32:37.084Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vj8l4k vs my=3vzw29
+[2026-02-19T13:32:37.084Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=li0ehl vs my=li0ehl
+[2026-02-19T13:32:37.085Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=li0ehl vs my=2lcpco
+[2026-02-19T13:32:37.084Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=li0ehl vs my=49an
+[2026-02-19T13:32:37.085Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=li0ehl vs my=beeyga
+[2026-02-19T13:32:37.085Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=li0ehl vs my=8s2bc
+[2026-02-19T13:32:37.085Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=li0ehl vs my=14plne
+[2026-02-19T13:32:37.085Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=li0ehl vs my=0tvoxj
+[2026-02-19T13:32:37.085Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=li0ehl vs my=tiaxit
+[2026-02-19T13:32:37.085Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=li0ehl vs my=s9cnbc
+[2026-02-19T13:32:37.085Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=li0ehl vs my=tjxylq
+[2026-02-19T13:32:37.085Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=li0ehl vs my=3vzw29
+[2026-02-19T13:32:37.085Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=49an vs my=49an
+[2026-02-19T13:32:37.085Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=49an vs my=2lcpco
+[2026-02-19T13:32:37.085Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=49an vs my=8s2bc
+[2026-02-19T13:32:37.085Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=49an vs my=14plne
+[2026-02-19T13:32:37.085Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=49an vs my=0tvoxj
+[2026-02-19T13:32:37.085Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=49an vs my=beeyga
+[2026-02-19T13:32:37.085Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=49an vs my=3vzw29
+[2026-02-19T13:32:37.085Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=49an vs my=s9cnbc
+[2026-02-19T13:32:37.085Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=49an vs my=tjxylq
+[2026-02-19T13:32:37.085Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8s2bc vs my=2lcpco
+[2026-02-19T13:32:37.085Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8s2bc vs my=8s2bc
+[2026-02-19T13:32:37.085Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8s2bc vs my=beeyga
+[2026-02-19T13:32:37.085Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8s2bc vs my=0tvoxj
+[2026-02-19T13:32:37.086Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8s2bc vs my=s9cnbc
+[2026-02-19T13:32:37.086Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8s2bc vs my=tiaxit
+[2026-02-19T13:32:37.085Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8s2bc vs my=14plne
+[2026-02-19T13:32:37.086Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2lcpco vs my=beeyga
+[2026-02-19T13:32:37.086Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2lcpco vs my=2lcpco
+[2026-02-19T13:32:37.086Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8s2bc vs my=3vzw29
+[2026-02-19T13:32:37.086Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2lcpco vs my=14plne
+[2026-02-19T13:32:37.086Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2lcpco vs my=0tvoxj
+[2026-02-19T13:32:37.086Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2lcpco vs my=s9cnbc
+[2026-02-19T13:32:37.086Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2lcpco vs my=tiaxit
+[2026-02-19T13:32:37.086Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2lcpco vs my=3vzw29
+[2026-02-19T13:32:37.086Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2lcpco vs my=tjxylq
+[2026-02-19T13:32:37.086Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=beeyga vs my=beeyga
+[2026-02-19T13:32:37.086Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=beeyga vs my=14plne
+[2026-02-19T13:32:37.086Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=beeyga vs my=0tvoxj
+[2026-02-19T13:32:37.086Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=beeyga vs my=s9cnbc
+[2026-02-19T13:32:37.086Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=beeyga vs my=tiaxit
+[2026-02-19T13:32:37.086Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=beeyga vs my=3vzw29
+[2026-02-19T13:32:37.086Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=beeyga vs my=tjxylq
+[2026-02-19T13:32:37.086Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=14plne vs my=14plne
+[2026-02-19T13:32:37.086Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=14plne vs my=0tvoxj
+[2026-02-19T13:32:37.086Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=14plne vs my=s9cnbc
+[2026-02-19T13:32:37.086Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=14plne vs my=3vzw29
+[2026-02-19T13:32:37.086Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=14plne vs my=tjxylq
+[2026-02-19T13:32:37.086Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=s9cnbc vs my=0tvoxj
+[2026-02-19T13:32:37.086Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=14plne vs my=tiaxit
+[2026-02-19T13:32:37.086Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=s9cnbc vs my=s9cnbc
+[2026-02-19T13:32:37.085Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=49an vs my=tiaxit
+[2026-02-19T13:32:37.087Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=s9cnbc vs my=tiaxit
+[2026-02-19T13:32:37.087Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=0tvoxj vs my=tiaxit
+[2026-02-19T13:32:37.087Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=0tvoxj vs my=0tvoxj
+[2026-02-19T13:32:37.087Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=0tvoxj vs my=3vzw29
+[2026-02-19T13:32:37.087Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=0tvoxj vs my=tjxylq
+[2026-02-19T13:32:37.087Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=s9cnbc vs my=3vzw29
+[2026-02-19T13:32:37.087Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=s9cnbc vs my=tjxylq
+[2026-02-19T13:32:37.087Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=tjxylq vs my=3vzw29
+[2026-02-19T13:32:37.087Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=tjxylq vs my=tjxylq
+[2026-02-19T13:32:37.087Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=tjxylq vs my=tiaxit
+[2026-02-19T13:32:37.086Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=8s2bc vs my=tjxylq
+[2026-02-19T13:32:37.087Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=tiaxit vs my=tiaxit
+[2026-02-19T13:32:37.087Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=3vzw29 vs my=3vzw29
+[2026-02-19T13:32:37.087Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=tiaxit vs my=3vzw29
+[2026-02-19T14:10:12.671Z] === Audio Service Started ===
+[2026-02-19T14:10:12.674Z] Platform: win32, FFmpeg: true
+[2026-02-19T14:10:22.833Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\AG 1.wav (req: 5zm44sc)
+[2026-02-19T14:10:22.841Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Bass.wav (req: 2bczj)
+[2026-02-19T14:10:22.841Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\BGVS.wav (req: cx8socr)
+[2026-02-19T14:10:22.842Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Choir.wav (req: boi3uv)
+[2026-02-19T14:10:22.841Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\AG 2.wav (req: 3sfn14)
+[2026-02-19T14:10:22.842Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Drums.wav (req: 60p09c)
+[2026-02-19T14:10:22.843Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\EG 1.wav (req: vdouw)
+[2026-02-19T14:10:22.843Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\EG 2.wav (req: 71200b)
+[2026-02-19T14:10:22.843Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\EG 3.wav (req: 42n9v)
+[2026-02-19T14:10:22.843Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\EG 4.wav (req: j0qgb)
+[2026-02-19T14:10:22.843Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\EG Group.wav (req: zxwn1j)
+[2026-02-19T14:10:22.844Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\FX.wav (req: hpr1id)
+[2026-02-19T14:10:22.844Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Guide.wav (req: yq8msq)
+[2026-02-19T14:10:22.844Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Keys 1.wav (req: 2tbno4)
+[2026-02-19T14:10:22.842Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Click Track.wav (req: uhfcxd)
+[2026-02-19T14:10:22.844Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Loop.wav (req: he7hy)
+[2026-02-19T14:10:22.844Z] [Socket] load_track received for C:\Users\Admin\Desktop\Order of Service\Service Order 1-1-2026\05 My Jesus-My Jesus-F#-76.00bpm\Piano.wav (req: qlm07c)
+[2026-02-19T14:10:22.876Z] [Socket] Track loaded 4218cb64-1f4a-42d1-a018-f6dac6783f3d, emitting track_loaded
+[2026-02-19T14:10:22.877Z] [Socket] Track loaded 8fb22254-a7e3-4d6b-87e9-f39db92a44d7, emitting track_loaded
+[2026-02-19T14:10:22.878Z] [Socket] Track loaded 7924fd38-a731-48b3-876d-96649049f5f4, emitting track_loaded
+[2026-02-19T14:10:22.880Z] [Socket] Track loaded a9ad6dd0-9718-480b-8e34-d18a85a36340, emitting track_loaded
+[2026-02-19T14:10:22.881Z] [Socket] Track loaded 03d2a686-a8c5-4806-a7dd-bbc7af841230, emitting track_loaded
+[2026-02-19T14:10:22.882Z] [Socket] Track loaded d36ff364-4308-4e2c-a9ec-d916248adef9, emitting track_loaded
+[2026-02-19T14:10:22.884Z] [Socket] Track loaded cd089a72-3213-49f4-a8b0-be52157ed02e, emitting track_loaded
+[2026-02-19T14:10:22.885Z] [Socket] Track loaded a1c34050-4561-4ea2-aa10-2178dd5722e1, emitting track_loaded
+[2026-02-19T14:10:22.886Z] [Socket] Track loaded 90db14cd-36bd-4a8f-8855-93450d38fb53, emitting track_loaded
+[2026-02-19T14:10:22.887Z] [Socket] Track loaded 3277afab-14f1-451a-b038-e2387805af5c, emitting track_loaded
+[2026-02-19T14:10:22.889Z] [Socket] Track loaded 21b5a2fe-acec-4069-9ec7-2beeb1bd2b18, emitting track_loaded
+[2026-02-19T14:10:22.890Z] [Socket] Track loaded 96864c4f-7e9d-450e-9313-f6b490dc135c, emitting track_loaded
+[2026-02-19T14:10:22.894Z] [Socket] Track loaded 23950fd1-0558-4a2d-a2d2-36b02f2eed66, emitting track_loaded
+[2026-02-19T14:10:22.892Z] [Socket] Track loaded 50ea2a2c-2519-4d0b-b659-30f39d79833b, emitting track_loaded
+[2026-02-19T14:10:22.900Z] [Socket] Track loaded 4978341a-746e-4605-b8e1-6f999b2da7a8, emitting track_loaded
+[2026-02-19T14:10:22.902Z] [Socket] Track loaded fc6a70e9-b245-4961-8559-d70f71f2d480, emitting track_loaded
+[2026-02-19T14:10:22.904Z] [Socket] Track loaded 21dcff66-77da-4fda-88af-cd8e040327e0, emitting track_loaded
+[2026-02-19T14:10:22.923Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5zm44sc vs my=5zm44sc
+[2026-02-19T14:10:22.955Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5zm44sc vs my=3sfn14
+[2026-02-19T14:10:22.955Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5zm44sc vs my=2bczj
+[2026-02-19T14:10:22.955Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5zm44sc vs my=boi3uv
+[2026-02-19T14:10:22.955Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5zm44sc vs my=cx8socr
+[2026-02-19T14:10:22.955Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5zm44sc vs my=uhfcxd
+[2026-02-19T14:10:22.955Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5zm44sc vs my=60p09c
+[2026-02-19T14:10:22.955Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5zm44sc vs my=vdouw
+[2026-02-19T14:10:22.955Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5zm44sc vs my=71200b
+[2026-02-19T14:10:22.955Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5zm44sc vs my=zxwn1j
+[2026-02-19T14:10:22.955Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5zm44sc vs my=42n9v
+[2026-02-19T14:10:22.955Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5zm44sc vs my=hpr1id
+[2026-02-19T14:10:22.955Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5zm44sc vs my=j0qgb
+[2026-02-19T14:10:22.956Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5zm44sc vs my=yq8msq
+[2026-02-19T14:10:22.956Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5zm44sc vs my=he7hy
+[2026-02-19T14:10:22.956Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5zm44sc vs my=qlm07c
+[2026-02-19T14:10:22.956Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2bczj vs my=3sfn14
+[2026-02-19T14:10:22.956Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=5zm44sc vs my=2tbno4
+[2026-02-19T14:10:22.956Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2bczj vs my=cx8socr
+[2026-02-19T14:10:22.956Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2bczj vs my=2bczj
+[2026-02-19T14:10:22.956Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2bczj vs my=boi3uv
+[2026-02-19T14:10:22.956Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2bczj vs my=uhfcxd
+[2026-02-19T14:10:22.956Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2bczj vs my=60p09c
+[2026-02-19T14:10:22.956Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2bczj vs my=42n9v
+[2026-02-19T14:10:22.956Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2bczj vs my=71200b
+[2026-02-19T14:10:22.956Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2bczj vs my=vdouw
+[2026-02-19T14:10:22.956Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2bczj vs my=yq8msq
+[2026-02-19T14:10:22.956Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2bczj vs my=hpr1id
+[2026-02-19T14:10:22.956Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2bczj vs my=j0qgb
+[2026-02-19T14:10:22.956Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2bczj vs my=2tbno4
+[2026-02-19T14:10:22.956Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2bczj vs my=he7hy
+[2026-02-19T14:10:22.956Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2bczj vs my=zxwn1j
+[2026-02-19T14:10:22.956Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=boi3uv vs my=cx8socr
+[2026-02-19T14:10:22.956Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2bczj vs my=qlm07c
+[2026-02-19T14:10:22.957Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=boi3uv vs my=boi3uv
+[2026-02-19T14:10:22.957Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=boi3uv vs my=uhfcxd
+[2026-02-19T14:10:22.956Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=boi3uv vs my=3sfn14
+[2026-02-19T14:10:22.957Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=boi3uv vs my=vdouw
+[2026-02-19T14:10:22.957Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=boi3uv vs my=71200b
+[2026-02-19T14:10:22.957Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=boi3uv vs my=42n9v
+[2026-02-19T14:10:22.957Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=boi3uv vs my=60p09c
+[2026-02-19T14:10:22.957Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=boi3uv vs my=j0qgb
+[2026-02-19T14:10:22.957Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=boi3uv vs my=zxwn1j
+[2026-02-19T14:10:22.957Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=boi3uv vs my=yq8msq
+[2026-02-19T14:10:22.957Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=boi3uv vs my=hpr1id
+[2026-02-19T14:10:22.957Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=boi3uv vs my=2tbno4
+[2026-02-19T14:10:22.957Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=boi3uv vs my=he7hy
+[2026-02-19T14:10:22.957Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=boi3uv vs my=qlm07c
+[2026-02-19T14:10:22.957Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=cx8socr vs my=3sfn14
+[2026-02-19T14:10:22.957Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=cx8socr vs my=uhfcxd
+[2026-02-19T14:10:22.957Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=cx8socr vs my=cx8socr
+[2026-02-19T14:10:22.957Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=cx8socr vs my=vdouw
+[2026-02-19T14:10:22.957Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=cx8socr vs my=60p09c
+[2026-02-19T14:10:22.957Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=cx8socr vs my=42n9v
+[2026-02-19T14:10:22.958Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=cx8socr vs my=zxwn1j
+[2026-02-19T14:10:22.958Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=cx8socr vs my=hpr1id
+[2026-02-19T14:10:22.957Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=cx8socr vs my=71200b
+[2026-02-19T14:10:22.958Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=cx8socr vs my=2tbno4
+[2026-02-19T14:10:22.958Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=cx8socr vs my=he7hy
+[2026-02-19T14:10:22.958Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=cx8socr vs my=qlm07c
+[2026-02-19T14:10:22.958Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=3sfn14 vs my=3sfn14
+[2026-02-19T14:10:22.958Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=cx8socr vs my=yq8msq
+[2026-02-19T14:10:22.958Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=3sfn14 vs my=uhfcxd
+[2026-02-19T14:10:22.958Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=3sfn14 vs my=60p09c
+[2026-02-19T14:10:22.958Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=3sfn14 vs my=71200b
+[2026-02-19T14:10:22.958Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=3sfn14 vs my=42n9v
+[2026-02-19T14:10:22.958Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=3sfn14 vs my=vdouw
+[2026-02-19T14:10:22.958Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=3sfn14 vs my=j0qgb
+[2026-02-19T14:10:22.958Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=3sfn14 vs my=zxwn1j
+[2026-02-19T14:10:22.958Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=3sfn14 vs my=yq8msq
+[2026-02-19T14:10:22.958Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=3sfn14 vs my=hpr1id
+[2026-02-19T14:10:22.958Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=3sfn14 vs my=2tbno4
+[2026-02-19T14:10:22.958Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=3sfn14 vs my=he7hy
+[2026-02-19T14:10:22.958Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=60p09c vs my=uhfcxd
+[2026-02-19T14:10:22.958Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=3sfn14 vs my=qlm07c
+[2026-02-19T14:10:22.958Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=60p09c vs my=vdouw
+[2026-02-19T14:10:22.958Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=cx8socr vs my=j0qgb
+[2026-02-19T14:10:22.958Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=60p09c vs my=71200b
+[2026-02-19T14:10:22.959Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=60p09c vs my=42n9v
+[2026-02-19T14:10:22.959Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=60p09c vs my=j0qgb
+[2026-02-19T14:10:22.959Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=60p09c vs my=zxwn1j
+[2026-02-19T14:10:22.959Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=60p09c vs my=hpr1id
+[2026-02-19T14:10:22.959Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=60p09c vs my=yq8msq
+[2026-02-19T14:10:22.959Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=60p09c vs my=he7hy
+[2026-02-19T14:10:22.959Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=60p09c vs my=2tbno4
+[2026-02-19T14:10:22.959Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=60p09c vs my=qlm07c
+[2026-02-19T14:10:22.959Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vdouw vs my=uhfcxd
+[2026-02-19T14:10:22.959Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vdouw vs my=vdouw
+[2026-02-19T14:10:22.959Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vdouw vs my=71200b
+[2026-02-19T14:10:22.959Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vdouw vs my=zxwn1j
+[2026-02-19T14:10:22.959Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vdouw vs my=j0qgb
+[2026-02-19T14:10:22.959Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vdouw vs my=42n9v
+[2026-02-19T14:10:22.959Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vdouw vs my=hpr1id
+[2026-02-19T14:10:22.959Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vdouw vs my=yq8msq
+[2026-02-19T14:10:22.959Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vdouw vs my=2tbno4
+[2026-02-19T14:10:22.959Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vdouw vs my=he7hy
+[2026-02-19T14:10:22.959Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=vdouw vs my=qlm07c
+[2026-02-19T14:10:22.959Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=42n9v vs my=uhfcxd
+[2026-02-19T14:10:22.959Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=42n9v vs my=71200b
+[2026-02-19T14:10:22.959Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=42n9v vs my=42n9v
+[2026-02-19T14:10:22.958Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=60p09c vs my=60p09c
+[2026-02-19T14:10:22.959Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=42n9v vs my=j0qgb
+[2026-02-19T14:10:22.959Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=42n9v vs my=zxwn1j
+[2026-02-19T14:10:22.959Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=42n9v vs my=yq8msq
+[2026-02-19T14:10:22.959Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=42n9v vs my=hpr1id
+[2026-02-19T14:10:22.959Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=42n9v vs my=he7hy
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=42n9v vs my=qlm07c
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=71200b vs my=j0qgb
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=71200b vs my=uhfcxd
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=71200b vs my=71200b
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=71200b vs my=zxwn1j
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=71200b vs my=hpr1id
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=71200b vs my=yq8msq
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=71200b vs my=2tbno4
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=j0qgb vs my=uhfcxd
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=j0qgb vs my=j0qgb
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=71200b vs my=he7hy
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=71200b vs my=qlm07c
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=j0qgb vs my=hpr1id
+[2026-02-19T14:10:22.959Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=42n9v vs my=2tbno4
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=j0qgb vs my=zxwn1j
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=j0qgb vs my=yq8msq
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=j0qgb vs my=2tbno4
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=j0qgb vs my=qlm07c
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=zxwn1j vs my=uhfcxd
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=zxwn1j vs my=zxwn1j
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=j0qgb vs my=he7hy
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=zxwn1j vs my=hpr1id
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=zxwn1j vs my=yq8msq
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=zxwn1j vs my=2tbno4
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=zxwn1j vs my=qlm07c
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=zxwn1j vs my=he7hy
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=yq8msq vs my=uhfcxd
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=yq8msq vs my=yq8msq
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=yq8msq vs my=hpr1id
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=yq8msq vs my=he7hy
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=yq8msq vs my=2tbno4
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2tbno4 vs my=hpr1id
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=yq8msq vs my=qlm07c
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2tbno4 vs my=uhfcxd
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2tbno4 vs my=he7hy
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2tbno4 vs my=qlm07c
+[2026-02-19T14:10:22.960Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=2tbno4 vs my=2tbno4
+[2026-02-19T14:10:22.961Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hpr1id vs my=hpr1id
+[2026-02-19T14:10:22.961Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hpr1id vs my=uhfcxd
+[2026-02-19T14:10:22.961Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hpr1id vs my=he7hy
+[2026-02-19T14:10:22.961Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=hpr1id vs my=qlm07c
+[2026-02-19T14:10:22.961Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=he7hy vs my=he7hy
+[2026-02-19T14:10:22.961Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=he7hy vs my=uhfcxd
+[2026-02-19T14:10:22.961Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=he7hy vs my=qlm07c
+[2026-02-19T14:10:22.961Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qlm07c vs my=uhfcxd
+[2026-02-19T14:10:22.961Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=qlm07c vs my=qlm07c
+[2026-02-19T14:10:22.961Z] [CLIENT] [RemoteAudioMixer] track_loaded evt: req=uhfcxd vs my=uhfcxd
+[2026-02-19T14:17:02.124Z] === Audio Service Started ===
+[2026-02-19T14:17:02.127Z] Platform: win32, FFmpeg: true
+[2026-02-19T14:20:04.574Z] === Audio Service Started ===
+[2026-02-19T14:20:04.576Z] Platform: win32, FFmpeg: true
+[2026-02-19T18:42:31.034Z] === Audio Service Started ===
+[2026-02-19T18:42:31.036Z] Platform: win32, FFmpeg: true
+[2026-02-19T18:49:30.263Z] === Audio Service Started ===
+[2026-02-19T18:49:30.265Z] Platform: win32, FFmpeg: true
+[2026-02-19T19:13:33.154Z] === Audio Service Started ===
+[2026-02-19T19:13:33.156Z] Platform: win32, FFmpeg: true
+[2026-02-20T01:29:37.600Z] === Audio Service Started ===
+[2026-02-20T01:29:37.603Z] Platform: win32, FFmpeg: true
+[2026-02-20T01:58:26.065Z] === Audio Service Started ===
+[2026-02-20T01:58:26.067Z] Platform: win32, FFmpeg: true
