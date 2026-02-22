@@ -1,0 +1,47 @@
+<div class="lyrics-column" #columnRef>
+    @if (!lyrics || parsedLines.length === 0) {
+    <div class="lyrics-column-empty">
+        <p>No lyrics loaded</p>
+        <p class="lyrics-column-hint">Select a song with lyrics to begin</p>
+    </div>
+    }
+
+    @if (lyrics && parsedLines.length > 0) {
+    <div class="lyrics-column-header">
+        <h3>Song Lyrics</h3>
+        <p class="lyrics-column-instructions">
+            Click or use ↑↓ arrows to select 2 lines
+        </p>
+    </div>
+
+    <div class="lyrics-column-content">
+        @for (line of parsedLines; track $index) {
+        @if (line.type === 'section') {
+        <div class="lyrics-section-label">
+            [{{ line.text }}]
+        </div>
+        }
+
+        @if (line.type === 'lyric') {
+        @let lyricIdx = getLineIndex($index);
+        <div [class.lyrics-line]="true" [class.lyrics-line-selected]="isInSelectedPair(lyricIdx)"
+            [class.lyrics-line-hovered]="isInHoveredPair(lyricIdx) && !isInSelectedPair(lyricIdx)"
+            [class.lyrics-line-pair-start]="lyricIdx % 2 === 0" (click)="handleLineClick(lyricIdx)"
+            (mouseenter)="handleLineHover(lyricIdx)" (mouseleave)="hoveredIndex = null">
+            {{ line.text }}
+            @if (isInSelectedPair(lyricIdx) && lyricIdx === selectedIndex) {
+            <div #selectedRef class="hidden"></div>
+            }
+        </div>
+        }
+        }
+    </div>
+
+    <div class="lyrics-column-footer">
+        <span class="lyrics-column-counter">
+            Showing lines {{ selectedIndex + 1 }}-{{ selectedIndex + 2 > lyricLines.length ? lyricLines.length :
+            selectedIndex + 2 }} of {{ lyricLines.length }}
+        </span>
+    </div>
+    }
+</div>

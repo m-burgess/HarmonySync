@@ -30,6 +30,7 @@ type TrackInfo struct {
 	ID       string  `json:"id"`
 	Path     string  `json:"path"`
 	Duration float64 `json:"duration"` // Seconds
+	Pan      float64 `json:"pan"`      // -1.0 (Left) to 1.0 (Right)
 }
 
 func NewService(eb *events.EventBus) (*Service, error) {
@@ -71,7 +72,7 @@ func (s *Service) LoadSong(songID string, tracks []TrackInfo) error {
 		go func(t TrackInfo) {
 			defer wg.Done()
 
-			if err := s.Mixer.LoadSongTrack(songID, t.ID, t.Path); err != nil {
+			if err := s.Mixer.LoadSongTrack(songID, t.ID, t.Path, t.Pan); err != nil {
 				errChan <- fmt.Errorf("failed to load track %s: %w", t.ID, err)
 				return
 			}
@@ -127,7 +128,7 @@ func (s *Service) TransposeSong(songID string, semitones int) error {
 			newPath = track.Path
 		}
 
-		if err := s.Mixer.LoadSongTrack(songID, track.ID, newPath); err != nil {
+		if err := s.Mixer.LoadSongTrack(songID, track.ID, newPath, track.Pan); err != nil {
 			return fmt.Errorf("failed to reload transposed track %s: %w", track.ID, err)
 		}
 	}

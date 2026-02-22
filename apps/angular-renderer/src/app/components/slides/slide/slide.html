@@ -1,0 +1,111 @@
+<div #slideRef [class]="slideClass" [ngStyle]="customStyle" (click)="handleClick()" (mouseenter)="handleMouseEnter()"
+    (mouseleave)="handleMouseLeave()" [attr.data-slide-index]="index" [attr.data-slide-type]="slide.type || 'lyric'"
+    [draggable]="true" (dragstart)="handleDragStartLocal($event)" (dragover)="$event.preventDefault()"
+    (dragenter)="handleDragEnterLocal($event)" (dragleave)="handleDragLeaveLocal()" (drop)="handleDropLocal($event)"
+    (dragend)="onDragEnd.emit()" tabindex="0">
+    <!-- Type Icon -->
+    <div *ngIf="showTypeIcon" class="slide-type-indicator">
+        <ng-container [ngSwitch]="slide.type">
+            <svg *ngSwitchCase="'image'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
+                class="slide-type-icon">
+                <path fill-rule="evenodd"
+                    d="M1.5 6a2.25 2.25 0 0 1 2.25-2.25h16.5A2.25 2.25 0 0 1 22.5 6v12a2.25 2.25 0 0 1-2.25 2.25H3.75A2.25 2.25 0 0 1 1.5 18V6ZM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0 0 21 18v-1.94l-2.69-2.689a1.5 1.5 0 0 0-2.12 0l-.88.879.97.97a.75.75 0 1 1-1.06 1.06l-5.16-5.159a1.5 1.5 0 0 0-2.12 0L3 16.061Zm10.125-7.81a1.125 1.125 0 1 1 2.25 0 1.125 1.125 0 0 1-2.25 0Z"
+                    clip-rule="evenodd" />
+            </svg>
+            <svg *ngSwitchCase="'video'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
+                class="slide-type-icon">
+                <path
+                    d="M4.5 4.5a3 3 0 0 0-3 3v9a3 3 0 0 0 3 3h15a3 3 0 0 0 3-3v-9a3 3 0 0 0-3-3h-15ZM10.5 8.25v7.5l6-3.75-6-3.75Z" />
+            </svg>
+            <svg *ngSwitchCase="'youtube'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
+                class="slide-type-icon">
+                <path fill-rule="evenodd"
+                    d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25ZM6.262 6.072a8.25 8.25 0 1 0 10.562 10.562L6.262 6.072ZM1.75 12a10.25 10.25 0 1 1 20.5 0 10.25 10.25 0 0 1-20.5 0Z"
+                    clip-rule="evenodd" />
+            </svg>
+            <svg *ngSwitchDefault xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
+                class="slide-type-icon">
+                <path fill-rule="evenodd"
+                    d="M5.625 1.5c-1.036 0-1.875.839-1.875 1.875v17.25c0 1.036.839 1.875 1.875 1.875h12.75c1.036 0 1.875-.839 1.875-1.875V12.75A3.375 3.375 0 0 0 16.5 9.375h-1.5V3.375c0-1.036-.839-1.875-1.875-1.875h-7.5ZM19.5 12h-3v-2.25c0-1.036.839-1.875 1.875-1.875H19.5V12Z"
+                    clip-rule="evenodd" />
+            </svg>
+        </ng-container>
+    </div>
+
+    <!-- Main Content -->
+    <div class="slide-content">
+        <ng-container [ngSwitch]="slide.type">
+            <!-- Image -->
+            <div *ngSwitchCase="'image'" class="slide-image-container">
+                <img [src]="mainImageSrc" [alt]="slide.name" class="slide-image" loading="lazy">
+            </div>
+
+            <!-- Video -->
+            <div *ngSwitchCase="'video'" class="slide-video-container">
+                <img *ngIf="slide.thumbnail_path" [src]="mainImageSrc" [alt]="slide.name" class="slide-image"
+                    loading="lazy">
+                <div *ngIf="!slide.thumbnail_path" class="slide-video-fallback">
+                    <span>Video: {{ slide.name }}</span>
+                </div>
+                <div *ngIf="videoDuration" class="slide-duration">{{ videoDuration }}</div>
+            </div>
+
+            <!-- YouTube -->
+            <div *ngSwitchCase="'youtube'" class="slide-youtube-container">
+                <img [src]="mainImageSrc" [alt]="slide.name" class="slide-image" loading="lazy">
+                <div class="slide-youtube-badge">YouTube</div>
+            </div>
+
+            <!-- Lyric -->
+            <div *ngSwitchDefault class="slide-lyrics-container">
+                <div *ngIf="slide.section" class="slide-lyrics-section">[{{ slide.section }}]</div>
+                <div class="slide-lyrics-text" [attr.data-line-count]="slide.text?.length">
+                    <p *ngFor="let line of displayLines" class="slide-lyrics-line">{{ line }}</p>
+                    <p *ngIf="hasMoreLines" class="slide-lyrics-line slide-lyrics-truncation">...{{ moreLinesCount }}
+                        more lines</p>
+                </div>
+            </div>
+        </ng-container>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div *ngIf="isLoading" class="slide-loading-overlay">
+        <div class="slide-loading-spinner"></div>
+        <span>Processing...</span>
+    </div>
+
+    <!-- Hover Actions -->
+    <div *ngIf="showActions && isHover && !isLoading" class="slide-actions-overlay">
+        <div class="slide-actions">
+            <button class="vscode-button primary p-1" (click)="handleClick($event)">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                    stroke="currentColor" class="w-4 h-4">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                </svg>
+            </button>
+            <button *ngIf="slide.type === 'video'" class="vscode-button secondary p-1" (click)="handleVideoClick()">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                    stroke="currentColor" class="w-4 h-4">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 0 1 0 1.971l-11.54 6.347c-.75.412-1.667-.13-1.667-.986V5.653Z" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Selection Indicator -->
+    <div *ngIf="isSelected" class="slide-selection-indicator"></div>
+
+    <!-- Enlarged Preview -->
+    <div *ngIf="showEnlargedPreview && previewImageSrc" class="slide-enlarged-preview-popup"
+        [ngStyle]="{ 'left.px': slidePosition.x, 'top.px': slidePosition.y, 'transform': 'translate(-50%, -50%)' }">
+        <div class="slide-enlarged-preview-container">
+            <img [src]="previewImageSrc" class="slide-enlarged-preview-image">
+            <div class="slide-enlarged-preview-info">
+                <h3 class="slide-enlarged-preview-title">{{ slide.name }}</h3>
+                <span *ngIf="videoDuration" class="slide-enlarged-preview-duration">{{ videoDuration }}</span>
+            </div>
+        </div>
+    </div>
+</div>

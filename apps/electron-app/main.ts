@@ -54,7 +54,7 @@ appSettingsService.load().catch((err: Error) => {
 });
 
 const isDev = process.env.NODE_ENV === 'development';
-const VITE_DEV_SERVER_URL = 'http://localhost:5174';
+const ANGULAR_DEV_SERVER_URL = 'http://localhost:4200';
 
 // Allow secure local file access via a custom protocol (works in dev and prod)
 protocol.registerSchemesAsPrivileged([
@@ -415,10 +415,9 @@ class ElectronApplication {
     if (!this.mainWindow) return;
 
     if (isDev) {
-      const devUrl = `${VITE_DEV_SERVER_URL}/index.html`;
-      console.log('[MainWindow] Loading dev URL:', devUrl);
+      console.log('[MainWindow] Loading dev URL:', ANGULAR_DEV_SERVER_URL);
       this.mainWindow
-        .loadURL(devUrl)
+        .loadURL(ANGULAR_DEV_SERVER_URL)
         .then(() => {
           console.log('[MainWindow] Dev URL loaded successfully');
           this.mainWindow?.webContents.openDevTools();
@@ -428,7 +427,7 @@ class ElectronApplication {
         });
     } else {
       this.mainWindow.loadFile(
-        path.join(__dirname, '../renderer/dist/index.html')
+        path.join(__dirname, '../../angular-renderer/dist/angular-renderer/browser/index.html')
       );
     }
   }
@@ -444,7 +443,15 @@ class ElectronApplication {
       show: false,
     });
 
-    this.loadWindowContent(this.audienceWindow, 'audience.html');
+    // Load the Angular app with the audience route
+    if (isDev) {
+      this.audienceWindow.loadURL(`${ANGULAR_DEV_SERVER_URL}#/audience`);
+    } else {
+      this.audienceWindow.loadFile(
+        path.join(__dirname, '../../angular-renderer/dist/angular-renderer/browser/index.html'),
+        { hash: '/audience' }
+      );
+    }
   }
 
   /**
@@ -458,7 +465,15 @@ class ElectronApplication {
       show: false,
     });
 
-    this.loadWindowContent(this.confidenceWindow, 'confidence.html');
+    // Load the Angular app with the confidence route
+    if (isDev) {
+      this.confidenceWindow.loadURL(`${ANGULAR_DEV_SERVER_URL}#/confidence`);
+    } else {
+      this.confidenceWindow.loadFile(
+        path.join(__dirname, '../../angular-renderer/dist/angular-renderer/browser/index.html'),
+        { hash: '/confidence' }
+      );
+    }
 
     if (isDev) {
       this.confidenceWindow.webContents.openDevTools();
@@ -478,7 +493,15 @@ class ElectronApplication {
       show: false,
     });
 
-    this.loadWindowContent(this.lowerThirdsWindow, 'lowerthirds.html');
+    // Load the Angular app with the lower-thirds route
+    if (isDev) {
+      this.lowerThirdsWindow.loadURL(`${ANGULAR_DEV_SERVER_URL}#/lower-thirds`);
+    } else {
+      this.lowerThirdsWindow.loadFile(
+        path.join(__dirname, '../../angular-renderer/dist/angular-renderer/browser/index.html'),
+        { hash: '/lower-thirds' }
+      );
+    }
   }
 
   /**
@@ -493,17 +516,6 @@ class ElectronApplication {
         preload: path.join(__dirname, 'preload.js'),
       },
     });
-  }
-
-  /**
-   * Load content into a window
-   */
-  private loadWindowContent(window: BrowserWindow, htmlFile: string): void {
-    if (isDev) {
-      window.loadURL(`${VITE_DEV_SERVER_URL}/${htmlFile}`);
-    } else {
-      window.loadFile(path.join(__dirname, '../renderer/dist', htmlFile));
-    }
   }
 
   /**

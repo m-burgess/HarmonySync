@@ -1,0 +1,81 @@
+<div class="h-screen w-screen bg-gray-900 text-gray-300 vscode-ui-font flex">
+  <!-- VS Code Activity Bar -->
+  <div class="vscode-activity-bar">
+    <app-activity-bar-icon [active]="true" label="Service Order" title="Service Order">
+      <svg icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+        stroke="currentColor" class="w-8 h-8">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+      </svg>
+    </app-activity-bar-icon>
+
+    <app-activity-bar-icon label="Audio/MIDI Settings" (onClick)="openAudioSettings()">
+      <svg icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+        stroke="currentColor" class="w-8 h-8">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="m9 9 10.5-3m0 6.553v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 1 1-.99-3.467l2.31-.66a2.25 2.25 0 0 0 1.632-2.163Zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 0 1-.99-3.467l2.31-.66A2.25 2.25 0 0 0 9 15.553Z" />
+      </svg>
+    </app-activity-bar-icon>
+
+    <app-activity-bar-icon label="Display Settings" (onClick)="openDisplaySettings()">
+      <svg icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+        stroke="currentColor" class="w-8 h-8">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M10.34 15.84c-.688-.06-1.386-.09-2.19-.09H4.5a2.25 2.25 0 0 1-2.25-2.25V5.25A2.25 2.25 0 0 1 4.5 3h15A2.25 2.25 0 0 1 21.75 5.25v9c0 .897-.323 1.722-.852 2.36M10.34 15.84c1.11.102 2.261.233 3.49.406" />
+      </svg>
+    </app-activity-bar-icon>
+
+    <app-activity-bar-icon label="Preferences" (onClick)="openPreferences()">
+      <svg icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+        stroke="currentColor" class="w-8 h-8">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M6 13.5V3.75m0 9.75a1.5 1.5 0 0 1 0 3m0-3a1.5 1.5 0 0 0 0 3m0 3.75V16.5m12-3V3.75m0 9.75a1.5 1.5 0 0 1 0 3m0-3a1.5 1.5 0 0 0 0 3m0 3.75V16.5m-6-9V3.75m0 3.75a1.5 1.5 0 0 1 0 3m0-3a1.5 1.5 0 0 0 0 3m0 9.75V10.5" />
+      </svg>
+    </app-activity-bar-icon>
+
+    <app-activity-bar-icon label="Timers" (onClick)="openTimers()">
+      <svg icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+        stroke="currentColor" class="w-8 h-8">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+      </svg>
+    </app-activity-bar-icon>
+
+    <div style="margin-top: auto; padding: 8px 0;">
+      <app-screen-buttons variant="activity"></app-screen-buttons>
+    </div>
+  </div>
+
+  <!-- Main Layout: Service Order Sidebar + Slide Editor -->
+  <div class="flex-1 flex">
+    <!-- Service Order Sidebar -->
+    <div class="vscode-sidebar bg-gray-800 border-r border-gray-700" [style.width]="sidebarWidth + 'px'">
+      <app-service-order-manager></app-service-order-manager>
+    </div>
+
+    <!-- VS Code Resize Handle for Sidebar -->
+    <div class="vscode-resize-handle-vertical" (mousedown)="startSidebarResize($event)" (dblclick)="resetSidebar()"
+      title="Double-click to reset sidebar width"></div>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex bg-gray-900">
+      <!-- Slide Editor or Lyrics Column -->
+      <div class="flex-1 overflow-hidden flex">
+        <div class="flex-1 overflow-auto bg-gray-900">
+          <app-slide-manager></app-slide-manager>
+        </div>
+        <div class="w-80 border-l border-gray-700 bg-gray-800">
+          <app-lyrics-column></app-lyrics-column>
+        </div>
+      </div>
+
+      <!-- VS Code Resize Handle for Mixer -->
+      <div class="vscode-resize-handle-vertical" (mousedown)="startMixerResize($event)" (dblclick)="resetMixer()"
+        title="Double-click to reset mixer width"></div>
+
+      <!-- Mixer Sidebar -->
+      <div [style.width]="mixerWidth + 'px'" style="min-width: 200px; max-width: 600px;">
+        <app-mixer-sidebar></app-mixer-sidebar>
+      </div>
+    </div>
+  </div>
+</div>

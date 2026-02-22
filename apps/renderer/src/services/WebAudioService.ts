@@ -30,22 +30,25 @@ export class WebAudioService extends BaseService implements IAudioService {
      */
     public async loadTracks(folderPath: string): Promise<AudioTrack[]> {
         try {
-            await this.mixer.loadTracks(folderPath);
+            const result = await this.mixer.loadTracks(folderPath);
 
-            // Get state to populate full track info
-            const state = this.mixer.getState();
+            // Use returned tracks which contain the correct pan information
+            // Fallback to state if result is empty (though it shouldn't be)
+            const tracks = result.tracks && result.tracks.length > 0
+                ? result.tracks
+                : this.mixer.getState().tracks;
 
             // Map to AudioTrack format
-            return state.tracks.map(t => ({
-                id: t.id,
-                name: t.name,
-                path: t.filePath,
-                duration: t.duration,
-                volume: t.volume,
-                pan: t.pan,
-                muted: t.isMuted,
-                isPreloaded: t.isPreloaded,
-                preloadStatus: t.isPreloaded ? 'ready' : 'pending' as const
+            return tracks.map(t => ({
+                id: (t as any).id || (t as any).track_name, // Handle difference between AudioTrackInfo and AudioTrackState
+                name: (t as any).track_name || (t as any).name,
+                path: (t as any).file_path || (t as any).filePath,
+                duration: (t as any).duration || 0,
+                volume: (t as any).volume ?? 1.0,
+                pan: (t as any).pan ?? 0,
+                muted: (t as any).isMuted || false,
+                isPreloaded: (t as any).isPreloaded || false,
+                preloadStatus: (t as any).isPreloaded ? 'ready' : 'pending' as const
             }));
         } catch (error) {
             return this.handleError('loadTracks', error);

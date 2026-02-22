@@ -65,6 +65,7 @@ func NewRouter(audioService *audio.Service, videoService *video.Service, imageSe
 	mux.HandleFunc("/api/mixer/pause", audioHandler.HandlePause)
 	mux.HandleFunc("/api/mixer/stop", audioHandler.HandleStop)
 	mux.HandleFunc("/api/mixer/volume", audioHandler.HandleSetVolume)
+	mux.HandleFunc("/api/mixer/pan", audioHandler.HandleSetPan)
 	mux.HandleFunc("/api/mixer/mute", audioHandler.HandleSetMute)
 	mux.HandleFunc("/api/songs/transpose", audioHandler.HandleTransposeSong)
 

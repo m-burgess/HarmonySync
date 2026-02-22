@@ -214,13 +214,15 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
             ?? '';
           const resolvedName = this.resolveTrackName(track as { name?: string; track_name?: string; path?: string; file_path?: string; filePath?: string });
 
+          console.log(`[AudioViewModel] Mapping track "${resolvedName}", incoming pan:`, (track as any).pan);
+
           return {
             ...track,
             name: resolvedName,
             path: resolvedPath,
             index,
             volume: track.volume ?? 1.0,
-            pan: track.pan ?? 0,
+            pan: (track as any).pan ?? 0, // Ensure we check the incoming track object even if type definition is loose
             muted: track.muted ?? false,
             isPreloaded: track.isPreloaded ?? false,
             preloadStatus: track.preloadStatus ?? 'pending',
@@ -444,7 +446,9 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
           config.tracks.forEach((trackConfig, index) => {
             if (this.tracks[index]) {
               this.tracks[index].volume = trackConfig.volume;
-              this.tracks[index].pan = trackConfig.pan;
+              if (typeof trackConfig.pan === 'number') {
+                this.tracks[index].pan = trackConfig.pan;
+              }
               this.tracks[index].muted = trackConfig.muted;
             }
           });
@@ -454,7 +458,9 @@ export class AudioViewModel extends BaseViewModel implements IAudioViewModel {
         for (let i = 0; i < this.tracks.length; i++) {
           const track = this.tracks[i];
           await this.audioService.setTrackVolume(i, track.volume);
-          await this.audioService.setTrackPan(i, track.pan);
+          if (typeof track.pan === 'number') {
+            await this.audioService.setTrackPan(i, track.pan);
+          }
           await this.audioService.muteTrack(i, track.muted);
         }
       }

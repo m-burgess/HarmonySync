@@ -93,6 +93,25 @@ func (h *AudioHandler) HandleSetVolume(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func (h *AudioHandler) HandleSetPan(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		TrackID string  `json:"trackId"`
+		Pan     float64 `json:"pan"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	h.Service.SetPan(req.TrackID, req.Pan)
+	w.WriteHeader(http.StatusOK)
+}
+
 func (h *AudioHandler) HandleSetMute(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)

@@ -5,6 +5,7 @@ export interface TrackInfo {
     id: string;
     path: string;
     duration: number;
+    pan?: number;
 }
 
 export interface SongInfo {
@@ -168,18 +169,24 @@ export class RemoteAudioMixer {
         if (!filePaths.length) return { tracks: [] };
 
         const songId = uuidv4();
-        const tracks: TrackInfo[] = filePaths.map(path => ({
-            id: uuidv4(),
-            path: path,
-            duration: 0
-        }));
+        const tracks: TrackInfo[] = filePaths.map(path => {
+            const filename = this.getFilename(path);
+            const pan = this.getPanFromFilename(filename);
+
+            return {
+                id: uuidv4(),
+                path: path,
+                duration: 0,
+                pan: pan
+            };
+        });
 
         const payload = {
             id: songId,
             tracks: tracks
         };
 
-        console.log(`[RemoteAudioMixer] Creating song ${songId}`);
+        console.log(`[RemoteAudioMixer] Creating song ${songId} with tracks:`, tracks);
 
         try {
             const res = await fetch(`${this.baseUrl}/api/songs/create`, {
@@ -195,7 +202,8 @@ export class RemoteAudioMixer {
             return {
                 tracks: tracks.map(t => ({
                     track_name: this.getFilename(t.path),
-                    file_path: t.path
+                    file_path: t.path,
+                    pan: t.pan
                 }))
             };
 
@@ -203,6 +211,23 @@ export class RemoteAudioMixer {
             console.error('[RemoteAudioMixer] Failed to create song:', e);
             throw e;
         }
+    }
+
+    private getPanFromFilename(filename: string): number {
+        const lowerName = filename.toLowerCase();
+        let pan = 1.0; // Default Right
+
+        // 1. Center (Split/Stereo) - Takes Precedence
+        if (lowerName.includes('split') || lowerName.includes('stereo')) {
+            pan = 0.0;
+        }
+        // 2. Left (Click/Guide/Metronome)
+        else if (lowerName.includes('click') || lowerName.includes('guide') || lowerName.includes('metronome')) {
+            pan = -1.0;
+        }
+
+        console.log(`[RemoteAudioMixer] Pan for "${filename}": ${pan}`);
+        return pan;
     }
 
     async play(): Promise<void> {
@@ -232,7 +257,17 @@ export class RemoteAudioMixer {
     }
 
     setTrackPan(trackId: string, pan: number) {
-        console.warn('setTrackPan not fully implemented in client');
+        fetch(`${this.baseUrl}/api/mixer/pan`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ trackId, pan })
+        }).catch(e => console.error(e));
+
+        const track = this.state.tracks.find(t => t.id === trackId);
+        if (track) {
+            track.pan = pan;
+            this.notifyListeners('local_update');
+        }
     }
 
     setTrackMute(trackId: string, muted: boolean) {

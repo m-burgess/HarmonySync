@@ -1,0 +1,51 @@
+<app-vscode-panel title="Mixer" className="flex flex-col h-full bg-vscode-sidebar-bg">
+    <!-- Mixer Header Controls -->
+    <div class="flex items-center justify-between p-3 border-b border-vscode-border">
+        <div class="flex gap-1">
+            <app-vscode-button [variant]="audioService.isPlaying() ? 'primary' : 'secondary'" (onClick)="playAll()"
+                title="Play All" icon="heroPlaySolid" className="w-8 h-8 p-0 flex items-center justify-center">
+            </app-vscode-button>
+
+            <app-vscode-button variant="secondary" (onClick)="stopAll()" title="Stop All" icon="heroStopSolid"
+                className="w-8 h-8 p-0 flex items-center justify-center">
+            </app-vscode-button>
+        </div>
+        <div class="text-[10px] text-vscode-foreground opacity-50 uppercase tracking-wider font-semibold">
+            {{ audioService.tracks().length }} Tracks
+        </div>
+    </div>
+
+    <!-- Mixer Tracks List -->
+    <div class="flex-1 overflow-y-auto px-2 py-4 space-y-4">
+        @if (audioService.tracks().length === 0) {
+        <div class="flex flex-col items-center justify-center h-40 opacity-30">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                stroke="currentColor" class="w-10 h-10 mb-2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M9 9l10.5-3m0 6.553v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 1 1-.99-3.467l2.31-.66a2.25 2.25 0 0 0 1.632-2.163Zm0 0V2.25L9 5.25v10.303A2.25 2.25 0 0 1 7.368 17.716l-1.32.377a1.803 1.803 0 1 1-.99-3.467l2.31-.66A2.25 2.25 0 0 0 9 11.716V9Zm0 0H9" />
+            </svg>
+            <span class="text-xs">No tracks loaded</span>
+        </div>
+        }
+
+        @for (track of audioService.tracks(); track track.id) {
+        <div (click)="toggleMute(track.id)"
+            class="track-card rounded p-2 border transition-all flex items-center gap-2 cursor-pointer select-none"
+            [style.background-color]="track.muted ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.07)'"
+            [style.border-color]="track.muted ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.15)'"
+            [style.opacity]="track.muted ? '0.4' : '1'" [class.hover:border-vscode-focus-border]="!track.muted">
+
+            <div class="w-2 h-2 rounded-full shrink-0 shadow-sm"
+                [style.background-color]="track.muted ? '#555' : '#4ade80'"
+                [style.box-shadow]="track.muted ? 'none' : '0 0 8px rgba(74, 222, 128, 0.4)'">
+            </div>
+
+            <span class="text-[11px] font-medium truncate text-vscode-foreground italic"
+                [style.color]="track.muted ? 'var(--vscode-descriptionForeground)' : 'var(--vscode-foreground)'"
+                [title]="track.name">
+                {{ track.name }}
+            </span>
+        </div>
+        }
+    </div>
+</app-vscode-panel>

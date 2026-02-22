@@ -97,7 +97,8 @@ func decodeFile(filePath string) (beep.StreamSeekCloser, beep.Format, error) {
 }
 
 // buildTrack decodes, resamples, buffers, and creates the effects chain for a track
-func (m *Mixer) buildTrack(id, filePath string) (*Track, error) {
+func (m *Mixer) buildTrack(id, filePath string, panValue float64) (*Track, error) {
+	fmt.Fprintf(os.Stderr, "[Mixer] buildTrack %s: pan=%f\n", id, panValue)
 	streamer, format, err := decodeFile(filePath)
 	if err != nil {
 		return nil, err
@@ -123,7 +124,7 @@ func (m *Mixer) buildTrack(id, filePath string) (*Track, error) {
 	bufStream := buffer.Streamer(0, buffer.Len())
 	ctrl := &beep.Ctrl{Streamer: bufStream, Paused: true}
 	vol := &effects.Volume{Streamer: ctrl, Base: 2, Volume: 0, Silent: false}
-	pan := &effects.Pan{Streamer: vol, Pan: 0}
+	pan := &effects.Pan{Streamer: vol, Pan: panValue}
 
 	return &Track{
 		ID:     id,
@@ -137,8 +138,8 @@ func (m *Mixer) buildTrack(id, filePath string) (*Track, error) {
 }
 
 // LoadSongTrack loads a track into a specific song group (does NOT add to inner mixer)
-func (m *Mixer) LoadSongTrack(songID, trackID, filePath string) error {
-	track, err := m.buildTrack(trackID, filePath)
+func (m *Mixer) LoadSongTrack(songID, trackID, filePath string, pan float64) error {
+	track, err := m.buildTrack(trackID, filePath, pan)
 	if err != nil {
 		return err
 	}
@@ -200,6 +201,32 @@ func (m *Mixer) ActivateSong(songID string) error {
 	return nil
 }
 
+// SetTrackPan sets the pan of a specific track (-1.0 to 1.0)
+func (m *Mixer) SetTrackPan(trackID string, pan float64) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Search in active song first
+	if m.ActiveSongID != "" {
+		if tracks, ok := m.Songs[m.ActiveSongID]; ok {
+			if track, ok := tracks[trackID]; ok {
+				track.Pan.Pan = pan
+				return nil
+			}
+		}
+	}
+
+	// Search in all songs (fallback)
+	for _, tracks := range m.Songs {
+		if track, ok := tracks[trackID]; ok {
+			track.Pan.Pan = pan
+			return nil
+		}
+	}
+
+	return fmt.Errorf("track %s not found", trackID)
+}
+
 // ClearSong removes one song's tracks from memory
 func (m *Mixer) ClearSong(songID string) {
 	m.mu.Lock()
@@ -217,7 +244,7 @@ func (m *Mixer) ClearSong(songID string) {
 
 // LoadTrack loads a track into the legacy flat map (backward compatible)
 func (m *Mixer) LoadTrack(id, path string) error {
-	track, err := m.buildTrack(id, path)
+	track, err := m.buildTrack(id, path, 0.0)
 	if err != nil {
 		return err
 	}
@@ -270,15 +297,6 @@ func (m *Mixer) SetTrackVolume(id string, volume float64) {
 			t.Volume.Silent = false
 			t.Volume.Volume = math.Log2(volume)
 		}
-	}
-}
-
-// SetTrackPan sets the pan of a track
-func (m *Mixer) SetTrackPan(id string, pan float64) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if t, ok := m.Tracks[id]; ok {
-		t.Pan.Pan = pan // -1 to 1
 	}
 }
 

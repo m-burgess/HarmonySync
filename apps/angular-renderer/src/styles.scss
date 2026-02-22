@@ -1,0 +1,310 @@
+@import "tailwindcss";
+@import "./app/styles/vscode-theme.css";
+
+/* Global dark theme — HarmonySync Angular renderer */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@theme {
+    --color-bg-base: #0d0f14;
+    --color-bg-surface: #161921;
+    --color-bg-elevated: #1e2330;
+    --color-bg-card: #232838;
+}
+
+:root {
+    --bg-base: #0d0f14;
+    --bg-surface: #161921;
+    --bg-elevated: #1e2330;
+    --bg-card: #232838;
+    --border: #2d3347;
+    --accent: #6366f1;
+    --accent-hover: #818cf8;
+    --accent-dim: rgba(99, 102, 241, 0.15);
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #475569;
+    --radius: 8px;
+    --radius-lg: 12px;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html,
+body {
+    height: 100vh;
+    width: 100vw;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: var(--bg-base);
+    color: var(--text-primary);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 13px;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* VS Code Specific Layout Helpers */
+.vscode-activity-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+    background-color: #333333;
+    border-right: 1px solid #464647;
+    flex-shrink: 0;
+    width: 48px;
+    z-index: 100;
+    height: 100%;
+}
+
+.vscode-sidebar {
+    display: flex;
+    flex-direction: column;
+    background-color: #252526;
+    border-right: 1px solid #464647;
+    flex-shrink: 0;
+    min-width: 200px;
+    height: 100%;
+}
+
+.vscode-resize-handle-vertical {
+    width: 4px;
+    background-color: transparent;
+    cursor: ew-resize;
+    transition: background-color 0.2s;
+    position: relative;
+    z-index: 50;
+
+    &:hover {
+        background-color: rgba(59, 130, 246, 0.2);
+    }
+
+    &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: -4px;
+        right: -4px;
+    }
+}
+
+/* Common Interactive Elements */
+button {
+    cursor: pointer;
+    font-family: inherit;
+    border: none;
+    border-radius: var(--radius);
+    transition: background 0.15s, opacity 0.15s, transform 0.1s;
+
+    &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    &:active:not(:disabled) {
+        transform: scale(0.97);
+    }
+}
+
+input[type="text"],
+input[type="range"] {
+    font-family: inherit;
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    outline: none;
+    transition: border-color 0.15s;
+
+    &:focus {
+        border-color: var(--accent);
+    }
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+}
+
+/* Utilities */
+.h-screen {
+    height: 100vh;
+}
+
+.w-screen {
+    width: 100vw;
+}
+
+.flex {
+    display: flex;
+}
+
+.flex-col {
+    flex-direction: column;
+}
+
+.flex-1 {
+    flex: 1 1 0%;
+}
+
+.shrink-0 {
+    flex-shrink: 0;
+}
+
+.items-center {
+    align-items: center;
+}
+
+.justify-between {
+    justify-content: space-between;
+}
+
+.overflow-hidden {
+    overflow: hidden;
+}
+
+.overflow-auto {
+    overflow: auto;
+}
+
+.mt-auto {
+    margin-top: auto;
+}
+
+.space-y-4> :not([hidden])~ :not([hidden]) {
+    margin-top: 1rem;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+/* Scrollbar styles */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #424242;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #4f4f4f;
+}
+
+/* VS Code Specific Component Styles */
+.vscode-panel {
+    display: flex;
+    flex-direction: column;
+    background-color: #1e1e1e;
+    border: 1px solid #374151;
+    /* gray-700 */
+}
+
+.vscode-panel-content {
+    padding: 0.75rem;
+    background-color: #1e1e1e;
+}
+
+.vscode-panel-header {
+    font-size: 11px;
+    font-weight: 600;
+    color: #cccccc;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid #464647;
+}
+
+/* Custom Scrollbar Utility */
+.custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #424242 transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #424242;
+    border-radius: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: #4f4f4f;
+}
+
+/* Dot indicators */
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+
+    &.green {
+        background: var(--success);
+        box-shadow: 0 0 6px var(--success);
+    }
+
+    &.yellow {
+        background: var(--warning);
+    }
+
+    &.red {
+        background: var(--danger);
+    }
+
+    &.gray {
+        background: var(--text-muted);
+    }
+
+    &.pulse {
+        animation: pulse 1.2s ease-in-out infinite;
+    }
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.3;
+    }
+}

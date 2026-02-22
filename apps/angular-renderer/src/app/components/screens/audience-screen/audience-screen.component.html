@@ -1,0 +1,29 @@
+<div id="audience-container" class="w-screen h-screen overflow-hidden relative">
+    @if (backgroundVideo) {
+    <video #backgroundVideoRef class="background-video fixed top-0 left-0 w-full h-full object-cover z-[-1] opacity-60"
+        [src]="backgroundVideo" autoPlay loop muted></video>
+    }
+
+    <!-- Content Layer -->
+    <div id="lyric-display"
+        class="content-layer relative z-20 flex flex-col justify-center items-center w-full h-full text-center p-8 box-border transition-opacity duration-200 overflow-hidden"
+        [class.opacity-100]="showLyrics" [class.opacity-0]="!showLyrics">
+        @if (content?.type === 'lyrics') {
+        @for (line of lyricLines; track $index) {
+        <div class="lyric-line text-[min(6vw,10vh)] leading-[1.2] font-bold my-[0.2em] text-white"
+            style="text-shadow: 2px 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(0,0,0,0.5);">
+            {{ line }}
+        </div>
+        }
+        }
+
+        @if (content?.type === 'image') {
+        <img [src]="imagePath" [alt]="imageName" class="max-w-[90%] max-h-[90%] object-contain shadow-2xl" />
+        }
+    </div>
+
+    <!-- Video Player -->
+    @if (showVideo) {
+    <div id="youtube-player" class="w-full h-full"></div>
+    }
+</div>

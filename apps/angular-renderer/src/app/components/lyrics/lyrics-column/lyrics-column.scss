@@ -1,0 +1,120 @@
+/* Lyrics Column Component Styles */
+
+.lyrics-column {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--vscode-bg-secondary, #1a1a1a);
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid var(--vscode-border, #2d2d2d);
+}
+
+.lyrics-column-header {
+    padding: 1rem;
+    background: var(--vscode-bg-tertiary, #252525);
+    border-bottom: 1px solid var(--vscode-border, #2d2d2d);
+}
+
+.lyrics-column-header h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--vscode-text, #e0e0e0);
+}
+
+.lyrics-column-instructions {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--vscode-text-secondary, #888);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.lyrics-column-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: var(--vscode-accent) transparent;
+}
+
+.lyrics-section-label {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #22d3ee;
+    margin: 1.5rem 0 0.75rem 0;
+    padding: 0.5rem 0.75rem;
+    background: rgba(34, 211, 238, 0.1);
+    border-left: 3px solid #22d3ee;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.lyrics-section-label:first-child {
+    margin-top: 0;
+}
+
+.lyrics-line {
+    padding: 0.5rem 0.75rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: var(--vscode-text, #e0e0e0);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 4px;
+    user-select: none;
+    position: relative;
+}
+
+.lyrics-line-pair-start {
+    margin-top: 0.5rem;
+}
+
+.lyrics-line-hovered {
+    background: rgba(59, 130, 246, 0.15);
+    color: #ffffff;
+}
+
+.lyrics-line-selected {
+    background: linear-gradient(135deg, rgba(34, 211, 238, 0.25) 0%, rgba(34, 211, 238, 0.15) 100%);
+    color: #ffffff;
+    font-weight: 500;
+    box-shadow: 0 0 0 1px var(--vscode-accent);
+}
+
+.lyrics-column-footer {
+    padding: 0.75rem 1rem;
+    background: var(--vscode-bg-tertiary, #252525);
+    border-top: 1px solid var(--vscode-border, #2d2d2d);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.lyrics-column-counter {
+    font-size: 0.85rem;
+    color: var(--vscode-text-secondary, #888);
+}
+
+.lyrics-column-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 2rem;
+    text-align: center;
+    color: var(--vscode-text-secondary, #888);
+}
+
+.lyrics-column-empty p {
+    margin: 0.5rem 0;
+}
+
+.hidden {
+    display: none;
+}
