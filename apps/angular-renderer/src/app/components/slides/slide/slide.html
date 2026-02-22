@@ -1,8 +1,7 @@
-<div #slideRef [class]="slideClass" [ngStyle]="customStyle" (click)="handleClick()" (mouseenter)="handleMouseEnter()"
-    (mouseleave)="handleMouseLeave()" [attr.data-slide-index]="index" [attr.data-slide-type]="slide.type || 'lyric'"
-    [draggable]="true" (dragstart)="handleDragStartLocal($event)" (dragover)="$event.preventDefault()"
-    (dragenter)="handleDragEnterLocal($event)" (dragleave)="handleDragLeaveLocal()" (drop)="handleDropLocal($event)"
-    (dragend)="onDragEnd.emit()" tabindex="0">
+<div #slideRef [class]="slideClass" [ngStyle]="customStyle" (click)="handleClick()" [attr.data-slide-index]="index"
+    [attr.data-slide-type]="slide.type || 'lyric'" [draggable]="true" (dragstart)="handleDragStartLocal($event)"
+    (dragover)="$event.preventDefault()" (dragenter)="handleDragEnterLocal($event)" (dragleave)="handleDragLeaveLocal()"
+    (drop)="handleDropLocal($event)" (dragend)="onDragEnd.emit()" tabindex="0">
     <!-- Type Icon -->
     <div *ngIf="showTypeIcon" class="slide-type-indicator">
         <ng-container [ngSwitch]="slide.type">
@@ -56,14 +55,9 @@
                 <div class="slide-youtube-badge">YouTube</div>
             </div>
 
-            <!-- Lyric -->
-            <div *ngSwitchDefault class="slide-lyrics-container">
-                <div *ngIf="slide.section" class="slide-lyrics-section">[{{ slide.section }}]</div>
-                <div class="slide-lyrics-text" [attr.data-line-count]="slide.text?.length">
-                    <p *ngFor="let line of displayLines" class="slide-lyrics-line">{{ line }}</p>
-                    <p *ngIf="hasMoreLines" class="slide-lyrics-line slide-lyrics-truncation">...{{ moreLinesCount }}
-                        more lines</p>
-                </div>
+            <!-- Fallback if no media -->
+            <div *ngSwitchDefault class="slide-empty-container">
+                <div class="p-2 text-center text-[10px] text-gray-500 italic">No Media</div>
             </div>
         </ng-container>
     </div>
@@ -72,40 +66,5 @@
     <div *ngIf="isLoading" class="slide-loading-overlay">
         <div class="slide-loading-spinner"></div>
         <span>Processing...</span>
-    </div>
-
-    <!-- Hover Actions -->
-    <div *ngIf="showActions && isHover && !isLoading" class="slide-actions-overlay">
-        <div class="slide-actions">
-            <button class="vscode-button primary p-1" (click)="handleClick($event)">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                    stroke="currentColor" class="w-4 h-4">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-                </svg>
-            </button>
-            <button *ngIf="slide.type === 'video'" class="vscode-button secondary p-1" (click)="handleVideoClick()">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                    stroke="currentColor" class="w-4 h-4">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 0 1 0 1.971l-11.54 6.347c-.75.412-1.667-.13-1.667-.986V5.653Z" />
-                </svg>
-            </button>
-        </div>
-    </div>
-
-    <!-- Selection Indicator -->
-    <div *ngIf="isSelected" class="slide-selection-indicator"></div>
-
-    <!-- Enlarged Preview -->
-    <div *ngIf="showEnlargedPreview && previewImageSrc" class="slide-enlarged-preview-popup"
-        [ngStyle]="{ 'left.px': slidePosition.x, 'top.px': slidePosition.y, 'transform': 'translate(-50%, -50%)' }">
-        <div class="slide-enlarged-preview-container">
-            <img [src]="previewImageSrc" class="slide-enlarged-preview-image">
-            <div class="slide-enlarged-preview-info">
-                <h3 class="slide-enlarged-preview-title">{{ slide.name }}</h3>
-                <span *ngIf="videoDuration" class="slide-enlarged-preview-duration">{{ videoDuration }}</span>
-            </div>
-        </div>
     </div>
 </div>

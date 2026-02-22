@@ -9,7 +9,8 @@ import { MixerSidebarComponent } from '../audio/mixer-sidebar/mixer-sidebar';
 import { TimerModalComponent } from '../modals/timer-modal/timer-modal.component';
 import { ElectronService } from '../../core/electron.service';
 import { ServiceOrderService } from '../../core/service-order.service';
-
+import { SlideService } from '../../core/slide.service';
+import { DisplayService } from '../../core/display.service';
 @Component({
     selector: 'app-main-layout',
     standalone: true,
@@ -34,16 +35,15 @@ export class MainLayoutComponent implements OnInit {
     mixerWidth = this.DEFAULT_MIXER_WIDTH;
 
     isTimerModalOpen = false;
-    possibleDisplays = [];
 
     // Services
     serviceOrderService = inject(ServiceOrderService);
+    slideService = inject(SlideService);
+    displayService = inject(DisplayService);
     electronService = inject(ElectronService);
 
     // Presentation state
     currentLyrics = computed(() => this.serviceOrderService.currentSong()?.lyrics || null);
-    allSlides: any[] = [];
-    selectedSlide: any = null;
     isLoadingTracks = computed(() => this.serviceOrderService.isLoading());
 
     isBrowser: boolean;
@@ -71,17 +71,12 @@ export class MainLayoutComponent implements OnInit {
 
     ngOnInit() {
         if (this.electronService.isElectron) {
-            this.refreshDisplays();
+            this.displayService.refreshDisplays().subscribe();
         }
     }
 
     async refreshDisplays() {
-        try {
-            const result = await this.electronService.invoke('settings:getDisplays');
-            this.possibleDisplays = result || [];
-        } catch (err) {
-            console.error('Failed to get displays:', err);
-        }
+        this.displayService.refreshDisplays().subscribe();
     }
 
     // VS Code style sidebar resizing
@@ -151,14 +146,6 @@ export class MainLayoutComponent implements OnInit {
     }
 
     // Presentation state handlers
-    setAllSlides(slides: any[]) {
-        this.allSlides = slides;
-    }
-
-    setSelectedSlide(slide: any) {
-        this.selectedSlide = slide;
-    }
-
     setAllTracks(tracks: any[], folderPath?: string) {
         console.log('Tracks loaded:', tracks.length, folderPath);
     }
@@ -167,14 +154,10 @@ export class MainLayoutComponent implements OnInit {
         // Handled by signal
     }
 
-    setCurrentLyrics(lyrics: string | null) {
-        // Handled by signal
-    }
-
     // Actions
-    toggleScreen(screenType: string) {
+    toggleScreen(screenType: any) {
         if (this.electronService.isElectron) {
-            this.electronService.invoke('window:toggle', screenType);
+            this.displayService.toggleWindow(screenType).subscribe();
         } else {
             console.log('Toggling screen (Browser)', screenType);
         }

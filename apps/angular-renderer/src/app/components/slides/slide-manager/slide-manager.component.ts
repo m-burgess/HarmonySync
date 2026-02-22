@@ -1,22 +1,11 @@
-import { Component, Input, Output, EventEmitter, ElementRef, ViewChild, HostListener } from '@angular/core';
+import { Component, ElementRef, ViewChild, HostListener, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { VSCodePanelComponent } from '../../vscode-ui/vscode-panel/vscode-panel.component';
 import { VSCodeInputComponent } from '../../vscode-ui/vscode-input/vscode-input.component';
 import { SlideItemComponent } from '../slide-item/slide-item.component';
 import { SlideImportModalComponent } from '../slide-import-modal/slide-import-modal.component';
-
-export interface SlideData {
-    id?: string;
-    name?: string;
-    type?: 'image' | 'video' | 'youtube' | 'lyric';
-    content?: string;
-    path?: string;
-    thumbnail_path?: string;
-    duration?: number;
-    videoId?: string;
-    text?: string[];
-    section?: string;
-}
+import { SlideService } from '../../../core/slide.service';
+import { Slide } from '../../../models/slide.models';
 
 @Component({
     selector: 'app-slide-manager',
@@ -79,11 +68,11 @@ export interface SlideData {
           #slidesWrap
           [style.--slide-size]="thumbnailSize + 'px'"
         >
-          <div class="slides-wrap-item" *ngFor="let slide of allSlides; let i = index" [attr.data-slide-index]="i">
+          <div class="slides-wrap-item" *ngFor="let slide of slideService.slides(); let i = index" [attr.data-slide-index]="i">
             <app-slide-item
               [slide]="slide"
               [index]="i"
-              [isSelected]="slide === selectedSlide"
+              [isSelected]="i === slideService.currentSlideIndex()"
               (onSelect)="handleSlideClick(i)"
               (onDragStart)="handleDragStart($event, i)"
               (onDragEnter)="handleDragEnter($event, i)"
@@ -110,10 +99,7 @@ export interface SlideData {
   `]
 })
 export class SlideManagerComponent {
-    @Input() allSlides: SlideData[] = [];
-    @Input() selectedSlide: number | SlideData | null = null;
-    @Output() setAllSlides = new EventEmitter<SlideData[]>();
-    @Output() setSelectedSlide = new EventEmitter<number | SlideData | null>();
+    slideService = inject(SlideService);
 
     thumbnailSize = 220;
     isImportModalOpen = false;
@@ -125,15 +111,19 @@ export class SlideManagerComponent {
 
     @HostListener('document:keydown', ['$event'])
     handleKeyDown(e: KeyboardEvent) {
-        if (e.key === 'ArrowDown') {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
             e.preventDefault();
-            this.navigateDown();
-        } else if (e.key === 'ArrowUp') {
+            this.slideService.nextSlide();
+        } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
             e.preventDefault();
-            this.navigateUp();
+            this.slideService.previousSlide();
         } else if (e.key === 'Delete') {
             e.preventDefault();
-            this.deleteSelected();
+            const currentIdx = this.slideService.currentSlideIndex();
+            const slide = this.slideService.slides()[currentIdx];
+            if (slide) {
+                this.slideService.deleteSlide(slide.id).subscribe();
+            }
         }
     }
 
@@ -149,20 +139,13 @@ export class SlideManagerComponent {
         this.isImportModalOpen = true;
     }
 
-    handleSlidesImported(newSlides: SlideData[]) {
-        const updatedSlides = [...this.allSlides, ...newSlides];
-        this.allSlides = updatedSlides;
-        this.setAllSlides.emit(updatedSlides);
+    handleSlidesImported(newSlides: Slide[]) {
+        // This should actually probably go through the service
+        this.slideService.slides.update(list => [...list, ...newSlides]);
     }
 
-    navigateDown() { /* VM Logic */ }
-    navigateUp() { /* VM Logic */ }
-    deleteSelected() { /* VM Logic */ }
-
     handleSlideClick(index: number) {
-        const slide = this.allSlides[index];
-        this.setSelectedSlide.emit(slide);
-        // Emitting confidence monitor event in future
+        this.slideService.selectSlide(index);
     }
 
     handleDragStart(e: DragEvent, position: number) {
@@ -182,11 +165,12 @@ export class SlideManagerComponent {
         e.preventDefault();
         if (this.dragItem !== null && this.dragItem !== position) {
             // Reorder logic
-            const newSlides = [...this.allSlides];
-            const items = newSlides.splice(this.dragItem, 1);
-            newSlides.splice(position, 0, items[0]);
-            this.allSlides = newSlides;
-            this.setAllSlides.emit(newSlides);
+            this.slideService.slides.update(list => {
+                const newList = [...list];
+                const [movedItem] = newList.splice(this.dragItem!, 1);
+                newList.splice(position, 0, movedItem);
+                return newList.map((s, idx) => ({ ...s, order: idx }));
+            });
         }
         this.dragItem = null;
         this.dragOverItem = null;

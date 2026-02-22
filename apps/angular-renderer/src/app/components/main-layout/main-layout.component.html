@@ -47,8 +47,7 @@
             <!-- Slide Editor or Lyrics Column -->
             <div class="flex-1 overflow-hidden flex">
                 <div class="flex-1 overflow-auto bg-gray-900 custom-scrollbar">
-                    <app-slide-manager [allSlides]="allSlides" [selectedSlide]="selectedSlide"
-                        (setAllSlides)="setAllSlides($event)" (setSelectedSlide)="setSelectedSlide($event)">
+                    <app-slide-manager>
                     </app-slide-manager>
                 </div>
                 <div class="w-80 border-l border-gray-700 bg-gray-800/80">
@@ -93,7 +92,7 @@
         </div>
     </div>
 
-    <app-timer-modal [isOpen]="isTimerModalOpen" [displays]="possibleDisplays" (onClose)="isTimerModalOpen = false"
-        (onSave)="handleSaveTimer($event)">
+    <app-timer-modal [isOpen]="isTimerModalOpen" [displays]="displayService.displays()"
+        (onClose)="isTimerModalOpen = false" (onSave)="handleSaveTimer($event)">
     </app-timer-modal>
 </div>

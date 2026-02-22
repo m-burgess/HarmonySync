@@ -1,12 +1,13 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { SlideComponent, SlideData, SlideSize } from '../slide/slide';
+import { SlideComponent, SlideSize } from '../slide/slide';
+import { Slide } from '../../../models/slide.models';
 
 @Component({
-    selector: 'app-slide-item',
-    standalone: true,
-    imports: [CommonModule, SlideComponent],
-    template: `
+  selector: 'app-slide-item',
+  standalone: true,
+  imports: [CommonModule, SlideComponent],
+  template: `
     <app-slide
       [slide]="slide"
       [index]="index"
@@ -22,7 +23,7 @@ import { SlideComponent, SlideData, SlideSize } from '../slide/slide';
       (onVideoTranscoded)="onVideoTranscoded.emit($event)"
     ></app-slide>
   `,
-    styles: [`
+  styles: [`
     :host {
       display: block;
       width: 100%;
@@ -31,17 +32,17 @@ import { SlideComponent, SlideData, SlideSize } from '../slide/slide';
   `]
 })
 export class SlideItemComponent {
-    @Input() slide!: SlideData;
-    @Input() index!: number;
-    @Input() isSelected = false;
-    @Input() size: SlideSize = 'medium';
-    @Input() thumbnailSize?: number;
-    @Input() showActions = true;
+  @Input() slide!: Slide;
+  @Input() index!: number;
+  @Input() isSelected = false;
+  @Input() size: SlideSize = 'medium';
+  @Input() thumbnailSize?: number;
+  @Input() showActions = true;
 
-    @Output() onSelect = new EventEmitter<number>();
-    @Output() onDragStart = new EventEmitter<DragEvent>();
-    @Output() onDragEnter = new EventEmitter<DragEvent>();
-    @Output() onDrop = new EventEmitter<DragEvent>();
-    @Output() onDragEnd = new EventEmitter<void>();
-    @Output() onVideoTranscoded = new EventEmitter<{ index: number, path: string }>();
+  @Output() onSelect = new EventEmitter<number>();
+  @Output() onDragStart = new EventEmitter<DragEvent>();
+  @Output() onDragEnter = new EventEmitter<DragEvent>();
+  @Output() onDrop = new EventEmitter<DragEvent>();
+  @Output() onDragEnd = new EventEmitter<void>();
+  @Output() onVideoTranscoded = new EventEmitter<{ index: number, path: string }>();
 }

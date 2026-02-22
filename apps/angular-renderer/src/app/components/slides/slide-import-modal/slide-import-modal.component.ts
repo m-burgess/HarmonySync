@@ -2,6 +2,7 @@ import { Component, Input, Output, EventEmitter, OnInit, OnDestroy } from '@angu
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ElectronService } from '../../../core/electron.service';
+import { Slide } from '../../../models/slide.models';
 
 export interface SlideImportProgress {
     message: string;
@@ -26,7 +27,7 @@ export interface SlideImportOptions {
 export class SlideImportModalComponent implements OnInit, OnDestroy {
     @Input() isOpen = false;
     @Output() onClose = new EventEmitter<void>();
-    @Output() onSlidesImported = new EventEmitter<any[]>();
+    @Output() onSlidesImported = new EventEmitter<Slide[]>();
 
     importType: 'pdf' | 'powerpoint' | 'folder' | 'zip' = 'pdf';
     selectedPath: string | null = null;

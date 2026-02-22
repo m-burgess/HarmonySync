@@ -1,6 +1,7 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { ElectronService } from './electron.service';
 import { AudioService } from './audio.service';
+import { SlideService } from './slide.service';
 import { from, Observable, of } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 
@@ -22,6 +23,7 @@ export interface ServiceOrderItem {
 export class ServiceOrderService {
     private electron = inject(ElectronService);
     private audio = inject(AudioService);
+    private slideService = inject(SlideService);
 
     // Reactive state
     readonly serviceOrder = signal<ServiceOrderItem[]>([]);
@@ -150,9 +152,7 @@ export class ServiceOrderService {
             }
 
             // 3. Trigger slide loading
-            // We'll use a custom event or just hit the slide service if we had one
-            // For now, let's just use the electron signal that others can listen to
-            this.electron.emit('load-slides-from-folder', { path: item.path, type: item.type });
+            this.slideService.loadFromFolder(item.path).subscribe();
 
         } catch (err) {
             console.error('Failed to load item:', err);
