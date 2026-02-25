@@ -1,10 +1,19 @@
 /* Confidence Monitor Styles */
 .timer-warning {
-    color: #ffa500;
+    color: #ffa500 !important;
     border-color: #ffa500 !important;
 }
 
 .timer-critical {
-    color: #ff0000;
+    color: #ff0000 !important;
     border-color: #ff0000 !important;
+}
+
+.lyric-line {
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
+}
+
+.monitor-container {
+    background-color: black;
+    cursor: none;
 }

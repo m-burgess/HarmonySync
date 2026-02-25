@@ -32,7 +32,7 @@
         </div>
         }
 
-        @for (track of audioService.tracks(); track track.id; let i = $index) {
+        @for (track of sortedTracks(); track track.id; let i = $index) {
         <div (click)="toggleMute(track.id)" [class.muted-state]="track.muted"
             class="track-card bg-[#252526] p-3 rounded-lg border border-[#333] hover:border-[#007acc]/40 transition-all group/track cursor-pointer select-none relative overflow-hidden active:scale-[0.98]">
 

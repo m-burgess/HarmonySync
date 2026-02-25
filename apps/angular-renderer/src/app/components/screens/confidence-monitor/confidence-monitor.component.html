@@ -1,61 +1,71 @@
 <div class="monitor-container w-screen h-screen bg-black text-white overflow-hidden relative font-sans">
-    <!-- Floating Clock at Top Center -->
-    <div class="floating-clock absolute top-4 left-1/2 -translate-x-1/2 z-50">
-        <div
-            class="clock-content text-[#00ff00] text-3xl font-mono px-4 py-1 bg-black/50 border border-[#00ff00]/30 rounded">
+    <!-- Centered Clock at Top -->
+    <div class="absolute top-6 left-1/2 -translate-x-1/2 z-50 text-center">
+        <div class="text-4xl font-mono font-bold tracking-tight text-white drop-shadow-lg">
             {{ currentTime }}
         </div>
     </div>
 
     <!-- Main Content Area -->
-    <div class="monitor-main-content h-full w-full flex flex-col pt-16 transition-opacity duration-200"
+    <div class="monitor-main-content h-full w-full flex flex-col pt-24 transition-opacity duration-200"
         [style.opacity]="opacity">
+
         @if (isLyricsMode) {
         <div class="lyrics-display flex-1 flex flex-col">
-            <!-- Current Lyrics -->
-            <div class="current-lyrics flex-[3] flex flex-col items-center justify-center p-8">
-                @for (line of content?.text; track $index) {
-                <div class="lyric-line text-[min(7vw,10vh)] font-bold text-[#ffff00] text-center leading-tight mb-2">
-                    {{ line }}
-                </div>
-                }
-            </div>
-
-            <!-- Next Lyrics -->
-            @if (nextSlide?.text?.length) {
-            <div class="next-lyrics flex-1 bg-zinc-900 border-t border-zinc-700 p-4">
-                <h4 class="text-zinc-500 text-sm font-bold uppercase mb-2">NEXT:</h4>
-                <div class="next-lyrics-text flex flex-col items-center">
-                    @for (line of nextSlide?.text.slice(0, 2); track $index) {
-                    <div class="text-[min(3vw,5vh)] text-zinc-400 font-medium">{{ line }}</div>
+            <!-- Current Lyrics (White, Top) -->
+            <div class="flex-1 flex flex-col items-center justify-center p-8 border-b border-white/10">
+                <div class="lyrics-group flex flex-col items-center">
+                    @for (line of content?.text; track $index) {
+                    <div class="lyric-line text-[min(7vw,10vh)] font-bold text-white text-center leading-tight mb-2">
+                        {{ line }}
+                    </div>
                     }
                 </div>
             </div>
-            }
+
+            <!-- Next Lyrics (Yellow, Bottom) -->
+            <div class="flex-1 flex flex-col items-center justify-center p-8 bg-zinc-950/50">
+                @if (nextSlide?.text?.length) {
+                <div class="lyrics-group flex flex-col items-center opacity-90">
+                    @for (line of nextSlide?.text; track $index) {
+                    <div class="lyric-line text-[min(5vw,8vh)] font-bold text-[#ffff00] text-center leading-tight mb-2">
+                        {{ line }}
+                    </div>
+                    }
+                </div>
+                } @else {
+                <div class="text-zinc-800 text-xs font-bold uppercase tracking-widest">--- End of Song ---</div>
+                }
+            </div>
         </div>
         }
 
-        @if (isImageDisplay; as c) {
+        <!-- Video/Media Countdown (When not in lyrics) -->
+        @if (!isLyricsMode && videoCountdown) {
+        <div class="flex-1 flex items-center justify-center">
+            <div class="text-[30vw] font-mono font-bold text-red-500 tabular-nums drop-shadow-2xl">
+                {{ videoCountdown }}
+            </div>
+        </div>
+        }
+
+        @if (isImageDisplay && !isLyricsMode) {
         @if (content; as activeContent) {
         @if (activeContent.type === 'image') {
-        <div class="image-display flex-1 flex items-center justify-center p-4">
-            <img [src]="activeContent.path" class="max-w-full max-h-full object-contain" />
+        <div class="image-display flex-1 flex items-center justify-center p-8">
+            <img [src]="activeContent.path"
+                class="max-w-full max-h-full object-contain rounded-lg shadow-2xl border border-white/10" />
         </div>
         }
         }
-        }
-
-        @if (isVideoMode && videoCountdown) {
-        <div class="video-countdown-large flex-1 flex items-center justify-center text-[25vw] font-mono text-red-500">
-            {{ videoCountdown }}
-        </div>
         }
     </div>
 
-    <!-- Floating Timer at Bottom -->
-    @if (timerDisplay && timerEnabled && !isLyricsMode) {
-    <div class="floating-timer absolute bottom-8 left-1/2 -translate-x-1/2 z-50" [ngClass]="timerDisplay.colorClass">
-        <div class="timer-content text-6xl font-bold font-mono px-6 py-2 bg-black/80 rounded border-2 border-white">
+    <!-- Custom Timer (Bottom Center) -->
+    @if (timerDisplay && timerEnabled) {
+    <div class="absolute bottom-10 left-1/2 -translate-x-1/2 z-50 px-10 py-4 bg-black/60 backdrop-blur-md rounded-2xl border-4 border-white/20 shadow-2xl transition-all duration-300"
+        [ngClass]="timerDisplay.colorClass">
+        <div class="text-8xl font-black font-mono tracking-tighter tabular-nums text-center">
             {{ timerDisplay.time }}
         </div>
     </div>

@@ -1065,6 +1065,7 @@ class IPCHandlerManager {
    */
   private registerSendHandlers(): void {
     this.ipcMain.handle('send:main', async (_event, channel: string, data: any) => {
+      console.log(`[Main] send:main called for channel: ${channel}`);
       const win = this.services.mainWindow();
       if (win && !win.isDestroyed()) {
         win.webContents.send(channel, data);
@@ -1084,15 +1085,23 @@ class IPCHandlerManager {
 
     this.ipcMain.handle('send:confidence', async (_event, channel: string, data: any) => {
       const win = this.services.confidenceWindow();
+      console.log(`[Main] send:confidence called for channel: ${channel}`);
       if (win && !win.isDestroyed()) {
+        console.log(`[Main] Sending to Confidence Window (ID: ${win.id})`);
         win.webContents.send(channel, data);
+      } else {
+        console.warn(`[Main] Confidence Window not found or destroyed! (win: ${!!win})`);
       }
     });
 
     this.ipcMain.handle('send:lowerThirds', async (_event, channel: string, data: any) => {
       const win = this.services.lowerThirdsWindow();
+      console.log(`[Main] send:lowerThirds called for channel: ${channel}`);
       if (win && !win.isDestroyed()) {
+        console.log(`[Main] Sending to Lower Thirds Window (ID: ${win.id})`);
         win.webContents.send(channel, data);
+      } else {
+        console.warn(`[Main] Lower Thirds Window not found or destroyed! (win: ${!!win})`);
       }
     });
   }

@@ -67,14 +67,32 @@ export class ElectronService {
             'set-background',
             'display-lyric-slide',
             'display-image-slide',
-            'display-video-slide'
+            'display-video-slide',
+            'display-lyrics',
+            'display-slide',
+            'clear-lyric-display'
+        ];
+
+        const confidenceEvents = [
+            'display-confidence-slide',
+            'display-confidence-lyrics',
+            'clear-confidence-display',
+            'video-progress'
+        ];
+
+        const lowerThirdsEvents = [
+            'set-lower-thirds-text'
         ];
 
         if (audienceEvents.includes(eventName)) {
-            this.invoke('send-to-window', { window: 'audience', channel: eventName, data: payload });
+            this.invoke('send:audience', eventName, payload);
+        } else if (confidenceEvents.includes(eventName)) {
+            this.invoke('send:confidence', eventName, payload);
+        } else if (lowerThirdsEvents.includes(eventName)) {
+            this.invoke('send:lowerThirds', eventName, payload);
         }
 
-        // Fallback to generic send if needed
+        // Fallback to generic send if needed (to main process)
         this.api.send(eventName, payload);
     }
 

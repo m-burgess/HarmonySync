@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AudioService } from '../../../core/audio.service';
@@ -35,6 +35,26 @@ import {
 export class MixerSidebarComponent implements OnInit {
   audioService = inject(AudioService);
   slideService = inject(SlideService);
+
+  readonly sortedTracks = computed(() => {
+    const tracks = [...this.audioService.tracks()];
+    return tracks.sort((a, b) => {
+      const nameA = a.name.toLowerCase();
+      const nameB = b.name.toLowerCase();
+
+      const isClickA = nameA.includes('click');
+      const isClickB = nameB.includes('click');
+      if (isClickA && !isClickB) return -1;
+      if (!isClickA && isClickB) return 1;
+
+      const isGuideA = nameA.includes('guide');
+      const isGuideB = nameB.includes('guide');
+      if (isGuideA && !isGuideB) return -1;
+      if (!isGuideA && isGuideB) return 1;
+
+      return nameA.localeCompare(nameB);
+    });
+  });
 
   ngOnInit() {
     this.audioService.connectWebSocket();

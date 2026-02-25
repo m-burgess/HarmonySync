@@ -116,8 +116,8 @@ export class ConfidenceMonitorComponent implements OnInit, OnDestroy {
         return c?.type === 'lyrics';
     }
     get isVideoMode(): boolean {
-        const c = this.transition.currentContent();
-        return c?.type === 'video';
+        const c = this.content;
+        return c?.type === 'video' || !!this.videoCountdown;
     }
 
     get opacity(): number {
