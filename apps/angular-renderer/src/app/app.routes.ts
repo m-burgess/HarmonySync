@@ -9,5 +9,6 @@ export const routes: Routes = [
     { path: 'audience', component: AudienceScreenComponent },
     { path: 'confidence', component: ConfidenceMonitorComponent },
     { path: 'lower-thirds', component: LowerThirdsScreenComponent },
+    { path: 'preservice', loadComponent: () => import('./components/screens/preservice-music/preservice-music.component').then(m => m.PreServiceMusicComponent) },
     { path: '**', redirectTo: '' }
 ];

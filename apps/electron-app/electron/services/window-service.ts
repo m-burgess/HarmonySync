@@ -23,6 +23,7 @@ export class WindowService extends BaseElectronService implements IWindowService
   private audienceWindowGetter?: WindowGetter;
   private confidenceWindowGetter?: WindowGetter;
   private lowerThirdsWindowGetter?: WindowGetter;
+  private preserviceMusicWindowGetter?: WindowGetter;
 
   constructor(config?: ServiceConfig) {
     super(config);
@@ -51,11 +52,13 @@ export class WindowService extends BaseElectronService implements IWindowService
   public registerWindowGetters(
     audienceGetter: WindowGetter,
     confidenceGetter: WindowGetter,
-    lowerThirdsGetter: WindowGetter
+    lowerThirdsGetter: WindowGetter,
+    preserviceMusicGetter: WindowGetter
   ): void {
     this.audienceWindowGetter = audienceGetter;
     this.confidenceWindowGetter = confidenceGetter;
     this.lowerThirdsWindowGetter = lowerThirdsGetter;
+    this.preserviceMusicWindowGetter = preserviceMusicGetter;
     this.log('info', 'Window getters registered');
   }
 
@@ -156,15 +159,47 @@ export class WindowService extends BaseElectronService implements IWindowService
   }
 
   /**
+   * Show preservice music window
+   * @returns Promise that resolves when window is shown
+   */
+  public async showPreserviceMusic(): Promise<void> {
+    try {
+      const win = this.getWindow(this.preserviceMusicWindowGetter, 'preserviceMusic');
+      if (win) {
+        win.show();
+        this.log('info', 'Pre-service music window shown');
+      }
+    } catch (error) {
+      this.handleError('showPreserviceMusic', error);
+    }
+  }
+
+  /**
+   * Hide preservice music window
+   * @returns Promise that resolves when window is hidden
+   */
+  public async hidePreserviceMusic(): Promise<void> {
+    try {
+      const win = this.getWindow(this.preserviceMusicWindowGetter, 'preserviceMusic');
+      if (win) {
+        win.hide();
+        this.log('info', 'Pre-service music window hidden');
+      }
+    } catch (error) {
+      this.handleError('hidePreserviceMusic', error);
+    }
+  }
+
+  /**
    * Toggle window visibility
    * @param windowType - Type of window to toggle
    * @returns Promise that resolves to new visibility state
    */
-  public async toggleWindow(windowType: 'audience' | 'confidence' | 'lowerThirds'): Promise<boolean> {
+  public async toggleWindow(windowType: 'audience' | 'confidence' | 'lowerThirds' | 'preserviceMusic'): Promise<boolean> {
     try {
       const getter = this.getWindowGetterByType(windowType);
       const win = this.getWindow(getter, windowType);
-      
+
       if (win) {
         const isVisible = win.isVisible();
         if (isVisible) {
@@ -192,7 +227,7 @@ export class WindowService extends BaseElectronService implements IWindowService
     try {
       const getter = this.getWindowGetterByType(windowType);
       const win = this.getWindow(getter, windowType);
-      
+
       if (win) {
         win.focus();
         this.log('info', `${windowType} window focused`);
@@ -211,7 +246,7 @@ export class WindowService extends BaseElectronService implements IWindowService
     try {
       const getter = this.getWindowGetterByType(windowType);
       const win = this.getWindow(getter, windowType);
-      
+
       if (win) {
         win.minimize();
         this.log('info', `${windowType} window minimized`);
@@ -226,11 +261,11 @@ export class WindowService extends BaseElectronService implements IWindowService
    * @param windowType - Type of window to maximize
    * @returns Promise that resolves when window is maximized/restored
    */
-  public async maximizeWindow(windowType: 'audience' | 'confidence' | 'lowerThirds'): Promise<void> {
+  public async maximizeWindow(windowType: 'audience' | 'confidence' | 'lowerThirds' | 'preserviceMusic'): Promise<void> {
     try {
       const getter = this.getWindowGetterByType(windowType);
       const win = this.getWindow(getter, windowType);
-      
+
       if (win) {
         if (win.isMaximized()) {
           win.unmaximize();
@@ -252,13 +287,13 @@ export class WindowService extends BaseElectronService implements IWindowService
    * @returns Promise that resolves when property is set
    */
   public async setAlwaysOnTop(
-    windowType: 'audience' | 'confidence' | 'lowerThirds',
+    windowType: 'audience' | 'confidence' | 'lowerThirds' | 'preserviceMusic',
     alwaysOnTop: boolean
   ): Promise<void> {
     try {
       const getter = this.getWindowGetterByType(windowType);
       const win = this.getWindow(getter, windowType);
-      
+
       if (win) {
         win.setAlwaysOnTop(alwaysOnTop);
         this.log('info', `${windowType} window always on top: ${alwaysOnTop}`);
@@ -273,7 +308,7 @@ export class WindowService extends BaseElectronService implements IWindowService
    * @param windowType - Type of window to check
    * @returns Promise that resolves to visibility status
    */
-  public async isWindowVisible(windowType: 'audience' | 'confidence' | 'lowerThirds'): Promise<boolean> {
+  public async isWindowVisible(windowType: 'audience' | 'confidence' | 'lowerThirds' | 'preserviceMusic'): Promise<boolean> {
     try {
       const getter = this.getWindowGetterByType(windowType);
       const win = this.getWindow(getter, windowType);
@@ -289,11 +324,11 @@ export class WindowService extends BaseElectronService implements IWindowService
    * @param windowType - Type of window
    * @returns Promise that resolves to window state
    */
-  public async getWindowState(windowType: 'audience' | 'confidence' | 'lowerThirds'): Promise<WindowState | null> {
+  public async getWindowState(windowType: 'audience' | 'confidence' | 'lowerThirds' | 'preserviceMusic'): Promise<WindowState | null> {
     try {
       const getter = this.getWindowGetterByType(windowType);
       const win = this.getWindow(getter, windowType);
-      
+
       if (!win) {
         return null;
       }
@@ -324,11 +359,13 @@ export class WindowService extends BaseElectronService implements IWindowService
     audience: { visible: boolean; exists: boolean };
     confidence: { visible: boolean; exists: boolean };
     lowerThirds: { visible: boolean; exists: boolean };
+    preserviceMusic: { visible: boolean; exists: boolean };
   }> {
     try {
       const audienceWin = this.audienceWindowGetter?.();
       const confidenceWin = this.confidenceWindowGetter?.();
       const lowerThirdsWin = this.lowerThirdsWindowGetter?.();
+      const preserviceWin = this.preserviceMusicWindowGetter?.();
 
       return {
         audience: {
@@ -342,6 +379,10 @@ export class WindowService extends BaseElectronService implements IWindowService
         lowerThirds: {
           visible: lowerThirdsWin ? lowerThirdsWin.isVisible() : false,
           exists: lowerThirdsWin !== null && lowerThirdsWin !== undefined
+        },
+        preserviceMusic: {
+          visible: preserviceWin ? preserviceWin.isVisible() : false,
+          exists: preserviceWin !== null && preserviceWin !== undefined
         }
       };
     } catch (error) {
@@ -358,7 +399,8 @@ export class WindowService extends BaseElectronService implements IWindowService
       await Promise.all([
         this.hideAudience(),
         this.hideConfidence(),
-        this.hideLowerThirds()
+        this.hideLowerThirds(),
+        this.hidePreserviceMusic()
       ]);
       this.log('info', 'All windows hidden');
     } catch (error) {
@@ -375,7 +417,8 @@ export class WindowService extends BaseElectronService implements IWindowService
       await Promise.all([
         this.showAudience(),
         this.showConfidence(),
-        this.showLowerThirds()
+        this.showLowerThirds(),
+        this.showPreserviceMusic()
       ]);
       this.log('info', 'All windows shown');
     } catch (error) {
@@ -394,7 +437,7 @@ export class WindowService extends BaseElectronService implements IWindowService
       this.log('warn', `${windowType} window getter not registered`);
       return null;
     }
-    
+
     const win = getter();
     if (!win) {
       this.log('warn', `${windowType} window not found`);
@@ -407,7 +450,7 @@ export class WindowService extends BaseElectronService implements IWindowService
    * @param windowType - Type of window
    * @returns Window getter function
    */
-  private getWindowGetterByType(windowType: 'audience' | 'confidence' | 'lowerThirds'): WindowGetter | undefined {
+  private getWindowGetterByType(windowType: 'audience' | 'confidence' | 'lowerThirds' | 'preserviceMusic'): WindowGetter | undefined {
     switch (windowType) {
       case 'audience':
         return this.audienceWindowGetter;
@@ -415,6 +458,8 @@ export class WindowService extends BaseElectronService implements IWindowService
         return this.confidenceWindowGetter;
       case 'lowerThirds':
         return this.lowerThirdsWindowGetter;
+      case 'preserviceMusic':
+        return this.preserviceMusicWindowGetter;
       default:
         throw new Error(`Unknown window type: ${windowType}`);
     }

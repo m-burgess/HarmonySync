@@ -19,5 +19,5 @@ export interface Track {
 
 export interface WsEvent {
     type: string;
-    payload: unknown;
+    [key: string]: any;
 }

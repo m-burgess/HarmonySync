@@ -86,7 +86,7 @@ export class SlideService {
             if (slide.type === 'image') {
                 this.electron.emit('display-image-slide', { path: slide.path, name: slide.name });
             } else if (slide.type === 'video') {
-                this.electron.invoke('display_video_slide', { path: slide.path, duration: slide.duration });
+                this.electron.invoke('display:videoSlide', slide.path, slide.duration);
             }
         }
     }

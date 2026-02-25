@@ -2,14 +2,33 @@
     <!-- VS Code Activity Bar -->
     <div class="vscode-activity-bar">
         <div class="flex flex-col items-center py-4 space-y-4">
-            <app-activity-bar-icon id="activity-bar-search" icon="heroMagnifyingGlass"
-                [active]="true"></app-activity-bar-icon>
-            <app-activity-bar-icon id="activity-bar-files" icon="heroPresentationChartBar"
-                [active]="false"></app-activity-bar-icon>
-            <app-activity-bar-icon id="activity-bar-audio" icon="heroMusicalNote"
-                [active]="false"></app-activity-bar-icon>
-            <app-activity-bar-icon id="activity-bar-settings" icon="heroCog" [active]="false"></app-activity-bar-icon>
-            <app-activity-bar-icon id="activity-bar-timers" icon="heroClock" [active]="false"></app-activity-bar-icon>
+            <app-activity-bar-icon id="activity-bar-explorer" icon="heroPresentationChartBar"
+                [active]="activeSidebar() === 'explorer'" label="Explorer"
+                (onClick)="setActiveSidebar('explorer')"></app-activity-bar-icon>
+
+            <app-activity-bar-icon id="activity-bar-timers" icon="heroClock"
+                [active]="activeSidebar() === 'timers' || isTimerActive()" label="Timers" [badge]="runningTimersCount()"
+                (onClick)="setActiveSidebar('timers')"></app-activity-bar-icon>
+
+            <app-activity-bar-icon id="activity-bar-settings" icon="heroCog" [active]="activeSidebar() === 'settings'"
+                label="Settings" (onClick)="setActiveSidebar('settings')"></app-activity-bar-icon>
+
+            <app-activity-bar-icon id="activity-bar-scheduler" icon="heroCalendarDays" [active]="showScheduler()"
+                label="Scheduler" (onClick)="toggleScheduler()"></app-activity-bar-icon>
+
+            <app-activity-bar-icon id="activity-bar-scripts" icon="heroCodeBracket" [active]="showScriptEditor()"
+                label="Scripts" (onClick)="toggleScriptEditor()"></app-activity-bar-icon>
+
+            <div class="h-[1px] w-8 bg-gray-700 my-2"></div>
+
+            <app-activity-bar-icon id="activity-bar-audience" icon="heroComputerDesktop"
+                [active]="isScreenActive('audience')" label="Audience"
+                (onClick)="toggleScreen('audience')"></app-activity-bar-icon>
+            <app-activity-bar-icon id="activity-bar-confidence" icon="heroTv" [active]="isScreenActive('confidence')"
+                label="Stage" (onClick)="toggleScreen('confidence')"></app-activity-bar-icon>
+            <app-activity-bar-icon id="activity-bar-lowerthirds" icon="heroQueueList"
+                [active]="isScreenActive('lowerThirds')" label="Lower 1/3"
+                (onClick)="toggleScreen('lowerThirds')"></app-activity-bar-icon>
         </div>
         <div class="mt-auto flex flex-col items-center py-4 space-y-4">
             <app-activity-bar-icon id="activity-bar-profile" icon="heroAdjustmentsHorizontal"
@@ -18,12 +37,18 @@
         </div>
     </div>
 
-    <!-- Main Layout: Service Order Sidebar + Slide Editor -->
+    <!-- Main Layout: Dynamic Sidebar + Slide Editor -->
     <div class="flex-1 flex">
-        <!-- Service Order Sidebar -->
-        <div class="vscode-sidebar bg-gray-800 border-r border-gray-700" [style.width]="sidebarWidth + 'px'">
-            <app-service-order-manager>
-            </app-service-order-manager>
+        <!-- Sidebar Column -->
+        <div class="vscode-sidebar bg-gray-800 border-r border-gray-700 overflow-hidden"
+            [style.width]="sidebarWidth + 'px'">
+            @if (activeSidebar() === 'explorer') {
+            <app-service-order-manager></app-service-order-manager>
+            } @else if (activeSidebar() === 'timers') {
+            <app-timer-list></app-timer-list>
+            } @else if (activeSidebar() === 'settings') {
+            <app-settings></app-settings>
+            }
         </div>
 
         <!-- VS Code Resize Handle for Sidebar -->
@@ -31,27 +56,72 @@
             title="Double-click to reset sidebar width"></div>
 
         <!-- Main Content Area -->
-        <div class="flex-1 flex flex-col bg-gray-900 overflow-hidden">
-            <!-- Top Action Bar -->
-            <div class="h-12 border-b border-gray-700 bg-gray-800/50 flex items-center px-4 justify-between">
-                <div class="flex items-center space-x-4">
-                    <span class="text-sm font-medium text-gray-400">Main Presentation</span>
-                    <app-screen-buttons (onOpenTimers)="openTimers()"
-                        (onToggleScreen)="toggleScreen($event)"></app-screen-buttons>
-                </div>
+        <div class="flex-1 flex flex-col bg-[#0a0a0a] overflow-hidden">
+            <!-- Top Action Bar (VS Code Breadcrumbs Style) -->
+            <div class="h-9 border-b border-[#2b2b2b] bg-[#1e1e1e] flex items-center px-4 justify-between select-none">
                 <div class="flex items-center space-x-2">
-                    <!-- Additional controls could go here -->
+                    <div class="flex items-center text-[#858585] text-[11px] font-medium">
+                        <span>harmonysync</span>
+                        <span class="mx-1.5 opacity-40">/</span>
+                        <span class="text-[#cccccc]">live-session</span>
+                        <span class="mx-1.5 opacity-40">/</span>
+                        <span class="text-[#007acc] font-bold">audience.main</span>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button (click)="displayService.clearAll().subscribe()"
+                        class="text-[10px] bg-[#333] hover:bg-[#444] text-[#cccccc] px-2.5 py-1 rounded transition-colors flex items-center gap-1.5 border border-white/5 shadow-sm active:scale-95"
+                        title="Clear All Screens">
+                        <ng-icon name="heroBolt" class="text-xs text-yellow-500"></ng-icon>
+                        CLEAR ALL
+                    </button>
+                    <div class="h-4 w-[1px] bg-white/5"></div>
+                    <div class="flex items-center gap-1.5 px-2 py-0.5 bg-[#252526] rounded-full border border-white/5">
+                        <div class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                        <span class="text-[9px] font-bold text-[#858585] tracking-widest uppercase">Streaming</span>
+                    </div>
                 </div>
             </div>
 
             <!-- Slide Editor or Lyrics Column -->
-            <div class="flex-1 overflow-hidden flex">
-                <div class="flex-1 overflow-auto bg-gray-900 custom-scrollbar">
-                    <app-slide-manager>
-                    </app-slide-manager>
-                </div>
-                <div class="w-80 border-l border-gray-700 bg-gray-800/80">
-                    <app-lyrics-column [lyrics]="currentLyrics()"></app-lyrics-column>
+            <div class="flex-1 overflow-hidden flex flex-col pt-2">
+
+                <!-- Grid Section -->
+                <div class="flex-1 flex overflow-hidden border-t border-[#2b2b2b]">
+                    <div class="flex-1 overflow-auto bg-[#0a0a0a] custom-scrollbar">
+                        @if (currentItemType() === 'song') {
+                        <div class="h-full flex flex-col">
+                            <div
+                                class="px-6 py-4 border-b border-[#2b2b2b] bg-[#1a1a1a] flex items-center justify-between">
+                                <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Active Lyrics View
+                                </h2>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] text-blue-500 font-medium">SONG MODE</span>
+                                    <div class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div>
+                                </div>
+                            </div>
+                            <div class="flex-1 overflow-auto">
+                                <app-lyrics-column [lyrics]="currentLyrics()"></app-lyrics-column>
+                            </div>
+                        </div>
+                        } @else {
+                        <app-slide-manager></app-slide-manager>
+                        }
+                    </div>
+
+                    <!-- Right Utility Bar (Lyrics) - Only visible if not in song mode and has lyrics -->
+                    @if (currentItemType() !== 'song' && currentItemType() !== 'folder' && currentLyrics()) {
+                    <div class="w-80 border-l border-[#2b2b2b] bg-[#1e1e1e]/60 flex flex-col">
+                        <div class="p-3 border-b border-[#2b2b2b] flex items-center justify-between">
+                            <h3 class="text-[10px] font-bold text-[#858585] uppercase tracking-widest">Active Lyrics
+                            </h3>
+                            <button class="text-[9px] text-[#007acc] hover:underline">Full View</button>
+                        </div>
+                        <div class="flex-1 overflow-auto custom-scrollbar">
+                            <app-lyrics-column [lyrics]="currentLyrics()"></app-lyrics-column>
+                        </div>
+                    </div>
+                    }
                 </div>
             </div>
 
@@ -92,7 +162,11 @@
         </div>
     </div>
 
-    <app-timer-modal [isOpen]="isTimerModalOpen" [displays]="displayService.displays()"
-        (onClose)="isTimerModalOpen = false" (onSave)="handleSaveTimer($event)">
-    </app-timer-modal>
+    @if (showScheduler()) {
+    <app-scheduler></app-scheduler>
+    }
+
+    @if (showScriptEditor()) {
+    <app-script-editor></app-script-editor>
+    }
 </div>

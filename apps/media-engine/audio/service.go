@@ -43,12 +43,22 @@ func NewService(eb *events.EventBus) (*Service, error) {
 
 	speaker.Play(m)
 
-	return &Service{
+	s := &Service{
 		Mixer:         m,
 		Transposition: NewTranspositionService(),
 		Songs:         make(map[string]SongData),
 		EventBus:      eb,
-	}, nil
+	}
+
+	m.OnSongFinished = func(songID string) {
+		log.Printf("Playback finished for song %s", songID)
+		s.EventBus.Broadcast(map[string]interface{}{
+			"type":   "audio_finished",
+			"songId": songID,
+		})
+	}
+
+	return s, nil
 }
 
 func (s *Service) LoadSong(songID string, tracks []TrackInfo) error {

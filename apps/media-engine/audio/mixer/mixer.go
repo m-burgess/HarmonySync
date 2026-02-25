@@ -38,6 +38,7 @@ type Mixer struct {
 	Tracks       map[string]*Track // legacy flat map (kept for backward compat)
 	inner        *beep.Mixer
 	SampleRate   beep.SampleRate
+	OnSongFinished func(songID string)
 }
 
 // Stream implements beep.Streamer, delegating to the inner mixer.
@@ -186,10 +187,22 @@ func (m *Mixer) ActivateSong(songID string) error {
 	// Rebuild inner mixer with only the new song's tracks
 	m.inner = &beep.Mixer{}
 	newTracks := m.Songs[songID]
+	first := true
 	for _, t := range newTracks {
 		// Keep them paused — Play() will unpause
 		t.Ctrl.Paused = true
 		t.Ctrl.Streamer = t.Buffer.Streamer(0, t.Buffer.Len())
+
+		if first && m.OnSongFinished != nil {
+			id := songID
+			t.Ctrl.Streamer = beep.Seq(t.Ctrl.Streamer, beep.Callback(func() {
+				if m.OnSongFinished != nil {
+					m.OnSongFinished(id)
+				}
+			}))
+			first = false
+		}
+
 		m.inner.Add(t.Pan)
 	}
 

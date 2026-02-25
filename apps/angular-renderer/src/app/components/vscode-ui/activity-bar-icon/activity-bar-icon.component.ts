@@ -3,10 +3,10 @@ import { CommonModule } from '@angular/common';
 import { NgIconComponent } from '@ng-icons/core';
 
 @Component({
-    selector: 'app-activity-bar-icon',
-    standalone: true,
-    imports: [CommonModule, NgIconComponent],
-    template: `
+  selector: 'app-activity-bar-icon',
+  standalone: true,
+  imports: [CommonModule, NgIconComponent],
+  template: `
     <div 
       class="vscode-activity-icon"
       [ngClass]="{'active': active}"
@@ -23,8 +23,8 @@ import { NgIconComponent } from '@ng-icons/core';
       </div>
     </div>
   `,
-    styles: [`
-    :host { display: block; }
+  styles: [`
+    :host { display: block; width: 100%; }
     .vscode-activity-icon {
       position: relative;
       cursor: pointer;
@@ -32,19 +32,53 @@ import { NgIconComponent } from '@ng-icons/core';
       flex-direction: column;
       align-items: center;
       width: 100%;
-      opacity: 0.6;
-      transition: opacity 0.2s;
+      padding: 12px 0;
+      color: #858585;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      group: hover;
     }
-    .vscode-activity-icon.active { opacity: 1; border-left: 2px solid #fff; }
-    .vscode-activity-icon:hover { opacity: 1; }
-    .label { font-size: 10px; margin-top: 2px; }
+    .vscode-activity-icon.active { 
+      color: #ffffff;
+      background: linear-gradient(90deg, rgba(0, 122, 204, 0.1) 0%, transparent 100%);
+    }
+    .vscode-activity-icon.active::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 20%;
+      bottom: 20%;
+      width: 2px;
+      background: #007acc;
+      box-shadow: 0 0 8px rgba(0, 122, 204, 0.6);
+      border-radius: 0 2px 2px 0;
+    }
+    .vscode-activity-icon:hover { 
+      color: #cccccc;
+      background: rgba(255, 255, 255, 0.03);
+    }
+    .icon {
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .vscode-activity-icon:hover .icon {
+      transform: scale(1.1);
+    }
+    .vscode-activity-icon:active .icon {
+      transform: scale(0.95);
+    }
+    .label { 
+      font-size: 9px; 
+      margin-top: 4px; 
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      opacity: 0.8;
+    }
   `]
 })
 export class ActivityBarIconComponent {
-    @Input() icon: string = '';
-    @Input() label: string = '';
-    @Input() active: boolean = false;
-    @Input() badge: number | string | null = null;
+  @Input() icon: string = '';
+  @Input() label: string = '';
+  @Input() active: boolean = false;
+  @Input() badge: number | string | null = null;
 
-    @Output() onClick = new EventEmitter<void>();
+  @Output() onClick = new EventEmitter<void>();
 }

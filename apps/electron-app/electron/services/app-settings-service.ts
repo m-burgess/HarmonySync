@@ -19,7 +19,33 @@ export interface AppSettings {
     maxServiceAge: number; // days
     lastImportedService?: string;
   };
-  // Add other settings sections as needed
+  preServicePlaylistStartTime: string;
+  countdownVideoStartTime: string;
+  serviceTimes: {
+    id: string;
+    name: string;
+    startTime: string;
+    endTime: string;
+  }[];
+  mixer: {
+    masterVolume: number;
+    trackDefaults: {
+      name: string;
+      volume: number;
+      pan: number;
+    }[];
+  };
+  lyrics: {
+    fontFamily: string;
+    fontSize: number;
+    fontWeight: string;
+    color: string;
+    textShadow: string;
+    textAlign: 'left' | 'center' | 'right';
+    verticalAlignment: 'top' | 'middle' | 'bottom';
+    bottomOffset: number;
+    topOffset: number;
+  };
   display?: any;
   audio?: any;
 }
@@ -30,6 +56,27 @@ const DEFAULT_SETTINGS: AppSettings = {
     autoImportOnStartup: false,
     cleanupOldServices: true,
     maxServiceAge: 7,
+  },
+  preServicePlaylistStartTime: '08:45',
+  countdownVideoStartTime: '08:55',
+  serviceTimes: [
+    { id: 'service-1', name: 'Morning Service', startTime: '09:00', endTime: '10:30' },
+    { id: 'service-2', name: 'Second Service', startTime: '11:00', endTime: '12:30' }
+  ],
+  mixer: {
+    masterVolume: 0.8,
+    trackDefaults: []
+  },
+  lyrics: {
+    fontFamily: 'Inter',
+    fontSize: 48,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    textShadow: '0 2px 4px rgba(0,0,0,0.5)',
+    textAlign: 'center',
+    verticalAlignment: 'bottom',
+    bottomOffset: 10,
+    topOffset: 0
   },
 };
 
@@ -43,7 +90,7 @@ export class AppSettingsService {
     const configDir = path.join(os.homedir(), '.harmonysync');
     this.settingsPath = path.join(configDir, 'app-settings.json');
     this.settings = { ...DEFAULT_SETTINGS };
-    
+
     // Ensure directory exists
     fs.ensureDirSync(configDir);
   }

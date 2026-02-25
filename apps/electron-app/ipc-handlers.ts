@@ -1361,26 +1361,29 @@ class IPCHandlerManager {
 
     this.ipcMain.handle('audio:saveMixerConfig', async (_event, songPath: string, config: any) => {
       try {
-        await fetch('http://127.0.0.1:3001/api/mixer/save', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ songPath, config }),
-        });
+        if (!songPath) return { success: false, error: 'No song path provided' };
+        const configPath = path.join(songPath, '.mixer.json');
+        await fs.writeJson(configPath, config, { spaces: 2 });
+        console.log('[audio:saveMixerConfig] Saved to:', configPath);
+        return { success: true };
       } catch (error) {
         console.error('[audio:saveMixerConfig] Error:', error);
+        return { success: false, error: error instanceof Error ? error.message : String(error) };
       }
     });
 
     this.ipcMain.handle('audio:loadMixerConfig', async (_event, songPath: string) => {
       try {
-        const response = await fetch(`http://127.0.0.1:3001/api/mixer/load?songPath=${encodeURIComponent(songPath)}`);
-        if (!response.ok) {
-          // Silently return null if audio service isn't available - this is optional config loading
-          return null;
+        if (!songPath) return null;
+        const configPath = path.join(songPath, '.mixer.json');
+        if (await fs.pathExists(configPath)) {
+          const config = await fs.readJson(configPath);
+          console.log('[audio:loadMixerConfig] Loaded from:', configPath);
+          return config;
         }
-        return await response.json();
+        return null;
       } catch (error) {
-        // Audio service may not be running - this is OK
+        console.error('[audio:loadMixerConfig] Error:', error);
         return null;
       }
     });
@@ -1475,48 +1478,23 @@ class IPCHandlerManager {
     });
 
     this.ipcMain.handle('display:slide', async (_event, content: any) => {
-      return await this.services.displayService.displaySlide(
-        this.services.audienceWindow,
-        this.services.confidenceWindow,
-        this.services.lowerThirdsWindow,
-        content
-      );
+      return await this.services.displayService.displaySlide(content);
     });
 
     this.ipcMain.handle('display:blackScreen', async () => {
-      return await this.services.displayService.blackScreen(this.services.audienceWindow);
+      return await this.services.displayService.blackScreen();
     });
 
     this.ipcMain.handle('display:clearAll', async () => {
-      // Send clear message to all display windows
-      try {
-        const windows = [
-          this.services.audienceWindow(),
-          this.services.confidenceWindow(),
-          this.services.lowerThirdsWindow(),
-        ];
-        for (const win of windows) {
-          if (win) {
-            win.webContents.send('display:clear');
-          }
-        }
-      } catch (error) {
-        console.error('[display:clearAll] Error:', error);
-      }
+      return await this.services.displayService.clearAll();
     });
 
     this.ipcMain.handle('display:updateLowerThirds', async (_event, textData: any) => {
-      return await this.services.displayService.updateLowerThirds(this.services.lowerThirdsWindow, textData);
+      return await this.services.displayService.updateLowerThirds(textData);
     });
 
     this.ipcMain.handle('display:broadcast', async (_event, channel: string, data: any) => {
-      return await this.services.displayService.broadcast(
-        this.services.audienceWindow,
-        this.services.confidenceWindow,
-        this.services.lowerThirdsWindow,
-        channel,
-        data
-      );
+      return await this.services.displayService.broadcast(channel, data);
     });
   }
 
@@ -1525,55 +1503,39 @@ class IPCHandlerManager {
    */
   private registerWindowServiceHandlers(): void {
     this.ipcMain.handle('window:showAudience', async () => {
-      return await this.services.windowService.showAudience(this.services.audienceWindow);
+      return await this.services.windowService.showAudience();
     });
 
     this.ipcMain.handle('window:hideAudience', async () => {
-      return await this.services.windowService.hideAudience(this.services.audienceWindow);
+      return await this.services.windowService.hideAudience();
     });
 
     this.ipcMain.handle('window:showConfidence', async () => {
-      return await this.services.windowService.showConfidence(this.services.confidenceWindow);
+      return await this.services.windowService.showConfidence();
     });
 
     this.ipcMain.handle('window:hideConfidence', async () => {
-      return await this.services.windowService.hideConfidence(this.services.confidenceWindow);
+      return await this.services.windowService.hideConfidence();
     });
 
     this.ipcMain.handle('window:showLowerThirds', async () => {
-      return await this.services.windowService.showLowerThirds(this.services.lowerThirdsWindow);
+      return await this.services.windowService.showLowerThirds();
     });
 
     this.ipcMain.handle('window:hideLowerThirds', async () => {
-      return await this.services.windowService.hideLowerThirds(this.services.lowerThirdsWindow);
+      return await this.services.windowService.hideLowerThirds();
     });
 
     this.ipcMain.handle('window:toggle', async (_event, windowName: string) => {
-      const getWindow =
-        windowName === 'audience'
-          ? this.services.audienceWindow
-          : windowName === 'confidence'
-            ? this.services.confidenceWindow
-            : this.services.lowerThirdsWindow;
-      return await this.services.windowService.toggleWindow(getWindow);
+      return await this.services.windowService.toggleWindow(windowName as any);
     });
 
     this.ipcMain.handle('window:setAlwaysOnTop', async (_event, windowName: string, alwaysOnTop: boolean) => {
-      const getWindow =
-        windowName === 'audience'
-          ? this.services.audienceWindow
-          : windowName === 'confidence'
-            ? this.services.confidenceWindow
-            : this.services.lowerThirdsWindow;
-      return await this.services.windowService.setAlwaysOnTop(getWindow, alwaysOnTop);
+      return await this.services.windowService.setAlwaysOnTop(windowName as any, alwaysOnTop);
     });
 
     this.ipcMain.handle('window:getAllStatus', async () => {
-      return await this.services.windowService.getAllWindowsStatus(
-        this.services.audienceWindow,
-        this.services.confidenceWindow,
-        this.services.lowerThirdsWindow
-      );
+      return await this.services.windowService.getAllWindowsStatus();
     });
   }
 

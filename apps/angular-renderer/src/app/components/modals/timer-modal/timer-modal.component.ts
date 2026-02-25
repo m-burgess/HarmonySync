@@ -1,33 +1,32 @@
-import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ModalComponent } from '../../vscode-ui/modal/modal.component';
 import { VSCodeButtonComponent } from '../../vscode-ui/vscode-button/vscode-button.component';
 import { VSCodeInputComponent } from '../../vscode-ui/vscode-input/vscode-input.component';
+import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
+import { Timer } from '../../../models/timer.models';
+import { Display } from '../../../models/display.models';
 
-export interface Timer {
-    id?: string;
-    name: string;
-    durationMinutes: number;
-    targetDisplays: string[];
-    status?: 'stopped' | 'running' | 'paused';
+export interface TimerDialogData {
+    timer?: Timer | null;
+    displays: Display[];
+    title?: string;
 }
 
 @Component({
     selector: 'app-timer-modal',
     standalone: true,
-    imports: [CommonModule, FormsModule, ModalComponent, VSCodeButtonComponent, VSCodeInputComponent],
+    imports: [CommonModule, FormsModule, VSCodeButtonComponent, VSCodeInputComponent],
     templateUrl: './timer-modal.component.html',
     styleUrl: './timer-modal.component.scss'
 })
 export class TimerModalComponent implements OnInit {
-    @Input() isOpen = false;
-    @Input() timer: Timer | null = null;
-    @Input() displays: any[] = [];
-    @Input() title = 'Create Timer';
+    private dialogRef = inject(DialogRef<Omit<Timer, 'id' | 'status' | 'createdAt'>>);
+    private data = inject<TimerDialogData>(DIALOG_DATA);
 
-    @Output() onClose = new EventEmitter<void>();
-    @Output() onSave = new EventEmitter<Omit<Timer, 'id' | 'status'>>();
+    timer = this.data.timer;
+    displays = this.data.displays;
+    title = this.data.title || 'Create Timer';
 
     name = '';
     hours = '0';
@@ -38,12 +37,6 @@ export class TimerModalComponent implements OnInit {
 
     ngOnInit() {
         this.resetForm();
-    }
-
-    ngOnChanges() {
-        if (this.isOpen) {
-            this.resetForm();
-        }
     }
 
     resetForm() {
@@ -93,12 +86,16 @@ export class TimerModalComponent implements OnInit {
         const h = parseInt(this.hours) || 0;
         const m = parseInt(this.minutes) || 0;
 
-        this.onSave.emit({
+        this.dialogRef.close({
             name: this.name.trim(),
             durationMinutes: h * 60 + m,
             targetDisplays: this.selectedDisplays
         });
 
         this.isSaving = false;
+    }
+
+    close() {
+        this.dialogRef.close();
     }
 }

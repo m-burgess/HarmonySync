@@ -1,63 +1,61 @@
-.mixer-btn {
-    @apply text-[9px] font-bold w-5 h-5 flex items-center justify-center rounded transition-colors;
-    background: var(--vscode-button-secondaryBackground);
-    color: var(--vscode-button-secondaryForeground);
-    border: 1px solid var(--vscode-border);
-
-    &:hover {
-        background: var(--vscode-button-secondaryHoverBackground);
-    }
-
-    &.active {
-        &.solo-btn {
-            background: var(--vscode-blue);
-            color: white;
-            border-color: var(--vscode-blue);
-        }
-
-        &.mute-btn {
-            background: var(--vscode-errorForeground);
-            color: white;
-            border-color: var(--vscode-errorForeground);
-        }
-    }
-}
-
-.track-card {
-    &:hover {
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    }
-}
-
-.pan-slider {
-    &::-webkit-slider-runnable-track {
-        background: linear-gradient(to right,
-                var(--vscode-border) 0%,
-                var(--vscode-border) 48%,
-                var(--vscode-focusBorder) 48%,
-                var(--vscode-focusBorder) 52%,
-                var(--vscode-border) 52%,
-                var(--vscode-border) 100%);
-    }
-}
-
-input[type="range"] {
-    @apply h-1.5 rounded-full appearance-none cursor-pointer;
-    background: var(--vscode-button-secondaryBackground);
-
-    &::-webkit-slider-thumb {
-        @apply w-3 h-3 rounded-full appearance-none border-0;
-        background: var(--vscode-foreground);
-        margin-top: -3px;
-        box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
-    }
-
-    &::-webkit-slider-runnable-track {
-        @apply h-1.5 rounded-full;
-    }
-}
-
 :host {
     display: block;
     height: 100%;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* Stem Mixer Card Interaction */
+.track-card {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    &.muted-state {
+        opacity: 0.6;
+        background-color: #1e1e1e !important;
+        border-color: #2a2a2a !important;
+
+        &:hover {
+            opacity: 0.8;
+            border-color: #333 !important;
+        }
+    }
+}
+
+/* Status Indicator Glows */
+.active-glow {
+    box-shadow: 0 0 15px rgba(0, 122, 204, 0.1);
+}
+
+@keyframes pulse-green {
+    0% {
+        opacity: 0.4;
+    }
+
+    50% {
+        opacity: 0.8;
+    }
+
+    100% {
+        opacity: 0.4;
+    }
+}
+
+.animate-pulse-subtle {
+    animation: pulse-green 2s infinite;
 }

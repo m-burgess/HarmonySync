@@ -14,6 +14,9 @@ importers:
 
   apps/angular-renderer:
     dependencies:
+      '@angular/cdk':
+        specifier: ^21.1.5
+        version: 21.1.5(@angular/common@21.1.5(@angular/core@21.1.5(@angular/compiler@21.1.5)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.1.5(@angular/compiler@21.1.5)(rxjs@7.8.2))(@angular/platform-browser@21.1.5(@angular/common@21.1.5(@angular/core@21.1.5(@angular/compiler@21.1.5)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.1.5(@angular/compiler@21.1.5)(rxjs@7.8.2)))(rxjs@7.8.2)
       '@angular/common':
         specifier: ^21.1.0
         version: 21.1.5(@angular/core@21.1.5(@angular/compiler@21.1.5)(rxjs@7.8.2))(rxjs@7.8.2)
@@ -38,6 +41,12 @@ importers:
       '@ng-icons/heroicons':
         specifier: ^33.1.0
         version: 33.1.0
+      monaco-editor:
+        specifier: ^0.55.1
+        version: 0.55.1
+      ngx-monaco-editor-v2:
+        specifier: ^21.1.4
+        version: 21.1.4(@angular/common@21.1.5(@angular/core@21.1.5(@angular/compiler@21.1.5)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.1.5(@angular/compiler@21.1.5)(rxjs@7.8.2))(monaco-editor@0.55.1)
       rxjs:
         specifier: ~7.8.0
         version: 7.8.2
@@ -444,6 +453,14 @@ packages:
         optional: true
       vitest:
         optional: true
+
+  '@angular/cdk@21.1.5':
+    resolution: {integrity: sha512-AlQPgqe3LLwXCyrDwYSX3m/WKnl2ppCMW7Gb+7bJpIcpMdWYEpSOSQF318jXGYIysKg43YbdJ1tWhJWY/cbn3w==}
+    peerDependencies:
+      '@angular/common': ^21.0.0 || ^22.0.0
+      '@angular/core': ^21.0.0 || ^22.0.0
+      '@angular/platform-browser': ^21.0.0 || ^22.0.0
+      rxjs: ^6.5.3 || ^7.4.0
 
   '@angular/cli@21.1.4':
     resolution: {integrity: sha512-XsMHgxTvHGiXXrhYZz3zMZYhYU0gHdpoHKGiEKXwcx+S1KoYbIssyg6oF2Kq49ZaE0OYCTKjnvgDce6ZqdkJ/A==}
@@ -4241,6 +4258,13 @@ packages:
   neo-async@2.6.2:
     resolution: {integrity: sha512-Yd3UES5mWCSqR+qNT93S3UoYUkqAZ9lLg8a7g9rimsWmYGK8cVToA4/sF3RrshdyV3sAGMXVUmpMYOw+dLpOuw==}
 
+  ngx-monaco-editor-v2@21.1.4:
+    resolution: {integrity: sha512-dZu3dY3D1YXPTIDRn9zOERdtDtGy1SOztpWG6gJlaj6NMSV59kNR/hfzaP+L3BukP6Ve07f3bIyvsx6Pz7uOaA==}
+    peerDependencies:
+      '@angular/common': ^21.1.4
+      '@angular/core': ^21.1.4
+      monaco-editor: ^0.55.1
+
   node-addon-api@6.1.0:
     resolution: {integrity: sha512-+eawOlIgy680F0kBzPUNFhMZGtJ1YmqM6l4+Crf4IkImjYrO/mqPwRMh352g23uIaQKFItcQ64I7KMaJxHgAVA==}
 
@@ -5648,6 +5672,15 @@ snapshots:
       - terser
       - tsx
       - yaml
+
+  '@angular/cdk@21.1.5(@angular/common@21.1.5(@angular/core@21.1.5(@angular/compiler@21.1.5)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.1.5(@angular/compiler@21.1.5)(rxjs@7.8.2))(@angular/platform-browser@21.1.5(@angular/common@21.1.5(@angular/core@21.1.5(@angular/compiler@21.1.5)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.1.5(@angular/compiler@21.1.5)(rxjs@7.8.2)))(rxjs@7.8.2)':
+    dependencies:
+      '@angular/common': 21.1.5(@angular/core@21.1.5(@angular/compiler@21.1.5)(rxjs@7.8.2))(rxjs@7.8.2)
+      '@angular/core': 21.1.5(@angular/compiler@21.1.5)(rxjs@7.8.2)
+      '@angular/platform-browser': 21.1.5(@angular/common@21.1.5(@angular/core@21.1.5(@angular/compiler@21.1.5)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.1.5(@angular/compiler@21.1.5)(rxjs@7.8.2))
+      parse5: 8.0.0
+      rxjs: 7.8.2
+      tslib: 2.8.1
 
   '@angular/cli@21.1.4(@types/node@25.2.0)(chokidar@5.0.0)':
     dependencies:
@@ -9905,6 +9938,13 @@ snapshots:
   negotiator@1.0.0: {}
 
   neo-async@2.6.2: {}
+
+  ngx-monaco-editor-v2@21.1.4(@angular/common@21.1.5(@angular/core@21.1.5(@angular/compiler@21.1.5)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.1.5(@angular/compiler@21.1.5)(rxjs@7.8.2))(monaco-editor@0.55.1):
+    dependencies:
+      '@angular/common': 21.1.5(@angular/core@21.1.5(@angular/compiler@21.1.5)(rxjs@7.8.2))(rxjs@7.8.2)
+      '@angular/core': 21.1.5(@angular/compiler@21.1.5)(rxjs@7.8.2)
+      monaco-editor: 0.55.1
+      tslib: 2.8.1
 
   node-addon-api@6.1.0:
     optional: true

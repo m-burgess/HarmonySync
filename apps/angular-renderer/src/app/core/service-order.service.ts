@@ -1,9 +1,13 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
+import { from, Observable, of } from 'rxjs';
+import { catchError, map, tap } from 'rxjs/operators';
 import { ElectronService } from './electron.service';
 import { AudioService } from './audio.service';
 import { SlideService } from './slide.service';
-import { from, Observable, of } from 'rxjs';
-import { catchError, map, tap } from 'rxjs/operators';
+import { FileService } from './file.service';
+import { ConfigService } from './config.service';
+import { MessagingService } from './messaging.service';
+import { EVENT_TYPES } from '../models/messaging.models';
 
 export interface ServiceOrderItem {
     id?: string;
@@ -24,12 +28,16 @@ export class ServiceOrderService {
     private electron = inject(ElectronService);
     private audio = inject(AudioService);
     private slideService = inject(SlideService);
+    private fileService = inject(FileService);
+    private config = inject(ConfigService);
+    private messaging = inject(MessagingService);
 
     // Reactive state
     readonly serviceOrder = signal<ServiceOrderItem[]>([]);
     readonly currentSongIndex = signal<number>(-1);
     readonly isLoading = signal<boolean>(false);
     readonly error = signal<string | null>(null);
+    readonly autoplayEnabled = signal<boolean>(false);
 
     // Derived state
     readonly hasSongs = computed(() => this.serviceOrder().length > 0);
@@ -44,44 +52,105 @@ export class ServiceOrderService {
         this.electron.on('service-order-loaded', (data: { serviceOrder: ServiceOrderItem[] }) => {
             if (data && data.serviceOrder) {
                 this.serviceOrder.set(data.serviceOrder);
+                this.currentSongIndex.set(-1); // Reset index on new list
             }
         });
+
+        this.electron.on('video-ended', () => {
+            const settings = this.config.settings();
+            if (settings?.serviceOrder?.advanceOnVideoEnd) {
+                console.log('[ServiceOrder] Video ended, advancing because advanceOnVideoEnd is true');
+                this.advanceToNext();
+            }
+        });
+
+        this.messaging.subscribe<any>(EVENT_TYPES.AUDIO_PLAYBACK_FINISHED).subscribe(() => {
+            const settings = this.config.settings();
+            if (settings?.serviceOrder?.advanceOnVideoEnd) {
+                console.log('[ServiceOrder] Audio finished, advancing because advanceOnVideoEnd is true');
+                this.advanceToNext();
+            }
+        });
+
+        // Initialize watch folder if configured
+        setTimeout(() => this.initWatchFolder(), 2000);
+    }
+
+    initWatchFolder(): void {
+        const settings = this.config.settings();
+        if (!settings?.serviceOrder?.watchFolder) return;
+
+        const watchFolder = settings.serviceOrder.watchFolder;
+        console.log(`[ServiceOrder] Initializing watch folder scanning: ${watchFolder}`);
+
+        // Initial scan
+        this.scanWatchFolder(watchFolder);
+
+        // Setup polling every 30 seconds for new zips
+        setInterval(() => this.scanWatchFolder(watchFolder), 30000);
+    }
+
+    private scanWatchFolder(path: string): void {
+        this.electron.invoke('service-order:scanForZips', path).then((res: any) => {
+            if (res.success && res.zips && res.zips.length > 0) {
+                console.log(`[ServiceOrder] Found ${res.zips.length} zips in watch folder`);
+                for (const zipPath of res.zips) {
+                    this.importZip(zipPath);
+                }
+            }
+        });
+    }
+
+    private importZip(zipPath: string): void {
+        console.log(`[ServiceOrder] Importing zip: ${zipPath}`);
+        this.electron.invoke('service-order:importZip', zipPath).then((res: any) => {
+            if (res.success && res.metadata) {
+                console.log(`[ServiceOrder] Import successful: ${res.metadata.name}`);
+                // Load the imported service order
+                this.electron.invoke('service-order:load', res.metadata.id);
+            }
+        });
+    }
+
+    toggleAutoplay(): void {
+        this.autoplayEnabled.update(v => !v);
     }
 
     async addFolders(): Promise<void> {
         this.isLoading.set(true);
         this.error.set(null);
 
-        try {
-            const result = await this.electron.invoke('dialog:selectFolders', { title: 'Add Folders to Service Order' });
+        this.fileService.selectFolders('Add Folders to Service Order').subscribe({
+            next: async (filePaths) => {
+                if (!filePaths || filePaths.length === 0) {
+                    this.isLoading.set(false);
+                    return;
+                }
 
-            if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+                for (const folderPath of filePaths) {
+                    // Check if already in service order
+                    if (this.serviceOrder().some(item => item.path === folderPath)) {
+                        continue;
+                    }
+
+                    // Load metadata
+                    const metadata = await this.electron.invoke('service-order:loadSongMetadata', folderPath);
+
+                    this.serviceOrder.update(order => [...order, metadata]);
+
+                    // Auto-preload if it's a song
+                    if (metadata.type === 'song' && metadata.hasAudio) {
+                        this.preloadSong(metadata);
+                    }
+                }
                 this.isLoading.set(false);
-                return;
+            },
+            error: (err) => {
+                console.error('Failed to add folders:', err);
+                this.error.set(err instanceof Error ? err.message : String(err));
+                this.isLoading.set(false);
             }
-
-            for (const folderPath of result.filePaths) {
-                // Check if already in service order
-                if (this.serviceOrder().some(item => item.path === folderPath)) {
-                    continue;
-                }
-
-                // Load metadata
-                const metadata = await this.electron.invoke('service-order:loadSongMetadata', folderPath);
-
-                this.serviceOrder.update(order => [...order, metadata]);
-
-                // Auto-preload if it's a song
-                if (metadata.type === 'song' && metadata.hasAudio) {
-                    this.preloadSong(metadata);
-                }
-            }
-        } catch (err) {
-            console.error('Failed to add folders:', err);
-            this.error.set(err instanceof Error ? err.message : String(err));
-        } finally {
-            this.isLoading.set(false);
-        }
+        });
     }
 
     async preloadSong(item: ServiceOrderItem): Promise<void> {
@@ -90,23 +159,23 @@ export class ServiceOrderService {
         const songId = item.id || item.path.split(/[\\/]/).filter(Boolean).pop() || 'song';
 
         // Get audio files in folder
-        try {
-            const fileNames = await this.electron.invoke('fs:readDir', item.path);
-            const audioExtensions = ['.mp3', '.wav', '.ogg', '.flac', '.m4a'];
-            const sep = item.path.includes('/') ? '/' : '\\';
-            const audioFiles = fileNames
-                .filter((f: string) => audioExtensions.some(ext => f.toLowerCase().endsWith(ext)))
-                .map((f: string) => `${item.path}${sep}${f}`);
+        this.fileService.readDir(item.path).subscribe({
+            next: (fileNames) => {
+                const audioExtensions = ['.mp3', '.wav', '.ogg', '.flac', '.m4a'];
+                const sep = item.path.includes('/') ? '/' : '\\';
+                const audioFiles = fileNames
+                    .filter((f: string) => audioExtensions.some(ext => f.toLowerCase().endsWith(ext)))
+                    .map((f: string) => `${item.path}${sep}${f}`);
 
-            if (audioFiles.length > 0) {
-                this.audio.preloadSong(songId, audioFiles).subscribe({
-                    next: () => console.log(`✓ Preloaded ${item.name}`),
-                    error: (err) => console.error(`Failed to preload ${item.name}:`, err)
-                });
-            }
-        } catch (err) {
-            console.error('Failed to read folder for preload:', err);
-        }
+                if (audioFiles.length > 0) {
+                    this.audio.preloadSong(songId, audioFiles).subscribe({
+                        next: () => console.log(`✓ Preloaded ${item.name}`),
+                        error: (err) => console.error(`Failed to preload ${item.name}:`, err)
+                    });
+                }
+            },
+            error: (err) => console.error('Failed to read folder for preload:', err)
+        });
     }
 
     removeItem(item: ServiceOrderItem): void {
@@ -159,6 +228,16 @@ export class ServiceOrderService {
             this.error.set(err instanceof Error ? err.message : String(err));
         } finally {
             this.isLoading.set(false);
+        }
+    }
+
+    async advanceToNext(): Promise<void> {
+        const index = this.currentSongIndex();
+        const order = this.serviceOrder();
+
+        if (index < order.length - 1) {
+            const nextItem = order[index + 1];
+            await this.loadItem(nextItem, index + 1);
         }
     }
 }

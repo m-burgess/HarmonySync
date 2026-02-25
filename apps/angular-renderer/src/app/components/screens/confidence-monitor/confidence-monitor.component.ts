@@ -1,10 +1,11 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ElectronService } from '../../../core/electron.service';
+import { LyricTransitionService } from '../../../core/lyric-transition.service';
 
 type LyricsContent = { type: 'lyrics'; text: string[] };
-type ImageContent = { type: 'image'; path?: string; name?: string };
-type VideoContent = { type: 'video'; path?: string; duration?: number };
+type ImageContent = { type: 'image'; path: string; name: string };
+type VideoContent = { type: 'video'; videoId: string };
 type SlideContent = LyricsContent | ImageContent | VideoContent | any;
 
 interface TimerState {
@@ -31,6 +32,7 @@ export class ConfidenceMonitorComponent implements OnInit, OnDestroy {
 
     private clockInterval: any = null;
     private unlisteners: (() => void)[] = [];
+    private transition = inject(LyricTransitionService);
 
     constructor(private electronService: ElectronService) { }
 
@@ -59,7 +61,7 @@ export class ConfidenceMonitorComponent implements OnInit, OnDestroy {
     private setupEventListeners() {
         const ulLyrics = this.electronService.on('display-confidence-lyrics', (payload: any) => {
             console.log('Confidence: display-confidence-lyrics received', payload);
-            this.currentSlide = { type: 'lyrics', text: payload.current || [] };
+            this.transition.transitionTo({ type: 'lyrics', text: payload.current || [] });
             this.nextSlide = { type: 'lyrics', text: payload.next || [] };
             this.isImageDisplay = false;
             this.videoCountdown = null;
@@ -68,7 +70,7 @@ export class ConfidenceMonitorComponent implements OnInit, OnDestroy {
 
         const ulClear = this.electronService.on('clear-confidence-display', () => {
             console.log('Confidence: clear-confidence-display received');
-            this.currentSlide = null;
+            this.transition.clear();
             this.nextSlide = null;
             this.isImageDisplay = false;
             this.videoCountdown = null;
@@ -108,8 +110,19 @@ export class ConfidenceMonitorComponent implements OnInit, OnDestroy {
         this.unlisteners.forEach(u => u());
     }
 
-    get isLyricsMode(): boolean { return this.currentSlide?.type === 'lyrics'; }
-    get isVideoMode(): boolean { return this.currentSlide?.type === 'video'; }
+    get content() { return this.transition.currentContent(); }
+    get isLyricsMode(): boolean {
+        const c = this.content;
+        return c?.type === 'lyrics';
+    }
+    get isVideoMode(): boolean {
+        const c = this.transition.currentContent();
+        return c?.type === 'video';
+    }
+
+    get opacity(): number {
+        return this.transition.contentOpacity();
+    }
 
     get timerDisplay() {
         if (!this.timer.active || this.timer.total === 0) return null;

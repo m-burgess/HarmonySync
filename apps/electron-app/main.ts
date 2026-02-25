@@ -187,6 +187,7 @@ class ElectronApplication {
   private audienceWindow: BrowserWindow | null = null;
   private confidenceWindow: BrowserWindow | null = null;
   private lowerThirdsWindow: BrowserWindow | null = null;
+  private preserviceMusicWindow: BrowserWindow | null = null;
   private displayServiceInstance: any = null;
   private windowServiceInstance: any = null;
   private serviceManager: ServiceProcessManager; private serviceOrderManagerReady: boolean = false;
@@ -225,6 +226,7 @@ class ElectronApplication {
       this.createAudienceWindow();
       this.createConfidenceWindow();
       this.createLowerThirdsWindow();
+      this.createPreserviceMusicWindow();
 
       // Instantiate display service with window getters if possible
       try {
@@ -394,6 +396,7 @@ class ElectronApplication {
         this.audienceWindow?.close();
         this.confidenceWindow?.close();
         this.lowerThirdsWindow?.close();
+        this.preserviceMusicWindow?.close();
 
         // Stop services
         await httpServer.stop();
@@ -500,6 +503,28 @@ class ElectronApplication {
       this.lowerThirdsWindow.loadFile(
         path.join(__dirname, '../../angular-renderer/dist/angular-renderer/browser/index.html'),
         { hash: '/lower-thirds' }
+      );
+    }
+  }
+
+  /**
+   * Create pre-service music manager window
+   */
+  private createPreserviceMusicWindow(): void {
+    this.preserviceMusicWindow = this.createSecondaryWindow({
+      width: 800,
+      height: 600,
+      frame: true,
+      show: false,
+    });
+
+    // Load the Angular app with the preservice route
+    if (isDev) {
+      this.preserviceMusicWindow.loadURL(`${ANGULAR_DEV_SERVER_URL}#/preservice`);
+    } else {
+      this.preserviceMusicWindow.loadFile(
+        path.join(__dirname, '../../angular-renderer/dist/angular-renderer/browser/index.html'),
+        { hash: '/preservice' }
       );
     }
   }
@@ -617,6 +642,7 @@ class ElectronApplication {
       audienceWindow: () => this.audienceWindow,
       confidenceWindow: () => this.confidenceWindow,
       lowerThirdsWindow: () => this.lowerThirdsWindow,
+      preserviceMusicWindow: () => this.preserviceMusicWindow,
       jsonStorage,
       ffmpegService,
       audioService,
@@ -673,6 +699,7 @@ class ElectronApplication {
   public getAudienceWindow = (): BrowserWindow | null => this.audienceWindow;
   public getConfidenceWindow = (): BrowserWindow | null => this.confidenceWindow;
   public getLowerThirdsWindow = (): BrowserWindow | null => this.lowerThirdsWindow;
+  public getPreserviceMusicWindow = (): BrowserWindow | null => this.preserviceMusicWindow;
 }
 
 // ==================== Application Lifecycle ====================

@@ -1,28 +1,56 @@
-import { Component, HostListener, Inject, PLATFORM_ID, OnInit, inject, computed } from '@angular/core';
+import { Component, HostListener, Inject, PLATFORM_ID, OnInit, inject, computed, signal } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { ServiceOrderManagerComponent } from '../service-order/service-order-manager/service-order-manager.component';
 import { SlideManagerComponent } from '../slides/slide-manager/slide-manager.component';
 import { LyricsColumnComponent } from '../lyrics/lyrics-column/lyrics-column.component';
 import { ActivityBarIconComponent } from '../vscode-ui/activity-bar-icon/activity-bar-icon.component';
-import { ScreenButtonsComponent } from '../screens/screen-buttons/screen-buttons.component';
 import { MixerSidebarComponent } from '../audio/mixer-sidebar/mixer-sidebar';
 import { TimerModalComponent } from '../modals/timer-modal/timer-modal.component';
+import { Dialog, DialogModule } from '@angular/cdk/dialog';
 import { ElectronService } from '../../core/electron.service';
 import { ServiceOrderService } from '../../core/service-order.service';
 import { SlideService } from '../../core/slide.service';
 import { DisplayService } from '../../core/display.service';
+import { TimerService } from '../../core/timer.service';
+import { ConfigService } from '../../core/config.service';
+import { TimerListComponent } from '../timer-list/timer-list.component';
+import { CreateTimerRequest } from '../../models/timer.models';
+import { SettingsComponent } from '../settings/settings.component';
+import { NgIconComponent, provideIcons } from '@ng-icons/core';
+import { heroPresentationChartBar, heroClock, heroCog, heroComputerDesktop, heroTv, heroQueueList, heroAdjustmentsHorizontal, heroBolt, heroCalendarDays, heroCodeBracket } from '@ng-icons/heroicons/outline';
+import { SchedulerComponent } from '../screens/scheduler/scheduler.component';
+import { ScriptEditorComponent } from '../screens/script-editor/script-editor.component';
+
 @Component({
     selector: 'app-main-layout',
     standalone: true,
     imports: [
         CommonModule,
         ActivityBarIconComponent,
-        ScreenButtonsComponent,
         MixerSidebarComponent,
         ServiceOrderManagerComponent,
         SlideManagerComponent,
         LyricsColumnComponent,
-        TimerModalComponent
+        TimerListComponent,
+        SettingsComponent,
+        SchedulerComponent,
+        ScriptEditorComponent,
+        NgIconComponent,
+        DialogModule
+    ],
+    providers: [
+        provideIcons({
+            heroPresentationChartBar,
+            heroClock,
+            heroCog,
+            heroComputerDesktop,
+            heroTv,
+            heroQueueList,
+            heroAdjustmentsHorizontal,
+            heroBolt,
+            heroCalendarDays,
+            heroCodeBracket
+        })
     ],
     templateUrl: './main-layout.component.html',
     styleUrl: './main-layout.component.scss'
@@ -34,17 +62,29 @@ export class MainLayoutComponent implements OnInit {
     sidebarWidth = this.DEFAULT_SIDEBAR_WIDTH;
     mixerWidth = this.DEFAULT_MIXER_WIDTH;
 
-    isTimerModalOpen = false;
-
     // Services
     serviceOrderService = inject(ServiceOrderService);
     slideService = inject(SlideService);
     displayService = inject(DisplayService);
+    timerService = inject(TimerService);
     electronService = inject(ElectronService);
+    configService = inject(ConfigService);
+    private dialog = inject(Dialog);
+
+    // Sidebar state
+    activeSidebar = signal<'explorer' | 'timers' | 'settings'>('explorer');
+    showScheduler = signal<boolean>(false);
+    showScriptEditor = signal<boolean>(false);
 
     // Presentation state
     currentLyrics = computed(() => this.serviceOrderService.currentSong()?.lyrics || null);
+    currentItemType = computed(() => this.serviceOrderService.currentSong()?.type || null);
     isLoadingTracks = computed(() => this.serviceOrderService.isLoading());
+    isTimerActive = computed(() => this.timerService.timers().some(t => t.status === 'running'));
+    runningTimersCount = computed(() => {
+        const count = this.timerService.timers().filter(t => t.status === 'running').length;
+        return count > 0 ? count : null;
+    });
 
     isBrowser: boolean;
 
@@ -163,21 +203,40 @@ export class MainLayoutComponent implements OnInit {
         }
     }
 
-    openAudioSettings() { console.log('Open Audio Settings'); }
-    openDisplaySettings() { console.log('Open Display Settings'); }
-    openPreferences() { console.log('Open Preferences'); }
-
-    openTimers() {
-        this.refreshDisplays();
-        this.isTimerModalOpen = true;
+    isScreenActive(screenType: string): boolean {
+        return this.displayService.windowStatus()[screenType]?.visible || false;
     }
 
-    async handleSaveTimer(timer: any) {
-        try {
-            await this.electronService.invoke('timer:create', timer);
-            this.isTimerModalOpen = false;
-        } catch (err) {
-            console.error('Failed to save timer:', err);
-        }
+    openAudioSettings() { console.log('Open Audio Settings'); }
+    openDisplaySettings() { console.log('Open Display Settings'); }
+    openPreferences() { this.activeSidebar.set('settings'); }
+
+    setActiveSidebar(sidebar: 'explorer' | 'timers' | 'settings') {
+        this.activeSidebar.set(sidebar);
+    }
+
+    openTimers() {
+        this.activeSidebar.set('timers');
+    }
+
+    toggleScheduler() {
+        this.showScheduler.set(!this.showScheduler());
+    }
+
+    toggleScriptEditor() {
+        this.showScriptEditor.set(!this.showScriptEditor());
+    }
+
+
+    async handleSaveTimer(timer: CreateTimerRequest) {
+        this.timerService.createTimer(timer).subscribe({
+            next: () => {
+                console.log('Timer saved successfully');
+                // Could close a modal here if needed
+            },
+            error: (err) => {
+                console.error('Failed to save timer:', err);
+            }
+        });
     }
 }

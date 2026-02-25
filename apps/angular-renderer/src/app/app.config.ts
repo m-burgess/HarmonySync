@@ -2,6 +2,7 @@ import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/
 import { provideHttpClient } from '@angular/common/http';
 import { provideRouter, withHashLocation } from '@angular/router';
 import { routes } from './app.routes';
+import { provideMonacoEditor } from 'ngx-monaco-editor-v2';
 import { provideIcons } from '@ng-icons/core';
 import {
   heroPresentationChartBar,
@@ -23,7 +24,8 @@ import {
   heroStop,
   heroTrash,
   heroPlus,
-  heroArrowPath
+  heroArrowPath,
+  heroQueueList
 } from '@ng-icons/heroicons/outline';
 import {
   heroComputerDesktopSolid,
@@ -33,7 +35,8 @@ import {
   heroPauseSolid,
   heroStopSolid,
   heroArrowPathSolid,
-  heroArrowUpTraySolid
+  heroArrowUpTraySolid,
+  heroQueueListSolid
 } from '@ng-icons/heroicons/solid';
 
 export const appConfig: ApplicationConfig = {
@@ -41,6 +44,7 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideHttpClient(),
     provideRouter(routes, withHashLocation()),
+    provideMonacoEditor(),
     provideIcons({
       heroPresentationChartBar,
       heroCog,
@@ -62,6 +66,7 @@ export const appConfig: ApplicationConfig = {
       heroTrash,
       heroPlus,
       heroArrowPath,
+      heroQueueList,
       heroComputerDesktopSolid,
       heroTvSolid,
       heroWindowSolid,
@@ -69,7 +74,8 @@ export const appConfig: ApplicationConfig = {
       heroPauseSolid,
       heroStopSolid,
       heroArrowPathSolid,
-      heroArrowUpTraySolid
+      heroArrowUpTraySolid,
+      heroQueueListSolid
     })
   ],
 };

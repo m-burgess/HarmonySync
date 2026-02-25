@@ -1,6 +1,8 @@
-import { Component, OnInit, OnDestroy, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ElementRef, ViewChild, AfterViewInit, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ElectronService } from '../../../core/electron.service';
+import { ConfigService } from '../../../core/config.service';
+import { LyricTransitionService, TransitionContent } from '../../../core/lyric-transition.service';
 
 interface LyricContent {
     type: 'lyrics';
@@ -38,14 +40,37 @@ export class AudienceScreenComponent implements OnInit, OnDestroy, AfterViewInit
     @ViewChild('youtubePlayerShell') youtubePlayerShell!: ElementRef;
     @ViewChild('backgroundVideoRef') backgroundVideoRef!: ElementRef<HTMLVideoElement>;
 
-    content: Content = null;
+    currentContent = computed(() => this.transition.currentContent());
     backgroundVideo: string | null = null;
     player: any = null;
     private intervalId: any = null;
 
-    private unlisteners: (() => void)[] = [];
+    private transition = inject(LyricTransitionService);
 
-    constructor(private electronService: ElectronService) { }
+    private unlisteners: (() => void)[] = [];
+    private electronService = inject(ElectronService);
+    private configService = inject(ConfigService);
+
+    // Computed styles based on settings
+    lyricStyles = computed(() => {
+        const s = this.configService.settings()?.lyrics;
+        if (!s) return {};
+
+        return {
+            'font-family': s.fontFamily,
+            'font-size': s.fontSize + 'px',
+            'font-weight': s.fontWeight,
+            'color': s.color,
+            'text-shadow': s.textShadow,
+            'text-align': s.textAlign,
+            'padding-top': s.topOffset + '%',
+            'padding-bottom': s.bottomOffset + '%',
+            'justify-content': s.verticalAlignment === 'top' ? 'flex-start' : (s.verticalAlignment === 'middle' ? 'center' : 'flex-end'),
+            'align-items': s.textAlign === 'left' ? 'flex-start' : (s.textAlign === 'center' ? 'center' : 'flex-end')
+        };
+    });
+
+    constructor() { }
 
     ngOnInit() {
         this.setupEventListeners();
@@ -53,7 +78,7 @@ export class AudienceScreenComponent implements OnInit, OnDestroy, AfterViewInit
 
     ngAfterViewInit() {
         // Check if we need to initialize YouTube
-        if (this.content?.type === 'video') {
+        if (this.currentContent()?.type === 'video') {
             this.initYouTubePlayer();
         }
     }
@@ -82,28 +107,32 @@ export class AudienceScreenComponent implements OnInit, OnDestroy, AfterViewInit
         // Lyrics
         const ulLyrics = this.electronService.on('display-lyrics', (payload: any) => {
             console.log('Audience: display-lyrics event received', payload);
-            this.content = { type: 'lyrics', text: payload.lines };
+            this.transition.transitionTo({ type: 'lyrics', text: payload.lines });
         });
         if (ulLyrics) this.unlisteners.push(ulLyrics);
 
         // Image
         const ulImage = this.electronService.on('display-image-slide', (payload: any) => {
             console.log('Audience: display-image-slide event received', payload);
-            this.content = { type: 'image', path: this.electronService.convertFileSrc(payload.path), name: payload.name };
+            this.transition.transitionTo({
+                type: 'image',
+                path: this.electronService.convertFileSrc(payload.path),
+                name: payload.name
+            });
         });
         if (ulImage) this.unlisteners.push(ulImage);
 
         // Clear
         const ulClear = this.electronService.on('clear-lyric-display', () => {
             console.log('Audience: clear-lyric-display event received');
-            this.content = null;
+            this.transition.clear();
         });
         if (ulClear) this.unlisteners.push(ulClear);
 
         // YouTube Navigate
         const ulNavigate = this.electronService.on('navigate', (payload: any) => {
             console.log('Audience: navigate event received', payload);
-            this.content = { type: 'video', videoId: payload.videoId };
+            this.transition.transitionTo({ type: 'video', videoId: payload.videoId });
             this.initYouTubePlayer();
         });
         if (ulNavigate) this.unlisteners.push(ulNavigate);
@@ -115,16 +144,48 @@ export class AudienceScreenComponent implements OnInit, OnDestroy, AfterViewInit
         });
         if (ulStartBGVideo) this.unlisteners.push(ulStartBGVideo);
 
+        const ulDisplayVideo = this.electronService.on('display-video-slide', (payload: any) => {
+            console.log('Audience: display-video-slide event received', payload);
+            this.backgroundVideo = this.electronService.convertFileSrc(payload.path);
+        });
+        if (ulDisplayVideo) this.unlisteners.push(ulDisplayVideo);
+
         // Background Video Stop
         const ulStopBGVideo = this.electronService.on('stop-background-video', () => {
             console.log('Audience: stop-background-video event received');
             this.backgroundVideo = null;
         });
         if (ulStopBGVideo) this.unlisteners.push(ulStopBGVideo);
+
+        // YouTube Controls
+        const ulPlayVideo = this.electronService.on('play-video', () => {
+            console.log('Audience: play-video');
+            if (this.player && this.player.playVideo) this.player.playVideo();
+        });
+        if (ulPlayVideo) this.unlisteners.push(ulPlayVideo);
+
+        const ulPauseVideo = this.electronService.on('pause-video', () => {
+            console.log('Audience: pause-video');
+            if (this.player && this.player.pauseVideo) this.player.pauseVideo();
+        });
+        if (ulPauseVideo) this.unlisteners.push(ulPauseVideo);
+
+        const ulSeekVideo = this.electronService.on('seek-video', (payload: any) => {
+            console.log('Audience: seek-video', payload);
+            if (this.player && this.player.seekTo) this.player.seekTo(payload.time, true);
+        });
+        if (ulSeekVideo) this.unlisteners.push(ulSeekVideo);
+
+        const ulVideoVolume = this.electronService.on('set-video-volume', (payload: any) => {
+            console.log('Audience: set-video-volume', payload);
+            if (this.player && this.player.setVolume) this.player.setVolume(payload.volume * 100);
+        });
+        if (ulVideoVolume) this.unlisteners.push(ulVideoVolume);
     }
 
     private initYouTubePlayer() {
-        if (this.content?.type !== 'video') return;
+        const current = this.currentContent();
+        if (current?.type !== 'video') return;
 
         if (this.player && typeof this.player.destroy === 'function') {
             this.player.destroy();
@@ -166,7 +227,7 @@ export class AudienceScreenComponent implements OnInit, OnDestroy, AfterViewInit
             this.player = new window.YT.Player('youtube-player', {
                 height: '100%',
                 width: '100%',
-                videoId: (this.content as VideoContent).videoId,
+                videoId: (current as VideoContent).videoId,
                 playerVars: {
                     autoplay: 1,
                     controls: 0,
@@ -204,22 +265,31 @@ export class AudienceScreenComponent implements OnInit, OnDestroy, AfterViewInit
     }
 
     get showLyrics(): boolean {
-        return !!this.content && (this.content.type === 'lyrics' || this.content.type === 'image');
+        const c = this.currentContent();
+        return !!c && (c.type === 'lyrics' || c.type === 'image');
     }
 
     get showVideo(): boolean {
-        return !!this.content && this.content.type === 'video';
+        const c = this.currentContent();
+        return !!c && c.type === 'video';
     }
 
     get lyricLines(): string[] {
-        return this.content?.type === 'lyrics' ? (this.content as LyricContent).text : [];
+        const c = this.currentContent();
+        return c?.type === 'lyrics' ? c.text || [] : [];
     }
 
-    get imagePath(): string {
-        return this.content?.type === 'image' ? (this.content as ImageContent).path : '';
+    get imagePath(): string | null {
+        const c = this.currentContent();
+        return c?.type === 'image' ? c.path || null : null;
     }
 
-    get imageName(): string {
-        return this.content?.type === 'image' ? (this.content as ImageContent).name : '';
+    get imageName(): string | null {
+        const c = this.currentContent();
+        return c?.type === 'image' ? c.name || null : null;
+    }
+
+    get opacity(): number {
+        return this.transition.contentOpacity();
     }
 }

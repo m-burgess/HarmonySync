@@ -1,51 +1,83 @@
-<app-vscode-panel title="Mixer" className="flex flex-col h-full bg-vscode-sidebar-bg">
+<app-vscode-panel title="Stem Mixer" className="flex flex-col h-full bg-[#1e1e1e]">
     <!-- Mixer Header Controls -->
-    <div class="flex items-center justify-between p-3 border-b border-vscode-border">
-        <div class="flex gap-1">
-            <app-vscode-button [variant]="audioService.isPlaying() ? 'primary' : 'secondary'" (onClick)="playAll()"
-                title="Play All" icon="heroPlaySolid" className="w-8 h-8 p-0 flex items-center justify-center">
-            </app-vscode-button>
+    <div class="flex items-center justify-between p-4 bg-[#252526] border-b border-[#333]">
+        <div class="flex gap-2">
+            <button (click)="playAll()" [class.bg-[#007acc]]="audioService.isPlaying()"
+                [class.bg-[#333]]="!audioService.isPlaying()"
+                class="w-10 h-10 rounded flex items-center justify-center text-white hover:scale-105 active:scale-95 transition-all shadow-md">
+                <ng-icon name="heroPlaySolid" class="text-lg"></ng-icon>
+            </button>
 
-            <app-vscode-button variant="secondary" (onClick)="stopAll()" title="Stop All" icon="heroStopSolid"
-                className="w-8 h-8 p-0 flex items-center justify-center">
-            </app-vscode-button>
+            <button (click)="stopAll()"
+                class="w-10 h-10 bg-[#333] rounded flex items-center justify-center text-white hover:bg-[#444] active:scale-95 transition-all shadow-md">
+                <ng-icon name="heroStopSolid" class="text-lg"></ng-icon>
+            </button>
         </div>
-        <div class="text-[10px] text-vscode-foreground opacity-50 uppercase tracking-wider font-semibold">
-            {{ audioService.tracks().length }} Tracks
+        <div class="text-right">
+            <div class="text-[9px] font-bold text-[#858585] uppercase tracking-tighter">Automatic Mixing</div>
+            <div class="flex items-center gap-1.5">
+                <div class="w-1.5 h-1.5 rounded-full bg-[#007acc] shadow-[0_0_8px_rgba(0,122,204,0.6)]"></div>
+                <span class="text-[10px] text-[#cccccc] font-mono leading-none">AI ENGAGED</span>
+            </div>
         </div>
     </div>
 
     <!-- Mixer Tracks List -->
-    <div class="flex-1 overflow-y-auto px-2 py-4 space-y-4">
+    <div class="flex-1 overflow-y-auto custom-scrollbar px-3 py-6 space-y-3">
         @if (audioService.tracks().length === 0) {
-        <div class="flex flex-col items-center justify-center h-40 opacity-30">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                stroke="currentColor" class="w-10 h-10 mb-2">
-                <path stroke-linecap="round" stroke-linejoin="round"
-                    d="M9 9l10.5-3m0 6.553v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 1 1-.99-3.467l2.31-.66a2.25 2.25 0 0 0 1.632-2.163Zm0 0V2.25L9 5.25v10.303A2.25 2.25 0 0 1 7.368 17.716l-1.32.377a1.803 1.803 0 1 1-.99-3.467l2.31-.66A2.25 2.25 0 0 0 9 11.716V9Zm0 0H9" />
-            </svg>
-            <span class="text-xs">No tracks loaded</span>
+        <div class="flex flex-col items-center justify-center h-64 opacity-20 group">
+            <ng-icon name="heroMusicalNoteSolid"
+                class="text-6xl mb-4 group-hover:scale-110 transition-transform"></ng-icon>
+            <span class="text-xs font-bold uppercase tracking-widest text-center px-4">Waiting for tracks...</span>
         </div>
         }
 
-        @for (track of audioService.tracks(); track track.id) {
-        <div (click)="toggleMute(track.id)"
-            class="track-card rounded p-2 border transition-all flex items-center gap-2 cursor-pointer select-none"
-            [style.background-color]="track.muted ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.07)'"
-            [style.border-color]="track.muted ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.15)'"
-            [style.opacity]="track.muted ? '0.4' : '1'" [class.hover:border-vscode-focus-border]="!track.muted">
+        @for (track of audioService.tracks(); track track.id; let i = $index) {
+        <div (click)="toggleMute(track.id)" [class.muted-state]="track.muted"
+            class="track-card bg-[#252526] p-3 rounded-lg border border-[#333] hover:border-[#007acc]/40 transition-all group/track cursor-pointer select-none relative overflow-hidden active:scale-[0.98]">
 
-            <div class="w-2 h-2 rounded-full shrink-0 shadow-sm"
-                [style.background-color]="track.muted ? '#555' : '#4ade80'"
-                [style.box-shadow]="track.muted ? 'none' : '0 0 8px rgba(74, 222, 128, 0.4)'">
+            <!-- Active State Glow -->
+            @if (!track.muted) {
+            <div class="absolute inset-0 bg-gradient-to-r from-[#007acc]/5 to-transparent pointer-events-none"></div>
+            }
+
+            <div class="flex items-center space-x-3 relative z-10">
+                <!-- Status Icon -->
+                <div class="p-2 bg-[#1e1e1e] rounded border transition-colors shadow-inner"
+                    [class.bg-[#007acc]/10]="!track.muted" [class.border-[#3c3c3c]]="track.muted"
+                    [class.border-[#007acc]/30]="!track.muted">
+                    <ng-icon [name]="track.muted ? 'heroSpeakerXMarkSolid' : getTrackIcon(track.name)"
+                        class="text-sm transition-all" [class.text-[#858585]]="track.muted"
+                        [class.text-[#007acc]]="!track.muted"></ng-icon>
+                </div>
+
+                <div class="flex-1 flex flex-col min-w-0">
+                    <span class="text-[11px] font-bold truncate transition-colors" [class.text-[#858585]]="track.muted"
+                        [class.text-[#e1e1e1]]="!track.muted">
+                        {{ track.name }}
+                    </span>
+                    <span class="text-[8px] font-bold uppercase tracking-tight opacity-40"
+                        [class.text-red-400]="track.muted" [class.text-green-400]="!track.muted">
+                        {{ track.muted ? 'Muted' : 'Live' }}
+                    </span>
+                </div>
+
+                <!-- Live Meter -->
+                <div class="flex gap-0.5 h-6 items-end pb-1 pr-1">
+                    @for (bar of [1,2,3]; track bar) {
+                    <div class="w-1 bg-[#444] rounded-t-sm transition-all duration-300"
+                        [style.height]="track.muted ? '2px' : (audioService.isPlaying() ? (30 + (i * 10 % 50) + (bar * 10)) + '%' : '2px')"
+                        [class.bg-[#007acc]]="!track.muted && audioService.isPlaying()"></div>
+                    }
+                </div>
             </div>
-
-            <span class="text-[11px] font-medium truncate text-vscode-foreground italic"
-                [style.color]="track.muted ? 'var(--vscode-descriptionForeground)' : 'var(--vscode-foreground)'"
-                [title]="track.name">
-                {{ track.name }}
-            </span>
         </div>
         }
+    </div>
+
+    <!-- Storage / Footprint -->
+    <div class="p-4 bg-[#1e1e1e] border-t border-[#333] flex items-center justify-between opacity-40">
+        <span class="text-[9px] font-mono">PAN: AUTO</span>
+        <span class="text-[9px] font-mono">VOL: AUTO</span>
     </div>
 </app-vscode-panel>

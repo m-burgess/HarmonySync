@@ -1,25 +1,54 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { AudioService } from '../../../core/audio.service';
+import { SlideService } from '../../../core/slide.service';
 import { VSCodePanelComponent } from '../../vscode-ui/vscode-panel/vscode-panel.component';
-import { VSCodeButtonComponent } from '../../vscode-ui/vscode-button/vscode-button.component';
+
+import { NgIconComponent, provideIcons } from '@ng-icons/core';
+import {
+  heroPlaySolid,
+  heroStopSolid,
+  heroSpeakerWaveSolid,
+  heroSpeakerXMarkSolid,
+  heroMicrophoneSolid,
+  heroMusicalNoteSolid
+} from '@ng-icons/heroicons/solid';
 
 @Component({
   selector: 'app-mixer-sidebar',
   standalone: true,
-  imports: [CommonModule, VSCodePanelComponent, VSCodeButtonComponent],
+  imports: [CommonModule, FormsModule, VSCodePanelComponent, NgIconComponent],
   templateUrl: './mixer-sidebar.html',
-  styleUrl: './mixer-sidebar.scss'
+  styleUrl: './mixer-sidebar.scss',
+  providers: [
+    provideIcons({
+      heroPlaySolid,
+      heroStopSolid,
+      heroSpeakerWaveSolid,
+      heroSpeakerXMarkSolid,
+      heroMicrophoneSolid,
+      heroMusicalNoteSolid
+    })
+  ]
 })
 export class MixerSidebarComponent implements OnInit {
   audioService = inject(AudioService);
+  slideService = inject(SlideService);
 
   ngOnInit() {
-    // Initial state or subscriptions if needed
+    this.audioService.connectWebSocket();
   }
 
   playAll() {
     this.audioService.play().subscribe();
+
+    // Automatically play background video if available
+    const currentSlides = this.slideService.slides();
+    const videoIdx = currentSlides.findIndex(s => s.type === 'video');
+    if (videoIdx !== -1) {
+      this.slideService.selectSlide(videoIdx);
+    }
   }
 
   stopAll() {
@@ -30,7 +59,9 @@ export class MixerSidebarComponent implements OnInit {
     this.audioService.toggleMute(trackId);
   }
 
-  getTrackById(id: string) {
-    return this.audioService.tracks().find(t => t.id === id);
+  getTrackIcon(name: string): string {
+    const lower = name.toLowerCase();
+    if (lower.includes('voc') || lower.includes('guide')) return 'heroMicrophoneSolid';
+    return 'heroMusicalNoteSolid';
   }
 }
