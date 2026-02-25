@@ -4,7 +4,8 @@ import * as fs from 'fs-extra';
 import { spawn, ChildProcess } from 'child_process';
 
 // Import backend services - using require since they will be compiled to CommonJS at runtime
-const jsonStorage = require('./electron/services/json-storage');
+const { getJSONStorageService } = require('./electron/services/json-storage');
+const jsonStorage = getJSONStorageService();
 const { getFFmpegService } = require('./electron/services/ffmpeg');
 const audioService = require('./electron/services/audio-service');
 const videoService = require('./electron/services/video-service');
@@ -202,6 +203,9 @@ class ElectronApplication {
   public async initialize(): Promise<void> {
     try {
       console.log('[Application] Initializing...');
+
+      // Initialize storage first as other services depend on it
+      await jsonStorage.initialize();
 
       // NOTE: register IPC handlers after creating windows so display/window
       // getters can be provided to services that need them.

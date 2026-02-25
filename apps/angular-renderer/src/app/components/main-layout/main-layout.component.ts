@@ -17,7 +17,7 @@ import { TimerListComponent } from '../timer-list/timer-list.component';
 import { CreateTimerRequest } from '../../models/timer.models';
 import { SettingsComponent } from '../settings/settings.component';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
-import { heroPresentationChartBar, heroClock, heroCog, heroComputerDesktop, heroTv, heroQueueList, heroAdjustmentsHorizontal, heroBolt, heroCalendarDays, heroCodeBracket } from '@ng-icons/heroicons/outline';
+import { heroPresentationChartBar, heroClock, heroCog, heroComputerDesktop, heroTv, heroQueueList, heroAdjustmentsHorizontal, heroBolt, heroCalendarDays, heroCodeBracket, heroMusicalNote } from '@ng-icons/heroicons/outline';
 import { SchedulerComponent } from '../screens/scheduler/scheduler.component';
 import { ScriptEditorComponent } from '../screens/script-editor/script-editor.component';
 
@@ -49,7 +49,8 @@ import { ScriptEditorComponent } from '../screens/script-editor/script-editor.co
             heroAdjustmentsHorizontal,
             heroBolt,
             heroCalendarDays,
-            heroCodeBracket
+            heroCodeBracket,
+            heroMusicalNote
         })
     ],
     templateUrl: './main-layout.component.html',
@@ -72,9 +73,7 @@ export class MainLayoutComponent implements OnInit {
     private dialog = inject(Dialog);
 
     // Sidebar state
-    activeSidebar = signal<'explorer' | 'timers' | 'settings'>('explorer');
-    showScheduler = signal<boolean>(false);
-    showScriptEditor = signal<boolean>(false);
+    activeSidebar = signal<'explorer' | 'timers' | 'settings' | 'scheduler' | 'scripts'>('explorer');
 
     // Presentation state
     currentLyrics = computed(() => this.serviceOrderService.currentSong()?.lyrics || null);
@@ -211,7 +210,7 @@ export class MainLayoutComponent implements OnInit {
     openDisplaySettings() { console.log('Open Display Settings'); }
     openPreferences() { this.activeSidebar.set('settings'); }
 
-    setActiveSidebar(sidebar: 'explorer' | 'timers' | 'settings') {
+    setActiveSidebar(sidebar: 'explorer' | 'timers' | 'settings' | 'scheduler' | 'scripts') {
         this.activeSidebar.set(sidebar);
     }
 
@@ -220,11 +219,23 @@ export class MainLayoutComponent implements OnInit {
     }
 
     toggleScheduler() {
-        this.showScheduler.set(!this.showScheduler());
+        this.activeSidebar.set('scheduler');
     }
 
     toggleScriptEditor() {
-        this.showScriptEditor.set(!this.showScriptEditor());
+        this.activeSidebar.set('scripts');
+    }
+
+    openPreserviceMusic() {
+        if (this.electronService.isElectron) {
+            this.electronService.invoke('open_preservice_music_window').then(res => {
+                console.log('Pre-service music window opened:', res);
+            }).catch(err => {
+                console.error('Failed to open pre-service music window:', err);
+            });
+        } else {
+            window.open('/#/preservice', '_blank');
+        }
     }
 
 

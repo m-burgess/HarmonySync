@@ -29,119 +29,112 @@ interface Script {
     standalone: true,
     imports: [CommonModule, FormsModule, NgIconComponent, MonacoEditorModule],
     template: `
-    <div class="fixed inset-0 bg-[#0a0a0a]/90 backdrop-blur-md z-50 flex flex-col animate-in fade-in duration-300">
+    <div class="flex flex-col h-full bg-[#1e1e1e] text-[#cccccc] select-none font-sans overflow-hidden">
         <!-- Header -->
-        <div class="h-12 bg-[#1e1e1e] border-b border-[#333333] flex items-center justify-between px-6 shadow-lg">
-            <div class="flex items-center space-x-3">
-                <ng-icon name="heroCodeBracket" class="text-[#007acc] text-xl"></ng-icon>
-                <h2 class="text-xs font-bold uppercase tracking-widest text-[#e1e1e1]">HarmonyScript Engine</h2>
-            </div>
-            
+        <div class="p-4 bg-[#252526] border-b border-[#3c3c3c] flex items-center justify-between shadow-sm z-20">
             <div class="flex items-center space-x-2">
-                <button (click)="handleNewScript()" class="editor-btn">
-                    <ng-icon name="heroDocumentPlus" class="mr-1.5"></ng-icon> New
-                </button>
-                <button (click)="handleSaveScript()" class="editor-btn">
-                    <ng-icon name="heroCheck" class="mr-1.5"></ng-icon> Save
-                </button>
-                <button (click)="handleExecuteScript()" [disabled]="isExecuting" class="editor-btn bg-green-600 hover:bg-green-700 border-green-500">
-                    <ng-icon [name]="isExecuting ? 'heroArrowPath' : 'heroPlay'" class="mr-1.5" [class.animate-spin]="isExecuting"></ng-icon> 
-                    {{ isExecuting ? 'Running...' : 'Test Run' }}
-                </button>
-                <div class="w-px h-4 bg-[#333] mx-2"></div>
-                <button (click)="close()" class="text-[#858585] hover:text-white p-1.5 hover:bg-[#333] rounded transition-all">
-                    <ng-icon name="heroXMark" class="text-lg"></ng-icon>
+                <ng-icon name="heroCodeBracket" class="text-[#007acc] text-lg"></ng-icon>
+                <h2 class="text-xs font-bold uppercase tracking-wider text-[#e1e1e1]">HarmonyScript</h2>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button (click)="handleSaveScript()" class="p-1.5 hover:bg-[#37373d] rounded text-[#858585] hover:text-white transition-all" title="Save Script">
+                    <ng-icon name="heroCheck"></ng-icon>
                 </button>
             </div>
         </div>
 
-        <div class="flex-1 flex overflow-hidden">
-            <!-- Sidebar: Script List -->
-            <div class="w-64 bg-[#1e1e1e] border-r border-[#333333] flex flex-col">
-                <div class="p-3 border-b border-[#333333] flex items-center justify-between">
-                    <span class="text-[10px] font-bold text-[#858585] uppercase tracking-tighter">Scripts Library</span>
-                    <button (click)="handleImportScript()" title="Import Script" class="text-[#858585] hover:text-white">
-                        <ng-icon name="heroArrowDownTray"></ng-icon>
-                    </button>
-                </div>
-                <div class="flex-1 overflow-auto custom-scrollbar p-2 space-y-1">
-                    @for (script of scripts(); track script.id) {
-                        <div (click)="handleLoadScript(script.id)" 
-                             [class.bg-[#37373d]]="currentScript?.id === script.id"
-                             class="group p-2.5 rounded hover:bg-[#2a2d2e] cursor-pointer transition-all border border-transparent hover:border-[#3c3c3c]">
-                            <div class="text-[11px] font-bold text-[#cccccc] group-hover:text-white">{{ script.name }}</div>
-                            <div class="text-[9px] text-[#858585] truncate">{{ script.description || 'No description' }}</div>
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- Script Selection -->
+            <div class="p-3 bg-[#252526] border-b border-[#333333]">
+                <div class="flex flex-col space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[9px] font-bold text-[#858585] uppercase">Active Script</span>
+                        <div class="flex space-x-1">
+                            <button (click)="handleNewScript()" class="text-[9px] text-blue-500 hover:underline">New</button>
+                            <span class="text-[9px] text-gray-600">|</span>
+                            <button (click)="handleImportScript()" class="text-[9px] text-blue-500 hover:underline">Import</button>
                         </div>
-                    }
+                    </div>
+                    <select (change)="handleLoadScript($any($event.target).value)" 
+                            class="w-full bg-[#3c3c3c] border border-[#444444] text-[#e1e1e1] text-xs px-2 py-1.5 rounded outline-none focus:border-[#007acc]">
+                        <option value="">-- Select Script --</option>
+                        @for (script of scripts(); track script.id) {
+                            <option [value]="script.id" [selected]="currentScript?.id === script.id">{{ script.name }}</option>
+                        }
+                    </select>
                 </div>
             </div>
 
-            <!-- Main: Editor -->
-            <div class="flex-1 flex flex-col bg-[#1e1e1e]">
-                <!-- Metadata Inputs -->
-                <div class="p-4 bg-[#252526] border-b border-[#333333] flex gap-4">
-                    <div class="flex-1 space-y-1">
-                        <label class="text-[9px] font-bold text-[#858585] uppercase">Script Name</label>
+            <!-- Editor Area -->
+            <div class="flex-1 flex flex-col min-h-0 bg-[#1e1e1e]">
+                <!-- Metadata Controls (Compact) -->
+                <div class="p-3 border-b border-[#333333] grid grid-cols-2 gap-3">
+                    <div class="space-y-1">
+                        <label class="text-[8px] font-bold text-[#858585] uppercase">Name</label>
                         <input type="text" [(ngModel)]="scriptName" 
-                               class="w-full bg-[#3c3c3c] border border-[#444444] text-[#e1e1e1] text-xs px-3 py-1.5 rounded outline-none focus:border-[#007acc]">
+                               class="w-full bg-[#2d2d2d] border border-[#444] text-[#e1e1e1] text-[10px] px-2 py-1 rounded outline-none">
                     </div>
-                    <div class="flex-1 space-y-1">
-                        <label class="text-[9px] font-bold text-[#858585] uppercase">Author</label>
+                    <div class="space-y-1">
+                        <label class="text-[8px] font-bold text-[#858585] uppercase">Author</label>
                         <input type="text" [(ngModel)]="scriptAuthor" 
-                               class="w-full bg-[#3c3c3c] border border-[#444444] text-[#e1e1e1] text-xs px-3 py-1.5 rounded outline-none focus:border-[#007acc]">
+                               class="w-full bg-[#2d2d2d] border border-[#444] text-[#e1e1e1] text-[10px] px-2 py-1 rounded outline-none">
                     </div>
                 </div>
 
-                <!-- Monaco Instance -->
-                <div class="flex-1 relative">
+                <!-- Monaco Editor (Flexible height) -->
+                <div class="flex-1 relative border-b border-[#333333]">
                     <ngx-monaco-editor class="absolute inset-0"
                                       [options]="editorOptions" 
                                       [(ngModel)]="code">
                     </ngx-monaco-editor>
                 </div>
 
-                <!-- Status Console -->
-                @if (executionResult || validationResult) {
-                    <div class="h-40 bg-[#111] border-t border-[#333] overflow-auto p-4 font-mono text-[11px]">
-                        @if (validationResult) {
-                            <div [class.text-green-400]="validationResult.valid" [class.text-red-400]="!validationResult.valid">
-                                [VALIDATION] {{ validationResult.valid ? '✓ Passed' : '✗ Failed: ' + validationResult.errors[0]?.message }}
-                            </div>
-                        }
-                        @if (executionResult) {
-                            <div [class.text-green-400]="executionResult.success" [class.text-red-400]="!executionResult.success" class="mt-2">
-                                [EXECUTION] {{ executionResult.success ? '✓ Completed' : '✗ Error: ' + executionResult.error?.message }}
-                                @if (executionResult.result) {
-                                    <pre class="mt-1 text-[#aaa]">{{ executionResult.result | json }}</pre>
-                                }
-                            </div>
-                        }
-                    </div>
-                }
-            </div>
+                <!-- Actions & Output -->
+                <div class="p-3 bg-[#111111] space-y-3">
+                    <button (click)="handleExecuteScript()" [disabled]="isExecuting" 
+                            class="w-full bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white text-[10px] font-bold py-2 rounded transition-all flex items-center justify-center">
+                        <ng-icon [name]="isExecuting ? 'heroArrowPath' : 'heroPlay'" class="mr-2" [class.animate-spin]="isExecuting"></ng-icon> 
+                        {{ isExecuting ? 'Running...' : 'Trigger Script' }}
+                    </button>
 
-            <!-- Sidebar: API Reference -->
-            @if (showApiDocs) {
-                <div class="w-72 bg-[#1e1e1e] border-l border-[#333333] overflow-auto custom-scrollbar p-6">
-                    <h3 class="text-xs font-bold text-[#007acc] uppercase mb-4">API Documentation</h3>
-                    <div class="space-y-6">
-                        <section>
-                            <h4 class="text-[10px] font-bold text-[#cccccc] mb-2 uppercase">harmony.display</h4>
-                            <ul class="text-[10px] text-[#858585] space-y-2">
-                                <li><code class="text-amber-500">showSlide(content)</code><br>Renders lyrics or content</li>
-                                <li><code class="text-amber-500">clearAll()</code><br>Clears all active projections</li>
-                            </ul>
-                        </section>
-                        <section>
-                            <h4 class="text-[10px] font-bold text-[#cccccc] mb-2 uppercase">harmony.midi</h4>
-                            <ul class="text-[10px] text-[#858585] space-y-2">
-                                <li><code class="text-amber-500">sendNote(note, vel)</code><br>Triggers external hardware</li>
-                            </ul>
-                        </section>
+                    @if (executionResult || validationResult) {
+                        <div class="bg-black/40 p-2 rounded border border-white/5 font-mono text-[9px] max-h-32 overflow-auto custom-scrollbar">
+                            @if (validationResult && !validationResult.valid) {
+                                <div class="text-red-400 mb-1">✗ Validation: {{ validationResult.errors[0]?.message }}</div>
+                            }
+                            @if (executionResult) {
+                                <div [class.text-green-400]="executionResult.success" [class.text-red-400]="!executionResult.success">
+                                    {{ executionResult.success ? '✓ Success' : '✗ Error: ' + executionResult.error?.message }}
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Toggle Docs -->
+        <div class="p-2 border-t border-[#333] flex justify-center">
+            <button (click)="showApiDocs = !showApiDocs" class="text-[9px] text-[#858585] hover:text-white uppercase tracking-widest font-bold">
+                {{ showApiDocs ? 'Hide docs' : 'Show docs' }}
+            </button>
+        </div>
+
+        @if (showApiDocs) {
+            <div class="h-40 bg-[#252526] border-t border-[#333] overflow-auto custom-scrollbar p-3 animate-in slide-in-from-bottom duration-200">
+                <h3 class="text-[9px] font-bold text-[#007acc] uppercase mb-2">Harmony API</h3>
+                <div class="space-y-3 text-[9px]">
+                    <div>
+                        <code class="text-amber-500">harmony.display.showSlide(content)</code>
+                        <p class="text-[#858585] mt-0.5">Renders lyrics or content</p>
+                    </div>
+                    <div>
+                        <code class="text-amber-500">harmony.midi.sendNote(note, vel)</code>
+                        <p class="text-[#858585] mt-0.5">Triggers hardware</p>
                     </div>
                 </div>
-            }
-        </div>
+            </div>
+        }
     </div>
   `,
     styles: [`

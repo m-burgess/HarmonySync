@@ -1546,7 +1546,7 @@ class IPCHandlerManager {
     this.ipcMain.handle('open_preservice_music_window', async () => {
       const { BrowserWindow } = require('electron');
       const isDev = process.env.NODE_ENV === 'development';
-      const VITE_DEV_SERVER_URL = 'http://localhost:5174';
+      const ANGULAR_DEV_SERVER_URL = 'http://localhost:4200';
 
       let preserviceWindow: BrowserWindow | null = new BrowserWindow({
         width: 800,
@@ -1561,9 +1561,9 @@ class IPCHandlerManager {
       });
 
       if (isDev) {
-        preserviceWindow?.loadURL(`${VITE_DEV_SERVER_URL}/preservice-music.html`);
+        preserviceWindow?.loadURL(`${ANGULAR_DEV_SERVER_URL}#/preservice`);
       } else {
-        preserviceWindow?.loadFile(path.join(__dirname, '../harmonysync/dist/preservice-music.html'));
+        preserviceWindow?.loadFile(path.join(__dirname, '../../angular-renderer/dist/angular-renderer/browser/index.html'), { hash: '/preservice' });
       }
 
       preserviceWindow?.once('ready-to-show', () => {
@@ -1585,7 +1585,7 @@ class IPCHandlerManager {
       console.log('[IPC] open_scheduler_window called');
       const { BrowserWindow } = require('electron');
       const isDev = process.env.NODE_ENV === 'development';
-      const VITE_DEV_SERVER_URL = 'http://localhost:5174';
+      const ANGULAR_DEV_SERVER_URL = 'http://localhost:4200';
 
       console.log('[IPC] Creating scheduler window, isDev:', isDev);
       let schedulerWindow: BrowserWindow | null = new BrowserWindow({
@@ -1601,12 +1601,12 @@ class IPCHandlerManager {
       });
 
       if (isDev) {
-        console.log('[IPC] Loading dev URL:', `${VITE_DEV_SERVER_URL}/scheduler.html`);
-        schedulerWindow?.loadURL(`${VITE_DEV_SERVER_URL}/scheduler.html`);
+        console.log('[IPC] Loading dev URL:', `${ANGULAR_DEV_SERVER_URL}#/scheduler`);
+        schedulerWindow?.loadURL(`${ANGULAR_DEV_SERVER_URL}#/scheduler`);
       } else {
-        const filePath = path.join(__dirname, '../harmonysync/dist/scheduler.html');
+        const filePath = path.join(__dirname, '../../angular-renderer/dist/angular-renderer/browser/index.html');
         console.log('[IPC] Loading file:', filePath);
-        schedulerWindow?.loadFile(filePath);
+        schedulerWindow?.loadFile(filePath, { hash: '/scheduler' });
       }
 
       schedulerWindow?.once('ready-to-show', () => {

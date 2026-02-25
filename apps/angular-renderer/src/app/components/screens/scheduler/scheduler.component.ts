@@ -36,147 +36,136 @@ export interface ScheduledEvent {
     standalone: true,
     imports: [CommonModule, FormsModule, NgIconComponent],
     template: `
-    <div class="scheduler-overlay fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="scheduler-container bg-[#1e1e1e] border border-[#333333] rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-            
-            <!-- Header -->
-            <div class="p-4 bg-[#252526] border-b border-[#3c3c3c] flex items-center justify-between">
-                <div class="flex items-center space-x-3 text-[#007acc]">
-                    <ng-icon name="heroCalendarDays" class="text-xl"></ng-icon>
-                    <h2 class="text-sm font-bold uppercase tracking-wider text-[#e1e1e1]">Service Scheduler</h2>
-                </div>
-                <button (click)="close()" class="text-[#858585] hover:text-white transition-colors p-1.5 hover:bg-[#333333] rounded">
-                    <ng-icon name="heroXMark" class="text-xl"></ng-icon>
-                </button>
+    <div class="scheduler-sidebar flex flex-col h-full bg-[#1e1e1e] text-[#cccccc] overflow-hidden select-none">
+        <!-- Header -->
+        <div class="p-4 bg-[#252526] border-b border-[#3c3c3c] flex items-center justify-between shadow-sm z-20">
+            <div class="flex items-center space-x-2">
+                <ng-icon name="heroCalendarDays" class="text-[#007acc] text-lg"></ng-icon>
+                <h2 class="text-xs font-bold uppercase tracking-wider text-[#e1e1e1]">Scheduler</h2>
             </div>
+        </div>
 
-            <div class="flex-1 overflow-auto custom-scrollbar p-6 space-y-8">
+        <div class="flex-1 overflow-auto custom-scrollbar p-4 space-y-6">
+            
+            <!-- Add New Event -->
+            <section class="bg-[#252526] p-4 rounded-md border border-[#333333] shadow-sm">
+                <h3 class="text-[10px] font-bold uppercase tracking-widest text-[#858585] mb-4 flex items-center">
+                    <ng-icon name="heroPlus" class="mr-2"></ng-icon> New Event
+                </h3>
                 
-                <!-- Add New Event -->
-                <section class="bg-[#252526] p-5 rounded-md border border-[#333333] shadow-sm">
-                    <h3 class="text-[10px] font-bold uppercase tracking-widest text-[#858585] mb-4 flex items-center">
-                        <ng-icon name="heroPlus" class="mr-2"></ng-icon> Schedule New Event
-                    </h3>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div class="flex flex-col space-y-1.5">
-                            <label class="text-[10px] font-medium text-[#969696]">Action / Macro</label>
-                            <select [(ngModel)]="newEvent.macroId" 
-                                    class="bg-[#3c3c3c] border border-[#444444] text-[#e1e1e1] text-xs px-2.5 py-2 rounded focus:border-[#007acc] outline-none">
-                                <option value="">-- Select Macro --</option>
-                                <optgroup label="Automation">
-                                    @for (macro of macros; track macro.id) {
-                                        <option [value]="macro.id">{{ macro.name }}</option>
-                                    }
-                                </optgroup>
-                            </select>
-                        </div>
+                <div class="flex flex-col space-y-4">
+                    <div class="flex flex-col space-y-1.5">
+                        <label class="text-[10px] font-medium text-[#969696]">Action / Macro</label>
+                        <select [(ngModel)]="newEvent.macroId" 
+                                class="bg-[#3c3c3c] border border-[#444444] text-[#e1e1e1] text-xs px-2.5 py-2 rounded focus:border-[#007acc] outline-none">
+                            <option value="">-- Select Macro --</option>
+                            <optgroup label="Automation">
+                                @for (macro of macros; track macro.id) {
+                                    <option [value]="macro.id">{{ macro.name }}</option>
+                                }
+                            </optgroup>
+                        </select>
+                    </div>
 
+                    <div class="grid grid-cols-2 gap-3">
                         <div class="flex flex-col space-y-1.5">
-                            <label class="text-[10px] font-medium text-[#969696]">Day of Week</label>
+                            <label class="text-[10px] font-medium text-[#969696]">Day</label>
                             <select [(ngModel)]="newEvent.day"
-                                    class="bg-[#3c3c3c] border border-[#444444] text-[#e1e1e1] text-xs px-2.5 py-2 rounded focus:border-[#007acc] outline-none">
+                                    class="bg-[#3c3c3c] border border-[#444444] text-[#e1e1e1] text-xs px-2 py-2 rounded focus:border-[#007acc] outline-none">
                                 @for (day of daysOfWeek; track day) {
-                                    <option [value]="day">{{ day }}</option>
+                                    <option [value]="day">{{ day.substring(0,3) }}</option>
                                 }
                             </select>
                         </div>
 
                         <div class="flex flex-col space-y-1.5">
-                            <label class="text-[10px] font-medium text-[#969696]">Trigger Time</label>
+                            <label class="text-[10px] font-medium text-[#969696]">Time</label>
                             <input type="time" [(ngModel)]="newEvent.time"
-                                   class="bg-[#3c3c3c] border border-[#444444] text-[#e1e1e1] text-xs px-2.5 py-2 rounded focus:border-[#007acc] outline-none">
-                        </div>
-
-                        <div class="flex items-end">
-                            <button (click)="addScheduledEvent()" 
-                                    [disabled]="!newEvent.macroId"
-                                    class="w-full bg-[#007acc] hover:bg-[#005a9e] disabled:opacity-50 disabled:cursor-not-allowed text-white text-[10px] font-bold py-2 px-4 rounded shadow-sm transition-all active:scale-95 flex items-center justify-center">
-                                <ng-icon name="heroPlus" class="mr-2"></ng-icon> Add Event
-                            </button>
+                                   class="bg-[#3c3c3c] border border-[#444444] text-[#e1e1e1] text-xs px-2 py-2 rounded focus:border-[#007acc] outline-none">
                         </div>
                     </div>
-                </section>
 
-                <!-- List of Events -->
-                <section>
-                    <h3 class="text-[10px] font-bold uppercase tracking-widest text-[#858585] mb-4 flex items-center">
-                        <ng-icon name="heroClock" class="mr-2"></ng-icon> Active Schedule
-                    </h3>
-                    
-                    @if (scheduledEvents().length === 0) {
-                        <div class="py-12 bg-[#252526] rounded-md border border-[#333333] border-dashed flex flex-col items-center justify-center text-[#666666]">
-                            <ng-icon name="heroCalendarDays" class="text-4xl mb-2 opacity-20"></ng-icon>
-                            <p class="text-xs">No events scheduled. Use the form above to add your first event.</p>
-                        </div>
-                    } @else {
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            @for (event of scheduledEvents(); track event.id) {
-                                <div class="bg-[#252526] p-4 rounded-md border border-[#333333] hover:border-[#454545] transition-all group flex items-center justify-between shadow-sm">
-                                    <div class="flex items-center space-x-4">
-                                        <div class="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" [checked]="event.enabled" (change)="toggleEvent(event)" class="sr-only peer">
-                                            <div class="w-8 h-4 bg-[#333333] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-[#007acc]"></div>
-                                        </div>
-                                        
-                                        <div [class.opacity-50]="!event.enabled">
-                                            <div class="text-[11px] font-bold text-[#e1e1e1]">{{ event.macroName }}</div>
-                                            <div class="text-[10px] text-[#858585]">
-                                                <span class="text-blue-400 capitalize">{{ event.day }}</span> 
-                                                <span class="mx-1">•</span> 
-                                                <span class="text-amber-400">{{ event.time }}</span>
-                                            </div>
+                    <button (click)="addScheduledEvent()" 
+                            [disabled]="!newEvent.macroId"
+                            class="w-full bg-[#007acc] hover:bg-[#005a9e] disabled:opacity-50 disabled:cursor-not-allowed text-white text-[10px] font-bold py-2 px-4 rounded shadow-sm transition-all active:scale-95 flex items-center justify-center">
+                        <ng-icon name="heroPlus" class="mr-2"></ng-icon> Add Event
+                    </button>
+                </div>
+            </section>
+
+            <!-- List of Events -->
+            <section>
+                <h3 class="text-[10px] font-bold uppercase tracking-widest text-[#858585] mb-4 flex items-center">
+                    <ng-icon name="heroClock" class="mr-2"></ng-icon> Active Schedule
+                </h3>
+                
+                @if (scheduledEvents().length === 0) {
+                    <div class="py-12 bg-[#252526] rounded-md border border-[#333333] border-dashed flex flex-col items-center justify-center text-[#666666]">
+                        <p class="text-[10px]">No events scheduled.</p>
+                    </div>
+                } @else {
+                    <div class="space-y-2">
+                        @for (event of scheduledEvents(); track event.id) {
+                            <div class="bg-[#252526] p-3 rounded-md border border-[#333333] hover:border-[#454545] transition-all group flex items-center justify-between shadow-sm">
+                                <div class="flex items-center space-x-3">
+                                    <input type="checkbox" [checked]="event.enabled" (change)="toggleEvent(event)" 
+                                           class="w-3 h-3 rounded bg-gray-700 border-gray-600 text-blue-600 focus:ring-blue-500">
+                                    
+                                    <div [class.opacity-50]="!event.enabled" class="overflow-hidden">
+                                        <div class="text-[10px] font-bold text-[#e1e1e1] truncate">{{ event.macroName }}</div>
+                                        <div class="text-[9px] text-[#858585]">
+                                            <span class="text-blue-400">{{ event.day?.substring(0,3) }}</span> 
+                                            <span class="mx-1">•</span> 
+                                            <span class="text-amber-400">{{ event.time }}</span>
                                         </div>
                                     </div>
-                                    
-                                    <button (click)="deleteEvent(event.id)" 
-                                            class="text-[#858585] hover:text-red-400 p-2 transition-colors opacity-0 group-hover:opacity-100">
-                                        <ng-icon name="heroTrash"></ng-icon>
-                                    </button>
                                 </div>
-                            }
-                        </div>
-                    }
-                </section>
+                                
+                                <button (click)="deleteEvent(event.id)" 
+                                        class="text-[#858585] hover:text-red-400 p-1.5 transition-colors opacity-0 group-hover:opacity-100">
+                                    <ng-icon name="heroTrash" class="text-xs"></ng-icon>
+                                </button>
+                            </div>
+                        }
+                    </div>
+                }
+            </section>
 
-                <!-- Weekly Overview -->
-                <section>
-                    <h3 class="text-[10px] font-bold uppercase tracking-widest text-[#858585] mb-4 flex items-center">
-                        <ng-icon name="heroBolt" class="mr-2"></ng-icon> Weekly Overview
-                    </h3>
-                    
-                    <div class="flex flex-wrap gap-2">
-                        @for (day of daysOfWeek; track day) {
-                            <div class="flex-1 min-w-[100px] bg-[#252526] rounded-md border border-[#333333] overflow-hidden flex flex-col">
-                                <div class="bg-[#333333] py-1.5 px-3 text-[9px] font-bold uppercase tracking-tighter text-[#aaaaaa] border-b border-[#444444]">
-                                    {{ day.substring(0, 3) }}
+            <!-- Weekly Overview (Vertical) -->
+            <section>
+                <h3 class="text-[10px] font-bold uppercase tracking-widest text-[#858585] mb-4 flex items-center">
+                    <ng-icon name="heroBolt" class="mr-2"></ng-icon> Weekly Overview
+                </h3>
+                
+                <div class="space-y-2">
+                    @for (day of daysOfWeek; track day) {
+                        @if (getEventsForDay(day).length > 0) {
+                            <div class="flex flex-col bg-[#252526] rounded border border-[#333333] overflow-hidden">
+                                <div class="bg-[#333333] px-2 py-1 text-[9px] font-bold text-[#aaa] uppercase tracking-tighter">
+                                    {{ day }}
                                 </div>
-                                <div class="p-2 min-h-[80px] space-y-1">
+                                <div class="p-1.5 space-y-1">
                                     @for (event of getEventsForDay(day); track event.id) {
-                                        <div class="text-[9px] bg-[#3c3c3c] px-1.5 py-0.5 rounded border-l-2 border-[#007acc] text-[#cccccc] truncate"
-                                             [title]="event.macroName + ' @ ' + event.time">
-                                            <span class="text-[#888] mr-1">{{ event.time }}</span> {{ event.macroName }}
-                                        </div>
-                                    } @empty {
-                                        <div class="h-full flex items-center justify-center opacity-10">
-                                            <ng-icon name="heroBolt" class="text-lg"></ng-icon>
+                                        <div class="text-[9px] bg-[#3c3c3c] px-2 py-0.5 rounded border-l-2 border-[#007acc] text-[#ccc] flex justify-between">
+                                            <span class="truncate pr-2">{{ event.macroName }}</span>
+                                            <span class="text-[#888] font-mono shrink-0">{{ event.time }}</span>
                                         </div>
                                     }
                                 </div>
                             </div>
                         }
-                    </div>
-                </section>
+                    }
+                </div>
+            </section>
+        </div>
+        
+        <!-- Footer -->
+        <div class="p-3 bg-[#252526] border-t border-[#3c3c3c] flex flex-col space-y-0.5 px-6">
+            <div class="text-[9px] text-[#858585] italic">
+                Schedulers run locally. Keep app open.
             </div>
-            
-            <!-- Footer -->
-            <div class="p-3 bg-[#252526] border-t border-[#3c3c3c] flex justify-between items-center px-6">
-                <div class="text-[9px] text-[#858585] italic">
-                    Schedulers run locally. Ensure application remains open for automated triggers.
-                </div>
-                <div class="text-[9px] font-mono text-indigo-400 bg-indigo-950/30 px-2 py-1 rounded">
-                    SYS-CLOCK: VERIFIED
-                </div>
+            <div class="text-[8px] font-mono text-indigo-400/60 uppercase">
+                Sys-Clock: Verified
             </div>
         </div>
     </div>

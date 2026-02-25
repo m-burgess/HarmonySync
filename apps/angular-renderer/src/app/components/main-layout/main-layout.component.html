@@ -13,11 +13,16 @@
             <app-activity-bar-icon id="activity-bar-settings" icon="heroCog" [active]="activeSidebar() === 'settings'"
                 label="Settings" (onClick)="setActiveSidebar('settings')"></app-activity-bar-icon>
 
-            <app-activity-bar-icon id="activity-bar-scheduler" icon="heroCalendarDays" [active]="showScheduler()"
-                label="Scheduler" (onClick)="toggleScheduler()"></app-activity-bar-icon>
+            <app-activity-bar-icon id="activity-bar-scheduler" icon="heroCalendarDays"
+                [active]="activeSidebar() === 'scheduler'" label="Scheduler"
+                (onClick)="toggleScheduler()"></app-activity-bar-icon>
 
-            <app-activity-bar-icon id="activity-bar-scripts" icon="heroCodeBracket" [active]="showScriptEditor()"
-                label="Scripts" (onClick)="toggleScriptEditor()"></app-activity-bar-icon>
+            <app-activity-bar-icon id="activity-bar-scripts" icon="heroCodeBracket"
+                [active]="activeSidebar() === 'scripts'" label="Scripts"
+                (onClick)="toggleScriptEditor()"></app-activity-bar-icon>
+
+            <app-activity-bar-icon id="activity-bar-preservice" icon="heroMusicalNote" [active]="false"
+                label="Pre-service Music" (onClick)="openPreserviceMusic()"></app-activity-bar-icon>
 
             <div class="h-[1px] w-8 bg-gray-700 my-2"></div>
 
@@ -48,6 +53,10 @@
             <app-timer-list></app-timer-list>
             } @else if (activeSidebar() === 'settings') {
             <app-settings></app-settings>
+            } @else if (activeSidebar() === 'scheduler') {
+            <app-scheduler></app-scheduler>
+            } @else if (activeSidebar() === 'scripts') {
+            <app-script-editor></app-script-editor>
             }
         </div>
 
@@ -162,11 +171,4 @@
         </div>
     </div>
 
-    @if (showScheduler()) {
-    <app-scheduler></app-scheduler>
-    }
-
-    @if (showScriptEditor()) {
-    <app-script-editor></app-script-editor>
-    }
 </div>
