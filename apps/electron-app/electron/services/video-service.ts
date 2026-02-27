@@ -85,7 +85,7 @@ export class VideoService extends BaseElectronService implements IVideoService {
    * @param outputPath - Optional output path (defaults to cache directory)
    * @returns Path to transcoded video
    */
-  public async transcode(inputPath: string, outputPath?: string): Promise<string> {
+  public async transcode(inputPath: string, onProgress?: (progress: any) => void, outputPath?: string): Promise<string> {
     try {
       const cacheDir = this.getCacheDir();
       const fileName = path.basename(inputPath, path.extname(inputPath));
@@ -113,6 +113,14 @@ export class VideoService extends BaseElectronService implements IVideoService {
               const currentTime = this.parseTimemark(progress.timemark);
               const percent = Math.min(100, Math.round((currentTime / totalDuration) * 100));
               this.log('debug', `Transcoding progress: ${percent}%`);
+              if (onProgress) {
+                onProgress({
+                  percent,
+                  currentTime,
+                  totalTime: totalDuration,
+                  message: `Transcoding ${fileName}...`
+                });
+              }
             }
           })
           .on('end', () => {

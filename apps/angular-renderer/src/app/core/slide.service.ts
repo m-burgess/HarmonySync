@@ -65,6 +65,14 @@ export class SlideService {
                 const mediaSlides = this.parseTimestamps((res.slides || []).filter(s => s.type !== 'lyric'));
                 this.slides.set(mediaSlides);
                 this.currentSlideIndex.set(mediaSlides.length > 0 ? 0 : -1);
+
+                // Auto-play background video if found
+                const backgroundVideo = mediaSlides.find(s => s.type === 'video' && s.duration && s.duration < 60);
+                if (backgroundVideo) {
+                    console.log('[SlideService] Found background video, auto-playing with loop:', backgroundVideo.name);
+                    this.electron.invoke('display:videoSlide', backgroundVideo.path, backgroundVideo.duration, true);
+                }
+
                 this.isLoading.set(false);
             }),
             catchError(err => {
@@ -88,7 +96,8 @@ export class SlideService {
             if (slide.type === 'image') {
                 this.electron.emit('display-image-slide', { path: slide.path, name: slide.name });
             } else if (slide.type === 'video') {
-                this.electron.invoke('display:videoSlide', slide.path, slide.duration);
+                const isLoopable = slide.duration !== undefined && slide.duration < 60;
+                this.electron.invoke('display:videoSlide', slide.path, slide.duration, isLoopable);
             }
         }
     }

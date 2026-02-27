@@ -1505,6 +1505,10 @@ class IPCHandlerManager {
     this.ipcMain.handle('display:broadcast', async (_event, channel: string, data: any) => {
       return await this.services.displayService.broadcast(channel, data);
     });
+
+    this.ipcMain.handle('display:getCurrentState', async () => {
+      return this.services.displayService.getCurrentState();
+    });
   }
 
   /**
@@ -1790,15 +1794,30 @@ class IPCHandlerManager {
 
         // Load videos as slides
         if (videoFiles.length > 0) {
-          const videoSlides = videoFiles.map((filePath, index) => ({
-            id: `video-${index}`,
-            type: 'video',
-            path: filePath,
-            name: path.basename(filePath),
-            url: `file://${filePath}`
-          }));
-          slides.push(...videoSlides);
-          console.log('[ipc-handlers] Loaded', videoFiles.length, 'video slides');
+          const videoSlidesWithMetadata = await Promise.all(
+            videoFiles.map(async (filePath, index) => {
+              let duration = 0;
+              try {
+                if (this.services.videoService) {
+                  const metadata = await this.services.videoService.getMetadata(filePath);
+                  duration = metadata.duration || 0;
+                }
+              } catch (e) {
+                console.warn('[ipc-handlers] Failed to get video metadata:', filePath, e);
+              }
+
+              return {
+                id: `video-${index}`,
+                type: 'video',
+                path: filePath,
+                name: path.basename(filePath),
+                url: `file://${filePath}`,
+                duration
+              };
+            })
+          );
+          slides.push(...videoSlidesWithMetadata);
+          console.log('[ipc-handlers] Loaded', videoFiles.length, 'video slides with metadata');
         }
 
         // Load presentations using slidesService

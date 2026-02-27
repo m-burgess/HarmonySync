@@ -31,6 +31,14 @@ export class DisplayService extends BaseElectronService implements IDisplayServi
   private lowerThirdsWindow: BrowserWindow | null = null;
   private preserviceMusicWindow: BrowserWindow | null = null;
 
+  // Display State Persistence
+  private currentState = {
+    video: null as { path: string; duration?: number; loop?: boolean } | null,
+    slide: null as SlideContent | null,
+    blackout: false,
+    lowerThirds: null as LowerThirdsData | null
+  };
+
   public getPreserviceMusicWindow(): BrowserWindow | null {
     return this.preserviceMusicWindow;
   }
@@ -153,6 +161,10 @@ export class DisplayService extends BaseElectronService implements IDisplayServi
    */
   public async displayVideoSlide(path: string, duration?: number, loop?: boolean): Promise<void> {
     try {
+      this.currentState.video = { path, duration, loop };
+      this.currentState.slide = null; // Video usually replaces or is background to slide
+      this.currentState.blackout = false;
+
       const audWin = this.getAudienceWindow();
       const confWin = this.getConfidenceWindow();
 
@@ -178,6 +190,9 @@ export class DisplayService extends BaseElectronService implements IDisplayServi
    */
   public async displaySlide(content: SlideContent): Promise<void> {
     try {
+      this.currentState.slide = content;
+      this.currentState.blackout = false;
+
       const audWin = this.getAudienceWindow();
       const confWin = this.getConfidenceWindow();
       const lowerWin = this.getLowerThirdsWindow();
@@ -195,6 +210,7 @@ export class DisplayService extends BaseElectronService implements IDisplayServi
       // Handle lower thirds if included in content
       if (lowerWin && !lowerWin.isDestroyed() && 'lowerThirds' in content) {
         const lowerThirdsData = (content as any).lowerThirds;
+        this.currentState.lowerThirds = lowerThirdsData;
         lowerWin.webContents.send('update-lower-thirds', lowerThirdsData);
         this.log('debug', 'Sent lower thirds data');
       }
@@ -210,6 +226,7 @@ export class DisplayService extends BaseElectronService implements IDisplayServi
    */
   public async blackScreen(): Promise<void> {
     try {
+      this.currentState.blackout = true;
       const audWin = this.getAudienceWindow();
 
       if (audWin && !audWin.isDestroyed()) {
@@ -228,6 +245,11 @@ export class DisplayService extends BaseElectronService implements IDisplayServi
    */
   public async clearAll(): Promise<void> {
     try {
+      this.currentState.video = null;
+      this.currentState.slide = null;
+      this.currentState.blackout = false;
+      this.currentState.lowerThirds = null;
+
       const audWin = this.getAudienceWindow();
       const confWin = this.getConfidenceWindow();
       const lowerWin = this.getLowerThirdsWindow();
@@ -259,6 +281,7 @@ export class DisplayService extends BaseElectronService implements IDisplayServi
    */
   public async updateLowerThirds(data: LowerThirdsData): Promise<void> {
     try {
+      this.currentState.lowerThirds = data;
       const lowerWin = this.getLowerThirdsWindow();
 
       if (lowerWin && !lowerWin.isDestroyed()) {
@@ -270,6 +293,13 @@ export class DisplayService extends BaseElectronService implements IDisplayServi
     } catch (error) {
       this.handleError('updateLowerThirds', error);
     }
+  }
+
+  /**
+   * Get current display state
+   */
+  public getCurrentState(): any {
+    return this.currentState;
   }
 
   /**

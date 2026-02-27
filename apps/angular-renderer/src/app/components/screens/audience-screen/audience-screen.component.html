@@ -1,7 +1,7 @@
 <div id="audience-container" class="w-screen h-screen overflow-hidden relative">
     @if (backgroundVideo) {
     <video #backgroundVideoRef class="background-video fixed top-0 left-0 w-full h-full object-cover z-[-1] opacity-60"
-        [src]="backgroundVideo" autoPlay loop muted></video>
+        [src]="backgroundVideo" autoplay [loop]="isLooping" muted></video>
     }
 
     <!-- Content Layer -->

@@ -57,6 +57,21 @@ export class ConfidenceViewModel implements OnDestroy {
     constructor() {
         this.startClock();
         this.setupEventListeners();
+        this.syncWithCurrentState();
+    }
+
+    private async syncWithCurrentState() {
+        try {
+            const state = await this.electron.invoke('display:getCurrentState');
+            if (state) {
+                if (state.slide) {
+                    this.transition.transitionTo({ type: 'lyrics', text: state.slide.text || [] });
+                }
+                // videoCountdown handles video progress, no need to sync initial static video state here unless duration info is provided
+            }
+        } catch (error) {
+            console.error('ConfidenceVM: failed to sync state', error);
+        }
     }
 
     ngOnDestroy() {

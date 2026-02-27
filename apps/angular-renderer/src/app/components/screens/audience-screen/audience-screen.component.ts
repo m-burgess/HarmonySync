@@ -42,6 +42,7 @@ export class AudienceScreenComponent implements OnInit, OnDestroy, AfterViewInit
 
     currentContent = computed(() => this.transition.currentContent());
     backgroundVideo: string | null = null;
+    isLooping: boolean = false;
     player: any = null;
     private intervalId: any = null;
 
@@ -74,6 +75,33 @@ export class AudienceScreenComponent implements OnInit, OnDestroy, AfterViewInit
 
     ngOnInit() {
         this.setupEventListeners();
+        this.syncWithCurrentState();
+    }
+
+    private async syncWithCurrentState() {
+        try {
+            const state = await this.electronService.invoke('display:getCurrentState');
+            console.log('Audience: syncing with current state', state);
+            if (state) {
+                if (state.video) {
+                    this.backgroundVideo = this.electronService.convertFileSrc(state.video.path);
+                    this.isLooping = !!state.video.loop;
+                }
+                if (state.slide) {
+                    if (state.slide.type === 'lyrics') {
+                        this.transition.transitionTo({ type: 'lyrics', text: state.slide.text });
+                    } else if (state.slide.type === 'image') {
+                        this.transition.transitionTo({
+                            type: 'image',
+                            path: this.electronService.convertFileSrc(state.slide.path),
+                            name: state.slide.name
+                        });
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Audience: failed to sync state', error);
+        }
     }
 
     ngAfterViewInit() {
@@ -147,6 +175,7 @@ export class AudienceScreenComponent implements OnInit, OnDestroy, AfterViewInit
         const ulDisplayVideo = this.electronService.on('display-video-slide', (payload: any) => {
             console.log('Audience: display-video-slide event received', payload);
             this.backgroundVideo = this.electronService.convertFileSrc(payload.path);
+            this.isLooping = !!payload.loop;
         });
         if (ulDisplayVideo) this.unlisteners.push(ulDisplayVideo);
 

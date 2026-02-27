@@ -48,7 +48,7 @@ export interface IAudioService extends IService {
 
 export interface IVideoService extends IService {
   getMetadata(filePath: string): Promise<any>;
-  transcode(inputPath: string, outputPath?: string): Promise<string>;
+  transcode(inputPath: string, onProgress?: (progress: any) => void, outputPath?: string): Promise<string>;
   generateThumbnail(videoPath: string, outputPath?: string): Promise<string>;
 }
 
@@ -157,7 +157,7 @@ export interface IFFmpegService extends IService {
   convertToOgg(inputPath: string, outputDir: string, onProgress?: (progress: number) => void): Promise<string>;
   transposeAudio(songPath: string, semitones: number): Promise<string>;
   getVideoMetadata(path: string): Promise<any>;
-  transcodeVideo(inputPath: string, outputPath?: string): Promise<string>;
+  transcodeVideo(inputPath: string, onProgress?: (progress: any) => void, outputPath?: string): Promise<string>;
   generateThumbnail(videoPath: string, outputPath?: string): Promise<string>;
 }
 

@@ -111,7 +111,7 @@ export class SlideComponent implements OnInit {
     } else {
       this.isLoading = true;
       try {
-        const transcodedPath = await this.electron.invoke('transcode_video', { inputPath: this.slide.path });
+        const transcodedPath = await this.electron.invoke('video:transcode', this.slide.path);
         this.onVideoTranscoded.emit({ index: this.index, path: transcodedPath });
         this.displayService.displayVideoSlide(transcodedPath, this.slide.duration).subscribe();
       } catch (error) {
