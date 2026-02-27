@@ -48,7 +48,7 @@
         <div class="vscode-sidebar bg-gray-800 border-r border-gray-700 overflow-hidden"
             [style.width]="sidebarWidth + 'px'">
             @if (activeSidebar() === 'explorer') {
-            <app-service-order-manager></app-service-order-manager>
+            <app-service-order></app-service-order>
             } @else if (activeSidebar() === 'timers') {
             <app-timer-list></app-timer-list>
             } @else if (activeSidebar() === 'settings') {
@@ -95,42 +95,17 @@
             <!-- Slide Editor or Lyrics Column -->
             <div class="flex-1 overflow-hidden flex flex-col pt-2">
 
-                <!-- Grid Section -->
+                <!-- Main Content Area: Slide Grid or Focus Lyrics -->
                 <div class="flex-1 flex overflow-hidden border-t border-[#2b2b2b]">
                     <div class="flex-1 overflow-auto bg-[#0a0a0a] custom-scrollbar">
-                        @if (currentItemType() === 'song') {
-                        <div class="h-full flex flex-col">
-                            <div
-                                class="px-6 py-4 border-b border-[#2b2b2b] bg-[#1a1a1a] flex items-center justify-between">
-                                <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Active Lyrics View
-                                </h2>
-                                <div class="flex items-center gap-2">
-                                    <span class="text-[10px] text-blue-500 font-medium">SONG MODE</span>
-                                    <div class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div>
-                                </div>
-                            </div>
-                            <div class="flex-1 overflow-auto">
-                                <app-lyrics-column [lyrics]="currentLyrics()"></app-lyrics-column>
-                            </div>
-                        </div>
-                        } @else {
-                        <app-slide-manager></app-slide-manager>
-                        }
-                    </div>
-
-                    <!-- Right Utility Bar (Lyrics) - Only visible if not in song mode and has lyrics -->
-                    @if (currentItemType() !== 'song' && currentItemType() !== 'folder' && currentLyrics()) {
-                    <div class="w-80 border-l border-[#2b2b2b] bg-[#1e1e1e]/60 flex flex-col">
-                        <div class="p-3 border-b border-[#2b2b2b] flex items-center justify-between">
-                            <h3 class="text-[10px] font-bold text-[#858585] uppercase tracking-widest">Active Lyrics
-                            </h3>
-                            <button class="text-[9px] text-[#007acc] hover:underline">Full View</button>
-                        </div>
-                        <div class="flex-1 overflow-auto custom-scrollbar">
+                        @if (currentItemType() === 'song' && currentLyrics()) {
+                        <div class="h-full px-6 py-4">
                             <app-lyrics-column [lyrics]="currentLyrics()"></app-lyrics-column>
                         </div>
+                        } @else {
+                        <app-slide-grid></app-slide-grid>
+                        }
                     </div>
-                    }
                 </div>
             </div>
 
@@ -167,7 +142,7 @@
         <!-- Mixer Sidebar -->
         <div [style.width]="mixerWidth + 'px'" class="bg-gray-800 border-l border-gray-700"
             style="min-width: 200px; max-width: 600px;">
-            <app-mixer-sidebar></app-mixer-sidebar>
+            <app-stem-mixer></app-stem-mixer>
         </div>
     </div>
 

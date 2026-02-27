@@ -1,14 +1,16 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
+import { Injectable, inject, signal, computed, effect } from '@angular/core';
 import { ElectronService } from './electron.service';
 import { Slide, LoadFromFolderResult } from '../models/slide.models';
 import { from, Observable, of } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
+import { AudioService } from './audio.service';
 
 @Injectable({
     providedIn: 'root'
 })
 export class SlideService {
     private readonly electron = inject(ElectronService);
+    private readonly audio = inject(AudioService);
 
     // ── Reactive State ──────────────────────────────────────────────────────────
     readonly slides = signal<Slide[]>([]);
@@ -36,7 +38,7 @@ export class SlideService {
         return from(this.electron.invoke('slides:loadSlides', folderPath)).pipe(
             map(res => res as Slide[]),
             tap(slides => {
-                const mediaSlides = (slides || []).filter(s => s.type !== 'lyric');
+                const mediaSlides = this.parseTimestamps((slides || []).filter(s => s.type !== 'lyric'));
                 this.slides.set(mediaSlides);
                 this.currentSlideIndex.set(mediaSlides.length > 0 ? 0 : -1);
                 this.isLoading.set(false);
@@ -60,7 +62,7 @@ export class SlideService {
         return from(this.electron.invoke('slides:loadFromFolder', folderPath)).pipe(
             map(res => res as LoadFromFolderResult),
             tap(res => {
-                const mediaSlides = (res.slides || []).filter(s => s.type !== 'lyric');
+                const mediaSlides = this.parseTimestamps((res.slides || []).filter(s => s.type !== 'lyric'));
                 this.slides.set(mediaSlides);
                 this.currentSlideIndex.set(mediaSlides.length > 0 ? 0 : -1);
                 this.isLoading.set(false);
@@ -119,6 +121,46 @@ export class SlideService {
         this.currentSlideIndex.set(-1);
         this.error.set(null);
     }
+
+    /**
+     * Parsing logic for timestamped lyrics (LRC or similar)
+     */
+    private parseTimestamps(slides: Slide[]): Slide[] {
+        return slides.map(slide => {
+            if (slide.type === 'lyric' && slide.content) {
+                const match = slide.content.match(/\[(\d+):(\d+\.\d+)\]/);
+                if (match) {
+                    const mins = parseInt(match[1], 10);
+                    const secs = parseFloat(match[2]);
+                    return { ...slide, startTime: mins * 60 + secs };
+                }
+            }
+            return slide;
+        });
+    }
+
+    // Effect for auto-advancing slides based on audio position
+    private readonly autoAdvanceEffect = effect(() => {
+        const pos = this.audio.currentPosition();
+        if (!this.audio.isPlaying()) return;
+
+        const slides = this.slides();
+        const currentIdx = this.currentSlideIndex();
+
+        // Find the best matching slide for the current position
+        // We look for the latest slide whose startTime <= current position
+        let bestIdx = -1;
+        for (let i = 0; i < slides.length; i++) {
+            const startTime = slides[i].startTime;
+            if (startTime !== undefined && startTime <= pos) {
+                bestIdx = i;
+            }
+        }
+
+        if (bestIdx !== -1 && bestIdx !== currentIdx) {
+            this.selectSlide(bestIdx);
+        }
+    });
 
     /**
      * Save a single slide changes

@@ -51,6 +51,7 @@ export class AudioService {
     readonly error = signal<string | null>(null);
     readonly currentSongPath = signal<string | null>(null);
     readonly connectionStatus = signal<'connecting' | 'connected' | 'error'>('connecting');
+    readonly currentPosition = signal<number>(0);
 
     // Derived / computed
     readonly hasTracksLoaded = computed(() => this.tracks().length > 0);
@@ -69,24 +70,12 @@ export class AudioService {
     }
 
     connectWebSocket(): void {
-        if (this.ws) return;
-
-        this.connectionStatus.set('connecting');
-        this.ws = new WebSocket(environment.wsUrl);
-
-        fromEvent<MessageEvent>(this.ws, 'message')
-            .pipe(map((e: MessageEvent) => JSON.parse(e.data) as WsEvent))
-            .subscribe((event: WsEvent) => {
-                this.wsEvents$.next(event);
-                this.handleWsEvent(event);
-            });
-
-        fromEvent(this.ws, 'open').subscribe(() => this.connectionStatus.set('connected'));
-        fromEvent(this.ws, 'error').subscribe(() => this.connectionStatus.set('error'));
-        fromEvent(this.ws, 'close').subscribe(() => {
-            this.ws = null;
-            this.connectionStatus.set('error');
+        // Now using Electron Bridge for events
+        this.electron.on('media-engine:event', (event: any) => {
+            this.wsEvents$.next(event);
+            this.handleWsEvent(event);
         });
+        this.connectionStatus.set('connected');
     }
 
     disconnectWebSocket(): void {
@@ -137,11 +126,7 @@ export class AudioService {
                     };
                 });
 
-                return this.http
-                    .post<{ status: string; id: string }>(
-                        `${this.base}/api/songs/create`,
-                        { id: songId, tracks: goTracks }
-                    )
+                return from(this.electron.invoke('media-engine:load-song', songId, goTracks))
                     .pipe(
                         map(() => {
                             const tracks: Track[] = goTracks.map((gt, i) => ({
@@ -167,10 +152,10 @@ export class AudioService {
                                         return tracks.map(t => {
                                             const saved = savedConfig.tracks.find((st: any) => st.id === t.id);
                                             if (saved) {
-                                                // Apply saved settings
-                                                this.http.post<void>(`${this.base}/api/mixer/volume`, { trackId: t.id, volume: saved.volume }).subscribe();
-                                                this.http.post<void>(`${this.base}/api/mixer/pan`, { trackId: t.id, pan: saved.pan }).subscribe();
-                                                this.http.post<void>(`${this.base}/api/mixer/mute`, { trackId: t.id, muted: saved.muted }).subscribe();
+                                                // Apply saved settings via Electron Bridge
+                                                from(this.electron.invoke('media-engine:set-volume', t.id, saved.volume ?? t.volume)).subscribe();
+                                                from(this.electron.invoke('media-engine:set-pan', t.id, saved.pan ?? t.pan)).subscribe();
+                                                from(this.electron.invoke('media-engine:set-mute', t.id, saved.muted ?? t.muted)).subscribe();
 
                                                 return {
                                                     ...t,
@@ -233,11 +218,10 @@ export class AudioService {
         this.tracks.update(tracks =>
             tracks.map(t => t.id === trackId ? { ...t, volume } : t)
         );
-        this.http.post<void>(`${this.base}/api/mixer/volume`, { trackId, volume })
+        from(this.electron.invoke('media-engine:set-volume', trackId, volume))
             .pipe(
                 tap(() => {
                     this.messaging.publish(EVENT_TYPES.AUDIO_VOLUME_CHANGED, { trackId, volume });
-                    this.saveMixerConfig();
                 }),
                 catchError(() => EMPTY)
             )
@@ -248,9 +232,8 @@ export class AudioService {
         this.tracks.update(tracks =>
             tracks.map(t => t.id === trackId ? { ...t, pan } : t)
         );
-        this.http.post<void>(`${this.base}/api/mixer/pan`, { trackId, pan })
+        from(this.electron.invoke('media-engine:set-pan', trackId, pan))
             .pipe(
-                tap(() => this.saveMixerConfig()),
                 catchError(() => EMPTY)
             )
             .subscribe();
@@ -265,9 +248,8 @@ export class AudioService {
             tracks.map(t => t.id === trackId ? { ...t, muted } : t)
         );
 
-        this.http.post<void>(`${this.base}/api/mixer/mute`, { trackId, muted })
+        from(this.electron.invoke('media-engine:set-mute', trackId, muted))
             .pipe(
-                tap(() => this.saveMixerConfig()),
                 catchError(() => EMPTY)
             )
             .subscribe();
@@ -297,7 +279,8 @@ export class AudioService {
 
     transpose(songId: string, semitones: number): Observable<void> {
         this.isLoading.set(true);
-        return this.http.post<void>(`${this.base}/api/songs/transpose`, { songId, semitones }).pipe(
+        return from(this.electron.invoke('media-engine:transpose', songId, semitones)).pipe(
+            map(() => { }),
             tap(() => this.isLoading.set(false)),
             catchError(err => {
                 this.error.set(err?.message ?? 'Transpose failed');
@@ -308,7 +291,8 @@ export class AudioService {
     }
 
     play(): Observable<void> {
-        return this.http.post<void>(`${this.base}/api/mixer/play`, {}).pipe(
+        return from(this.electron.invoke('media-engine:play')).pipe(
+            map(() => { }),
             tap(() => {
                 this.isPlaying.set(true);
                 this.isPaused.set(false);
@@ -322,7 +306,8 @@ export class AudioService {
     }
 
     pause(): Observable<void> {
-        return this.http.post<void>(`${this.base}/api/mixer/pause`, {}).pipe(
+        return from(this.electron.invoke('media-engine:pause')).pipe(
+            map(() => { }),
             tap(() => {
                 this.isPlaying.set(false);
                 this.isPaused.set(true);
@@ -336,11 +321,13 @@ export class AudioService {
     }
 
     stop(): Observable<void> {
-        return this.http.post<void>(`${this.base}/api/mixer/stop`, {}).pipe(
+        return from(this.electron.invoke('media-engine:stop')).pipe(
+            map(() => { }),
             tap(() => {
                 this.isPlaying.set(false);
                 this.isPaused.set(false);
                 this.messaging.publish(EVENT_TYPES.AUDIO_PLAYBACK_STOPPED, {});
+                this.currentPosition.set(0);
             }),
             catchError((err: Error) => {
                 this.error.set(err?.message ?? 'Stop failed');
@@ -356,8 +343,11 @@ export class AudioService {
         return 1;
     }
 
-    private handleWsEvent(event: WsEvent): void {
+    private handleWsEvent(event: any): void {
         switch (event.type) {
+            case 'playback_position':
+                this.currentPosition.set(event.position);
+                break;
             case 'audio_play':
                 this.isPlaying.set(true);
                 this.isPaused.set(false);
@@ -370,12 +360,14 @@ export class AudioService {
             case 'audio_cleared':
                 this.isPlaying.set(false);
                 this.isPaused.set(false);
+                this.currentPosition.set(0);
                 if (event.type === 'audio_cleared') this.tracks.set([]);
                 break;
             case 'audio_finished':
                 this.isPlaying.set(false);
                 this.isPaused.set(false);
-                this.messaging.publish(EVENT_TYPES.AUDIO_PLAYBACK_FINISHED, { songId: event['songId'] });
+                this.currentPosition.set(0);
+                this.messaging.publish(EVENT_TYPES.AUDIO_PLAYBACK_FINISHED, { songId: event.songId });
                 break;
             case 'audio_volume_changed': {
                 const { trackId, volume } = event;

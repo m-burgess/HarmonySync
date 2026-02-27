@@ -1,10 +1,10 @@
 import { Component, HostListener, Inject, PLATFORM_ID, OnInit, inject, computed, signal } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { ServiceOrderManagerComponent } from '../service-order/service-order-manager/service-order-manager.component';
-import { SlideManagerComponent } from '../slides/slide-manager/slide-manager.component';
+import { ServiceOrderComponent } from '../service-order/service-order/service-order.component';
+import { SlideGridComponent } from '../slides/slide-grid/slide-grid.component';
 import { LyricsColumnComponent } from '../lyrics/lyrics-column/lyrics-column.component';
 import { ActivityBarIconComponent } from '../vscode-ui/activity-bar-icon/activity-bar-icon.component';
-import { MixerSidebarComponent } from '../audio/mixer-sidebar/mixer-sidebar';
+import { StemMixerComponent } from '../audio/stem-mixer/stem-mixer.component';
 import { TimerModalComponent } from '../modals/timer-modal/timer-modal.component';
 import { Dialog, DialogModule } from '@angular/cdk/dialog';
 import { ElectronService } from '../../core/electron.service';
@@ -27,9 +27,9 @@ import { ScriptEditorComponent } from '../screens/script-editor/script-editor.co
     imports: [
         CommonModule,
         ActivityBarIconComponent,
-        MixerSidebarComponent,
-        ServiceOrderManagerComponent,
-        SlideManagerComponent,
+        StemMixerComponent,
+        ServiceOrderComponent,
+        SlideGridComponent,
         LyricsColumnComponent,
         TimerListComponent,
         SettingsComponent,

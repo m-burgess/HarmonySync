@@ -4,16 +4,14 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    background: var(--vscode-bg-secondary, #1a1a1a);
-    border-radius: 4px;
+    background: transparent;
     overflow: hidden;
-    border: 1px solid var(--vscode-border, #2d2d2d);
 }
 
 .lyrics-column-header {
-    padding: 1rem;
-    background: var(--vscode-bg-tertiary, #252525);
-    border-bottom: 1px solid var(--vscode-border, #2d2d2d);
+    padding: 0 0 1.5rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    margin-bottom: 1rem;
 }
 
 .lyrics-column-header h3 {
@@ -25,20 +23,20 @@
 
 .lyrics-column-instructions {
     margin: 0;
-    font-size: 0.85rem;
-    color: var(--vscode-text-secondary, #888);
+    font-size: 0.75rem;
+    color: #858585;
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
 .lyrics-column-content {
     flex: 1;
     overflow-y: auto;
-    padding: 1rem;
+    padding: 0;
     scroll-behavior: smooth;
-    scrollbar-width: thin;
-    scrollbar-color: var(--vscode-accent) transparent;
 }
 
 .lyrics-section-label {
@@ -59,31 +57,40 @@
 }
 
 .lyrics-line {
-    padding: 0.5rem 0.75rem;
-    font-size: 1rem;
-    line-height: 1.5;
-    color: var(--vscode-text, #e0e0e0);
+    padding: 0.6rem 1rem;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    color: #cccccc;
     cursor: pointer;
-    transition: all 0.2s ease;
-    border-radius: 4px;
+    transition: all 0.15s ease;
     user-select: none;
     position: relative;
+    border-left: 3px solid transparent;
 }
 
 .lyrics-line-pair-start {
-    margin-top: 0.5rem;
+    margin-top: 0.75rem;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+}
+
+.lyrics-line:not(.lyrics-line-pair-start) {
+    padding-top: 0.2rem;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
 }
 
 .lyrics-line-hovered {
-    background: rgba(59, 130, 246, 0.15);
+    background: rgba(255, 255, 255, 0.03);
     color: #ffffff;
+    border-left-color: rgba(255, 255, 255, 0.1);
 }
 
 .lyrics-line-selected {
-    background: linear-gradient(135deg, rgba(34, 211, 238, 0.25) 0%, rgba(34, 211, 238, 0.15) 100%);
+    background: rgba(0, 122, 204, 0.15);
     color: #ffffff;
-    font-weight: 500;
-    box-shadow: 0 0 0 1px var(--vscode-accent);
+    font-weight: 600;
+    border-left-color: #007acc;
 }
 
 .lyrics-column-footer {

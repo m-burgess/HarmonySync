@@ -1,0 +1,107 @@
+<app-vscode-panel title="Stem Mixer" className="flex flex-col h-full bg-[#1e1e1e]">
+    <!-- Mixer Header Controls -->
+    <div class="flex items-center justify-between p-4 bg-[#252526] border-b border-[#333]">
+        <div class="flex gap-2">
+            <button (click)="vm.play()" [class.bg-[#007acc]]="vm.isPlaying()" [class.bg-[#333]]="!vm.isPlaying()"
+                class="w-10 h-10 rounded flex items-center justify-center text-white hover:scale-105 active:scale-95 transition-all shadow-md">
+                <ng-icon name="heroPlaySolid" class="text-lg"></ng-icon>
+            </button>
+
+            <button (click)="vm.stop()"
+                class="w-10 h-10 bg-[#333] rounded flex items-center justify-center text-white hover:bg-[#444] active:scale-95 transition-all shadow-md">
+                <ng-icon name="heroStopSolid" class="text-lg"></ng-icon>
+            </button>
+
+            <div class="w-[1px] h-10 bg-[#333] mx-1"></div>
+
+            <button (click)="vm.saveMix()"
+                class="px-3 h-10 bg-[#007acc]/10 border border-[#007acc]/30 rounded flex items-center gap-2 text-[#007acc] hover:bg-[#007acc]/20 active:scale-95 transition-all shadow-sm">
+                <ng-icon name="heroAdjustmentsHorizontalSolid" class="text-sm"></ng-icon>
+                <span class="text-[10px] font-bold uppercase tracking-wider">Save Mix</span>
+            </button>
+        </div>
+        <div class="text-right">
+            <div class="text-[9px] font-bold text-[#858585] uppercase tracking-tighter">Automatic Mixing</div>
+            <div class="flex items-center gap-1.5">
+                <div class="w-1.5 h-1.5 rounded-full bg-[#007acc] shadow-[0_0_8px_rgba(0,122,204,0.6)]"></div>
+                <span class="text-[10px] text-[#cccccc] font-mono leading-none">AI ENGAGED</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mixer Tracks List -->
+    <div class="flex-1 overflow-y-auto custom-scrollbar px-3 py-6 space-y-3">
+        @if (!vm.hasTracks()) {
+        <div class="flex flex-col items-center justify-center h-64 opacity-20 group">
+            <ng-icon name="heroMusicalNoteSolid"
+                class="text-6xl mb-4 group-hover:scale-110 transition-transform"></ng-icon>
+            <span class="text-xs font-bold uppercase tracking-widest text-center px-4">Waiting for tracks...</span>
+        </div>
+        }
+
+        @for (track of vm.sortedTracks(); track track.id; let i = $index) {
+        <div (click)="vm.toggleMute(track.id)"
+            class="track-card bg-[#252526] p-3 rounded-lg border border-[#333] hover:border-[#007acc]/40 transition-all group/track cursor-pointer select-none relative overflow-hidden active:scale-[0.98]">
+
+            <!-- Active State Glow -->
+            @if (!track.muted) {
+            <div class="absolute inset-0 bg-gradient-to-r from-[#007acc]/5 to-transparent pointer-events-none"></div>
+            }
+
+            <div class="flex items-center space-x-3 relative z-10">
+                <!-- Status Icon -->
+                <div class="p-2 bg-[#1e1e1e] rounded border transition-colors shadow-inner"
+                    [class.bg-[#007acc]/10]="!track.muted" [class.border-[#3c3c3c]]="track.muted"
+                    [class.border-[#007acc]/30]="!track.muted">
+                    <ng-icon [name]="track.muted ? 'heroSpeakerXMarkSolid' : getTrackIcon(track.name)"
+                        class="text-sm transition-all" [class.text-[#858585]]="track.muted"
+                        [class.text-[#007acc]]="!track.muted"></ng-icon>
+                </div>
+
+                <div class="flex-1 flex flex-col min-w-0">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-[11px] font-bold truncate transition-colors"
+                            [class.text-[#858585]]="track.muted" [class.text-[#e1e1e1]]="!track.muted">
+                            {{ vm.formatTrackName(track.name) }}
+                        </span>
+                    </div>
+
+                    <!-- Volume Slider -->
+                    <div class="flex items-center gap-2" (click)="$event.stopPropagation()">
+                        <input type="range" min="0" max="1" step="0.01" [ngModel]="track.volume"
+                            (ngModelChange)="vm.setVolume(track.id, $event)"
+                            class="flex-1 h-1 bg-[#2b2b2b] rounded-full appearance-none cursor-pointer accent-[#007acc]">
+                        <span class="text-[9px] font-mono text-[#858585] w-6">{{ (track.volume * 100).toFixed(0)
+                            }}</span>
+                    </div>
+                </div>
+
+                <!-- Live Meter (Mocked for UI feel) -->
+                <div class="flex gap-0.5 h-6 items-end pb-1 pr-1">
+                    @for (bar of [1,2,3]; track bar) {
+                    <div class="w-1 bg-[#444] rounded-t-sm transition-all duration-300"
+                        [style.height]="track.muted ? '2px' : (vm.isPlaying() ? (30 + (i * 10 % 50) + (bar * 10)) + '%' : '2px')"
+                        [class.bg-[#007acc]]="!track.muted && vm.isPlaying()"></div>
+                    }
+                </div>
+            </div>
+        </div>
+        }
+    </div>
+
+    <!-- Global Footer -->
+    <div class="p-4 bg-[#1e1e1e] border-t border-[#333] space-y-3">
+        <div class="flex items-center justify-between mb-1">
+            <span class="text-[10px] font-bold text-[#858585] uppercase tracking-widest">Master Volume</span>
+            <span class="text-[10px] font-mono text-[#007acc]">{{ (vm.globalVolume() * 100).toFixed(0) }}%</span>
+        </div>
+        <input type="range" min="0" max="1" step="0.01" [ngModel]="vm.globalVolume()"
+            (ngModelChange)="vm.audioService.tracks()"
+            class="w-full h-1 bg-[#2b2b2b] rounded-full appearance-none cursor-pointer accent-[#007acc]">
+
+        <div class="flex items-center justify-between opacity-40 pt-2">
+            <span class="text-[9px] font-mono">PAN: AUTO</span>
+            <span class="text-[9px] font-mono">LATENCY: 12ms</span>
+        </div>
+    </div>
+</app-vscode-panel>

@@ -4,7 +4,8 @@
  * (audience, confidence, lower thirds)
  */
 
-import { BrowserWindow } from 'electron';
+import { BrowserWindow, app } from 'electron';
+import * as path from 'path';
 import { BaseElectronService } from '@harmonysync/core';
 import { IDisplayService, ServiceConfig } from '@harmonysync/core';
 import { SlideContent, LowerThirdsData } from '@harmonysync/core';
@@ -25,6 +26,15 @@ export class DisplayService extends BaseElectronService implements IDisplayServi
   private getConfidenceWindow: WindowGetter;
   private getLowerThirdsWindow: WindowGetter;
 
+  private audienceWindow: BrowserWindow | null = null;
+  private confidenceWindow: BrowserWindow | null = null;
+  private lowerThirdsWindow: BrowserWindow | null = null;
+  private preserviceMusicWindow: BrowserWindow | null = null;
+
+  public getPreserviceMusicWindow(): BrowserWindow | null {
+    return this.preserviceMusicWindow;
+  }
+
   constructor(
     getAudienceWindow: WindowGetter,
     getConfidenceWindow: WindowGetter,
@@ -42,6 +52,90 @@ export class DisplayService extends BaseElectronService implements IDisplayServi
    */
   protected override async onInitialize(): Promise<void> {
     this.log('info', 'Display service ready');
+
+    // Auto-initialize windows when app is ready
+    if (app.isReady()) {
+      await this.initializeWindows();
+    } else {
+      app.whenReady().then(() => this.initializeWindows());
+    }
+  }
+
+  /**
+   * Create and configure all application windows
+   */
+  public async initializeWindows(): Promise<void> {
+    this.log('info', 'Initializing application windows');
+
+    const isDev = process.env.NODE_ENV === 'development';
+    const ANGULAR_DEV_SERVER_URL = 'http://localhost:4200';
+    // Adjust path based on compiled structure
+    const preloadPath = path.join(__dirname, '../../preload.js');
+
+    // Create Audience Window
+    this.audienceWindow = this.createSecondaryWindow(preloadPath, {
+      width: 960,
+      height: 540,
+      title: 'Audience Display'
+    });
+    this.loadWindowContent(this.audienceWindow, 'audience', isDev, ANGULAR_DEV_SERVER_URL);
+
+    // Create Confidence Monitor
+    this.confidenceWindow = this.createSecondaryWindow(preloadPath, {
+      width: 960,
+      height: 540,
+      title: 'Confidence Monitor'
+    });
+    this.loadWindowContent(this.confidenceWindow, 'confidence', isDev, ANGULAR_DEV_SERVER_URL);
+
+    // Create Lower Thirds
+    this.lowerThirdsWindow = this.createSecondaryWindow(preloadPath, {
+      width: 960,
+      height: 540,
+      transparent: true,
+      frame: false,
+      alwaysOnTop: true,
+      title: 'Lower Thirds Overlay'
+    });
+    this.loadWindowContent(this.lowerThirdsWindow, 'lower-thirds', isDev, ANGULAR_DEV_SERVER_URL);
+
+    // Create Preservice Music
+    this.preserviceMusicWindow = this.createSecondaryWindow(preloadPath, {
+      width: 800,
+      height: 600,
+      title: 'Pre-service Music'
+    });
+    this.loadWindowContent(this.preserviceMusicWindow, 'preservice', isDev, ANGULAR_DEV_SERVER_URL);
+
+    // Update getters to use our locally managed windows
+    this.getAudienceWindow = () => this.audienceWindow;
+    this.getConfidenceWindow = () => this.confidenceWindow;
+    this.getLowerThirdsWindow = () => this.lowerThirdsWindow;
+
+    this.log('info', 'All windows initialized and routed');
+  }
+
+  private createSecondaryWindow(preloadPath: string, options: any): BrowserWindow {
+    return new BrowserWindow({
+      ...options,
+      show: false, // Don't show until explicitly requested or content loaded
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        preload: preloadPath,
+      },
+    });
+  }
+
+  private loadWindowContent(window: BrowserWindow, route: string, isDev: boolean, devUrl: string): void {
+    if (isDev) {
+      window.loadURL(`${devUrl}#/${route}`);
+    } else {
+      window.loadFile(
+        path.join(__dirname, '../../../angular-renderer/dist/angular-renderer/browser/index.html'),
+        { hash: `/${route}` }
+      );
+    }
   }
 
   /**

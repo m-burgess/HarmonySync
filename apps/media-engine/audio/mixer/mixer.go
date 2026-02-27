@@ -32,13 +32,14 @@ type Track struct {
 // Mixer manages multiple songs, each containing multiple tracks.
 // Only one song is active at a time; switching is instant.
 type Mixer struct {
-	mu           sync.Mutex
-	Songs        map[string]map[string]*Track // songId -> trackId -> Track
-	ActiveSongID string
-	Tracks       map[string]*Track // legacy flat map (kept for backward compat)
-	inner        *beep.Mixer
-	SampleRate   beep.SampleRate
+	mu             sync.Mutex
+	Songs          map[string]map[string]*Track // songId -> trackId -> Track
+	ActiveSongID   string
+	Tracks         map[string]*Track // legacy flat map (kept for backward compat)
+	inner          *beep.Mixer
+	SampleRate     beep.SampleRate
 	OnSongFinished func(songID string)
+	TotalSamples   int64
 }
 
 // Stream implements beep.Streamer, delegating to the inner mixer.
@@ -46,7 +47,40 @@ func (m *Mixer) Stream(samples [][2]float64) (n int, ok bool) {
 	m.mu.Lock()
 	inner := m.inner
 	m.mu.Unlock()
-	return inner.Stream(samples)
+	n, ok = inner.Stream(samples)
+	if n > 0 {
+		m.mu.Lock()
+		m.TotalSamples += int64(n)
+		m.mu.Unlock()
+	}
+	return n, ok
+}
+
+// GetPosition returns the current playback position in seconds
+func (m *Mixer) GetPosition() float64 {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return float64(m.TotalSamples) / float64(m.SampleRate)
+}
+
+// IsPlaying returns true if any track in the active song is unpaused
+func (m *Mixer) IsPlaying() bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for _, t := range m.Tracks {
+		if !t.Ctrl.Paused {
+			return true
+		}
+	}
+	return false
+}
+
+// GetActiveSongID returns the ID of the currently active song
+func (m *Mixer) GetActiveSongID() string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.ActiveSongID
 }
 
 // Err implements beep.Streamer
@@ -293,6 +327,7 @@ func (m *Mixer) Pause() {
 func (m *Mixer) Stop() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	m.TotalSamples = 0
 	for _, t := range m.Tracks {
 		t.Ctrl.Paused = true
 		t.Ctrl.Streamer = t.Buffer.Streamer(0, t.Buffer.Len())

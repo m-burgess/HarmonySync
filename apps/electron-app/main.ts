@@ -30,6 +30,7 @@ const eventTriggerService = require('./electron/services/event-trigger-service')
 const { ServiceOrderImporter } = require('./electron/services/service-order-importer');
 const { appSettingsService } = require('./electron/services/app-settings-service');
 const { getTimerService } = require('./electron/services/timer-service');
+const { mediaEngineBridge } = require('./electron/services/media-engine-bridge');
 
 // MIDI manager with optional loading
 let midiManager: any = null;
@@ -225,37 +226,41 @@ class ElectronApplication {
         }
       });
 
-      // Create windows
+      // Create main window first (control interface)
       this.createMainWindow();
-      this.createAudienceWindow();
-      this.createConfidenceWindow();
-      this.createLowerThirdsWindow();
-      this.createPreserviceMusicWindow();
 
-      // Instantiate display service with window getters if possible
+      // Instantiate and initialize DisplayService for secondary windows
       try {
         const DisplayServiceModule = require('./electron/services/display-service');
         const DisplayServiceClass = DisplayServiceModule?.default || DisplayServiceModule;
-        if (typeof DisplayServiceClass === 'function') {
-          this.displayServiceInstance = new DisplayServiceClass(
-            () => this.audienceWindow,
-            () => this.confidenceWindow,
-            () => this.lowerThirdsWindow
-          );
-        } else {
-          // Fallback: use module as-is and try to update getters
-          this.displayServiceInstance = DisplayServiceModule;
-          if (this.displayServiceInstance && this.displayServiceInstance.updateWindowGetters) {
-            this.displayServiceInstance.updateWindowGetters(
-              () => this.audienceWindow,
-              () => this.confidenceWindow,
-              () => this.lowerThirdsWindow
-            );
-          }
+
+        // Create instance with empty getters initially; DisplayService will manage its own windows
+        this.displayServiceInstance = new DisplayServiceClass(
+          () => null,
+          () => null,
+          () => null
+        );
+
+        // Initialize service which spawns the windows
+        if (typeof this.displayServiceInstance.initialize === 'function') {
+          await this.displayServiceInstance.initialize();
+        } else if (typeof this.displayServiceInstance.onInitialize === 'function') {
+          // Fallback if initialize is not public/available
+          await this.displayServiceInstance.onInitialize();
         }
+
+        // Sync local references for IPC and management
+        this.audienceWindow = this.displayServiceInstance.getAudienceWindow();
+        this.confidenceWindow = this.displayServiceInstance.getConfidenceWindow();
+        this.lowerThirdsWindow = this.displayServiceInstance.getLowerThirdsWindow();
+        // Since getPreserviceMusicWindow isn't on IDisplayService interface usually, 
+        // we access it via the instance if it exists
+        if (typeof this.displayServiceInstance.getPreserviceMusicWindow === 'function') {
+          this.preserviceMusicWindow = this.displayServiceInstance.getPreserviceMusicWindow();
+        }
+
       } catch (err) {
-        console.warn('[Application] Could not instantiate display service:', err);
-        this.displayServiceInstance = displayService; // fallback to original require
+        console.warn('[Application] Could not initialize display service orchestration:', err);
       }
 
       // Register window getters with windowService if available
@@ -440,100 +445,6 @@ class ElectronApplication {
   }
 
   /**
-   * Create audience display window
-   */
-  private createAudienceWindow(): void {
-    this.audienceWindow = this.createSecondaryWindow({
-      width: 960,
-      height: 540,
-      frame: true,
-      show: false,
-    });
-
-    // Load the Angular app with the audience route
-    if (isDev) {
-      this.audienceWindow.loadURL(`${ANGULAR_DEV_SERVER_URL}#/audience`);
-    } else {
-      this.audienceWindow.loadFile(
-        path.join(__dirname, '../../angular-renderer/dist/angular-renderer/browser/index.html'),
-        { hash: '/audience' }
-      );
-    }
-  }
-
-  /**
-   * Create confidence monitor window
-   */
-  private createConfidenceWindow(): void {
-    this.confidenceWindow = this.createSecondaryWindow({
-      width: 960,
-      height: 540,
-      frame: true,
-      show: false,
-    });
-
-    // Load the Angular app with the confidence route
-    if (isDev) {
-      this.confidenceWindow.loadURL(`${ANGULAR_DEV_SERVER_URL}#/confidence`);
-    } else {
-      this.confidenceWindow.loadFile(
-        path.join(__dirname, '../../angular-renderer/dist/angular-renderer/browser/index.html'),
-        { hash: '/confidence' }
-      );
-    }
-
-    if (isDev) {
-      this.confidenceWindow.webContents.openDevTools();
-    }
-  }
-
-  /**
-   * Create lower thirds overlay window
-   */
-  private createLowerThirdsWindow(): void {
-    this.lowerThirdsWindow = this.createSecondaryWindow({
-      width: 960,
-      height: 540,
-      frame: true,
-      transparent: true,
-      alwaysOnTop: true,
-      show: false,
-    });
-
-    // Load the Angular app with the lower-thirds route
-    if (isDev) {
-      this.lowerThirdsWindow.loadURL(`${ANGULAR_DEV_SERVER_URL}#/lower-thirds`);
-    } else {
-      this.lowerThirdsWindow.loadFile(
-        path.join(__dirname, '../../angular-renderer/dist/angular-renderer/browser/index.html'),
-        { hash: '/lower-thirds' }
-      );
-    }
-  }
-
-  /**
-   * Create pre-service music manager window
-   */
-  private createPreserviceMusicWindow(): void {
-    this.preserviceMusicWindow = this.createSecondaryWindow({
-      width: 800,
-      height: 600,
-      frame: true,
-      show: false,
-    });
-
-    // Load the Angular app with the preservice route
-    if (isDev) {
-      this.preserviceMusicWindow.loadURL(`${ANGULAR_DEV_SERVER_URL}#/preservice`);
-    } else {
-      this.preserviceMusicWindow.loadFile(
-        path.join(__dirname, '../../angular-renderer/dist/angular-renderer/browser/index.html'),
-        { hash: '/preservice' }
-      );
-    }
-  }
-
-  /**
    * Generic method to create secondary windows
    */
   private createSecondaryWindow(config: WindowConfig): BrowserWindow {
@@ -570,6 +481,8 @@ class ElectronApplication {
         mediaEnginePath, // In startService, we are spawning 'node' currently. Need to change this.
         { PORT: '3001' }
       );
+      // Connect bridge to Go engine after it starts
+      mediaEngineBridge.connect();
     } else {
       console.error('[Application] Go Media Engine binary not found at:', mediaEnginePath);
       // Fallback or Error?

@@ -58,7 +58,28 @@ func NewService(eb *events.EventBus) (*Service, error) {
 		})
 	}
 
+	go s.monitorPlayback()
+
 	return s, nil
+}
+
+func (s *Service) monitorPlayback() {
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		<-ticker.C
+		if s.Mixer.ActiveSongID != "" {
+			if s.Mixer.IsPlaying() {
+				pos := s.Mixer.GetPosition()
+				s.EventBus.Broadcast(map[string]interface{}{
+					"type":     "playback_position",
+					"songId":   s.Mixer.ActiveSongID,
+					"position": pos,
+				})
+			}
+		}
+	}
 }
 
 func (s *Service) LoadSong(songID string, tracks []TrackInfo) error {

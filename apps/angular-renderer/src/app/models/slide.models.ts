@@ -18,6 +18,7 @@ export interface Slide {
     fontSize?: number;
     fontFamily?: string;
     order: number;
+    startTime?: number; // In seconds
 }
 
 /**
