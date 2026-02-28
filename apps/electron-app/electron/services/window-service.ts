@@ -441,6 +441,10 @@ export class WindowService extends BaseElectronService implements IWindowService
     const win = getter();
     if (!win) {
       this.log('warn', `${windowType} window not found`);
+      return null;
+    } else if (win.isDestroyed()) {
+      this.log('warn', `${windowType} window is destroyed`);
+      return null;
     }
     return win;
   }

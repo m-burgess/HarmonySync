@@ -41,7 +41,8 @@
 
         @for (track of vm.sortedTracks(); track track.id; let i = $index) {
         <div (click)="vm.toggleMute(track.id)"
-            class="track-card bg-[#252526] p-3 rounded-lg border border-[#333] hover:border-[#007acc]/40 transition-all group/track cursor-pointer select-none relative overflow-hidden active:scale-[0.98]">
+            class="track-card bg-[#252526] p-3 rounded-lg border border-[#333] hover:border-[#007acc]/40 transition-all group/track cursor-pointer select-none relative overflow-hidden active:scale-[0.98]"
+            [class.opacity-50]="track.muted">
 
             <!-- Active State Glow -->
             @if (!track.muted) {

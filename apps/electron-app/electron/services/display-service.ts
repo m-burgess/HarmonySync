@@ -30,6 +30,7 @@ export class DisplayService extends BaseElectronService implements IDisplayServi
   private confidenceWindow: BrowserWindow | null = null;
   private lowerThirdsWindow: BrowserWindow | null = null;
   private preserviceMusicWindow: BrowserWindow | null = null;
+  private isAppQuitting = false;
 
   // Display State Persistence
   private currentState = {
@@ -60,6 +61,10 @@ export class DisplayService extends BaseElectronService implements IDisplayServi
    */
   protected override async onInitialize(): Promise<void> {
     this.log('info', 'Display service ready');
+
+    app.on('before-quit', () => {
+      this.isAppQuitting = true;
+    });
 
     // Auto-initialize windows when app is ready
     if (app.isReady()) {
@@ -124,7 +129,7 @@ export class DisplayService extends BaseElectronService implements IDisplayServi
   }
 
   private createSecondaryWindow(preloadPath: string, options: any): BrowserWindow {
-    return new BrowserWindow({
+    const win = new BrowserWindow({
       ...options,
       show: false, // Don't show until explicitly requested or content loaded
       webPreferences: {
@@ -133,6 +138,16 @@ export class DisplayService extends BaseElectronService implements IDisplayServi
         preload: preloadPath,
       },
     });
+
+    win.on('close', (e) => {
+      if (!this.isAppQuitting) {
+        e.preventDefault();
+        win.hide();
+        this.log('debug', `Intercepted close event for secondary window, hiding instead`);
+      }
+    });
+
+    return win;
   }
 
   private loadWindowContent(window: BrowserWindow, route: string, isDev: boolean, devUrl: string): void {
