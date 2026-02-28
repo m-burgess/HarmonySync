@@ -472,13 +472,17 @@ class ElectronApplication {
     console.log('[Application] Starting external services...');
 
     // Start Go Media Engine (Audio, Video, Image)
-    const mediaEnginePath = path.join(__dirname, '../../media-engine/harmonysync-media-engine.exe');
+    const mediaEngineBinary = process.platform === 'win32'
+      ? 'harmonysync-media-engine.exe'
+      : 'harmonysync-media-engine';
+
+    const mediaEnginePath = path.join(__dirname, '../../media-engine', mediaEngineBinary);
 
     if (fs.existsSync(mediaEnginePath)) {
       console.log('[Application] Spawning Go Media Engine:', mediaEnginePath);
       await this.serviceManager.startService(
         'Media Engine',
-        mediaEnginePath, // In startService, we are spawning 'node' currently. Need to change this.
+        mediaEnginePath,
         { PORT: '3001' }
       );
       // Connect bridge to Go engine after it starts

@@ -3,6 +3,9 @@
   "description": "HarmonySync - Modern worship presentation software",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "license": "MIT",
   "author": "HarmonySync Team",
   "workspaces": [
