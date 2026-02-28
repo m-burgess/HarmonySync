@@ -1,6 +1,5 @@
 import { BrowserWindow, ipcMain } from 'electron';
 import WebSocket from 'ws';
-import fetch from 'node-fetch';
 
 export interface MediaEngineEvent {
     type: string;
