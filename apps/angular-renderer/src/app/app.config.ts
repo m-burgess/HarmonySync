@@ -1,4 +1,5 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
+import { ApplicationConfig, provideBrowserGlobalErrorListeners, importProvidersFrom } from '@angular/core';
+import { DialogModule } from '@angular/cdk/dialog';
 import { provideHttpClient } from '@angular/common/http';
 import { provideRouter, withHashLocation } from '@angular/router';
 import { routes } from './app.routes';
@@ -17,6 +18,9 @@ import {
   heroChevronDown,
   heroArrowDownTray,
   heroCheckCircle,
+  heroCheck,
+  heroXMark,
+  heroBars3,
   heroPencil,
   heroMagnifyingGlass,
   heroPlay,
@@ -44,6 +48,7 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideHttpClient(),
     provideRouter(routes, withHashLocation()),
+    importProvidersFrom(DialogModule),
     provideMonacoEditor(),
     provideIcons({
       heroPresentationChartBar,
@@ -58,6 +63,9 @@ export const appConfig: ApplicationConfig = {
       heroChevronDown,
       heroArrowDownTray,
       heroCheckCircle,
+      heroCheck,
+      heroXMark,
+      heroBars3,
       heroPencil,
       heroMagnifyingGlass,
       heroPlay,

@@ -8,6 +8,9 @@ import { FileService } from './file.service';
 import { ConfigService } from './config.service';
 import { MessagingService } from './messaging.service';
 import { EVENT_TYPES } from '../models/messaging.models';
+import { SongMap } from '../models/song-map.models';
+import { Dialog } from '@angular/cdk/dialog';
+
 
 export interface ServiceOrderItem {
     id?: string;
@@ -16,7 +19,9 @@ export interface ServiceOrderItem {
     type: 'song' | 'folder' | 'presentation';
     tracks?: any[];
     lyrics?: string;
+    songMap?: SongMap;
     hasAudio?: boolean;
+
     audioFileCount?: number;
     files?: string[];
 }
@@ -31,6 +36,7 @@ export class ServiceOrderService {
     private fileService = inject(FileService);
     private config = inject(ConfigService);
     private messaging = inject(MessagingService);
+    private dialog = inject(Dialog);
 
     // Reactive state
     readonly serviceOrder = signal<ServiceOrderItem[]>([]);
@@ -214,10 +220,18 @@ export class ServiceOrderService {
                 this.audio.loadTracks(item.path).subscribe();
             }
 
-            // 2. Load lyrics if available
-            const lyrics = await this.electron.invoke('service-order:loadLyrics', item.path);
-            if (lyrics) {
+            // 2. Load song map if available, otherwise fallback to lyrics.txt
+            const songMap = await this.electron.invoke('service-order:loadSongMap', item.path);
+            if (songMap) {
+                this.serviceOrder.update(order => order.map(i => i.path === item.path ? { ...i, songMap } : i));
+                // Generate lyrics from song map for display
+                const lyrics = this.generateLyricsFromMap(songMap);
                 this.serviceOrder.update(order => order.map(i => i.path === item.path ? { ...i, lyrics } : i));
+            } else {
+                const lyrics = await this.electron.invoke('service-order:loadLyrics', item.path);
+                if (lyrics) {
+                    this.serviceOrder.update(order => order.map(i => i.path === item.path ? { ...i, lyrics } : i));
+                }
             }
 
             // 3. Trigger slide loading
@@ -239,5 +253,37 @@ export class ServiceOrderService {
             const nextItem = order[index + 1];
             await this.loadItem(nextItem, index + 1);
         }
+    }
+
+    private generateLyricsFromMap(songMap: SongMap): string {
+        return songMap.sections.map(s => {
+            const lyrics = s.lyrics.trim();
+            if (!lyrics) return `[${s.label}]`;
+            return `[${s.label}]\n${lyrics}`;
+        }).join('\n\n');
+    }
+
+    async openSongMapEditor(item: ServiceOrderItem, index: number): Promise<void> {
+        const { SongMapModalComponent } = await import('../components/modals/song-map-modal/song-map-modal.component');
+
+        const dialogRef = this.dialog.open<SongMap | null>(SongMapModalComponent, {
+            data: {
+                songName: item.name,
+                songPath: item.path,
+                existingMap: item.songMap
+            }
+        });
+
+        dialogRef.closed.subscribe(async (result) => {
+            if (result) {
+                // Save to song folder
+                const success = await this.electron.invoke('service-order:saveSongMap', item.path, result);
+                if (success) {
+                    console.log('Song map saved successfully');
+                    // Reload item to reflect changes
+                    await this.loadItem(item, index);
+                }
+            }
+        });
     }
 }

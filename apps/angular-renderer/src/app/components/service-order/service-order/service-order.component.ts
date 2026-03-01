@@ -7,35 +7,35 @@ import { VSCodePanelComponent } from '../../vscode-ui/vscode-panel/vscode-panel.
 import { VSCodeButtonComponent } from '../../vscode-ui/vscode-button/vscode-button.component';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import {
-    heroMusicalNote,
-    heroWindow,
-    heroPlus,
-    heroTrash,
-    heroPencil,
-    heroArrowDownTray
+  heroMusicalNote,
+  heroWindow,
+  heroPlus,
+  heroTrash,
+  heroPencil,
+  heroArrowDownTray
 } from '@ng-icons/heroicons/outline';
 
 @Component({
-    selector: 'app-service-order',
-    standalone: true,
-    imports: [
-        CommonModule,
-        FormsModule,
-        VSCodePanelComponent,
-        VSCodeButtonComponent,
-        NgIconComponent
-    ],
-    providers: [
-        provideIcons({
-            heroMusicalNote,
-            heroWindow,
-            heroPlus,
-            heroTrash,
-            heroPencil,
-            heroArrowDownTray
-        })
-    ],
-    template: `
+  selector: 'app-service-order',
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    VSCodePanelComponent,
+    VSCodeButtonComponent,
+    NgIconComponent
+  ],
+  providers: [
+    provideIcons({
+      heroMusicalNote,
+      heroWindow,
+      heroPlus,
+      heroTrash,
+      heroPencil,
+      heroArrowDownTray
+    })
+  ],
+  template: `
     <app-vscode-panel title="Service Order" className="flex flex-col h-full bg-[#1e1e1e]">
       <div class="flex flex-col h-full p-3" id="service-order-container">
           
@@ -94,6 +94,11 @@ import {
                 </div>
                 
                 <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button *ngIf="item.type === 'song'" (click)="$event.stopPropagation(); vm.openSongMapEditor(item, i)" 
+                          class="p-1 hover:bg-[#444] rounded text-[#858585] hover:text-[#007acc] transition-colors"
+                          title="Edit Song Map">
+                    <ng-icon name="heroPencil" class="text-xs"></ng-icon>
+                  </button>
                   <button (click)="$event.stopPropagation(); vm.removeItem(item)" 
                           class="p-1 hover:bg-[#444] rounded text-[#858585] hover:text-red-400 transition-colors">
                     <ng-icon name="heroTrash" class="text-xs"></ng-icon>
@@ -112,7 +117,7 @@ import {
       </div>
     </app-vscode-panel>
   `,
-    styles: [`
+  styles: [`
     :host { display: block; height: 100%; }
     .custom-scrollbar {
       &::-webkit-scrollbar { width: 4px; }
@@ -126,9 +131,9 @@ import {
   `]
 })
 export class ServiceOrderComponent implements OnInit {
-    vm = inject(ServiceOrderViewModel);
+  vm = inject(ServiceOrderViewModel);
 
-    ngOnInit() {
-        // Sync logic if needed
-    }
+  ngOnInit() {
+    // Sync logic if needed
+  }
 }

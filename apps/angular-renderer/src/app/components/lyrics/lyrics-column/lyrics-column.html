@@ -7,6 +7,54 @@
     }
 
     @if (lyrics && parsedLines.length > 0) {
+    <!-- Song Map Header (Based on User's Screenshot) -->
+    <div *ngIf="songMap" class="song-map-header p-4 bg-[#1a1a1a] border border-[#333] rounded-lg mb-6 shadow-sm">
+        <div class="flex items-start gap-4">
+            <!-- Cover image placeholder -->
+            <div
+                class="w-20 h-20 bg-gradient-to-br from-[#007acc] to-blue-900 rounded shadow-inner flex items-center justify-center text-white/20 select-none">
+                <ng-icon name="heroMusicalNote" size="40"></ng-icon>
+            </div>
+
+            <div class="flex-1 space-y-2">
+                <div class="flex items-center gap-2">
+                    <h2 class="text-xl font-bold tracking-tight text-white">{{ songMap.bpm }} BPM Song</h2>
+                    <span
+                        class="text-xs px-2 py-0.5 bg-[#007acc]/20 text-[#007acc] rounded border border-[#007acc]/30 font-bold uppercase tracking-widest">Map
+                        Active</span>
+                </div>
+
+                <div class="flex items-center gap-4 text-xs font-medium text-gray-400">
+                    <div class="flex items-center gap-1.5">
+                        <span class="uppercase font-bold tracking-widest text-[10px] opacity-40">Length:</span>
+                        <span class="text-white selection:bg-[#007acc]">{{ songMap.songLength }}</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="uppercase font-bold tracking-widest text-[10px] opacity-40">BPM:</span>
+                        <span class="text-white selection:bg-[#007acc]">{{ songMap.bpm }}</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="uppercase font-bold tracking-widest text-[10px] opacity-40">Meter:</span>
+                        <span class="text-white selection:bg-[#007acc] selection:text-white">{{ songMap.timeSignature
+                            }}</span>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap gap-1.5 pt-1">
+                    <span class="uppercase font-bold tracking-widest text-[10px] opacity-40 w-full mb-1">Sequence
+                        Track</span>
+                    <div *ngFor="let section of songMap.sections; let last = last" class="flex items-center">
+                        <span
+                            class="px-1.5 py-0.5 bg-[#252526] border border-[#333] rounded text-[10px] font-mono text-[#007acc] hover:border-[#007acc]/50 cursor-default transition-colors">
+                            {{ section.label | slice:0:2 }}{{ section.label.split(' ')[1] || '' }}
+                        </span>
+                        <span *ngIf="!last" class="mx-1 text-gray-700 text-[10px]">,</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="lyrics-column-header">
         <h3>Song Lyrics</h3>
         <p class="lyrics-column-instructions">

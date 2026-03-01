@@ -425,6 +425,34 @@ class IPCHandlerManager {
       }
     });
 
+    this.ipcMain.handle('service-order:loadSongMap', async (_event, songPath: string) => {
+      try {
+        const path = require('path');
+        const fs = require('fs-extra');
+        const mapPath = path.join(songPath, 'song-map.json');
+        if (await fs.pathExists(mapPath)) {
+          return await fs.readJson(mapPath);
+        }
+        return null;
+      } catch (error) {
+        console.error('[service-order:loadSongMap] Error:', error);
+        return null;
+      }
+    });
+
+    this.ipcMain.handle('service-order:saveSongMap', async (_event, songPath: string, songMap: any) => {
+      try {
+        const path = require('path');
+        const fs = require('fs-extra');
+        const mapPath = path.join(songPath, 'song-map.json');
+        await fs.writeJson(mapPath, songMap, { spaces: 2 });
+        return true;
+      } catch (error) {
+        console.error('[service-order:saveSongMap] Error:', error);
+        return false;
+      }
+    });
+
     this.ipcMain.handle('service-order:openLyricsFile', async (_event, songPath: string) => {
       try {
         const path = require('path');

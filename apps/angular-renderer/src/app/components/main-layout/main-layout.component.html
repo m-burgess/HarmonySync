@@ -100,7 +100,8 @@
                     <div class="flex-1 overflow-auto bg-[#0a0a0a] custom-scrollbar">
                         @if (currentItemType() === 'song' && currentLyrics()) {
                         <div class="h-full px-6 py-4">
-                            <app-lyrics-column [lyrics]="currentLyrics()"></app-lyrics-column>
+                            <app-lyrics-column [lyrics]="currentLyrics()"
+                                [songMap]="currentSongMap()"></app-lyrics-column>
                         </div>
                         } @else {
                         <app-slide-grid></app-slide-grid>

@@ -77,7 +77,9 @@ export class MainLayoutComponent implements OnInit {
 
     // Presentation state
     currentLyrics = computed(() => this.serviceOrderService.currentSong()?.lyrics || null);
+    currentSongMap = computed(() => this.serviceOrderService.currentSong()?.songMap || null);
     currentItemType = computed(() => this.serviceOrderService.currentSong()?.type || null);
+
     isLoadingTracks = computed(() => this.serviceOrderService.isLoading());
     isTimerActive = computed(() => this.timerService.timers().some(t => t.status === 'running'));
     runningTimersCount = computed(() => {

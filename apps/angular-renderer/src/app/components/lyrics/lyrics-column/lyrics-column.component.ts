@@ -1,6 +1,11 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, OnChanges, SimpleChanges, ViewChild, ElementRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { NgIconComponent, provideIcons } from '@ng-icons/core';
+import { heroMusicalNote } from '@ng-icons/heroicons/outline';
 import { ElectronService } from '../../../core/electron.service';
+
+import { SongMap } from '../../../models/song-map.models';
+
 
 interface ParsedLine {
     type: 'section' | 'lyric';
@@ -18,12 +23,17 @@ export interface SelectionChangeData {
 @Component({
     selector: 'app-lyrics-column',
     standalone: true,
-    imports: [CommonModule],
+    imports: [CommonModule, NgIconComponent],
+    providers: [
+        provideIcons({ heroMusicalNote })
+    ],
     templateUrl: './lyrics-column.html',
     styleUrl: './lyrics-column.scss'
 })
+
 export class LyricsColumnComponent implements OnInit, OnDestroy, OnChanges {
     @Input() lyrics: string | null = null;
+    @Input() songMap: SongMap | null = null;
     @Output() onSelectionChange = new EventEmitter<SelectionChangeData>();
 
     selectedIndex = 0;
