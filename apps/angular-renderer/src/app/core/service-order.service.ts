@@ -267,6 +267,8 @@ export class ServiceOrderService {
         const { SongMapModalComponent } = await import('../components/modals/song-map-modal/song-map-modal.component');
 
         const dialogRef = this.dialog.open<SongMap | null>(SongMapModalComponent, {
+            hasBackdrop: false, // Removes the "transparent screen" dimming
+            panelClass: 'vscode-dialog-panel',
             data: {
                 songName: item.name,
                 songPath: item.path,

@@ -13,10 +13,12 @@ export interface TimerDialogData {
     title?: string;
 }
 
+import { VSCodeModalComponent } from '../../vscode-ui/modal/modal.component';
+
 @Component({
     selector: 'app-timer-modal',
     standalone: true,
-    imports: [CommonModule, FormsModule, VSCodeButtonComponent, VSCodeInputComponent],
+    imports: [CommonModule, FormsModule, VSCodeButtonComponent, VSCodeInputComponent, VSCodeModalComponent],
     templateUrl: './timer-modal.component.html',
     styleUrl: './timer-modal.component.scss'
 })

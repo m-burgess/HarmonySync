@@ -28,10 +28,12 @@ export interface SongMapModalData {
     existingMap?: SongMap;
 }
 
+import { VSCodeModalComponent } from '../../vscode-ui/modal/modal.component';
+
 @Component({
     selector: 'app-song-map-modal',
     standalone: true,
-    imports: [CommonModule, FormsModule, DragDropModule, NgIconComponent],
+    imports: [CommonModule, FormsModule, DragDropModule, NgIconComponent, VSCodeModalComponent],
     providers: [
         provideIcons({ heroPlus, heroTrash, heroCheck, heroXMark, heroBars3, heroSparkles })
     ],

@@ -1,58 +1,46 @@
-<div
-    class="bg-[#1e1e1e] border border-[#3c3c3c] rounded-md shadow-[0_0_24px_rgba(0,0,0,0.6)] overflow-hidden flex flex-col w-[500px]">
-    <!-- Header -->
-    <div class="flex items-center justify-between p-4 border-b border-gray-700 bg-gray-900/50">
-        <h2 class="text-lg font-bold text-white">{{ title }}</h2>
-        <button (click)="close()" class="text-gray-400 hover:text-white transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                stroke="currentColor" class="w-6 h-6">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-        </button>
-    </div>
-
-    <!-- Body -->
-    <div class="space-y-4 p-6 overflow-y-auto max-h-[70vh]">
+<app-vscode-modal [title]="title" size="medium" (onClose)="close()">
+    <div class="space-y-4">
         <!-- Timer Name -->
         <div>
-            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Timer Name</label>
+            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Timer Name</label>
             <app-vscode-input [(ngModel)]="name" placeholder="e.g., Sermon Timer" [disabled]="isSaving">
             </app-vscode-input>
         </div>
 
         <!-- Duration -->
         <div>
-            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Duration</label>
+            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Duration</label>
             <div class="flex items-center gap-3">
                 <div class="flex items-center gap-2">
                     <input type="text" [(ngModel)]="hours"
-                        class="w-16 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-center text-sm"
+                        class="w-16 bg-[#2a2d2e] border border-[#3c3c3c] rounded px-2 py-1 text-center text-sm outline-none focus:border-[#007acc]"
                         maxlength="2" [disabled]="isSaving">
-                    <span class="text-xs text-gray-500">hours</span>
+                    <span class="text-[10px] uppercase font-bold text-gray-500">hours</span>
                 </div>
                 <span class="text-gray-600">:</span>
                 <div class="flex items-center gap-2">
                     <input type="text" [(ngModel)]="minutes"
-                        class="w-16 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-center text-sm"
+                        class="w-16 bg-[#2a2d2e] border border-[#3c3c3c] rounded px-2 py-1 text-center text-sm outline-none focus:border-[#007acc]"
                         maxlength="2" [disabled]="isSaving">
-                    <span class="text-xs text-gray-500">minutes</span>
+                    <span class="text-[10px] uppercase font-bold text-gray-500">minutes</span>
                 </div>
             </div>
         </div>
 
         <!-- Display Selection -->
         <div>
-            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Target Displays</label>
+            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Target
+                Displays</label>
             @if (displays.length === 0) {
-            <p class="text-xs text-gray-600 italic">No external displays detected</p>
+            <p class="text-[11px] text-gray-600 italic">No external displays detected</p>
             } @else {
-            <div class="space-y-2 bg-gray-900/30 p-3 rounded border border-gray-700/50">
+            <div class="space-y-2 bg-[#252526] p-3 rounded border border-[#3c3c3c]">
                 @for (display of displays; track display.id) {
                 <label class="flex items-center gap-3 cursor-pointer group">
                     <input type="checkbox" [checked]="selectedDisplays.includes(display.id)"
-                        (change)="handleDisplayToggle(display.id)"
-                        class="form-checkbox bg-gray-900 border-gray-700 rounded text-blue-500" [disabled]="isSaving">
-                    <span class="text-sm text-gray-300 group-hover:text-white transition-colors">
+                        (change)="handleDisplayToggle(display.id)" class="w-3 h-3 accent-[#007acc]"
+                        [disabled]="isSaving">
+                    <span class="text-[11px] text-gray-300 group-hover:text-white transition-colors">
                         {{ display.name }} {{ display.isPrimary ? '(Main)' : '' }}
                     </span>
                 </label>
@@ -63,17 +51,17 @@
 
         <!-- Error -->
         @if (error) {
-        <div class="bg-red-500/10 border border-red-500/50 rounded p-4">
-            <p class="text-xs text-red-400 font-medium">{{ error }}</p>
+        <div class="bg-red-500/10 border border-red-500/50 rounded p-2 mt-4">
+            <p class="text-[10px] text-red-400 font-bold uppercase tracking-wider">{{ error }}</p>
         </div>
         }
-
-        <!-- Footer -->
-        <div class="flex justify-end gap-3 pt-4 border-t border-gray-700">
-            <app-vscode-button variant="secondary" (onClick)="close()" [disabled]="isSaving">Cancel</app-vscode-button>
-            <app-vscode-button (onClick)="handleSave()" [disabled]="isSaving">
-                {{ isSaving ? 'Saving...' : (timer ? 'Update Timer' : 'Create Timer') }}
-            </app-vscode-button>
-        </div>
     </div>
-</div>
+
+    <!-- Footer Slot -->
+    <div footer>
+        <app-vscode-button variant="secondary" (onClick)="close()" [disabled]="isSaving">Cancel</app-vscode-button>
+        <app-vscode-button (onClick)="handleSave()" [disabled]="isSaving">
+            {{ isSaving ? 'Saving...' : (timer ? 'Update Timer' : 'Create Timer') }}
+        </app-vscode-button>
+    </div>
+</app-vscode-modal>

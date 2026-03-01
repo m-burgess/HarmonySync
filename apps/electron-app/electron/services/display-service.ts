@@ -89,7 +89,7 @@ export class DisplayService extends BaseElectronService implements IDisplayServi
     this.audienceWindow = this.createSecondaryWindow(preloadPath, {
       width: 960,
       height: 540,
-      title: 'Audience Display'
+      title: 'Audience'
     });
     this.loadWindowContent(this.audienceWindow, 'audience', isDev, ANGULAR_DEV_SERVER_URL);
 

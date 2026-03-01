@@ -17,7 +17,7 @@ export class LyricTransitionService {
     // Signals for UI binding
     readonly currentContent = signal<TransitionContent | null>(null);
     readonly isTransitioning = signal<boolean>(false);
-    readonly contentOpacity = signal<number>(0);
+    readonly contentOpacity = signal<number>(1);
 
     /**
      * Smoothly transition to new content

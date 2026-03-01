@@ -1,28 +1,33 @@
-<div id="audience-container" class="w-screen h-screen overflow-hidden relative">
+<div id="audience-container" class="audience-container">
+    <!-- 1. Background Video Layer -->
     @if (backgroundVideo) {
-    <video #backgroundVideoRef class="background-video fixed top-0 left-0 w-full h-full object-cover z-0 opacity-60"
-        [src]="backgroundVideo" autoplay [loop]="isLooping" muted></video>
+    <video #backgroundVideoRef class="background-video pointer-events-none" [src]="backgroundVideo" autoplay
+        [loop]="isLooping" muted playsinline></video>
     }
 
-    <!-- Content Layer -->
-    <div id="lyric-display"
-        class="content-layer relative z-20 flex flex-col w-full h-full p-8 box-border transition-opacity duration-200 overflow-hidden"
-        [style.opacity]="opacity" [class.hidden]="!showLyrics && !showVideo" [ngStyle]="lyricStyles()">
-        @if (showLyrics && lyricLines.length) {
-        @for (line of lyricLines; track $index) {
-        <div class="lyric-line leading-[1.2] my-[0.2em]">
-            {{ line }}
+    <!-- 2. Video Player Layer (YouTube etc) -->
+    @if (showVideo) {
+    <div id="youtube-player" class="absolute inset-0 w-full h-full" style="z-index: 50;"></div>
+    }
+
+    <!-- 3. Lyrics/Content Overlay Layer -->
+    <div id="lyric-display" class="lyric-overlay transition-opacity duration-300" [style.opacity]="opacity"
+        [ngStyle]="lyricStyles()">
+
+        @if (lyricLines && lyricLines.length > 0) {
+        <div class="lyrics-container w-full flex flex-col items-center justify-center">
+            @for (line of lyricLines; track $index) {
+            <p class="lyric-line font-bold leading-tight select-none drop-shadow-2xl text-white"
+                style="font-size: 8vh; margin: 0.15em 0; text-shadow: 0 4px 12px rgba(0,0,0,0.9);">
+                {{ line }}
+            </p>
+            }
         </div>
-        }
         }
 
         @if (imagePath) {
-        <img [src]="imagePath" [alt]="imageName || ''" class="max-w-[90%] max-h-[90%] object-contain shadow-2xl" />
+        <img [src]="imagePath" [alt]="imageName || ''"
+            class="max-w-[85%] max-h-[85%] object-contain shadow-2xl rounded-lg" style="z-index: 200;" />
         }
     </div>
-
-    <!-- Video Player -->
-    @if (showVideo) {
-    <div id="youtube-player" class="w-full h-full relative z-10"></div>
-    }
 </div>

@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, ElementRef, ViewChild, AfterViewInit, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Title } from '@angular/platform-browser';
 import { ElectronService } from '../../../core/electron.service';
 import { ConfigService } from '../../../core/config.service';
 import { LyricTransitionService, TransitionContent } from '../../../core/lyric-transition.service';
@@ -51,29 +52,41 @@ export class AudienceScreenComponent implements OnInit, OnDestroy, AfterViewInit
     private unlisteners: (() => void)[] = [];
     private electronService = inject(ElectronService);
     private configService = inject(ConfigService);
+    private titleService = inject(Title);
 
     // Computed styles based on settings
     lyricStyles = computed(() => {
         const s = this.configService.settings()?.lyrics;
-        if (!s) return {};
+        if (!s) return {
+            'justify-content': 'center',
+            'align-items': 'center',
+            'text-align': 'center',
+            'font-family': 'Inter',
+            'font-size': '10vh',
+            'color': 'white'
+        };
+
+        // Hard-force center for now as requested
+        const textAlign = s.textAlign || 'center';
 
         return {
-            'font-family': s.fontFamily,
-            'font-size': s.fontSize + 'px',
-            'font-weight': s.fontWeight,
-            'color': s.color,
-            'text-shadow': s.textShadow,
-            'text-align': s.textAlign,
-            'padding-top': s.topOffset + '%',
-            'padding-bottom': s.bottomOffset + '%',
-            'justify-content': s.verticalAlignment === 'top' ? 'flex-start' : (s.verticalAlignment === 'middle' ? 'center' : 'flex-end'),
-            'align-items': s.textAlign === 'left' ? 'flex-start' : (s.textAlign === 'center' ? 'center' : 'flex-end')
+            'font-family': s.fontFamily || 'Inter',
+            'font-size': (s.fontSize || 80) + 'px',
+            'font-weight': s.fontWeight || 'bold',
+            'color': s.color || 'white',
+            'text-shadow': s.textShadow || 'none',
+            'text-align': 'center',
+            'padding-top': '0',
+            'padding-bottom': '0',
+            'justify-content': 'center',
+            'align-items': 'center'
         };
     });
 
     constructor() { }
 
     ngOnInit() {
+        this.titleService.setTitle('Audience');
         this.setupEventListeners();
         this.syncWithCurrentState();
     }
@@ -295,7 +308,10 @@ export class AudienceScreenComponent implements OnInit, OnDestroy, AfterViewInit
 
     get showLyrics(): boolean {
         const c = this.currentContent();
-        return !!c && (c.type === 'lyrics' || c.type === 'image');
+        // If content is lyrics OR image, show it.
+        // If there is no specific content (c is null or clear) BUT background video is active,
+        // we still want the layer available (though it will be empty).
+        return !!c && (c.type === 'lyrics' || c.type === 'image') || (!!this.backgroundVideo && (!c || c.type === 'clear'));
     }
 
     get showVideo(): boolean {
