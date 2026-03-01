@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Title } from '@angular/platform-browser';
 import { ConfidenceViewModel } from '../../../viewmodels/confidence.viewmodel';
 
 type LyricsContent = { type: 'lyrics'; text: string[] };
@@ -22,5 +23,10 @@ interface TimerState {
 })
 export class ConfidenceMonitorComponent {
     vm = inject(ConfidenceViewModel);
+    private titleService = inject(Title);
+
+    ngOnInit() {
+        this.titleService.setTitle('Stage Monitor');
+    }
 }
 

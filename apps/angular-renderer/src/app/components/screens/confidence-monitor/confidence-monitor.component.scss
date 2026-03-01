@@ -1,4 +1,60 @@
 /* Confidence Monitor Styles */
+.monitor-container {
+    position: relative !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background-color: #000 !important;
+    overflow: hidden !important;
+    color: white !important;
+    cursor: none;
+}
+
+.monitor-clock {
+    position: absolute !important;
+    top: 1.5rem !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    font-size: 2.5rem !important;
+    font-weight: bold !important;
+    color: #fff !important;
+    font-family: monospace;
+    z-index: 50;
+    opacity: 0.8;
+}
+
+.lyrics-zone {
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    text-align: center !important;
+    padding: 0 5% !important;
+    z-index: 10;
+}
+
+.current-lyrics-wrap {
+    margin-bottom: 4vh !important;
+}
+
+.lyric-line-main {
+    font-size: 8vh !important;
+    font-weight: 800 !important;
+    color: #fff !important;
+    line-height: 1.1 !important;
+    margin: 0.1em 0 !important;
+    text-transform: uppercase;
+}
+
+.lyric-line-next {
+    font-size: 8vh !important;
+    font-weight: 600 !important;
+    color: #ffff00 !important;
+    line-height: 1.1 !important;
+    margin: 0.1em 0 !important;
+}
+
 .timer-warning {
     color: #ffa500 !important;
     border-color: #ffa500 !important;
@@ -7,13 +63,4 @@
 .timer-critical {
     color: #ff0000 !important;
     border-color: #ff0000 !important;
-}
-
-.lyric-line {
-    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
-}
-
-.monitor-container {
-    background-color: black;
-    cursor: none;
 }
