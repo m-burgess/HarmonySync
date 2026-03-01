@@ -14,7 +14,7 @@
     top: 1.5rem !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
-    font-size: 2.5rem !important;
+    font-size: 8vh !important;
     font-weight: bold !important;
     color: #fff !important;
     font-family: monospace;
@@ -44,7 +44,7 @@
     color: #fff !important;
     line-height: 1.1 !important;
     margin: 0.1em 0 !important;
-    text-transform: uppercase;
+    text-transform: uppercase !important;
 }
 
 .lyric-line-next {
@@ -53,6 +53,14 @@
     color: #ffff00 !important;
     line-height: 1.1 !important;
     margin: 0.1em 0 !important;
+    text-transform: uppercase !important;
+}
+
+.end-of-song {
+    font-size: 3vh !important;
+    font-weight: bold !important;
+    color: #3c3c3c !important;
+    text-transform: uppercase !important;
 }
 
 .timer-warning {
