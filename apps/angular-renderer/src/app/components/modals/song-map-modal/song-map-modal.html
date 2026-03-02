@@ -7,95 +7,112 @@
     </div>
 
     <!-- ModalContent: Body -->
-    <div class="flex h-full w-full overflow-hidden">
-        <!-- Sidebar: Song Metadata + Section List -->
-        <div class="w-80 border-r border-[#333] flex flex-col bg-[#161616]">
-            <!-- Meatadata Inputs -->
-            <div class="p-4 space-y-4 border-b border-[#333]">
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="space-y-1">
-                        <label class="text-[10px] uppercase font-bold text-gray-500 tracking-wider">BPM</label>
-                        <input type="number" [(ngModel)]="bpm"
-                            class="w-full bg-[#252526] border border-[#333] rounded px-3 py-2 text-sm focus:border-[#007acc] outline-none transition-colors" />
+    <div class="flex h-full w-full overflow-hidden bg-[#1e1e1e]">
+        <!-- Left Sidebar: Settings + Sequence -->
+        <div class="w-64 flex-shrink-0 border-r border-[#333] flex flex-col bg-[#161616]">
+            <!-- Settings Section -->
+            <div class="p-3 border-b border-[#333]">
+                <div class="flex items-center gap-2 mb-3">
+                    <ng-icon name="heroBars3" class="text-xs text-[#007acc]"></ng-icon>
+                    <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Song Settings</span>
+                </div>
+
+                <div class="space-y-3">
+                    <div class="flex items-center gap-3">
+                        <div class="flex-1 space-y-1">
+                            <label class="text-[9px] uppercase text-gray-500">BPM</label>
+                            <input type="number" [(ngModel)]="bpm"
+                                class="w-full bg-[#1e1e1e] border border-[#333] rounded px-2 py-1 text-xs focus:border-[#007acc] outline-none transition-colors" />
+                        </div>
+                        <div class="flex-1 space-y-1">
+                            <label class="text-[9px] uppercase text-gray-500">Meter</label>
+                            <select [(ngModel)]="timeSignature"
+                                class="w-full bg-[#1e1e1e] border border-[#333] rounded px-2 py-1 text-xs focus:border-[#007acc] outline-none transition-colors cursor-pointer">
+                                <option value="4/4">4/4</option>
+                                <option value="3/4">3/4</option>
+                                <option value="6/8">6/8</option>
+                                <option value="12/8">12/8</option>
+                            </select>
+                        </div>
+                        <div class="flex-1 space-y-1">
+                            <label class="text-[9px] uppercase font-bold text-gray-500 tracking-widest">Key</label>
+                            <select [(ngModel)]="originalKey"
+                                class="w-full bg-[#1e1e1e] border border-[#333] rounded px-2 py-1 text-xs outline-none focus:border-[#007acc] transition-colors appearance-none cursor-pointer">
+                                <option value="C">C</option>
+                                <option value="C#">C#</option>
+                                <option value="D">D</option>
+                                <option value="Eb">Eb</option>
+                                <option value="E">E</option>
+                                <option value="F">F</option>
+                                <option value="F#">F#</option>
+                                <option value="G">G</option>
+                                <option value="Ab">Ab</option>
+                                <option value="A">A</option>
+                                <option value="Bb">Bb</option>
+                                <option value="B">B</option>
+                            </select>
+                        </div>
+                        <div class="flex-1 space-y-1">
+                            <label class="text-[9px] uppercase text-gray-500">Length</label>
+                            <input type="text" [(ngModel)]="songLength" placeholder="3:00"
+                                class="w-full bg-[#1e1e1e] border border-[#333] rounded px-2 py-1 text-xs focus:border-[#007acc] outline-none transition-colors" />
+                        </div>
                     </div>
-                    <div class="space-y-1">
-                        <label class="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Length
-                            (M:SS)</label>
-                        <input type="text" [(ngModel)]="songLength" placeholder="3:41"
-                            class="w-full bg-[#252526] border border-[#333] rounded px-3 py-2 text-sm focus:border-[#007acc] outline-none transition-colors" />
+
+                    <div class="flex items-center justify-between bg-[#1e1e1e] p-2 rounded border border-[#333]">
+                        <div class="text-[10px] text-gray-400 font-mono">
+                            <span [class.text-green-500]="isValid" [class.text-yellow-500]="!isValid">{{ totalBars
+                                }}</span>
+                            <span class="mx-1">/</span>
+                            <span>{{ expectedBars }}</span>
+                            <span class="ml-1 opacity-50">bars</span>
+                        </div>
+                        <button (click)="distributeEvenly()"
+                            class="px-2 py-1 bg-[#37373d] hover:bg-[#45454d] text-[9px] uppercase font-bold rounded flex items-center gap-1.5 transition-colors">
+                            <ng-icon name="heroSparkles" class="text-yellow-500 text-[10px]"></ng-icon>
+                            Auto-Calc
+                        </button>
                     </div>
-                </div>
-
-                <div class="space-y-1">
-                    <label class="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Meter</label>
-                    <select [(ngModel)]="timeSignature"
-                        class="w-full bg-[#252526] border border-[#333] rounded px-3 py-2 text-sm focus:border-[#007acc] outline-none transition-colors appearance-none cursor-pointer">
-                        <option value="4/4">4/4</option>
-                        <option value="3/4">3/4</option>
-                        <option value="6/8">6/8</option>
-                        <option value="2/4">2/4</option>
-                        <option value="5/4">5/4</option>
-                    </select>
-                </div>
-
-                <div class="flex items-center justify-between text-[11px] font-mono py-1">
-                    <div class="text-gray-400">Total Bars: <span [class.text-green-500]="isValid"
-                            [class.text-red-500]="!isValid">{{ totalBars }}</span></div>
-                    <div class="text-gray-400">Diff: <span class="text-yellow-500">{{ remainingBars > 0 ? '+' : '' }}{{
-                            remainingBars }}</span></div>
-                </div>
-
-                <div class="flex gap-2">
-                    <button (click)="distributeEvenly()"
-                        class="flex-1 px-2 py-1.5 bg-[#252526] hover:bg-[#333] border border-[#333] rounded text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2">
-                        <ng-icon name="heroSparkles" class="text-yellow-500"></ng-icon>
-                        Divide Evenly
-                    </button>
-                </div>
-
-                <div *ngIf="!isValid"
-                    class="text-[10px] text-orange-400 bg-orange-400/10 p-2 rounded border border-orange-400/20 leading-tight">
-                    Warning: Sequence total ({{ totalBars }}) must equal expected total ({{ expectedBars }}) before
-                    saving.
                 </div>
             </div>
 
-            <!-- Sequence Drag/Drop List -->
+            <!-- Sequence Section -->
             <div class="flex-1 flex flex-col overflow-hidden">
                 <div
-                    class="px-4 py-2 bg-[#1a1a1a] text-[10px] uppercase font-bold text-gray-500 tracking-widest flex items-center justify-between">
-                    <span>Sequence</span>
-                    <span class="text-xs">{{ sequence().length }}</span>
+                    class="px-3 py-2 bg-[#1e1e1e] text-[10px] uppercase font-bold text-gray-500 tracking-wider flex items-center justify-between border-b border-[#333]">
+                    <div class="flex items-center gap-2">
+                        <ng-icon name="heroCheck" class="text-xs"></ng-icon>
+                        <span>Sequence</span>
+                    </div>
+                    <span class="bg-[#37373d] px-1.5 rounded text-[9px]">{{ sequence().length }}</span>
                 </div>
-                <!-- Drag Drop List of sections -->
-                <div cdkDropList class="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar"
+
+                <div cdkDropList class="flex-1 overflow-y-auto p-1 space-y-0.5 custom-scrollbar"
                     (cdkDropListDropped)="drop($event)">
                     <div *ngFor="let section of sequence(); let i = index" cdkDrag (click)="selectSection(i)"
-                        class="group flex items-center gap-3 p-2 rounded border border-transparent cursor-pointer transition-all hover:bg-[#2a2d2e]"
+                        class="group flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-all hover:bg-[#2a2d2e]"
                         [class.bg-[#37373d]]="selectedSectionIndex() === i"
-                        [class.border-[#007acc]/40]="selectedSectionIndex() === i">
+                        [class.text-white]="selectedSectionIndex() === i">
 
-                        <div cdkDragHandle class="text-gray-600 hover:text-gray-400 cursor-grab active:cursor-grabbing">
-                            <ng-icon name="heroBars3" class="text-sm"></ng-icon>
+                        <div cdkDragHandle
+                            class="text-gray-600 group-hover:text-gray-400 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity">
+                            <ng-icon name="heroBars3" class="text-xs"></ng-icon>
                         </div>
 
                         <div class="flex-1 min-w-0">
-                            <div class="text-[11px] font-bold text-[#cccccc] truncate">{{ section.label }}</div>
-                            <div class="text-[9px] text-gray-500">{{ section.bars }} bars <span *ngIf="section.chords">•
-                                    {{ section.chords }}</span></div>
+                            <div class="text-[11px] font-medium truncate">{{ section.label }}</div>
+                            <div class="text-[9px] text-gray-500">{{ section.bars }} bars</div>
                         </div>
 
                         <button (click)="removeSection(i, $event)"
-                            class="opacity-0 group-hover:opacity-100 p-1 hover:bg-[#444] rounded text-gray-500 hover:text-red-400">
-                            <ng-icon name="heroTrash" class="text-xs"></ng-icon>
+                            class="opacity-0 group-hover:opacity-100 p-1 hover:bg-[#444] rounded text-gray-500 hover:text-red-400 transition-all">
+                            <ng-icon name="heroTrash" class="text-[10px]"></ng-icon>
                         </button>
                     </div>
 
                     <div *ngIf="sequence().length === 0"
                         class="py-12 flex flex-col items-center justify-center opacity-20 text-center px-4">
-                        <ng-icon name="heroPlus" size="30" class="mb-2"></ng-icon>
-                        <p class="text-[10px] uppercase tracking-widest leading-loose">Add sections from the palette to
-                            start mapping</p>
+                        <p class="text-[9px] uppercase tracking-widest leading-loose">Add from palette</p>
                     </div>
                 </div>
             </div>
@@ -103,35 +120,58 @@
 
         <!-- Main Content Area: Palette (Left) + Editor (Right) -->
         <div class="flex-1 flex overflow-hidden bg-[#0d0d0d]">
-            <!-- Palette Area -->
-            <div class="w-64 border-r border-[#333] flex flex-col">
-                <div class="p-3 bg-[#1a1a1a] text-[10px] uppercase font-bold text-gray-500 tracking-widest">Section
-                    Palette</div>
-                <div class="flex-1 overflow-y-auto p-3 flex flex-wrap gap-2 content-start custom-scrollbar">
-                    <div *ngFor="let item of availableLabels"
-                        class="palette-group w-full space-y-1.5 mb-2 pb-2 border-b border-white/5 last:border-0">
+            <!-- Palette Area: Redesigned as a List Box -->
+            <div class="w-60 flex-shrink-0 border-r border-[#333] flex flex-col bg-[#161616]">
+                <div class="p-3 bg-[#1e1e1e] border-b border-[#333] flex items-center justify-between">
+                    <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Song Part
+                        Palette</span>
+                    <button class="text-gray-500 hover:text-white transition-colors" title="Filter sections...">
+                        <ng-icon name="heroBars3" class="text-xs"></ng-icon>
+                    </button>
+                </div>
+
+                <!-- Search/Filter (Mockup style) -->
+                <div class="p-2 border-b border-[#333]">
+                    <div class="relative">
+                        <input type="text" placeholder="Filter..."
+                            class="w-full bg-[#1e1e1e] border border-[#333] rounded px-2 py-1 text-[11px] outline-none focus:border-[#007acc] transition-colors" />
+                    </div>
+                </div>
+
+                <!-- Part List -->
+                <div class="flex-1 overflow-y-auto custom-scrollbar">
+                    <div *ngFor="let item of availableLabels" class="section-part-group border-b border-[#252526]">
+                        <!-- Main Label Item -->
                         <div (click)="addSection(item.label)"
-                            class="palette-label flex items-center justify-between px-2 py-1.5 bg-[#252526] hover:bg-[#2d2d2e] rounded border border-[#333] cursor-pointer transition-all active:scale-[0.98]">
-                            <span class="text-[10px] font-bold">{{ item.label }}</span>
-                            <ng-icon name="heroPlus" class="text-[8px] text-[#007acc]"></ng-icon>
+                            class="flex items-center justify-between px-3 py-2.5 cursor-pointer hover:bg-[#2a2d2e] group transition-colors">
+                            <div class="flex items-center gap-2">
+                                <div
+                                    class="w-1 h-5 rounded-full bg-[#007acc] opacity-0 group-hover:opacity-100 transition-opacity">
+                                </div>
+                                <span class="text-xs font-semibold text-[#cccccc]">{{ item.label }}</span>
+                            </div>
+                            <ng-icon name="heroPlus" class="text-xs text-gray-500 group-hover:text-[#007acc]"></ng-icon>
                         </div>
-                        <div *ngIf="item.numbers.length > 0" class="flex flex-wrap gap-1.5 pl-2">
+
+                        <!-- Number Variations (Sub-items) -->
+                        <div *ngIf="item.numbers.length > 0" class="flex flex-wrap gap-1.5 px-3 pb-3 pl-6">
                             <button *ngFor="let n of item.numbers" (click)="addSection(item.label + ' ' + n)"
-                                class="px-2 py-0.5 bg-[#1a1a1a] border border-[#333] hover:border-gray-500 rounded text-[9px] font-mono transition-colors">
+                                class="px-2.5 py-1 bg-[#1e1e1e] border border-[#333] hover:border-[#007acc] hover:bg-[#2a2d2e] rounded text-[10px] font-mono font-bold text-gray-400 hover:text-white transition-all">
                                 {{ n }}
                             </button>
                         </div>
                     </div>
                 </div>
+
                 <!-- Custom Label Add -->
-                <div class="p-3 border-t border-[#333] bg-[#1a1a1a]">
+                <div class="p-3 border-t border-[#333] bg-[#1e1e1e]">
                     <div class="relative">
                         <input type="text" [(ngModel)]="customNewLabel" (keyup.enter)="addCustomLabel()"
-                            placeholder="Custom Label..."
-                            class="w-full bg-[#2a2a2a] border border-[#333] rounded px-3 py-2 text-[10px] outline-none focus:border-[#007acc] transition-colors pr-10" />
+                            placeholder="Add Custom..."
+                            class="w-full bg-[#161616] border border-[#333] rounded px-2 py-1.5 text-[10px] outline-none focus:border-[#007acc] transition-colors pr-8" />
                         <button (click)="addCustomLabel()"
-                            class="absolute right-2 top-1.5 text-[#007acc] hover:text-blue-400 p-1">
-                            <ng-icon name="heroPlus" class="text-sm"></ng-icon>
+                            class="absolute right-1 top-1 text-gray-500 hover:text-[#007acc] p-1">
+                            <ng-icon name="heroPlus" class="text-xs"></ng-icon>
                         </button>
                     </div>
                 </div>
@@ -140,18 +180,19 @@
             <!-- Detailed Section Editor -->
             <div class="flex-1 flex flex-col overflow-hidden bg-[#1e1e1e]">
                 <div *ngIf="selectedSectionIndex() !== -1"
-                    class="flex-1 flex flex-col p-6 space-y-6 overflow-y-auto custom-scrollbar">
-                    <header class="flex items-center justify-between">
+                    class="flex-1 flex flex-col p-4 space-y-4 overflow-y-auto custom-scrollbar">
+                    <header class="flex items-center justify-between pb-3 border-b border-[#333]">
                         <div class="flex items-center gap-4">
-                            <h3 class="text-xl font-bold text-white">{{ sequence()[selectedSectionIndex()].label }}</h3>
+                            <h3 class="text-sm font-bold text-[#cccccc] uppercase tracking-wider">{{
+                                sequence()[selectedSectionIndex()].label }}</h3>
                             <div class="flex items-center gap-2">
-                                <label class="text-[10px] uppercase font-bold text-gray-500">Bars</label>
+                                <label class="text-[9px] uppercase font-bold text-gray-500">Bars</label>
                                 <input type="number" [(ngModel)]="sequence()[selectedSectionIndex()].bars"
-                                    class="w-16 bg-[#252526] border border-[#333] rounded px-2 py-1 text-sm outline-none focus:border-[#007acc]" />
+                                    class="w-12 bg-[#161616] border border-[#333] rounded px-1.5 py-0.5 text-xs outline-none focus:border-[#007acc] transition-colors" />
                                 <button *ngIf="remainingBars !== 0" (click)="fillRemaining()"
                                     class="p-1 hover:bg-[#333] rounded text-[#007acc] transition-colors"
                                     title="Auto-fill remainder to this section">
-                                    <ng-icon name="heroSparkles" class="text-sm"></ng-icon>
+                                    <ng-icon name="heroSparkles" class="text-[10px]"></ng-icon>
                                 </button>
                             </div>
                         </div>
@@ -159,33 +200,45 @@
 
                     <div class="space-y-2 flex-1 flex flex-col min-h-0">
                         <label
-                            class="text-[10px] uppercase font-bold text-gray-500 tracking-widest flex items-center justify-between">
-                            <span>Lyrics</span>
-                            <span class="text-[9px] font-mono opacity-50">{{
-                                sequence()[selectedSectionIndex()].lyrics.length }} chars</span>
+                            class="text-[9px] uppercase font-bold text-gray-500 tracking-widest flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <ng-icon name="heroSparkles" class="text-[#007acc]"></ng-icon>
+                                <span>ChordPro Content</span>
+                            </div>
+                            <span class="text-[8px] font-mono opacity-50">{{
+                                sequence()[selectedSectionIndex()].content.length }} chars</span>
                         </label>
-                        <textarea [(ngModel)]="sequence()[selectedSectionIndex()].lyrics"
-                            placeholder="Enter section lyrics here..."
-                            class="flex-1 bg-[#252526] border border-[#333] rounded p-4 text-sm outline-none focus:border-[#007acc] resize-none font-sans leading-relaxed transition-colors custom-scrollbar mb-4"></textarea>
-                    </div>
+                        <div class="flex-1 flex flex-col gap-2 min-h-0">
+                            <textarea [(ngModel)]="sequence()[selectedSectionIndex()].content"
+                                placeholder="[G]Example lyrics... [D]more lyrics"
+                                class="flex-1 bg-[#161616] border border-[#333] rounded p-3 text-sm font-mono leading-relaxed outline-none focus:border-[#007acc] resize-none transition-colors custom-scrollbar"></textarea>
 
-                    <div class="space-y-2">
-                        <label class="text-[10px] uppercase font-bold text-gray-500 tracking-widest">Chord Progression
-                            (Numbers)</label>
-                        <input type="text" [(ngModel)]="sequence()[selectedSectionIndex()].chords"
-                            placeholder="e.g. 1-6m-5-4"
-                            class="w-full bg-[#252526] border border-[#333] rounded px-4 py-3 text-sm font-mono tracking-wider outline-none focus:border-[#007acc] transition-colors" />
+                            <div
+                                class="p-2 bg-[#252526] rounded border border-[#333] flex items-center justify-between">
+                                <div class="flex items-center gap-2 text-[10px] text-gray-400 font-medium">
+                                    <kbd
+                                        class="px-1 bg-[#444] rounded border border-[#555] shadow-sm text-white">Ctrl</kbd>
+                                    + <kbd
+                                        class="px-1 bg-[#444] rounded border border-[#555] shadow-sm text-white">Space</kbd>
+                                    for Chord Suggestions
+                                </div>
+                                <button (click)="importFromText()"
+                                    class="text-[10px] font-bold text-[#007acc] hover:text-blue-400 transition-colors uppercase tracking-wider">
+                                    Import/Convert Text...
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <div *ngIf="selectedSectionIndex() === -1"
-                    class="flex-1 flex flex-col items-center justify-center text-center opacity-30 select-none">
-                    <div class="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mb-6">
-                        <ng-icon name="heroBars3" size="30"></ng-icon>
+                    class="flex-1 flex flex-col items-center justify-center text-center opacity-30 select-none p-10">
+                    <div class="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center mb-4">
+                        <ng-icon name="heroBars3" size="24"></ng-icon>
                     </div>
-                    <h3 class="text-sm uppercase font-bold tracking-[0.2em] mb-2">Editor Active</h3>
-                    <p class="text-xs max-w-xs leading-relaxed">Select a section from the sequence sidebar to edit its
-                        lyrics and chord progressions.</p>
+                    <h3 class="text-[10px] uppercase font-bold tracking-[0.2em] mb-2">Select a section</h3>
+                    <p class="text-[10px] max-w-[200px] leading-relaxed">Choose a part from the sequence sidebar to edit
+                        its content.</p>
                 </div>
             </div>
         </div>
@@ -195,8 +248,10 @@
     <div footer class="flex items-center justify-between w-full">
         <div class="flex items-center gap-6">
             <div class="flex items-center gap-2">
-                <div class="w-2 h-2 rounded-full" [class.bg-green-500]="isValid" [class.bg-red-500]="!isValid"></div>
-                <span class="text-[10px] font-bold text-gray-400 tracking-wider">Status: {{ isValid ? 'Ready to Save' :
+                <div class="w-2 h-2 rounded-full" [class.bg-green-500]="isValid" [class.bg-red-500]="!isValid">
+                </div>
+                <span class="text-[10px] font-bold text-gray-400 tracking-wider">Status: {{ isValid ? 'Ready to
+                    Save' :
                     'Invalid Sync' }}</span>
             </div>
         </div>

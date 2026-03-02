@@ -10,6 +10,7 @@ import * as path from 'path';
 import * as fs from 'fs-extra';
 import * as os from 'os';
 import { BrowserWindow } from 'electron';
+import { WebSocketServer, WebSocket } from 'ws';
 import { BaseElectronService, IRemoteControlService, ServiceConfig } from '@harmonysync/core';
 
 /**
@@ -31,6 +32,9 @@ interface AppState {
   playbackPosition: number;
   loadedTracks: string[];
   setlistDirectory: string | null;
+  currentSongName?: string;
+  currentSongPath?: string;
+  currentSongMap?: any;
 }
 
 /**
@@ -65,6 +69,7 @@ export class RemoteControlService extends BaseElectronService implements IRemote
   private readonly port: number;
   private cachedIPAddress: string | null = null;
   private rateLimitMap: Map<string, RateLimitRecord> = new Map();
+  private wss: WebSocketServer | null = null;
 
   // Application state
   private appState: AppState = {
@@ -126,9 +131,10 @@ export class RemoteControlService extends BaseElectronService implements IRemote
     // Apply rate limiting to API routes
     this.app.use('/api', this.createRateLimiter());
 
-    // Serve static files from public directory
-    const publicDir = path.join(__dirname, '../public');
-    this.app.use(express.static(publicDir));
+    // Serve Musician View from mobile-app/dist
+    const musicianViewDir = path.join(__dirname, '../../../mobile-app/dist');
+    this.app.use(express.static(musicianViewDir));
+    this.log('info', `Serving Musician View from: ${musicianViewDir}`);
 
     // Logging middleware
     this.app.use(this.createLoggingMiddleware());
@@ -152,6 +158,20 @@ export class RemoteControlService extends BaseElectronService implements IRemote
             this.log('info', `  - Local:   http://localhost:${serverPort}`);
             this.log('info', `  - Network: http://${ipAddress}:${serverPort}`);
             this.log('info', `  - Mobile:  http://${ipAddress}:${serverPort}/mobile-control.html`);
+
+            // Initialize WebSocket server
+            this.wss = new WebSocketServer({ server: this.server! });
+            this.wss.on('connection', (ws: WebSocket) => {
+              this.log('info', 'New musician device connected via WebSocket');
+              // Send current state on connection
+              ws.send(JSON.stringify({ type: 'state', data: this.appState }));
+
+              ws.on('message', (message: string) => {
+                this.log('debug', `Received message from musician device: ${message}`);
+                // Handle incoming messages from musicians if needed (e.g. key selection)
+              });
+            });
+
             this.emit('started', { port: serverPort, ipAddress });
             resolve();
           }
@@ -213,6 +233,16 @@ export class RemoteControlService extends BaseElectronService implements IRemote
   public updateState(updates: Partial<AppState>): void {
     Object.assign(this.appState, updates);
     this.emit('state-updated', this.appState);
+
+    // Broadcast state to all connected WebSocket clients
+    if (this.wss) {
+      const message = JSON.stringify({ type: 'state', data: this.appState });
+      this.wss.clients.forEach((client: WebSocket) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(message);
+        }
+      });
+    }
   }
 
   /**

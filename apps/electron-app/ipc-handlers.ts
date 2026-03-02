@@ -425,30 +425,32 @@ class IPCHandlerManager {
       }
     });
 
-    this.ipcMain.handle('service-order:loadSongMap', async (_event, songPath: string) => {
+    this.ipcMain.handle('service-order:saveLyrics', async (_event, songPath: string, content: string) => {
       try {
         const path = require('path');
         const fs = require('fs-extra');
-        const mapPath = path.join(songPath, 'song-map.json');
-        if (await fs.pathExists(mapPath)) {
-          return await fs.readJson(mapPath);
-        }
-        return null;
+        const lyricsPath = path.join(songPath, 'lyrics.txt');
+        await fs.writeFile(lyricsPath, content, 'utf8');
+        return true;
       } catch (error) {
-        console.error('[service-order:loadSongMap] Error:', error);
-        return null;
+        console.error('[service-order:saveLyrics] Error:', error);
+        return false;
       }
     });
 
-    this.ipcMain.handle('service-order:saveSongMap', async (_event, songPath: string, songMap: any) => {
+    this.ipcMain.handle('remote:update-song-data', async (_event, data: any) => {
       try {
-        const path = require('path');
-        const fs = require('fs-extra');
-        const mapPath = path.join(songPath, 'song-map.json');
-        await fs.writeJson(mapPath, songMap, { spaces: 2 });
-        return true;
+        if (this.services.remoteControlService) {
+          this.services.remoteControlService.updateState({
+            currentSongName: data.name,
+            currentSongPath: data.path,
+            currentSongMap: data.songMap
+          });
+          return true;
+        }
+        return false;
       } catch (error) {
-        console.error('[service-order:saveSongMap] Error:', error);
+        console.error('[remote:update-song-data] Error:', error);
         return false;
       }
     });

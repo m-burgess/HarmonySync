@@ -10,15 +10,19 @@ import { heroPlus, heroTrash, heroCheck, heroXMark, heroBars3, heroSparkles } fr
 export interface SongSection {
     id: string;
     label: string;
-    lyrics: string;
-    chords: string;
+    content: string; // ChordPro format: Chords in [brackets]
     bars: number;
+
+    // Legacy support for migration
+    lyrics?: string;
+    chords?: string;
 }
 
 export interface SongMap {
     bpm: number;
     songLength: string; // e.g., "3:41"
     timeSignature: string; // e.g., "4/4"
+    originalKey: string; // Added for ChordPro transposition
     sections: SongSection[];
 }
 
@@ -42,9 +46,10 @@ import { VSCodeModalComponent } from '../../vscode-ui/modal/modal.component';
 })
 export class SongMapModalComponent implements OnInit {
     // Song metadata
-    bpm = signal<number>(120);
-    songLength = signal<string>('3:00');
+    bpm = signal<number>(78);
+    songLength = signal<string>('0:00');
     timeSignature = signal<string>('4/4');
+    originalKey = signal<string>('C');
 
     // Available labels to pick from (based on screenshot)
     availableLabels = [
@@ -82,7 +87,21 @@ export class SongMapModalComponent implements OnInit {
             this.bpm.set(this.data.existingMap.bpm);
             this.songLength.set(this.data.existingMap.songLength);
             this.timeSignature.set(this.data.existingMap.timeSignature);
-            this.sequence.set(this.data.existingMap.sections.map(s => ({ ...s })));
+            this.originalKey.set(this.data.existingMap.originalKey || 'C');
+
+            // Migrate old sections to ChordPro content
+            const migratedSections = this.data.existingMap.sections.map(s => {
+                const updated = { ...s };
+                if (!updated.content && (updated.lyrics || updated.chords)) {
+                    // Primitive migration: If chords exist, put them at start as a hint?
+                    // Better: If we have separate fields, we can't easily merge without knowing line positions.
+                    // For now, just put chords in brackets if possible, or just append.
+                    const chordLine = updated.chords ? `[${updated.chords.split('-').join('][')}]` : '';
+                    updated.content = chordLine + (chordLine ? '\n' : '') + updated.lyrics;
+                }
+                return updated as SongSection;
+            });
+            this.sequence.set(migratedSections);
         }
     }
 
@@ -91,8 +110,7 @@ export class SongMapModalComponent implements OnInit {
         const newSection: SongSection = {
             id,
             label,
-            lyrics: '',
-            chords: '',
+            content: '',
             bars: 8 // Default
         };
         this.sequence.update(s => [...s, newSection]);
@@ -155,9 +173,12 @@ export class SongMapModalComponent implements OnInit {
     get expectedBars(): number {
         const [min, sec] = this.songLength().split(':').map(val => parseInt(val, 10) || 0);
         const totalSeconds = (min * 60) + sec;
-        const [beatsPerBar] = this.timeSignature().split('/').map(val => parseInt(val, 10) || 0);
+        const [num, den] = this.timeSignature().split('/').map(val => parseInt(val, 10) || 4);
 
-        if (totalSeconds === 0 || this.bpm() === 0 || beatsPerBar === 0) return 0;
+        if (totalSeconds === 0 || this.bpm() === 0 || num === 0) return 0;
+
+        // For /8 time signatures (6/8, 12/8), BPM usually refers to the dotted quarter (conductor's beat)
+        const beatsPerBar = den === 8 ? num / 3 : num;
 
         const totalBeats = (totalSeconds * this.bpm()) / 60;
         return Math.round(totalBeats / beatsPerBar);
@@ -187,16 +208,62 @@ export class SongMapModalComponent implements OnInit {
         if (count === 0) return;
 
         const expected = this.expectedBars;
-        const barsPerSection = Math.floor(expected / count);
-        const remainder = expected % count;
+        const [num, den] = this.timeSignature().split('/').map(val => parseInt(val, 10) || 4);
 
-        this.sequence.update(s => {
-            return s.map((section, i) => ({
-                ...section,
-                // Add the remainder bars to the last section
-                bars: i === count - 1 ? barsPerSection + remainder : barsPerSection
-            }));
+        // alignment based on user feedback and common worship music patterns
+        let alignment = 4;
+        if (num === 3 && den === 4) {
+            alignment = 6; // User requested 6, 12, 24 for 3/4
+        } else if (den === 8) {
+            alignment = 4; // 6/8 and 12/8 phrases are typically 4 or 8 bars
+        }
+
+        // 1. Assign base bars based on section type (Modern Worship Patterns)
+        const baseBars = this.sequence().map(section => {
+            const label = section.label.toLowerCase();
+            if (label.includes('verse') || label.includes('chorus') || label.includes('refrain')) {
+                return 8;
+            }
+            if (label.includes('bridge')) {
+                return 16;
+            }
+            if (label.includes('intro') || label.includes('outro') || label.includes('ending') ||
+                label.includes('vamp') || label.includes('instrumental') || label.includes('interlude') ||
+                label.includes('tag') || label.includes('turnaround') || label.includes('pre') ||
+                label.includes('post') || label.includes('breakdown')) {
+                return 4;
+            }
+            return 8; // Default
         });
+
+        const totalBase = baseBars.reduce((a, b) => a + b, 0);
+
+        // 2. Scale and align
+        const scaleFactor = expected / totalBase;
+        let distributedTotal = 0;
+
+        const nextSequence = this.sequence().map((section, i) => {
+            let targetBars = baseBars[i] * scaleFactor;
+
+            // Align to worship patterns (multiples of 4 or 3)
+            // But ensure at least one 'alignment' unit
+            targetBars = Math.max(alignment, Math.round(targetBars / alignment) * alignment);
+
+            distributedTotal += targetBars;
+            return { ...section, bars: targetBars };
+        });
+
+        // 3. Fix remainder by adjusting the longest section (usually Verse or Bridge)
+        // or just the last section if everything else fails.
+        let diff = expected - distributedTotal;
+        if (diff !== 0) {
+            // Find a suitable section to absorb the difference (multiples of alignment)
+            // If diff is not a multiple of alignment, we just apply it to the last one anyway to satisfy total
+            const indexToAdjust = nextSequence.length - 1;
+            nextSequence[indexToAdjust].bars = Math.max(alignment, nextSequence[indexToAdjust].bars + diff);
+        }
+
+        this.sequence.set(nextSequence);
     }
 
     get isValid(): boolean {
@@ -210,6 +277,7 @@ export class SongMapModalComponent implements OnInit {
             bpm: this.bpm(),
             songLength: this.songLength(),
             timeSignature: this.timeSignature(),
+            originalKey: this.originalKey(),
             sections: this.sequence()
         };
 
@@ -218,5 +286,65 @@ export class SongMapModalComponent implements OnInit {
 
     close() {
         this.dialogRef.close(null);
+    }
+
+    importFromText() {
+        const input = prompt('Paste your chord sheet text (chords above lyrics):');
+        if (!input) return;
+
+        const lines = input.split('\n');
+        const result: string[] = [];
+
+        for (let i = 0; i < lines.length; i++) {
+            const currentLine = lines[i];
+            const nextLine = lines[i + 1] || '';
+
+            // Heuristic to detect chord line: contains mostly chord symbols and spaces
+            const isChordLine = (line: string) => {
+                const words = line.trim().split(/\s+/);
+                if (words.length === 0) return false;
+                // Check if most words look like chords (A-G with accidental/extension)
+                const chordRegex = /^[A-G](b|#)?(maj|min|m|sus|dim|aug|add)?\d?(\/[A-G](b|#)?)?$/i;
+                const chordCount = words.filter(w => chordRegex.test(w)).length;
+                return chordCount > 0 && chordCount >= words.length * 0.5;
+            };
+
+            if (isChordLine(currentLine) && nextLine.trim() && !isChordLine(nextLine)) {
+                // Merge currentLine (chords) into nextLine (lyrics)
+                let mergedLine = '';
+                let lastPos = 0;
+
+                // Find chords and their positions
+                const chordMatches: { chord: string, pos: number }[] = [];
+                const regex = /\S+/g;
+                let match;
+                while ((match = regex.exec(currentLine)) !== null) {
+                    chordMatches.push({ chord: match[0], pos: match.index });
+                }
+
+                // Insert chords into lyrics at corresponding positions
+                let currentLyrics = nextLine;
+                let offset = 0;
+                chordMatches.forEach(m => {
+                    const pos = Math.min(m.pos + offset, currentLyrics.length);
+                    currentLyrics = currentLyrics.slice(0, pos) + `[${m.chord}]` + currentLyrics.slice(pos);
+                    offset += m.chord.length + 2;
+                });
+
+                result.push(currentLyrics);
+                i++; // Skip nextLine as we merged it
+            } else {
+                result.push(currentLine);
+            }
+        }
+
+        const index = this.selectedSectionIndex();
+        if (index !== -1) {
+            this.sequence.update(s => {
+                const updated = [...s];
+                updated[index].content = result.join('\n');
+                return updated;
+            });
+        }
     }
 }

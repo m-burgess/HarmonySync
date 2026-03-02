@@ -175,14 +175,14 @@ export class HTTPServerService extends BaseElectronService implements IHTTPServe
           const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
           const chunkSize = (end - start) + 1;
           const file = fs.createReadStream(videoPath, { start, end });
-          
+
           const headers = {
             'Content-Range': `bytes ${start}-${end}/${fileSize}`,
             'Accept-Ranges': 'bytes',
             'Content-Length': chunkSize,
             'Content-Type': 'video/mp4',
           };
-          
+
           res.writeHead(206, headers);
           file.pipe(res);
         } else {
@@ -191,7 +191,7 @@ export class HTTPServerService extends BaseElectronService implements IHTTPServe
             'Content-Length': fileSize,
             'Content-Type': 'video/mp4',
           };
-          
+
           res.writeHead(200, headers);
           fs.createReadStream(videoPath).pipe(res);
         }
@@ -253,6 +253,10 @@ export function createHTTPServerService(port?: number, config?: ServiceConfig): 
 const defaultInstance = new HTTPServerService();
 
 // Export function-based API for backward compatibility
+export async function initialize(): Promise<void> {
+  return defaultInstance.initialize();
+}
+
 export async function start(port?: number): Promise<void> {
   return defaultInstance.start(port);
 }

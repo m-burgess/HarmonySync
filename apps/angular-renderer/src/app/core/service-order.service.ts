@@ -9,6 +9,7 @@ import { ConfigService } from './config.service';
 import { MessagingService } from './messaging.service';
 import { EVENT_TYPES } from '../models/messaging.models';
 import { SongMap } from '../models/song-map.models';
+import { SongMapParser } from '../utils/song-map-parser';
 import { Dialog } from '@angular/cdk/dialog';
 
 
@@ -220,18 +221,22 @@ export class ServiceOrderService {
                 this.audio.loadTracks(item.path).subscribe();
             }
 
-            // 2. Load song map if available, otherwise fallback to lyrics.txt
-            const songMap = await this.electron.invoke('service-order:loadSongMap', item.path);
-            if (songMap) {
-                this.serviceOrder.update(order => order.map(i => i.path === item.path ? { ...i, songMap } : i));
-                // Generate lyrics from song map for display
+            // 2. Load lyrics.txt and parse as SongMap
+            const lyricsRaw = await this.electron.invoke('service-order:loadLyrics', item.path);
+            if (lyricsRaw) {
+                const songMap = SongMapParser.parse(lyricsRaw);
                 const lyrics = this.generateLyricsFromMap(songMap);
-                this.serviceOrder.update(order => order.map(i => i.path === item.path ? { ...i, lyrics } : i));
-            } else {
-                const lyrics = await this.electron.invoke('service-order:loadLyrics', item.path);
-                if (lyrics) {
-                    this.serviceOrder.update(order => order.map(i => i.path === item.path ? { ...i, lyrics } : i));
-                }
+
+                this.serviceOrder.update(order => order.map(i =>
+                    i.path === item.path ? { ...i, songMap, lyrics } : i
+                ));
+
+                // Also update the state for the remote control (musician view)
+                this.electron.invoke('remote:update-song-data', {
+                    name: item.name,
+                    path: item.path,
+                    songMap
+                });
             }
 
             // 3. Trigger slide loading
@@ -278,10 +283,13 @@ export class ServiceOrderService {
 
         dialogRef.closed.subscribe(async (result) => {
             if (result) {
-                // Save to song folder
-                const success = await this.electron.invoke('service-order:saveSongMap', item.path, result);
+                // Convert back to standardized text format
+                const lyricsText = SongMapParser.stringify(result);
+
+                // Save to lyrics.txt
+                const success = await this.electron.invoke('service-order:saveLyrics', item.path, lyricsText);
                 if (success) {
-                    console.log('Song map saved successfully');
+                    console.log('Song map saved to lyrics.txt successfully');
                     // Reload item to reflect changes
                     await this.loadItem(item, index);
                 }

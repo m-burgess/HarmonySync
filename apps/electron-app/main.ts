@@ -299,6 +299,14 @@ class ElectronApplication {
         }
       });
 
+      // Start local servers
+      console.log('[Application] Starting local servers...');
+      remoteControlService.initialize(() => this.mainWindow);
+      await remoteControlService.start();
+
+      await httpServer.initialize();
+      await httpServer.start();
+
       // Start external services (audio, video, image)
       await this.startExternalServices();
 
