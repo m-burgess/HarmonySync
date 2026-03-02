@@ -4,85 +4,47 @@
 
     .custom-scrollbar {
         &::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+            width: 10px;
+            height: 10px;
         }
 
         &::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.1);
+            background: #1e1e1e;
         }
 
         &::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid transparent;
-            background-clip: content-box;
+            background: #333;
+            border: 2px solid #1e1e1e;
+            border-radius: 10px;
 
             &:hover {
-                background: rgba(255, 255, 255, 0.2);
-                background-clip: content-box;
+                background: #444;
             }
         }
     }
 
-    /* CDk Drag & Drop Styles */
-    .cdk-drag-preview {
-        box-sizing: border-box;
-        border-radius: 4px;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-        background-color: #37373d;
-        color: white;
-        padding: 5px 12px;
-        border: 1px solid #007acc;
-        transform: scale(1.02);
-    }
-
-    .cdk-drag-placeholder {
-        opacity: 0.1;
-        background: rgba(255, 255, 255, 0.05);
-    }
-
-    .cdk-drag-animating {
-        transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
-    }
-
-    .cdk-drop-list-dragging .section-item:not(.cdk-drag-placeholder) {
-        transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
-    }
-
-    /* Layout Distribution Fixes */
-    .w-64 {
-        width: 16rem;
-        min-width: 16rem;
-    }
-
-    .w-60 {
-        width: 15rem;
-        min-width: 15rem;
-    }
-
-    /* ChordPro Area */
+    /* Editor Area */
     textarea {
-        font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+        font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Courier New', monospace;
         tab-size: 4;
         line-height: 1.6;
+        background: #161616 !important;
+        border: none !important;
+        color: #d4d4d4 !important;
+        caret-color: #007acc;
 
         &::placeholder {
-            color: rgba(255, 255, 255, 0.2);
-            font-style: italic;
+            color: rgba(255, 255, 255, 0.1);
+        }
+
+        &:focus {
+            outline: none !important;
+            box-shadow: none !important;
         }
     }
 
-    kbd {
-        box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1);
-    }
-
-    /* Palette Improvements */
-    .section-part-group {
-        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-
-        &:hover {
-            background: rgba(255, 255, 255, 0.02);
-        }
+    code {
+        font-family: 'JetBrains Mono', monospace;
     }
 
     /* Animation */
@@ -91,25 +53,9 @@
             opacity: 0;
             transform: translateY(10px);
         }
-
         to {
             opacity: 1;
             transform: translateY(0);
-        }
-    }
-
-    /* Input focus effects */
-    input,
-    select,
-    textarea {
-        background: #1e1e1e !important;
-        border: 1px solid #333 !important;
-        color: #cccccc !important;
-
-        &:focus {
-            border-color: #007acc !important;
-            outline: none;
-            box-shadow: 0 0 0 1px rgba(0, 122, 204, 0.3);
         }
     }
 }

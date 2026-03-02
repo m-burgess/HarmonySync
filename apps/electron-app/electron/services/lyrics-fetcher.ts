@@ -294,6 +294,81 @@ export class LyricsFetcherService extends BaseElectronService implements ILyrics
       this.handleError('deleteLyrics', error);
     }
   }
+
+  /**
+   * Scrape lyrics from a URL (e.g. Genius.com)
+   * @param url - URL to scrape
+   * @returns Cleaned lyrics text
+   */
+  public async scrape(url: string): Promise<string> {
+    try {
+      this.log('info', `Scraping lyrics from: ${url}`);
+      const response = await axios.get(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+      });
+
+      const html = response.data;
+
+      // Genius.com specific scraping
+      if (url.includes('genius.com')) {
+        // Find all lyrics containers
+        const lyricsContainers = html.match(/<div data-lyrics-container="true"[\s\S]*?<\/div>/g);
+
+        if (!lyricsContainers) {
+          throw new Error('Could not find lyrics content on page');
+        }
+
+        let fullLyrics = lyricsContainers.join('\n');
+
+        // 1. Clean up <br/> tags to newlines
+        fullLyrics = fullLyrics.replace(/<br\s*\/?>/gi, '\n');
+
+        // 2. Remove all other HTML tags
+        fullLyrics = fullLyrics.replace(/<[^>]*>?/gm, '');
+
+        // 3. Decode HTML entities (basic ones)
+        fullLyrics = fullLyrics
+          .replace(/&quot;/g, '"')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&#39;/g, "'")
+          .replace(/&rsquo;/g, "'")
+          .replace(/&hellip;/g, '...');
+
+        // 4. Clean up whitespace
+        const lines = fullLyrics.split('\n');
+        const cleanedLines = lines
+          .map((line: string) => line.trim())
+          .filter((line: string) => {
+            // Filter out junk
+            const upper = line.toUpperCase();
+            if (upper.includes('EMBED')) return false;
+            if (upper === 'LYRICS') return false;
+            if (upper.includes('YOU MIGHT ALSO LIKE')) return false;
+            return line.length > 0;
+          });
+
+        return cleanedLines.join('\n');
+      }
+
+      // Generic fallback: strip all tags and try to find blocks
+      let text = html.replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<[^>]*>?/gm, '\n');
+
+      return text.split('\n')
+        .map((line: string) => line.trim())
+        .filter((line: string) => line.length > 0)
+        .join('\n');
+
+    } catch (error) {
+      this.handleError('scrape', error);
+      throw error;
+    }
+  }
 }
 
 // Export for backward compatibility

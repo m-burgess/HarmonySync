@@ -6,7 +6,7 @@ export interface Slide {
     title?: string;
     name?: string;
     content?: string;
-    type?: 'image' | 'video' | 'youtube' | 'lyric';
+    type?: 'image' | 'video' | 'youtube' | 'lyric' | 'canva';
     path?: string;
     thumbnail_path?: string;
     duration?: number;
@@ -19,6 +19,7 @@ export interface Slide {
     fontFamily?: string;
     order: number;
     startTime?: number; // In seconds
+    url?: string;
 }
 
 /**

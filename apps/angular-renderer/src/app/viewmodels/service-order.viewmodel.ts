@@ -40,8 +40,4 @@ export class ServiceOrderViewModel {
     async advanceToNext() {
         await this.serviceOrderService.advanceToNext();
     }
-
-    async openSongMapEditor(item: ServiceOrderItem, index: number) {
-        await this.serviceOrderService.openSongMapEditor(item, index);
-    }
 }

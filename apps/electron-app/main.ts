@@ -31,6 +31,7 @@ const { ServiceOrderImporter } = require('./electron/services/service-order-impo
 const { appSettingsService } = require('./electron/services/app-settings-service');
 const { getTimerService } = require('./electron/services/timer-service');
 const { mediaEngineBridge } = require('./electron/services/media-engine-bridge');
+const { getCanvaService } = require('./electron/services/canva-service');
 
 // MIDI manager with optional loading
 let midiManager: any = null;
@@ -49,6 +50,9 @@ const ffmpegService = getFFmpegService();
 
 // Initialize Timer service singleton
 const timerService = getTimerService(jsonStorage);
+
+// Initialize Canva service singleton
+const canvaService = getCanvaService();
 
 // Initialize and load app settings
 appSettingsService.load().catch((err: Error) => {
@@ -598,6 +602,7 @@ class ElectronApplication {
       serviceOrderImporter,
       appSettingsService,
       timerService,
+      canvaService,
     });
   }
 

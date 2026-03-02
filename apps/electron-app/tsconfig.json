@@ -1,7 +1,10 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022"],
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
     "module": "commonjs",
     "moduleResolution": "node",
     "resolveJsonModule": true,
@@ -12,9 +15,15 @@
     "useDefineForClassFields": false,
     "baseUrl": ".",
     "paths": {
-      "@electron/*": ["./*"],
-      "@electron/types/*": ["./types/*"],
-      "@electron/services/*": ["./services/*"]
+      "@electron/*": [
+        "./*"
+      ],
+      "@electron/types/*": [
+        "./types/*"
+      ],
+      "@electron/services/*": [
+        "./services/*"
+      ]
     },
     "outDir": "dist",
     "composite": true,
@@ -23,6 +32,12 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["electron/**/*", "types/**/*", "main.ts", "preload.ts", "ipc-handlers.ts"],
+  "include": [
+    "electron/**/*",
+    "types/**/*",
+    "main.ts",
+    "preload.ts",
+    "ipc-handlers.ts"
+  ],
   "references": []
 }

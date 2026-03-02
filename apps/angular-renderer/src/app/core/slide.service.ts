@@ -98,6 +98,16 @@ export class SlideService {
             } else if (slide.type === 'video') {
                 const isLoopable = slide.duration !== undefined && slide.duration < 60;
                 this.electron.invoke('display:videoSlide', slide.path, slide.duration, isLoopable);
+            } else if (slide.type === 'lyric') {
+                this.electron.emit('display-lyric-slide', {
+                    text: slide.text || [slide.content],
+                    section: slide.name || 'Scripture'
+                });
+            } else if (slide.type === 'youtube') {
+                // If we have a youtube player on audience screen
+                this.electron.emit('display-youtube-slide', { url: slide.url || slide.content });
+            } else if (slide.type === 'canva') {
+                this.electron.emit('display-canva-slide', { url: slide.url || slide.content });
             }
         }
     }

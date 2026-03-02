@@ -38,6 +38,7 @@ interface Services {
   serviceOrderImporter: any;
   appSettingsService: any;
   timerService: any;
+  canvaService: any;
 }
 
 interface DialogOpenDirectoryOptions {
@@ -91,6 +92,7 @@ class IPCHandlerManager {
     this.registerRemoteControlEventHandlers();
     this.registerAppSettingsHandlers();
     this.registerTimerHandlers();
+    this.registerCanvaHandlers();
   }
 
   /**
@@ -425,6 +427,17 @@ class IPCHandlerManager {
       }
     });
 
+    this.ipcMain.handle('service-order:loadSermon', async (_event, sermonPath: string) => {
+      try {
+        const path = require('path');
+        const fs = require('fs-extra');
+        const fullPath = path.join(sermonPath, 'sermon.txt');
+        return await fs.readFile(fullPath, 'utf8');
+      } catch (error) {
+        return null;
+      }
+    });
+
     this.ipcMain.handle('service-order:saveLyrics', async (_event, songPath: string, content: string) => {
       try {
         const path = require('path');
@@ -434,6 +447,19 @@ class IPCHandlerManager {
         return true;
       } catch (error) {
         console.error('[service-order:saveLyrics] Error:', error);
+        return false;
+      }
+    });
+
+    this.ipcMain.handle('service-order:saveSermon', async (_event, sermonPath: string, content: string) => {
+      try {
+        const path = require('path');
+        const fs = require('fs-extra');
+        const fullPath = path.join(sermonPath, 'sermon.txt');
+        await fs.writeFile(fullPath, content, 'utf8');
+        return true;
+      } catch (error) {
+        console.error('[service-order:saveSermon] Error:', error);
         return false;
       }
     });
@@ -854,6 +880,10 @@ class IPCHandlerManager {
 
     this.ipcMain.handle('lyrics:fetch', async (_event, songId: string) => {
       return await this.services.lyricsFetcher.fetch(songId);
+    });
+
+    this.ipcMain.handle('lyrics:scrape', async (_event, url: string) => {
+      return await this.services.lyricsFetcher.scrape(url);
     });
   }
 
@@ -2122,6 +2152,15 @@ class IPCHandlerManager {
     // Reset timer
     this.ipcMain.handle('timer:reset', async (_event, id: string) => {
       return await this.services.timerService.resetTimer(id);
+    });
+  }
+
+  /**
+   * Canva Handlers
+   */
+  private registerCanvaHandlers(): void {
+    this.ipcMain.handle('canva:importSlides', async (_event, options: any) => {
+      return await this.services.canvaService.importSlides(options);
     });
   }
 }

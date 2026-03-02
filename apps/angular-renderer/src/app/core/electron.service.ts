@@ -70,6 +70,8 @@ export class ElectronService {
             'display-video-slide',
             'display-lyrics',
             'display-slide',
+            'display-youtube-slide',
+            'display-canva-slide',
             'clear-lyric-display'
         ];
 

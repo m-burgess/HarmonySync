@@ -74,7 +74,8 @@ export class LyricsColumnComponent implements OnInit, OnDestroy, OnChanges {
             const sectionMatch = trimmed.match(/^\[(.*)\]$/);
 
             if (sectionMatch) {
-                currentSection = sectionMatch[1];
+                const fullSection = sectionMatch[1];
+                currentSection = fullSection.split('|')[0].trim();
                 lines.push({ type: 'section', text: currentSection, originalIndex: idx });
             } else if (trimmed.length > 0) {
                 lines.push({ type: 'lyric', text: trimmed, section: currentSection, originalIndex: idx });

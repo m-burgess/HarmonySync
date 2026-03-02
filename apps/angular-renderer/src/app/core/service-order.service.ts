@@ -8,21 +8,19 @@ import { FileService } from './file.service';
 import { ConfigService } from './config.service';
 import { MessagingService } from './messaging.service';
 import { EVENT_TYPES } from '../models/messaging.models';
-import { SongMap } from '../models/song-map.models';
 import { SongMapParser } from '../utils/song-map-parser';
-import { Dialog } from '@angular/cdk/dialog';
-
+import { SermonParser } from '../utils/sermon-parser';
+import { SongMap } from '../models/song-map.models';
 
 export interface ServiceOrderItem {
     id?: string;
     name: string;
     path: string;
-    type: 'song' | 'folder' | 'presentation';
+    type: 'song' | 'folder' | 'presentation' | 'sermon';
     tracks?: any[];
     lyrics?: string;
     songMap?: SongMap;
     hasAudio?: boolean;
-
     audioFileCount?: number;
     files?: string[];
 }
@@ -37,7 +35,6 @@ export class ServiceOrderService {
     private fileService = inject(FileService);
     private config = inject(ConfigService);
     private messaging = inject(MessagingService);
-    private dialog = inject(Dialog);
 
     // Reactive state
     readonly serviceOrder = signal<ServiceOrderItem[]>([]);
@@ -221,26 +218,142 @@ export class ServiceOrderService {
                 this.audio.loadTracks(item.path).subscribe();
             }
 
-            // 2. Load lyrics.txt and parse as SongMap
-            const lyricsRaw = await this.electron.invoke('service-order:loadLyrics', item.path);
-            if (lyricsRaw) {
-                const songMap = SongMapParser.parse(lyricsRaw);
-                const lyrics = this.generateLyricsFromMap(songMap);
+            // 2. Load Metadata (Lyrics or Sermon)
+            if (item.type === 'song') {
+                const lyricsRaw = await this.electron.invoke('service-order:loadLyrics', item.path);
+                if (lyricsRaw) {
+                    let songMap = SongMapParser.parse(lyricsRaw);
 
-                this.serviceOrder.update(order => order.map(i =>
-                    i.path === item.path ? { ...i, songMap, lyrics } : i
-                ));
+                    // Check if we need to auto-scrape
+                    const hasLyrics = songMap.sections.some(s => s.lyrics && s.lyrics.trim().length > 5);
+                    if (songMap.lyricsUrl && !hasLyrics) {
+                        console.log(`[ServiceOrder] Lyrics missing but URL found. Auto-scraping...`);
+                        const scrapedLyrics = await this.electron.invoke('lyrics:scrape', songMap.lyricsUrl);
 
-                // Also update the state for the remote control (musician view)
-                this.electron.invoke('remote:update-song-data', {
-                    name: item.name,
-                    path: item.path,
-                    songMap
-                });
+                        if (scrapedLyrics) {
+                            const lines = scrapedLyrics.split('\n');
+                            let currentLabel = 'Verse 1';
+                            let currentLyrics: string[] = [];
+                            songMap.sections = [];
+
+                            for (let line of lines) {
+                                line = line.trim();
+                                if (line.startsWith('[') && line.endsWith(']')) {
+                                    if (currentLyrics.length > 0 || songMap.sections.length > 0) {
+                                        songMap.sections.push({
+                                            id: crypto.randomUUID(),
+                                            label: currentLabel,
+                                            chords: '',
+                                            lyrics: currentLyrics.join('\n').trim()
+                                        });
+                                    }
+                                    currentLabel = line.slice(1, -1);
+                                    currentLyrics = [];
+                                } else {
+                                    currentLyrics.push(line);
+                                }
+                            }
+
+                            if (currentLyrics.length > 0 || currentLabel) {
+                                songMap.sections.push({
+                                    id: crypto.randomUUID(),
+                                    label: currentLabel,
+                                    chords: '',
+                                    lyrics: currentLyrics.join('\n').trim()
+                                });
+                            }
+
+                            const updatedText = SongMapParser.stringify(songMap);
+                            await this.electron.invoke('service-order:saveLyrics', item.path, updatedText);
+                            console.log(`[ServiceOrder] Auto-scraped lyrics saved and cached.`);
+                        }
+                    }
+
+                    const lyrics = this.generateLyricsFromMap(songMap);
+
+                    this.serviceOrder.update(order => order.map(i =>
+                        i.path === item.path ? { ...i, songMap, lyrics } : i
+                    ));
+
+                    // Update remote control
+                    this.electron.invoke('remote:update-song-data', {
+                        name: item.name,
+                        path: item.path,
+                        songMap
+                    });
+
+                    // Send MIDI notes
+                    if (songMap.midiNotes && songMap.midiNotes.length > 0) {
+                        console.log(`[ServiceOrder] Sending MIDI notes: ${songMap.midiNotes.join(', ')}`);
+                        for (const noteStr of songMap.midiNotes) {
+                            const noteNum = this.noteToMidiNumber(noteStr);
+                            if (noteNum !== -1) {
+                                this.electron.invoke('midi:sendNote', 0, noteNum, 100, 500);
+                            }
+                        }
+                    }
+                }
+            } else if (item.type === 'sermon') {
+                const sermonRaw = await this.electron.invoke('service-order:loadSermon', item.path);
+                if (sermonRaw) {
+                    const sermonData = SermonParser.parse(sermonRaw);
+
+                    // Check for Canva slides and snapshot them if needed
+                    const canvaSlides = sermonData.slides.filter(s => s.type === 'canva');
+                    if (canvaSlides.length > 0) {
+                        this.isLoading.set(true);
+                        for (const slide of canvaSlides) {
+                            try {
+                                console.log(`[ServiceOrder] Snapshotting Canva presentation: ${slide.url}`);
+                                const outputDir = `${item.path}/canva_snapshots_${slide.id}`;
+                                const snapshots = await this.electron.invoke('canva:importSlides', {
+                                    url: slide.url,
+                                    outputDir: outputDir
+                                });
+
+                                if (snapshots && snapshots.length > 0) {
+                                    // Transform Canva slide into multiple image slides
+                                    const snapshotSlides = snapshots.map((s: any, idx: number) => ({
+                                        id: `${slide.id}-snap-${idx}`,
+                                        type: 'image',
+                                        name: `${slide.name} - Slide ${idx + 1}`,
+                                        path: s.imagePath,
+                                        url: `local://${s.imagePath}`
+                                    }));
+
+                                    // Replace the canva slide with its snapshots
+                                    const slideIdx = sermonData.slides.findIndex(s => s.id === slide.id);
+                                    if (slideIdx !== -1) {
+                                        sermonData.slides.splice(slideIdx, 1, ...snapshotSlides);
+                                    }
+                                }
+                            } catch (e) {
+                                console.error(`[ServiceOrder] Failed to snapshot Canva presentation: ${slide.url}`, e);
+                            }
+                        }
+                    }
+
+                    // Set slides directly from sermon.txt
+                    this.slideService.slides.set(sermonData.slides as any);
+                    this.slideService.currentSlideIndex.set(sermonData.slides.length > 0 ? 0 : -1);
+
+                    // Send MIDI notes
+                    if (sermonData.midiNotes && sermonData.midiNotes.length > 0) {
+                        console.log(`[ServiceOrder] Sending Sermon MIDI notes: ${sermonData.midiNotes.join(', ')}`);
+                        for (const noteStr of sermonData.midiNotes) {
+                            const noteNum = this.noteToMidiNumber(noteStr);
+                            if (noteNum !== -1) {
+                                this.electron.invoke('midi:sendNote', 0, noteNum, 100, 500);
+                            }
+                        }
+                    }
+                }
             }
 
-            // 3. Trigger slide loading
-            this.slideService.loadFromFolder(item.path).subscribe();
+            // 3. Trigger slide loading (Except for sermons which we handled above)
+            if (item.type !== 'sermon') {
+                this.slideService.loadFromFolder(item.path).subscribe();
+            }
 
         } catch (err) {
             console.error('Failed to load item:', err);
@@ -248,6 +361,19 @@ export class ServiceOrderService {
         } finally {
             this.isLoading.set(false);
         }
+    }
+
+    private noteToMidiNumber(noteStr: string): number {
+        const notes: { [key: string]: number } = {
+            'C': 0, 'C#': 1, 'DB': 1, 'D': 2, 'D#': 3, 'EB': 3, 'E': 4,
+            'F': 5, 'F#': 6, 'GB': 6, 'G': 7, 'G#': 8, 'AB': 8, 'A': 9,
+            'A#': 10, 'BB': 10, 'B': 11
+        };
+        const match = noteStr.trim().toUpperCase().match(/^([A-G]#?|D[B]|E[B]|G[B]|A[B]|B[B])-?(-?\d+)$/);
+        if (!match) return -1;
+        const note = match[1];
+        const octave = parseInt(match[2], 10);
+        return (notes[note] ?? 0) + (octave + 1) * 12;
     }
 
     async advanceToNext(): Promise<void> {
@@ -262,38 +388,10 @@ export class ServiceOrderService {
 
     private generateLyricsFromMap(songMap: SongMap): string {
         return songMap.sections.map(s => {
+            const header = s.chords ? `${s.label} | ${s.chords}` : s.label;
             const lyrics = s.lyrics.trim();
-            if (!lyrics) return `[${s.label}]`;
-            return `[${s.label}]\n${lyrics}`;
+            if (!lyrics) return `[${header}]`;
+            return `[${header}]\n${lyrics}`;
         }).join('\n\n');
-    }
-
-    async openSongMapEditor(item: ServiceOrderItem, index: number): Promise<void> {
-        const { SongMapModalComponent } = await import('../components/modals/song-map-modal/song-map-modal.component');
-
-        const dialogRef = this.dialog.open<SongMap | null>(SongMapModalComponent, {
-            hasBackdrop: false, // Removes the "transparent screen" dimming
-            panelClass: 'vscode-dialog-panel',
-            data: {
-                songName: item.name,
-                songPath: item.path,
-                existingMap: item.songMap
-            }
-        });
-
-        dialogRef.closed.subscribe(async (result) => {
-            if (result) {
-                // Convert back to standardized text format
-                const lyricsText = SongMapParser.stringify(result);
-
-                // Save to lyrics.txt
-                const success = await this.electron.invoke('service-order:saveLyrics', item.path, lyricsText);
-                if (success) {
-                    console.log('Song map saved to lyrics.txt successfully');
-                    // Reload item to reflect changes
-                    await this.loadItem(item, index);
-                }
-            }
-        });
     }
 }

@@ -94,11 +94,6 @@ import {
                 </div>
                 
                 <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button *ngIf="item.type === 'song'" (click)="$event.stopPropagation(); vm.openSongMapEditor(item, i)" 
-                          class="p-1 hover:bg-[#444] rounded text-[#858585] hover:text-[#007acc] transition-colors"
-                          title="Edit Song Map">
-                    <ng-icon name="heroPencil" class="text-xs"></ng-icon>
-                  </button>
                   <button (click)="$event.stopPropagation(); vm.removeItem(item)" 
                           class="p-1 hover:bg-[#444] rounded text-[#858585] hover:text-red-400 transition-colors">
                     <ng-icon name="heroTrash" class="text-xs"></ng-icon>

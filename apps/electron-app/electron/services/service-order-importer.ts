@@ -66,7 +66,7 @@ export interface ServiceItem {
   id: string;
   name: string;
   path: string;
-  type: 'folder' | 'song' | 'presentation' | 'video' | 'image';
+  type: 'folder' | 'song' | 'presentation' | 'video' | 'image' | 'sermon';
   sortOrder: number;
   config?: ItemConfig;
   children?: ServiceItem[];
@@ -100,7 +100,7 @@ export class ServiceOrderImporter {
       '.harmonysync',
       'imported-service-orders'
     );
-    
+
     // Ensure folder exists
     fs.ensureDirSync(this.extractBaseFolder);
   }
@@ -159,17 +159,17 @@ export class ServiceOrderImporter {
 
       // Use streaming extraction for large files (unzipper handles files > 2GB)
       console.log('📦 Starting streaming extraction...');
-      
+
       await new Promise<void>((resolve, reject) => {
         const stream = fs.createReadStream(zipPath)
           .pipe(unzipper.Extract({ path: extractPath }));
-        
+
         stream.on('finish', () => {
           console.log('✅ Streaming extraction complete');
           // Give filesystem a moment to finalize writes
           setTimeout(() => resolve(), 100);
         });
-        
+
         stream.on('error', (err: Error) => {
           console.error('❌ Streaming extraction error:', err);
           reject(err);
@@ -231,7 +231,7 @@ export class ServiceOrderImporter {
       // Handle nested folder structure
       let scanPath = folderPath;
       const rootContents = await fs.readdir(folderPath);
-      
+
       console.log(`📁 Root contents (${rootContents.length} items):`, rootContents);
 
       // If single folder, dive into it recursively until we find actual item folders
@@ -259,7 +259,7 @@ export class ServiceOrderImporter {
       // Read items
       const entries = await fs.readdir(scanPath, { withFileTypes: true });
       const folders = entries.filter(e => e.isDirectory());
-      
+
       console.log(`📋 Found ${folders.length} folders to process:`, folders.map(f => f.name));
 
       for (const entry of folders) {
@@ -329,7 +329,11 @@ export class ServiceOrderImporter {
   private async detectItemType(folderPath: string): Promise<ServiceItem['type']> {
     try {
       const files = await fs.readdir(folderPath);
-      
+      const lowerFiles = files.map(f => f.toLowerCase());
+
+      // Check for sermon.txt first
+      if (lowerFiles.includes('sermon.txt')) return 'sermon';
+
       // Check for various file types
       const audioExts = ['.mp3', '.wav', '.ogg', '.flac', '.m4a', '.aac'];
       const videoExts = ['.mp4', '.mov', '.avi', '.mkv', '.webm'];
@@ -354,7 +358,7 @@ export class ServiceOrderImporter {
       if (hasPresentation) return 'presentation';
       if (hasVideo) return 'video';
       if (hasImage) return 'image';
-      
+
       return 'folder'; // Default
     } catch {
       return 'folder';
@@ -394,7 +398,7 @@ export class ServiceOrderImporter {
     }
 
     // Check for sermon
-    const hasSermon = metadata.items.some(item => 
+    const hasSermon = metadata.items.some(item =>
       item.name.toLowerCase().includes('sermon')
     );
     if (!hasSermon) {
@@ -414,7 +418,7 @@ export class ServiceOrderImporter {
    */
   async deleteServiceOrder(serviceId: string): Promise<void> {
     const servicePath = path.join(this.extractBaseFolder, serviceId);
-    
+
     try {
       await fs.remove(servicePath);
       console.log(`🗑️  Deleted service order: ${serviceId}`);
@@ -504,14 +508,14 @@ export class ServiceOrderImporter {
   private async loadItemConfig(itemPath: string): Promise<ItemConfig | undefined> {
     try {
       const configPath = path.join(itemPath, 'config.json');
-      
+
       if (!fs.existsSync(configPath)) {
         return undefined;
       }
 
       const configContent = await fs.readFile(configPath, 'utf-8');
       const config = JSON.parse(configContent) as ItemConfig;
-      
+
       console.log(`✅ Loaded config for item: ${path.basename(itemPath)}`);
       return config;
     } catch (error) {
@@ -560,7 +564,7 @@ export class ServiceOrderImporter {
 
       await fs.writeFile(configPath, JSON.stringify(template, null, 2), 'utf-8');
       console.log(`✅ Created config template at ${configPath}`);
-      
+
       return configPath;
     } catch (error) {
       console.error('Error creating config template:', error);

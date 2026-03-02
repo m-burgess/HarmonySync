@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ElementRef, ViewChild, AfterViewInit, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Title } from '@angular/platform-browser';
+import { Title, DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ElectronService } from '../../../core/electron.service';
 import { ConfigService } from '../../../core/config.service';
 import { LyricTransitionService, TransitionContent } from '../../../core/lyric-transition.service';
@@ -17,8 +17,9 @@ interface ImageContent {
 }
 
 interface VideoContent {
-    type: 'video';
-    videoId: string;
+    type: 'video' | 'youtube' | 'canva';
+    videoId?: string;
+    url?: string;
 }
 
 type Content = LyricContent | ImageContent | VideoContent | null;
@@ -48,6 +49,7 @@ export class AudienceScreenComponent implements OnInit, OnDestroy, AfterViewInit
     private intervalId: any = null;
 
     private transition = inject(LyricTransitionService);
+    private sanitizer = inject(DomSanitizer);
 
     private unlisteners: (() => void)[] = [];
     private electronService = inject(ElectronService);
@@ -104,9 +106,11 @@ export class AudienceScreenComponent implements OnInit, OnDestroy, AfterViewInit
                     if (state.slide.type === 'lyrics') {
                         this.transition.transitionTo({ type: 'lyrics', text: state.slide.text });
                     } else if (state.slide.type === 'image') {
+                        const path = state.slide.path;
+                        const isUrl = path.startsWith('http') || path.startsWith('https');
                         this.transition.transitionTo({
                             type: 'image',
-                            path: this.electronService.convertFileSrc(state.slide.path),
+                            path: isUrl ? path : this.electronService.convertFileSrc(path),
                             name: state.slide.name
                         });
                     }
@@ -119,7 +123,8 @@ export class AudienceScreenComponent implements OnInit, OnDestroy, AfterViewInit
 
     ngAfterViewInit() {
         // Check if we need to initialize YouTube
-        if (this.currentContent()?.type === 'video') {
+        const current = this.currentContent();
+        if (current?.type === 'video' || current?.type === 'youtube') {
             this.initYouTubePlayer();
         }
     }
@@ -155,13 +160,37 @@ export class AudienceScreenComponent implements OnInit, OnDestroy, AfterViewInit
         // Image
         const ulImage = this.electronService.on('display-image-slide', (payload: any) => {
             console.log('Audience: display-image-slide event received', payload);
+            const path = payload.path;
+            const isUrl = path.startsWith('http') || path.startsWith('https');
             this.transition.transitionTo({
                 type: 'image',
-                path: this.electronService.convertFileSrc(payload.path),
+                path: isUrl ? path : this.electronService.convertFileSrc(path),
                 name: payload.name
             });
         });
         if (ulImage) this.unlisteners.push(ulImage);
+
+        // Youtube Slide
+        const ulYoutube = this.electronService.on('display-youtube-slide', (payload: any) => {
+            console.log('Audience: display-youtube-slide event received', payload);
+            this.transition.transitionTo({
+                type: 'video',
+                videoId: this.extractVideoId(payload.url)
+            });
+            this.initYouTubePlayer();
+        });
+        if (ulYoutube) this.unlisteners.push(ulYoutube);
+
+        // Canva Slide
+        const ulCanva = this.electronService.on('display-canva-slide', (payload: any) => {
+            console.log('Audience: display-canva-slide event received', payload);
+            let url = payload.url;
+            if (url && url.includes('canva.com') && !url.includes('?embed')) {
+                url = url.split('?')[0] + '/view?embed';
+            }
+            this.transition.transitionTo({ type: 'canva', url });
+        });
+        if (ulCanva) this.unlisteners.push(ulCanva);
 
         // Clear
         const ulClear = this.electronService.on('clear-lyric-display', () => {
@@ -227,7 +256,7 @@ export class AudienceScreenComponent implements OnInit, OnDestroy, AfterViewInit
 
     private initYouTubePlayer() {
         const current = this.currentContent();
-        if (current?.type !== 'video') return;
+        if (current?.type !== 'video' && current?.type !== 'youtube') return;
 
         if (this.player && typeof this.player.destroy === 'function') {
             this.player.destroy();
@@ -269,7 +298,7 @@ export class AudienceScreenComponent implements OnInit, OnDestroy, AfterViewInit
             this.player = new window.YT.Player('youtube-player', {
                 height: '100%',
                 width: '100%',
-                videoId: (current as VideoContent).videoId,
+                videoId: (current as any).videoId || this.extractVideoId((current as any).url),
                 playerVars: {
                     autoplay: 1,
                     controls: 0,
@@ -316,7 +345,28 @@ export class AudienceScreenComponent implements OnInit, OnDestroy, AfterViewInit
 
     get showVideo(): boolean {
         const c = this.currentContent();
-        return !!c && c.type === 'video';
+        return !!c && (c.type === 'video' || c.type === 'youtube');
+    }
+
+    get showCanva(): boolean {
+        const c = this.currentContent();
+        return !!c && c.type === 'canva';
+    }
+
+    get canvaUrl(): SafeResourceUrl | null {
+        const c = this.currentContent();
+        if (c?.type === 'canva' && c.url) {
+            return this.sanitizer.bypassSecurityTrustResourceUrl(c.url);
+        }
+        return null;
+    }
+
+    private extractVideoId(url: string | undefined): string {
+        if (!url) return '';
+        if (url.length === 11) return url; // Already an ID
+        const regExp = /^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2].length === 11) ? match[2] : url;
     }
 
     get lyricLines(): string[] {

@@ -1,11 +1,12 @@
 import { Injectable, signal } from '@angular/core';
 
 export interface TransitionContent {
-    type: 'lyrics' | 'image' | 'video' | 'clear';
+    type: 'lyrics' | 'image' | 'video' | 'youtube' | 'canva' | 'clear';
     text?: string[];
     path?: string;
     name?: string;
     videoId?: string;
+    url?: string;
 }
 
 @Injectable({

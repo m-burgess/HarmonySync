@@ -10,6 +10,14 @@
     <div id="youtube-player" class="absolute inset-0 w-full h-full" style="z-index: 50;"></div>
     }
 
+    <!-- 2b. Canva Layer -->
+    @if (showCanva && canvaUrl) {
+    <div class="absolute inset-0 w-full h-full" style="z-index: 55;">
+        <iframe [src]="canvaUrl" class="w-full h-full border-none" allowfullscreen
+            allow="clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe>
+    </div>
+    }
+
     <!-- 3. Lyrics/Content Overlay Layer -->
     <div id="lyric-display" class="lyric-overlay transition-opacity duration-300" [style.opacity]="opacity"
         [ngStyle]="lyricStyles()">

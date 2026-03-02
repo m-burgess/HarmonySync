@@ -142,6 +142,9 @@ interface ElectronAPI {
 
   // Receive from main process
   receive: (channel: string, callback: (...args: any[]) => void) => () => void;
+
+  // Canva integration
+  canvaImportSlides: (options: any) => Promise<any>;
 }
 
 /**
@@ -362,6 +365,9 @@ class ElectronAPIBuilder {
         ipcRenderer.on(channel, (_event: IpcRendererEvent, ...args: any[]) => callback(...args));
         return () => ipcRenderer.removeAllListeners(channel);
       },
+
+      // Canva integration
+      canvaImportSlides: (options: any) => ipcRenderer.invoke('canva:importSlides', options),
     };
   }
 

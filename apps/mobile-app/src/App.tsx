@@ -12,23 +12,21 @@ function cn(...inputs: ClassValue[]) {
 interface SongSection {
     id: string;
     label: string;
-    content: string; // New ChordPro field
-    bars: number;
-    lyrics?: string; // Legacy
-    chords?: string; // Legacy
+    lyrics: string;
+    chords: string;
 }
 
 interface SongMap {
     bpm: number;
     songLength: string;
     timeSignature: string;
+    originalKey?: string;
     sections: SongSection[];
 }
 
 interface AppState {
     currentSongName?: string;
     currentSongMap?: SongMap;
-    originalKey?: string; // Added for ChordPro transposition
     playbackStatus: string;
 }
 
@@ -70,59 +68,32 @@ export default function App() {
 
     const renderSection = (section: SongSection) => {
         const displayKey = isCapoMode ? capo.keyToPlay : targetKey;
-        const originalKey = state?.originalKey || 'C'; // Fallback to C if unknown
 
-        // 1. Handle ChordPro Content (Primary)
-        if (section.content) {
-            const lines = section.content.split('\n');
-            return (
-                <div className="p-4 rounded-xl mb-4 bg-surface border border-white/10 shadow-xl">
-                    <div className="flex justify-between items-center mb-4">
-                        <span className="text-accent font-bold uppercase tracking-wider text-sm">{section.label}</span>
-                        <span className="text-white/40 text-xs font-mono">{section.bars} bars</span>
-                    </div>
-                    <div className="space-y-4">
-                        {lines.map((line, li) => {
-                            // Extract parts: text or [chord]
-                            const parts = line.split(/(\[.*?\])/g);
-                            if (line.trim() === '') return <div key={li} className="h-2" />;
+        // Transpose the progression (e.g. "1-4-5" -> "G-C-D")
+        const transposedChords = Transposer.transposeProgression(section.chords || '', displayKey);
 
-                            return (
-                                <div key={li} className="relative flex flex-wrap leading-[2.5] pt-4">
-                                    {parts.map((part, pi) => {
-                                        if (part.startsWith('[') && part.endsWith(']')) {
-                                            const chord = part.slice(1, -1);
-                                            const transposed = Transposer.transposeLetterChord(chord, originalKey, displayKey);
-                                            return (
-                                                <span key={pi} className="absolute -top-3 text-primary font-bold text-lg pointer-events-none select-none">
-                                                    {transposed}
-                                                </span>
-                                            );
-                                        }
-                                        return <span key={pi} className="text-white/80 text-lg">{part}</span>;
-                                    })}
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            );
-        }
-
-        // 2. Legacy Rendering (if still needed)
-        const transposedLegacyChords = Transposer.transposeProgression(section.chords || '', displayKey);
         return (
             <div className="p-4 rounded-xl mb-4 bg-surface border border-white/10 shadow-xl">
-                <div className="flex justify-between items-center mb-3">
+                <div className="flex justify-between items-center mb-4">
                     <span className="text-accent font-bold uppercase tracking-wider text-sm">{section.label}</span>
-                    <span className="text-white/40 text-xs font-mono">{section.bars} bars</span>
                 </div>
-                <div className="flex flex-wrap gap-4 mb-3">
-                    {transposedLegacyChords.map((chord, i) => (
-                        <span key={i} className="text-2xl font-bold text-primary">{chord}</span>
-                    ))}
-                </div>
-                <pre className="text-white/80 whitespace-pre-wrap font-sans text-lg">{section.lyrics}</pre>
+
+                {/* Chords Row */}
+                {transposedChords.length > 0 && (
+                    <div className="flex flex-wrap gap-4 mb-4 pb-4 border-b border-white/5">
+                        {transposedChords.map((chord, i) => (
+                            <div key={i} className="flex items-center gap-2">
+                                <span className="text-2xl font-bold text-primary tracking-tight">{chord}</span>
+                                {i < transposedChords.length - 1 && <ChevronRight className="w-4 h-4 text-white/10" />}
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* Lyrics */}
+                <pre className="text-white/80 whitespace-pre-wrap font-sans leading-relaxed text-lg">
+                    {section.lyrics}
+                </pre>
             </div>
         );
     };
