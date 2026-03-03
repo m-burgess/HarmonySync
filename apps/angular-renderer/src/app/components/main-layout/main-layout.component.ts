@@ -5,7 +5,6 @@ import { SlideGridComponent } from '../slides/slide-grid/slide-grid.component';
 import { LyricsColumnComponent } from '../lyrics/lyrics-column/lyrics-column.component';
 import { ActivityBarIconComponent } from '../vscode-ui/activity-bar-icon/activity-bar-icon.component';
 import { StemMixerComponent } from '../audio/stem-mixer/stem-mixer.component';
-import { TimerModalComponent } from '../modals/timer-modal/timer-modal.component';
 import { Dialog, DialogModule } from '@angular/cdk/dialog';
 import { ElectronService } from '../../core/electron.service';
 import { ServiceOrderService } from '../../core/service-order.service';
@@ -13,7 +12,6 @@ import { SlideService } from '../../core/slide.service';
 import { DisplayService } from '../../core/display.service';
 import { TimerService } from '../../core/timer.service';
 import { ConfigService } from '../../core/config.service';
-import { TimerListComponent } from '../timer-list/timer-list.component';
 import { CreateTimerRequest } from '../../models/timer.models';
 import { SettingsComponent } from '../settings/settings.component';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
@@ -31,7 +29,6 @@ import { ScriptEditorComponent } from '../screens/script-editor/script-editor.co
         ServiceOrderComponent,
         SlideGridComponent,
         LyricsColumnComponent,
-        TimerListComponent,
         SettingsComponent,
         SchedulerComponent,
         ScriptEditorComponent,

@@ -12,6 +12,7 @@ interface Services {
   audienceWindow: WindowGetter;
   confidenceWindow: WindowGetter;
   lowerThirdsWindow: WindowGetter;
+  preserviceMusicWindow: WindowGetter;
   jsonStorage: any;
   ffmpegService: any;
   audioService: any;
@@ -39,6 +40,7 @@ interface Services {
   appSettingsService: any;
   timerService: any;
   canvaService: any;
+  preserviceAutomationService: any;
 }
 
 interface DialogOpenDirectoryOptions {
@@ -701,6 +703,13 @@ class IPCHandlerManager {
               config: item.config
             }))
           });
+        }
+
+        // Check for pre-service music in sermon items
+        const sermonItem = serviceOrder.items.find((item: any) => item.type === 'sermon');
+        if (sermonItem?.config?.manifest?.music && this.services.preserviceAutomationService) {
+          console.log('[service-order:load] Triggering pre-service automation');
+          this.services.preserviceAutomationService.scheduleFromManifest(sermonItem.config.manifest);
         }
 
         return {
@@ -1564,6 +1573,10 @@ class IPCHandlerManager {
 
     this.ipcMain.handle('display:broadcast', async (_event, channel: string, data: any) => {
       return await this.services.displayService.broadcast(channel, data);
+    });
+
+    this.ipcMain.handle('display:broadcastToTargets', async (_event, targets: string[], channel: string, data: any) => {
+      return await this.services.displayService.broadcastToTargets(targets, channel, data);
     });
 
     this.ipcMain.handle('display:getCurrentState', async () => {

@@ -26,6 +26,7 @@ export class ConfidenceViewModel implements OnDestroy {
     readonly videoCountdown = signal<string | null>(null);
     readonly timer = signal<TimerState>({ active: false, elapsed: 0, total: 0 });
     readonly timerEnabled = signal<boolean>(false);
+    readonly targetedTimer = signal<string | null>(null);
 
     // Derived State
     readonly currentContent = computed(() => this.transition.currentContent());
@@ -127,6 +128,12 @@ export class ConfidenceViewModel implements OnDestroy {
 
         this.registerListener('confidence-timer-enable', () => this.timerEnabled.set(true));
         this.registerListener('confidence-timer-disable', () => this.timerEnabled.set(false));
+
+        this.registerListener('display-timer', (p: any) => {
+            this.targetedTimer.set(p.time);
+            // Optionally clear after some time if it's just a one-shot, 
+            // but usually timers are updated or stay until next slide
+        });
     }
 
     private registerListener(event: string, callback: (payload: any) => void) {

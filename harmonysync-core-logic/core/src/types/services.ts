@@ -67,6 +67,7 @@ export interface IDisplayService extends IService {
   blackScreen(): Promise<void>;
   updateLowerThirds(data: any): Promise<void>;
   broadcast(event: string, data: any): Promise<void>;
+  broadcastToTargets(targets: string[], event: string, data: any): Promise<void>;
 }
 
 export interface IWindowService extends IService {

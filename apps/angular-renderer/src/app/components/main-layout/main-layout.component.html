@@ -6,9 +6,6 @@
                 [active]="activeSidebar() === 'explorer'" label="Explorer"
                 (onClick)="setActiveSidebar('explorer')"></app-activity-bar-icon>
 
-            <app-activity-bar-icon id="activity-bar-timers" icon="heroClock"
-                [active]="activeSidebar() === 'timers' || isTimerActive()" label="Timers" [badge]="runningTimersCount()"
-                (onClick)="setActiveSidebar('timers')"></app-activity-bar-icon>
 
             <app-activity-bar-icon id="activity-bar-settings" icon="heroCog" [active]="activeSidebar() === 'settings'"
                 label="Settings" (onClick)="setActiveSidebar('settings')"></app-activity-bar-icon>
@@ -49,8 +46,6 @@
             [style.width]="sidebarWidth + 'px'">
             @if (activeSidebar() === 'explorer') {
             <app-service-order></app-service-order>
-            } @else if (activeSidebar() === 'timers') {
-            <app-timer-list></app-timer-list>
             } @else if (activeSidebar() === 'settings') {
             <app-settings></app-settings>
             } @else if (activeSidebar() === 'scheduler') {

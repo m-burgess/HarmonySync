@@ -38,4 +38,14 @@
             class="max-w-[85%] max-h-[85%] object-contain shadow-2xl rounded-lg" style="z-index: 200;" />
         }
     </div>
+
+    <!-- Targeted Timer Overlay -->
+    @if (targetedTimer()) {
+    <div
+        class="absolute bottom-10 right-10 z-[100] px-8 py-3 bg-black/50 backdrop-blur-md rounded-xl border border-white/20 shadow-2xl animate-pulse">
+        <div class="text-6xl font-black font-mono tracking-tighter tabular-nums text-white">
+            {{ targetedTimer() }}
+        </div>
+    </div>
+    }
 </div>

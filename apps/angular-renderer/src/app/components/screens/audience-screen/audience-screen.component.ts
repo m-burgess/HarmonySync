@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ElementRef, ViewChild, AfterViewInit, inject, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, ElementRef, ViewChild, AfterViewInit, inject, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Title, DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ElectronService } from '../../../core/electron.service';
@@ -46,6 +46,7 @@ export class AudienceScreenComponent implements OnInit, OnDestroy, AfterViewInit
     backgroundVideo: string | null = null;
     isLooping: boolean = false;
     player: any = null;
+    targetedTimer = signal<string | null>(null);
     private intervalId: any = null;
 
     private transition = inject(LyricTransitionService);
@@ -252,6 +253,12 @@ export class AudienceScreenComponent implements OnInit, OnDestroy, AfterViewInit
             if (this.player && this.player.setVolume) this.player.setVolume(payload.volume * 100);
         });
         if (ulVideoVolume) this.unlisteners.push(ulVideoVolume);
+
+        const ulDisplayTimer = this.electronService.on('display-timer', (payload: any) => {
+            console.log('Audience: display-timer event received', payload);
+            this.targetedTimer.set(payload.time);
+        });
+        if (ulDisplayTimer) this.unlisteners.push(ulDisplayTimer);
     }
 
     private initYouTubePlayer() {

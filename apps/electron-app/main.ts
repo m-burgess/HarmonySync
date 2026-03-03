@@ -32,6 +32,7 @@ const { appSettingsService } = require('./electron/services/app-settings-service
 const { getTimerService } = require('./electron/services/timer-service');
 const { mediaEngineBridge } = require('./electron/services/media-engine-bridge');
 const { getCanvaService } = require('./electron/services/canva-service');
+const { PreserviceAutomationService } = require('./electron/services/preservice-automation-service');
 
 // MIDI manager with optional loading
 let midiManager: any = null;
@@ -195,6 +196,7 @@ class ElectronApplication {
   private lowerThirdsWindow: BrowserWindow | null = null;
   private preserviceMusicWindow: BrowserWindow | null = null;
   private displayServiceInstance: any = null;
+  private preserviceAutomationService: any = null;
   private windowServiceInstance: any = null;
   private serviceManager: ServiceProcessManager; private serviceOrderManagerReady: boolean = false;
   private pendingServiceOrderItems: any[] | null = null;
@@ -262,6 +264,14 @@ class ElectronApplication {
         if (typeof this.displayServiceInstance.getPreserviceMusicWindow === 'function') {
           this.preserviceMusicWindow = this.displayServiceInstance.getPreserviceMusicWindow();
         }
+
+        // Initialize PreserviceAutomationService
+        this.preserviceAutomationService = new PreserviceAutomationService(
+          () => this.preserviceMusicWindow,
+          this.displayServiceInstance,
+          eventTriggerService
+        );
+        await this.preserviceAutomationService.initialize();
 
       } catch (err) {
         console.warn('[Application] Could not initialize display service orchestration:', err);
@@ -603,6 +613,7 @@ class ElectronApplication {
       appSettingsService,
       timerService,
       canvaService,
+      preserviceAutomationService: this.preserviceAutomationService,
     });
   }
 

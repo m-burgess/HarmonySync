@@ -20,6 +20,11 @@ export interface Slide {
     order: number;
     startTime?: number; // In seconds
     url?: string;
+    action?: {
+        timer?: string;
+        targets?: string[];
+        midi?: string[];
+    };
 }
 
 /**

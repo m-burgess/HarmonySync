@@ -179,12 +179,17 @@ export interface ScriptExecutionResult {
 export interface Slide {
   id: string;
   title: string;
-  type: 'text' | 'image' | 'video' | 'html' | 'lyrics';
+  type: 'text' | 'image' | 'video' | 'html' | 'lyrics' | 'youtube' | 'canva';
   content: SlideContent;
   thumbnail?: string;
   order?: number;
   groupId?: string;
   tags?: string[];
+  action?: {
+    timer?: string;
+    targets?: string[];
+    midi?: string[];
+  };
   createdAt?: string | Date;
   updatedAt?: string | Date;
 }
@@ -335,4 +340,24 @@ export interface BackgroundOptions {
   videoPath?: string;
   opacity?: number;
   blur?: number;
+}
+
+// ==================== Presentation Manifest Models ====================
+
+export interface PresentationManifest {
+  youtube?: string;
+  canva?: string;
+  midi?: string[];
+  music?: {
+    playlist: string;
+    start: string;
+    end: string;
+  };
+  slideMidi?: Record<string, string[]>;
+  folderMidi?: Record<string, string[]>;
+}
+
+export interface SermonData {
+  manifest: PresentationManifest;
+  slides: Slide[];
 }

@@ -390,6 +390,52 @@ export class DisplayService extends BaseElectronService implements IDisplayServi
   }
 
   /**
+   * Broadcast message to specific display targets
+   * @param targets - Array of targets ('audience', 'confidence', 'lower-thirds')
+   * @param channel - IPC channel name
+   * @param data - Data to send
+   */
+  public async broadcastToTargets(
+    targets: string[],
+    channel: string,
+    data: any
+  ): Promise<void> {
+    try {
+      let sentCount = 0;
+      const validTargets = targets.map(t => t.toLowerCase());
+
+      const targetMap: Record<string, () => BrowserWindow | null> = {
+        'audience': this.getAudienceWindow.bind(this),
+        'confidence': this.getConfidenceWindow.bind(this),
+        'lowerthirds': this.getLowerThirdsWindow.bind(this),
+        'lower-thirds': this.getLowerThirdsWindow.bind(this),
+        'both': () => null, // Special case handled below
+      };
+
+      if (validTargets.includes('both')) {
+        await this.broadcast(channel, data);
+        return;
+      }
+
+      for (const target of validTargets) {
+        const getWin = targetMap[target];
+        if (getWin) {
+          const win = getWin();
+          if (win && !win.isDestroyed()) {
+            win.webContents.send(channel, data);
+            sentCount++;
+          }
+        }
+      }
+
+      this.log('debug', `Targeted broadcast on channel ${channel} to ${sentCount} windows (Targets: ${targets.join(', ')})`);
+      this.emit('broadcast-sent', { channel, data, count: sentCount, targets });
+    } catch (error) {
+      this.handleError(`broadcastToTargets(${targets.join(',')}, ${channel})`, error);
+    }
+  }
+
+  /**
    * Check if a specific window is available
    * @param windowType - Type of window to check
    * @returns True if window exists and is not destroyed

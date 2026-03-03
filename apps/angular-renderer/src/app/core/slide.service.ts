@@ -109,6 +109,21 @@ export class SlideService {
             } else if (slide.type === 'canva') {
                 this.electron.emit('display-canva-slide', { url: slide.url || slide.content });
             }
+
+            // Handle slide actions (timers, midi)
+            if (slide.action) {
+                if (slide.action.timer) {
+                    const targets = slide.action.targets || ['both'];
+                    this.electron.invoke('display:broadcastToTargets', targets, 'display-timer', {
+                        time: slide.action.timer,
+                        id: slide.id
+                    });
+                }
+
+                if (slide.action.midi) {
+                    this.electron.emit('midi-trigger', { notes: slide.action.midi });
+                }
+            }
         }
     }
 

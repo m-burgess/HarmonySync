@@ -17,6 +17,7 @@ import AdmZip from 'adm-zip';
 import unzipper from 'unzipper';
 import { v4 as uuidv4 } from 'uuid';
 import os from 'os';
+import { SermonParser } from '@harmonysync/core';
 
 // ==================== Type Definitions ====================
 
@@ -269,13 +270,23 @@ export class ServiceOrderImporter {
         const itemType = await this.detectItemType(fullPath);
         const config = await this.loadItemConfig(fullPath);
 
+        // If it's a sermon/presentation manifest, parse it for automation
+        let manifest = undefined;
+        if (itemType === 'sermon') {
+          const sermonContent = await this.loadSermonContent(fullPath);
+          if (sermonContent) {
+            const data = SermonParser.parse(sermonContent);
+            manifest = data.manifest;
+          }
+        }
+
         const item: ServiceItem = {
           id: uuidv4(),
           name: cleanName,
           path: fullPath,
           type: itemType,
           sortOrder: sortOrder,
-          config: config
+          config: { ...config, manifest }
         };
 
         console.log(`✅ Added item: ${cleanName} (type: ${itemType}, order: ${sortOrder})`);
@@ -331,8 +342,8 @@ export class ServiceOrderImporter {
       const files = await fs.readdir(folderPath);
       const lowerFiles = files.map(f => f.toLowerCase());
 
-      // Check for sermon.txt first
-      if (lowerFiles.includes('sermon.txt')) return 'sermon';
+      // Check for Service_Order.txt or sermon.txt
+      if (lowerFiles.includes('service_order.txt') || lowerFiles.includes('sermon.txt')) return 'sermon';
 
       // Check for various file types
       const audioExts = ['.mp3', '.wav', '.ogg', '.flac', '.m4a', '.aac'];
@@ -496,6 +507,23 @@ export class ServiceOrderImporter {
       };
     } catch (error) {
       console.error('Error getting service:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Load sermon content from folder
+   */
+  private async loadSermonContent(itemPath: string): Promise<string | null> {
+    try {
+      const files = await fs.readdir(itemPath);
+      const sermonFile = files.find(f =>
+        f.toLowerCase() === 'service_order.txt' || f.toLowerCase() === 'sermon.txt'
+      );
+
+      if (!sermonFile) return null;
+      return await fs.readFile(path.join(itemPath, sermonFile), 'utf-8');
+    } catch {
       return null;
     }
   }

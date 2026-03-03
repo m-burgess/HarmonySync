@@ -13,63 +13,12 @@
     </div>
 
     <!-- ModalContent: Body -->
-    <div class="flex h-full w-full overflow-hidden bg-[#1e1e1e] p-4 gap-4">
+    <div class="flex h-full w-full overflow-hidden bg-[#1e1e1e] p-2 gap-2">
         <!-- Editor Area -->
-        <div class="flex-1 flex flex-col bg-[#161616] border border-[#333] rounded-lg overflow-hidden shadow-2xl">
-            <div class="flex items-center justify-between px-3 py-2 bg-[#1e1e1e] border-b border-[#333]">
-                <div class="flex items-center gap-2">
-                    <ng-icon name="heroDocumentText" class="text-[#007acc]"></ng-icon>
-                    <span class="text-[9px] uppercase font-bold text-gray-400 tracking-widest">Lyrics & Chords
-                        Source</span>
-                </div>
-                <div class="flex items-center gap-4 text-[8px] font-mono text-gray-500 uppercase tracking-tighter">
-                    <span>Format: [Section | Chords]</span>
-                    <span class="opacity-30">|</span>
-                    <span>Line split by newline</span>
-                </div>
-            </div>
-
+        <div class="flex-1 flex flex-col bg-[#161616] border border-[#333] rounded overflow-hidden">
             <textarea [(ngModel)]="rawText"
-                class="flex-1 w-full bg-[#161616] text-[#d4d4d4] p-6 font-mono text-sm leading-relaxed outline-none resize-none custom-scrollbar"
-                spellcheck="false"
-                placeholder="BPM: 78&#10;Time: 4/4&#10;Length: 3:00&#10;Key: C&#10;&#10;[Intro | 1-6m-5-4]&#10;&#10;[Verse 1 | 1-6m-5-4]&#10;Are you past the point of weary..."></textarea>
-        </div>
-
-        <!-- Right Side: Format Help -->
-        <div class="w-64 flex-shrink-0 flex flex-col gap-4">
-            <div class="p-4 bg-[#1e1e1e] border border-[#333] rounded-lg space-y-3">
-                <h3 class="text-[10px] uppercase font-black text-[#007acc] tracking-[0.2em]">Quick Guide</h3>
-                <div class="space-y-4">
-                    <div class="space-y-1.5">
-                        <p class="text-[9px] font-bold text-gray-400 uppercase">1. Metadata</p>
-                        <code
-                            class="block bg-black/30 p-2 rounded text-[9px] text-yellow-500/80 leading-relaxed font-mono">
-                            BPM: 78<br>
-                            Time: 4/4<br>
-                            Length: 3:41<br>
-                            Key: C<br>
-                            Lyrics URL: https://...
-                        </code>
-                    </div>
-                    <div class="space-y-1.5">
-                        <p class="text-[9px] font-bold text-gray-400 uppercase">2. Sections</p>
-                        <code
-                            class="block bg-black/30 p-2 rounded text-[9px] text-green-500/80 leading-relaxed font-mono">
-                            [Verse 1 | 1-6m-5-4]
-                        </code>
-                    </div>
-                    <div class="space-y-1.5">
-                        <p class="text-[9px] font-bold text-gray-400 uppercase">3. Lyrics</p>
-                        <p class="text-[9px] text-gray-500 leading-normal italic">Place lyrics directly under the
-                            section header. Chords in the header apply to the entire section.</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex-1 flex flex-col items-center justify-center opacity-20 text-center px-6">
-                <ng-icon name="heroDocumentText" size="32" class="mb-3"></ng-icon>
-                <p class="text-[9px] uppercase tracking-[0.2em] font-bold">Live Editor</p>
-            </div>
+                class="flex-1 w-full bg-[#161616] text-[#d4d4d4] p-4 font-mono text-sm leading-relaxed outline-none resize-none custom-scrollbar"
+                spellcheck="false" placeholder="Edit your song content here..."></textarea>
         </div>
     </div>
 
