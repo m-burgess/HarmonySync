@@ -1,0 +1,16 @@
+<song>
+  <title>Song Title</title>
+  <bpm>78</bpm>
+  <timing>4/4</timing>
+  <length>3:00</length>
+  <key>C</key>
+  <lyricsURL></lyricsURL>
+  <part name="Intro">
+    <chords>1-6m-5-4</chords>
+    <lyrics></lyrics>
+  </part>
+  <part name="Verse 1">
+    <chords>1-6m-5-4</chords>
+    <lyrics>Paste lyrics here...</lyrics>
+  </part>
+</song>

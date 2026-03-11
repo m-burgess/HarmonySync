@@ -8,9 +8,8 @@ import { FileService } from './file.service';
 import { ConfigService } from './config.service';
 import { MessagingService } from './messaging.service';
 import { EVENT_TYPES } from '../models/messaging.models';
-import { SongMapParser } from '../utils/song-map-parser';
-import { SermonParser } from '../utils/sermon-parser';
-import { SongMap } from '../models/song-map.models';
+import { ServiceMapper } from '../utils/service-mapper';
+import { SongMap, SongMapper } from '@harmonysync/core';
 
 export interface ServiceOrderItem {
     id?: string;
@@ -222,7 +221,7 @@ export class ServiceOrderService {
             if (item.type === 'song') {
                 const lyricsRaw = await this.electron.invoke('service-order:loadLyrics', item.path);
                 if (lyricsRaw) {
-                    let songMap = SongMapParser.parse(lyricsRaw);
+                    let songMap = SongMapper.parse(lyricsRaw);
 
                     // Check if we need to auto-scrape
                     const hasLyrics = songMap.sections.some(s => s.lyrics && s.lyrics.trim().length > 5);
@@ -263,7 +262,7 @@ export class ServiceOrderService {
                                 });
                             }
 
-                            const updatedText = SongMapParser.stringify(songMap);
+                            const updatedText = SongMapper.stringify(songMap);
                             await this.electron.invoke('service-order:saveLyrics', item.path, updatedText);
                             console.log(`[ServiceOrder] Auto-scraped lyrics saved and cached.`);
                         }
@@ -296,7 +295,7 @@ export class ServiceOrderService {
             } else if (item.type === 'sermon') {
                 const sermonRaw = await this.electron.invoke('service-order:loadSermon', item.path);
                 if (sermonRaw) {
-                    const sermonData = SermonParser.parse(sermonRaw);
+                    const sermonData = ServiceMapper.parse(sermonRaw);
 
                     // Check for Canva slides and snapshot them if needed
                     const canvaSlides = sermonData.slides.filter(s => s.type === 'canva');

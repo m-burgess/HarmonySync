@@ -17,7 +17,7 @@ import AdmZip from 'adm-zip';
 import unzipper from 'unzipper';
 import { v4 as uuidv4 } from 'uuid';
 import os from 'os';
-import { SermonParser } from '@harmonysync/core';
+import { ServiceMapper } from '@harmonysync/core';
 
 // ==================== Type Definitions ====================
 
@@ -275,7 +275,7 @@ export class ServiceOrderImporter {
         if (itemType === 'sermon') {
           const sermonContent = await this.loadSermonContent(fullPath);
           if (sermonContent) {
-            const data = SermonParser.parse(sermonContent);
+            const data = ServiceMapper.parse(sermonContent);
             manifest = data.manifest;
           }
         }
@@ -342,8 +342,8 @@ export class ServiceOrderImporter {
       const files = await fs.readdir(folderPath);
       const lowerFiles = files.map(f => f.toLowerCase());
 
-      // Check for Service_Order.txt or sermon.txt
-      if (lowerFiles.includes('service_order.txt') || lowerFiles.includes('sermon.txt')) return 'sermon';
+      // Check for Service-Map.xml, Service-Map.txt or sermon.txt
+      if (lowerFiles.includes('service-map.xml') || lowerFiles.includes('service-map.txt') || lowerFiles.includes('service_order.txt') || lowerFiles.includes('sermon.txt')) return 'sermon';
 
       // Check for various file types
       const audioExts = ['.mp3', '.wav', '.ogg', '.flac', '.m4a', '.aac'];
@@ -518,7 +518,7 @@ export class ServiceOrderImporter {
     try {
       const files = await fs.readdir(itemPath);
       const sermonFile = files.find(f =>
-        f.toLowerCase() === 'service_order.txt' || f.toLowerCase() === 'sermon.txt'
+        f.toLowerCase() === 'service-map.xml' || f.toLowerCase() === 'service-map.txt' || f.toLowerCase() === 'service_order.txt' || f.toLowerCase() === 'sermon.txt'
       );
 
       if (!sermonFile) return null;

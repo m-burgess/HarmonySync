@@ -4,8 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { heroCheck, heroXMark, heroDocumentText, heroInformationCircle, heroSparkles, heroArrowPath } from '@ng-icons/heroicons/outline';
-import { SongMap, SongMapModalData } from '../../../models/song-map.models';
-import { SongMapParser } from '../../../utils/song-map-parser';
+import { SongMapModalData } from '../../../models/song-map.models';
+import { SongMap, SongMapper } from '@harmonysync/core';
 import { VSCodeModalComponent } from '../../vscode-ui/modal/modal.component';
 import { ElectronService } from '../../../core/electron.service';
 
@@ -32,18 +32,26 @@ export class SongMapModalComponent implements OnInit {
 
     ngOnInit() {
         if (this.data.existingMap) {
-            this.rawText.set(SongMapParser.stringify(this.data.existingMap));
+            this.rawText.set(SongMapper.stringify(this.data.existingMap, this.data.songName));
         } else {
-            // Default template
+            // Default XML template
             this.rawText.set(
-                `BPM: 78\n` +
-                `Time: 4/4\n` +
-                `Length: 3:00\n` +
-                `Key: C\n` +
-                `Lyrics URL: \n\n` +
-                `[Intro | 1-6m-5-4]\n\n` +
-                `[Verse 1 | 1-6m-5-4]\n` +
-                `Paste lyrics here...`
+                `<song>\n` +
+                `  <title>${this.data.songName || 'Untitled'}</title>\n` +
+                `  <bpm>78</bpm>\n` +
+                `  <timing>4/4</timing>\n` +
+                `  <length>3:00</length>\n` +
+                `  <key>C</key>\n` +
+                `  <lyricsURL></lyricsURL>\n` +
+                `  <part name="Intro">\n` +
+                `    <chords>1-6m-5-4</chords>\n` +
+                `    <lyrics></lyrics>\n` +
+                `  </part>\n` +
+                `  <part name="Verse 1">\n` +
+                `    <chords>1-6m-5-4</chords>\n` +
+                `    <lyrics>Paste lyrics here...</lyrics>\n` +
+                `  </part>\n` +
+                `</song>`
             );
         }
     }
@@ -53,7 +61,7 @@ export class SongMapModalComponent implements OnInit {
         if (!text) return;
 
         try {
-            let songMap = SongMapParser.parse(text);
+            let songMap = SongMapper.parse(text);
             this.dialogRef.close(songMap);
         } catch (error) {
             console.error('Error parsing song map:', error);

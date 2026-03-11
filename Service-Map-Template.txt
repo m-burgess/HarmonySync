@@ -1,0 +1,19 @@
+---
+[Playlist: https://youtube.com/playlist?list=PL12345, 8:30AM, 8:55AM]
+[Canva: Paste canva link]
+[Filename: A-5, G-5, 8:55AM, 9:00AM]
+[AutoStart Next Item] 
+[Song Folder 1: C-1, G-1]
+[Announcements: C-3, F-5]
+[Song Folder 2: C-2, G-3]
+[Song Folder 3: C-4, G-5]
+[Filename.png/mov/mp4: A-4, B-4]
+[Filename.png/mov/mp4: 05:00 , confidence]
+---
+ A-4, B-4
+[Genesis 1:1]
+In the beginning God created the heavens and the earth.
+
+[timer: 05:00 | target: confidence]
+[youtube]
+https://youtube.com/watch?v=abc

@@ -226,7 +226,7 @@ export class LyricsFetcherService extends BaseElectronService implements ILyrics
    */
   public async saveLyrics(songPath: string, lyrics: string): Promise<boolean> {
     try {
-      const lyricsPath = path.join(songPath, 'lyrics.txt');
+      const lyricsPath = path.join(songPath, 'Song-Map.txt');
       await fs.writeFile(lyricsPath, lyrics, 'utf-8');
       this.log('info', `Saved lyrics to: ${lyricsPath}`);
       return true;
@@ -242,11 +242,13 @@ export class LyricsFetcherService extends BaseElectronService implements ILyrics
    */
   public async loadLyrics(songPath: string): Promise<string | null> {
     try {
-      const lyricsPath = path.join(songPath, 'lyrics.txt');
-
+      let lyricsPath = path.join(songPath, 'Song-Map.txt');
       if (!await fs.pathExists(lyricsPath)) {
-        this.log('debug', `No lyrics file found at: ${lyricsPath}`);
-        return null;
+        lyricsPath = path.join(songPath, 'lyrics.txt');
+        if (!await fs.pathExists(lyricsPath)) {
+          this.log('debug', `No lyrics file found at: ${songPath}`);
+          return null;
+        }
       }
 
       const lyrics = await fs.readFile(lyricsPath, 'utf-8');
@@ -265,8 +267,9 @@ export class LyricsFetcherService extends BaseElectronService implements ILyrics
    */
   public async hasLyrics(songPath: string): Promise<boolean> {
     try {
-      const lyricsPath = path.join(songPath, 'lyrics.txt');
-      return await fs.pathExists(lyricsPath);
+      const lyricsPath = path.join(songPath, 'Song-Map.txt');
+      if (await fs.pathExists(lyricsPath)) return true;
+      return await fs.pathExists(path.join(songPath, 'lyrics.txt'));
     } catch (error) {
       this.log('error', 'Error checking for lyrics:', error);
       return false;
@@ -280,11 +283,14 @@ export class LyricsFetcherService extends BaseElectronService implements ILyrics
    */
   public async deleteLyrics(songPath: string): Promise<boolean> {
     try {
-      const lyricsPath = path.join(songPath, 'lyrics.txt');
+      let lyricsPath = path.join(songPath, 'Song-Map.txt');
 
       if (!await fs.pathExists(lyricsPath)) {
-        this.log('debug', `No lyrics to delete at: ${lyricsPath}`);
-        return false;
+        lyricsPath = path.join(songPath, 'lyrics.txt');
+        if (!await fs.pathExists(lyricsPath)) {
+          this.log('debug', `No lyrics to delete at: ${songPath}`);
+          return false;
+        }
       }
 
       await fs.remove(lyricsPath);

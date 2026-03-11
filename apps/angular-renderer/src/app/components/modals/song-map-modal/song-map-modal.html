@@ -26,11 +26,10 @@
     <div footer class="flex items-center justify-end w-full gap-3">
         <button (click)="close()"
             class="px-5 py-2 text-[11px] font-bold uppercase tracking-wider hover:bg-[#333] rounded transition-colors text-gray-400">Cancel</button>
-        <button (click)="save()" [disabled]="isScraping()"
+        <button (click)="save()"
             class="px-10 py-2 bg-[#007acc] hover:bg-[#0062a3] text-white rounded text-[11px] font-bold transition-all shadow-lg shadow-blue-900/20 uppercase tracking-widest flex items-center gap-2">
-            <ng-icon [name]="isScraping() ? 'heroArrowPath' : 'heroCheck'"
-                [class.animate-spin]="isScraping()"></ng-icon>
-            {{ isScraping() ? 'Pulling Lyrics...' : 'Apply Changes' }}
+            <ng-icon name="heroCheck"></ng-icon>
+            Apply Changes
         </button>
     </div>
 </app-vscode-modal>

@@ -13,7 +13,7 @@ export interface SermonData {
     slides: SermonSlide[];
 }
 
-export class SermonParser {
+export class ServiceMapper {
     static parse(content: string): SermonData {
         const lines = content.split('\n');
         const data: SermonData = {

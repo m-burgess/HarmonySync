@@ -422,8 +422,13 @@ class IPCHandlerManager {
       try {
         const path = require('path');
         const fs = require('fs-extra');
-        const lyricsPath = path.join(songPath, 'lyrics.txt');
-        return await fs.readFile(lyricsPath, 'utf8');
+        const lyricsPath = path.join(songPath, 'Song-Map.txt');
+        if (await fs.pathExists(lyricsPath)) {
+          return await fs.readFile(lyricsPath, 'utf8');
+        }
+        // Fallback
+        const oldLyricsPath = path.join(songPath, 'lyrics.txt');
+        return await fs.readFile(oldLyricsPath, 'utf8');
       } catch (error) {
         return null;
       }
@@ -433,8 +438,17 @@ class IPCHandlerManager {
       try {
         const path = require('path');
         const fs = require('fs-extra');
-        const fullPath = path.join(sermonPath, 'sermon.txt');
-        return await fs.readFile(fullPath, 'utf8');
+        const fullPath = path.join(sermonPath, 'Service-Map.txt');
+        if (await fs.pathExists(fullPath)) {
+          return await fs.readFile(fullPath, 'utf8');
+        }
+        // Fallbacks
+        const oldPathSermon = path.join(sermonPath, 'sermon.txt');
+        if (await fs.pathExists(oldPathSermon)) {
+          return await fs.readFile(oldPathSermon, 'utf8');
+        }
+        const oldPathOrder = path.join(sermonPath, 'Service_Order.txt');
+        return await fs.readFile(oldPathOrder, 'utf8');
       } catch (error) {
         return null;
       }
@@ -444,7 +458,7 @@ class IPCHandlerManager {
       try {
         const path = require('path');
         const fs = require('fs-extra');
-        const lyricsPath = path.join(songPath, 'lyrics.txt');
+        const lyricsPath = path.join(songPath, 'Song-Map.txt');
         await fs.writeFile(lyricsPath, content, 'utf8');
         return true;
       } catch (error) {
@@ -457,7 +471,7 @@ class IPCHandlerManager {
       try {
         const path = require('path');
         const fs = require('fs-extra');
-        const fullPath = path.join(sermonPath, 'sermon.txt');
+        const fullPath = path.join(sermonPath, 'Service-Map.txt');
         await fs.writeFile(fullPath, content, 'utf8');
         return true;
       } catch (error) {
@@ -487,8 +501,12 @@ class IPCHandlerManager {
       try {
         const path = require('path');
         const { shell } = require('electron');
-        const lyricsPath = path.join(songPath, 'lyrics.txt');
-        await shell.openPath(lyricsPath);
+        const lyricsPath = path.join(songPath, 'Song-Map.txt');
+        if (await fs.pathExists(lyricsPath)) {
+          await shell.openPath(lyricsPath);
+        } else {
+          await shell.openPath(path.join(songPath, 'lyrics.txt'));
+        }
       } catch (error) {
         console.error('[service-order:openLyricsFile] Error:', error);
       }

@@ -1,0 +1,56 @@
+<app-vscode-modal size="medium" (onClose)="close()" [hasHeaderSlot]="true">
+    <!-- Modal Header Slot -->
+    <div header class="flex items-center justify-between w-full pr-4">
+        <div>
+            <h2 class="text-xs font-bold uppercase tracking-wider">{{ data.title }}</h2>
+        </div>
+        <div class="flex items-center gap-2 px-3 py-1 bg-[#252526] rounded-full border border-[#333]">
+            <ng-icon name="heroClock" class="text-[#007acc] text-[10px]"></ng-icon>
+        </div>
+    </div>
+
+    <!-- ModalContent: Body -->
+    <div class="flex flex-col h-full w-full bg-[#1e1e1e] p-4 gap-4 text-[#cccccc]">
+        <!-- Setup fields -->
+        <div class="flex flex-col gap-2">
+            <label class="text-xs font-bold uppercase tracking-wider text-[#858585]">Name</label>
+            <input type="text" [ngModel]="name()" (ngModelChange)="name.set($event)"
+                class="w-full bg-[#161616] border border-[#3c3c3c] rounded p-2 text-sm outline-none focus:border-[#007acc]">
+        </div>
+
+        <div class="flex flex-col gap-2">
+            <label class="text-xs font-bold uppercase tracking-wider text-[#858585]">Duration (Minutes)</label>
+            <input type="number" [ngModel]="durationMinutes()" (ngModelChange)="durationMinutes.set($event)" min="1"
+                class="w-full bg-[#161616] border border-[#3c3c3c] rounded p-2 text-sm outline-none focus:border-[#007acc]">
+        </div>
+
+        <div class="flex flex-col gap-2">
+            <label class="text-xs font-bold uppercase tracking-wider text-[#858585]">Target Displays</label>
+            <div class="flex flex-col gap-2">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" [checked]="selectedDisplays().has('confidence')"
+                        (change)="toggleDisplay('confidence')"
+                        class="accent-[#007acc] w-4 h-4 rounded bg-[#161616] border-[#3c3c3c]">
+                    <span class="text-sm">Confidence Screen</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" [checked]="selectedDisplays().has('audience')"
+                        (change)="toggleDisplay('audience')"
+                        class="accent-[#007acc] w-4 h-4 rounded bg-[#161616] border-[#3c3c3c]">
+                    <span class="text-sm">Audience Screen</span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Slot -->
+    <div footer class="flex items-center justify-end w-full gap-3">
+        <button (click)="close()"
+            class="px-5 py-2 text-[11px] font-bold uppercase tracking-wider hover:bg-[#333] rounded transition-colors text-gray-400">Cancel</button>
+        <button (click)="save()"
+            class="px-10 py-2 bg-[#007acc] hover:bg-[#0062a3] text-white rounded text-[11px] font-bold transition-all shadow-lg shadow-blue-900/20 uppercase tracking-widest flex items-center gap-2">
+            <ng-icon name="heroCheck"></ng-icon>
+            Create
+        </button>
+    </div>
+</app-vscode-modal>

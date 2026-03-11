@@ -1,0 +1,28 @@
+<serviceOrder>
+  <!-- Global Playlist Configuration -->
+  <playlist url="https://youtube.com/playlist?list=PL12345">
+    <service name="morning" start="8:30AM" end="8:55AM" />
+    <service name="midmorning" start="10:30AM" end="10:55AM" />
+  </playlist>
+  
+  <!-- Global Canva Presentation Link -->
+  <canva url="Paste canva link" />
+
+  <!-- Item Configurations based on folder or file names -->
+  <item name="Filename.png/mov/mp4">
+    <midi>A-4, B-4</midi>
+    <timer>05:00</timer>
+    <timerTarget>audience, confidence</timerTarget>
+    <autoAdvanceWhenComplete>true</autoAdvanceWhenComplete>
+  </item>
+
+  <!-- Countdown video automatically starts 5 minutes before service -->
+  <item name="Countdown.mp4" start="8:25AM" end="8:30AM">
+    <autoAdvanceWhenComplete>true</autoAdvanceWhenComplete>
+  </item>
+
+  <!-- Items can have URLs directly tied to them -->
+  <item name="AnotherFilename.mov">
+    <url>https://example.com/video</url>
+  </item>
+</serviceOrder>

@@ -576,7 +576,7 @@ export class SettingsComponent implements OnInit {
         if (!this.electronService.isElectron) return;
 
         try {
-            const displays = await this.electronService.invoke('settings:getAvailableDisplays');
+            const displays = await this.electronService.invoke('settings:getDisplays');
             this.availableDisplays = Array.isArray(displays) ? displays : [];
 
             const audioDevices = await this.electronService.invoke('settings:getAudioDevices');

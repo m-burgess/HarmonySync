@@ -189,6 +189,9 @@ export interface Slide {
     timer?: string;
     targets?: string[];
     midi?: string[];
+    startTime?: string;
+    endTime?: string;
+    url?: string;
   };
   createdAt?: string | Date;
   updatedAt?: string | Date;
@@ -344,6 +347,13 @@ export interface BackgroundOptions {
 
 // ==================== Presentation Manifest Models ====================
 
+export interface ItemConfig {
+  midi?: string[];
+  startTime?: string;
+  endTime?: string;
+  url?: string;
+}
+
 export interface PresentationManifest {
   youtube?: string;
   canva?: string;
@@ -353,8 +363,9 @@ export interface PresentationManifest {
     start: string;
     end: string;
   };
-  slideMidi?: Record<string, string[]>;
-  folderMidi?: Record<string, string[]>;
+  slideMidi?: Record<string, ItemConfig>;
+  folderMidi?: Record<string, ItemConfig>;
+  autoStartNextItem?: boolean;
 }
 
 export interface SermonData {
