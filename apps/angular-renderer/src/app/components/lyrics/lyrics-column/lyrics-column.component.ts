@@ -4,7 +4,7 @@ import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { heroMusicalNote } from '@ng-icons/heroicons/outline';
 import { ElectronService } from '../../../core/electron.service';
 
-import { SongMap } from '../../../models/song-map.models';
+import { SongMap } from '@harmonysync/core';
 
 
 interface ParsedLine {

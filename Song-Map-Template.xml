@@ -11,6 +11,9 @@
   </part>
   <part name="Verse 1">
     <chords>1-6m-5-4</chords>
-    <lyrics>Paste lyrics here...</lyrics>
+    <lyrics>
+      <line timestamp="00:00">Paste lyrics here...</line>
+      <line timestamp="00:10">Second line of lyrics...</line>
+    </lyrics>
   </part>
 </song>

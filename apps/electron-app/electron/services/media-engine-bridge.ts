@@ -67,6 +67,10 @@ export class MediaEngineBridge {
         }
     }
 
+    public async parseSongMap(filePath: string) {
+        return this.get(`/songs/parse?filePath=${encodeURIComponent(filePath)}`);
+    }
+
     private registerIpcHandlers() {
         // Forward basic controls
         ipcMain.handle('media-engine:play', () => this.post('/mixer/play', {}));
@@ -94,6 +98,11 @@ export class MediaEngineBridge {
         ipcMain.handle('media-engine:transpose', (_, songId: string, semitones: number) =>
             this.post('/songs/transpose', { songId, semitones })
         );
+
+        // Song Map Parsing
+        ipcMain.handle('media-engine:parse-song-map', (_, filePath: string) =>
+            this.get(`/songs/parse?filePath=${encodeURIComponent(filePath)}`)
+        );
     }
 
     private async post(endpoint: string, body: any) {
@@ -109,6 +118,21 @@ export class MediaEngineBridge {
             return await response.json().catch(() => ({ success: true }));
         } catch (err) {
             console.error(`[MediaEngineBridge] POST ${endpoint} failed:`, err);
+            return { success: false, error: String(err) };
+        }
+    }
+
+    private async get(endpoint: string) {
+        try {
+            const response = await fetch(`${this.baseUrl}${endpoint}`, {
+                method: 'GET'
+            });
+            if (!response.ok) {
+                throw new Error(`Go Engine Error: ${response.statusText}`);
+            }
+            return await response.json();
+        } catch (err) {
+            console.error(`[MediaEngineBridge] GET ${endpoint} failed:`, err);
             return { success: false, error: String(err) };
         }
     }

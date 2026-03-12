@@ -1,6 +1,9 @@
 import { SermonData, PresentationManifest, Slide, ItemConfig } from '../types/models';
-import { XMLParser } from 'fast-xml-parser';
 
+/**
+ * ServiceMapper handles the parsing of Service Order files.
+ * XML parsing has been moved to a basic implementation to remove fast-xml-parser.
+ */
 export class ServiceMapper {
     /**
      * Parses the Service_Order.txt or Service_Order.xml content
@@ -9,120 +12,110 @@ export class ServiceMapper {
     static parse(content: string): SermonData {
         const trimmed = content.trim();
         if (trimmed.startsWith('<')) {
-            return this.parseXml(trimmed);
+            return this.parseBasicXml(trimmed);
         }
         return this.parseLegacyText(content);
     }
 
     /**
-     * Parse XML-based Service Maps
+     * Parse XML-based Service Maps using basic regex to avoid external dependencies.
      */
-    private static parseXml(content: string): SermonData {
-        const parser = new XMLParser({
-            ignoreAttributes: false,
-            attributeNamePrefix: "@_",
-            textNodeName: "#text"
-        });
-        
-        let parsed: any;
-        try {
-            parsed = parser.parse(content);
-        } catch (e) {
-            console.error("Failed to parse Service Map XML", e);
-            return { manifest: {}, slides: [] };
-        }
-
-        const root = parsed.serviceOrder || parsed.manifest;
-        if (!root) {
-            return { manifest: {}, slides: [] };
-        }
-
+    private static parseBasicXml(content: string): SermonData {
         const manifest: PresentationManifest = {
             folderMidi: {},
             slideMidi: {}
         };
 
-        // Parse Playlist
-        if (root.playlist) {
-            let services: any[] = [];
-            if (Array.isArray(root.playlist.service)) {
-                services = root.playlist.service;
-            } else if (root.playlist.service) {
-                services = [root.playlist.service];
+        try {
+            // Parse Playlist
+            const playlistMatch = content.match(/<playlist(.*?)>([\s\S]*?)<\/playlist>/);
+            if (playlistMatch) {
+                const attrs = playlistMatch[1];
+                const urlMatch = attrs.match(/url="(.*?)"/);
+                
+                const servicesMatch = playlistMatch[2].match(/<service(.*?)[\/]?>/g);
+                let start = '';
+                let end = '';
+                if (servicesMatch && servicesMatch[0]) {
+                    const sAttrs = servicesMatch[0];
+                    const startMatch = sAttrs.match(/start="(.*?)"/);
+                    const endMatch = sAttrs.match(/end="(.*?)"/);
+                    if (startMatch) start = startMatch[1];
+                    if (endMatch) end = endMatch[1];
+                }
+
+                if (urlMatch) {
+                    manifest.music = {
+                        playlist: urlMatch[1],
+                        start,
+                        end
+                    };
+                }
             }
 
-            // Using the first service times globally for now, or just storing the URL as requested by legacy code
-            if (root.playlist["@_url"]) {
-                manifest.music = {
-                    playlist: root.playlist["@_url"],
-                    start: services[0] ? services[0]["@_start"] || '' : '',
-                    end: services[0] ? services[0]["@_end"] || '' : ''
-                };
-            }
-        }
-
-        // Parse Canva
-        if (root.canva && root.canva["@_url"]) {
-            manifest.canva = root.canva["@_url"];
-        } else if (typeof root.canva === 'string') {
-            manifest.canva = root.canva;
-        }
-
-        // Parse Items
-        let items: any[] = [];
-        if (Array.isArray(root.item)) {
-            items = root.item;
-        } else if (root.item) {
-            items = [root.item];
-        }
-
-        for (const item of items) {
-            const name = item["@_name"];
-            if (!name) continue;
-
-            const config: ItemConfig = {};
-
-            if (item.midi) {
-                config.midi = String(item.midi).split(',').map(m => m.trim());
+            // Parse Canva
+            const canvaMatch = content.match(/<canva(.*?)>(.*?)<\/canva>/) || content.match(/<canva(.*?)[\/]?>/);
+            if (canvaMatch) {
+                const attrs = canvaMatch[1];
+                const urlAttrMatch = attrs.match(/url="(.*?)"/);
+                if (urlAttrMatch) {
+                    manifest.canva = urlAttrMatch[1];
+                } else if (canvaMatch[2]) {
+                    manifest.canva = canvaMatch[2].trim();
+                }
             }
 
-            if (item.url) {
-                config.url = String(item.url).trim();
-            }
+            // Parse Items
+            const itemRegex = /<item name="(.*?)">([\s\S]*?)<\/item>|<item name="(.*?)" (.*?)[\/]?>/g;
+            let match;
+            while ((match = itemRegex.exec(content)) !== null) {
+                const name = match[1] || match[3];
+                const innerOrAttrs = match[2] || match[4];
+                if (!name) continue;
 
-            if (item["@_start"]) {
-                config.startTime = String(item["@_start"]).trim();
-            }
+                const config: ItemConfig = {};
+                
+                // Extract from inner content or attributes
+                if (match[2]) {
+                    const midiMatch = match[2].match(/<midi>(.*?)<\/midi>/);
+                    if (midiMatch) config.midi = midiMatch[1].split(',').map(m => m.trim());
 
-            if (item["@_end"]) {
-                config.endTime = String(item["@_end"]).trim();
-            }
+                    const urlMatch = match[2].match(/<url>(.*?)<\/url>/);
+                    if (urlMatch) config.url = urlMatch[1].trim();
 
-            if (item.timer) {
-                // If it's a direct slide action config we pass it via config
-                (config as any).timer = String(item.timer).trim();
-            }
+                    const timerMatch = match[2].match(/<timer>(.*?)<\/timer>/);
+                    if (timerMatch) (config as any).timer = timerMatch[1].trim();
 
-            if (item.timerTarget) {
-                (config as any).timerTarget = String(item.timerTarget).split(',').map((t: string) => t.trim());
-            }
+                    const targetMatch = match[2].match(/<timerTarget>(.*?)<\/timerTarget>/);
+                    if (targetMatch) (config as any).timerTarget = targetMatch[1].split(',').map((t: string) => t.trim());
 
-            if (String(item.autoAdvanceWhenComplete).toLowerCase() === 'true') {
-                manifest.autoStartNextItem = true;
-                (config as any).autoAdvanceWhenComplete = true; // store specifically for this item if needed
-            }
+                    const autoAdvanceMatch = match[2].match(/<autoAdvanceWhenComplete>(.*?)<\/autoAdvanceWhenComplete>/);
+                    if (autoAdvanceMatch && autoAdvanceMatch[1].toLowerCase() === 'true') {
+                        manifest.autoStartNextItem = true;
+                        (config as any).autoAdvanceWhenComplete = true;
+                    }
+                }
 
-            // Differentiate between folders and files. Usually files have extensions natively in our usage.
-            if (name.includes('.')) {
-                manifest.slideMidi![name] = config;
-            } else {
-                manifest.folderMidi![name] = config;
+                // Attributes
+                const startMatch = (match[2] || match[4] || '').match(/start="(.*?)"/);
+                if (startMatch) config.startTime = startMatch[1].trim();
+
+                const endMatch = (match[2] || match[4] || '').match(/end="(.*?)"/);
+                if (endMatch) config.endTime = endMatch[1].trim();
+
+                if (name.includes('.')) {
+                    manifest.slideMidi![name] = config;
+                } else {
+                    manifest.folderMidi![name] = config;
+                }
             }
+        } catch (e) {
+            console.error("[ServiceMapper] Basic XML parse failed", e);
         }
 
         return {
             manifest,
-            slides: [] // The new specification leaves out pure slide text from the XML mapper
+            slides: []
         };
     }
 

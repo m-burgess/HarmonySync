@@ -24,6 +24,7 @@
   "private": true,
   "packageManager": "pnpm@10.28.2",
   "dependencies": {
+    "@harmonysync/core": "workspace:*",
     "@angular/cdk": "^21.1.5",
     "@angular/common": "^21.1.0",
     "@angular/compiler": "^21.1.0",

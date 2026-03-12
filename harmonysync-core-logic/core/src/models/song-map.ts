@@ -1,8 +1,14 @@
+export interface LyricLine {
+    text: string;
+    timestamp?: string;
+}
+
 export interface SongSection {
     id: string;
     label: string;
     lyrics: string;
     chords: string;
+    lines?: LyricLine[];
 }
 
 export interface SongMap {

@@ -33,6 +33,7 @@ func NewRouter(audioService *audio.Service, videoService *video.Service, imageSe
 	audioHandler := NewAudioHandler(audioService)
 	videoHandler := NewVideoHandler(videoService)
 	imageHandler := NewImageHandler(imageService)
+	songsHandler := NewSongsHandler()
 
 	// Health check
 	mux.HandleFunc("/health", handleHealth)
@@ -68,6 +69,7 @@ func NewRouter(audioService *audio.Service, videoService *video.Service, imageSe
 	mux.HandleFunc("/api/mixer/pan", audioHandler.HandleSetPan)
 	mux.HandleFunc("/api/mixer/mute", audioHandler.HandleSetMute)
 	mux.HandleFunc("/api/songs/transpose", audioHandler.HandleTransposeSong)
+	mux.HandleFunc("/api/songs/parse", songsHandler.HandleParseSongMap)
 
 	// Video Endpoints
 	mux.HandleFunc("/api/video/transcode", videoHandler.HandleTranscode)

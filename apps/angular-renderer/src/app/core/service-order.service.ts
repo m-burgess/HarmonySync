@@ -219,9 +219,17 @@ export class ServiceOrderService {
 
             // 2. Load Metadata (Lyrics or Sermon)
             if (item.type === 'song') {
-                const lyricsRaw = await this.electron.invoke('service-order:loadLyrics', item.path);
-                if (lyricsRaw) {
-                    let songMap = SongMapper.parse(lyricsRaw);
+                const songMapResult = await this.electron.invoke('service-order:loadSongMap', item.path);
+                if (songMapResult) {
+                    let songMap: SongMap;
+
+                    if (songMapResult.type === 'legacy') {
+                        // Legacy text/txt format
+                        songMap = SongMapper.parse(songMapResult.raw);
+                    } else {
+                        // New Go-parsed XML format
+                        songMap = songMapResult;
+                    }
 
                     // Check if we need to auto-scrape
                     const hasLyrics = songMap.sections.some(s => s.lyrics && s.lyrics.trim().length > 5);

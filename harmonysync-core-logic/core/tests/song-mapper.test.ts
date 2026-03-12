@@ -59,4 +59,52 @@ describe('SongMapper XML', () => {
         expect(xml).toContain('<title>My Jesus</title>');
         expect(xml).toContain('<midiNotes>C-1, G-1</midiNotes>');
     });
+
+    it('should parse granular timestamps in lyrics correctly', () => {
+        const timestampedContent = `
+<song>
+  <part name="Automation Verse">
+    <lyrics>
+      <line timestamp="00:05">Line 1</line>
+      <line timestamp="00:15">Line 2</line>
+    </lyrics>
+  </part>
+</song>
+`;
+        const result = SongMapper.parse(timestampedContent);
+        expect(result.sections.length).toBe(1);
+        const section = result.sections[0];
+        expect(section.label).toBe('Automation Verse');
+        expect(section.lines).toBeDefined();
+        expect(section.lines!.length).toBe(2);
+        expect(section.lines![0].text).toBe('Line 1');
+        expect(section.lines![0].timestamp).toBe('00:05');
+        expect(section.lines![1].text).toBe('Line 2');
+        expect(section.lines![1].timestamp).toBe('00:15');
+        
+        // Backward compatibility: lyrics field should be populated
+        expect(section.lyrics).toBe('Line 1\nLine 2');
+    });
+
+    it('should stringify granular timestamps correctly', () => {
+        const map = {
+            bpm: 120,
+            timeSignature: '4/4',
+            songLength: '4:00',
+            sections: [{
+                id: '1',
+                label: 'Verse 1',
+                chords: '1-4-5',
+                lyrics: 'L1\nL2',
+                lines: [
+                    { text: 'L1', timestamp: '00:00' },
+                    { text: 'L2', timestamp: '00:10' }
+                ]
+            }]
+        };
+
+        const xml = SongMapper.stringify(map as any, 'Timestamp Test');
+        expect(xml).toContain('<line timestamp="00:00">L1</line>');
+        expect(xml).toContain('<line timestamp="00:10">L2</line>');
+    });
 });

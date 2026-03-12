@@ -1,13 +1,18 @@
-import { XMLParser, XMLBuilder } from 'fast-xml-parser';
 import { SongMap, SongSection } from '../models/song-map';
-import { randomUUID } from 'crypto';
 
+/**
+ * SongMapper handles the legacy plain-text format [Label] \n Lyrics
+ * XML parsing has been moved to the Go Media Engine for robustness.
+ */
 export class SongMapper {
     /**
-     * Parses a standardized XML string into a SongMap object.
+     * Parses legacy plain-text song maps.
+     * Format: 
+     * [Verse 1]
+     * Lyrics here...
      */
     static parse(content: string): SongMap {
-        const defaultMap: SongMap = {
+        const songMap: SongMap = {
             bpm: 78,
             timeSignature: '4/4',
             songLength: '0:00',
@@ -16,106 +21,135 @@ export class SongMapper {
         };
 
         if (!content || !content.trim()) {
-            return defaultMap;
+            return songMap;
         }
 
-        const parser = new XMLParser({
-            ignoreAttributes: false,
-            attributeNamePrefix: '@_',
-            parseTagValue: false, // keep everything as strings initially
-            isArray: (name) => {
-                // Ensure specific nodes are always treated as arrays
-                return name === 'part';
-            }
-        });
-
-        let xmlObj;
-        try {
-            xmlObj = parser.parse(content);
-        } catch (e) {
-            console.warn('Failed to parse SongMap as XML, returning default format', e);
-            return defaultMap;
+        // If it looks like XML, we shouldn't be parsing it here 
+        // (Go engine handles XML now for file loading), but we'll 
+        // provide a very basic fallback for the UI modal if it receives XML
+        if (content.trim().startsWith('<song>')) {
+            return this.parseBasicXML(content, songMap);
         }
 
-        const root = xmlObj.song;
-        if (!root) {
-            // Attempt fallback legacy text parsing if not a valid XML root
-             console.warn('SongMap does not contain <song> root, returning default format');
-             return defaultMap;
-        }
+        return this.parseLegacyText(content, songMap);
+    }
 
-        const songMap: SongMap = { ...defaultMap };
+    private static parseLegacyText(content: string, songMap: SongMap): SongMap {
+        const lines = content.split('\n');
+        let currentSection: SongSection | null = null;
+        let sectionLyrics: string[] = [];
 
-        if (root.title) {
-           // We might want to store title in SongMap, but keeping backwards compatible interface for now
-        }
-        if (root.bpm) songMap.bpm = parseInt(root.bpm as string, 10) || defaultMap.bpm;
-        if (root.timing) songMap.timeSignature = typeof root.timing === 'string' ? root.timing.trim() : defaultMap.timeSignature;
-        if (root.length) songMap.songLength = typeof root.length === 'string' ? root.length.trim() : defaultMap.songLength;
-        if (root.key) songMap.originalKey = typeof root.key === 'string' ? root.key.trim() : defaultMap.originalKey;
-        if (root.lyricsURL) songMap.lyricsUrl = typeof root.lyricsURL === 'string' ? root.lyricsURL.trim() : undefined;
-        
-        if (root.midiNotes) {
-            const notesStr = String(root.midiNotes).trim();
-            if (notesStr) {
-                songMap.midiNotes = notesStr.split(',').map(n => n.trim()).filter(Boolean);
-            }
-        }
+        for (let line of lines) {
+            line = line.trim();
+            if (!line && !currentSection) continue;
 
-        // Parse sections (parts)
-        if (root.part && Array.isArray(root.part)) {
-            for (const part of root.part) {
-                const label = part['@_name'] || 'Unknown Part';
-                const chords = typeof part.chords === 'string' ? part.chords.trim() : '';
-                
-                // Allow empty lyrics or string lyrics
-                const lyrics = typeof part.lyrics === 'string' ? part.lyrics.trim() : ''; 
+            if (line.startsWith('[') && line.endsWith(']')) {
+                if (currentSection) {
+                    currentSection.lyrics = sectionLyrics.join('\n').trim();
+                    songMap.sections.push(currentSection);
+                }
 
-                songMap.sections.push({
-                    id: randomUUID(), // using Node's crypto
+                const inner = line.slice(1, -1);
+                const parts = inner.split('|');
+                const label = parts[0].trim();
+                const chords = parts.length > 1 ? parts[1].trim() : '';
+
+                currentSection = {
+                    id: crypto.randomUUID(),
                     label,
                     chords,
-                    lyrics
-                });
+                    lyrics: ''
+                };
+                sectionLyrics = [];
+            } else {
+                if (currentSection) {
+                    sectionLyrics.push(line);
+                }
             }
+        }
+
+        if (currentSection) {
+            currentSection.lyrics = sectionLyrics.join('\n').trim();
+            songMap.sections.push(currentSection);
         }
 
         return songMap;
     }
 
+    private static parseBasicXML(content: string, songMap: SongMap): SongMap {
+        // Very basic regex-based parsing just for UI modal support 
+        // without fast-xml-parser. 
+        // Real parsing is done in Go.
+        try {
+            const bpmMatch = content.match(/<bpm>(.*?)<\/bpm>/);
+            if (bpmMatch) songMap.bpm = parseInt(bpmMatch[1], 10);
+
+            const timingMatch = content.match(/<timing>(.*?)<\/timing>/);
+            if (timingMatch) songMap.timeSignature = timingMatch[1];
+
+            const lengthMatch = content.match(/<length>(.*?)<\/length>/);
+            if (lengthMatch) songMap.songLength = lengthMatch[1];
+
+            const keyMatch = content.match(/<key>(.*?)<\/key>/);
+            if (keyMatch) songMap.originalKey = keyMatch[1];
+
+            // Extract parts (regex is primitive but enough for simple modal edits)
+            const partRegex = /<part name="(.*?)">([\s\S]*?)<\/part>/g;
+            let match;
+            while ((match = partRegex.exec(content)) !== null) {
+                const label = match[1];
+                const inner = match[2];
+                const chordsMatch = inner.match(/<chords>(.*?)<\/chords>/);
+                const lyricsMatch = inner.match(/<lyrics>([\s\S]*?)<\/lyrics>/);
+
+                songMap.sections.push({
+                    id: crypto.randomUUID(),
+                    label,
+                    chords: chordsMatch ? chordsMatch[1].trim() : '',
+                    lyrics: lyricsMatch ? lyricsMatch[1].replace(/<line.*?>/g, '').replace(/<\/line>/g, '').trim() : ''
+                });
+            }
+        } catch (e) {
+            console.warn('[SongMapper] Basic XML parse failed', e);
+        }
+        return songMap;
+    }
+
+    /**
+     * Stringifies a SongMap into XML.
+     */
     static stringify(map: SongMap, title: string = 'Untitled'): string {
-        const builder = new XMLBuilder({
-            ignoreAttributes: false,
-            format: true,
-            indentBy: '  ',
-            suppressEmptyNode: false
+        let xml = `<song>\n`;
+        xml += `  <title>${title}</title>\n`;
+        xml += `  <bpm>${map.bpm}</bpm>\n`;
+        xml += `  <timing>${map.timeSignature}</timing>\n`;
+        xml += `  <length>${map.songLength}</length>\n`;
+        xml += `  <key>${map.originalKey || ''}</key>\n`;
+        
+        if (map.midiNotes && map.midiNotes.length > 0) {
+            xml += `  <midiNotes>${map.midiNotes.join(', ')}</midiNotes>\n`;
+        }
+
+        map.sections.forEach(s => {
+            xml += `  <part name="${s.label}">\n`;
+            xml += `    <chords>${s.chords || ''}</chords>\n`;
+            xml += `    <lyrics>\n`;
+            if (s.lines && s.lines.length > 0) {
+                s.lines.forEach(l => {
+                    xml += `      <line timestamp="${l.timestamp || ''}">${l.text}</line>\n`;
+                });
+            } else {
+                // Split by newline and wrap in lines if needed, or just raw
+                const lines = (s.lyrics || '').split('\n');
+                lines.forEach(line => {
+                    xml += `      <line>${line}</line>\n`;
+                });
+            }
+            xml += `    </lyrics>\n`;
+            xml += `  </part>\n`;
         });
 
-        const obj: any = {
-            song: {
-                title: title,
-                bpm: map.bpm,
-                timing: map.timeSignature,
-                length: map.songLength,
-                key: map.originalKey || '',
-                lyricsURL: map.lyricsUrl || ''
-            }
-        };
-
-        if (map.midiNotes && map.midiNotes.length > 0) {
-            obj.song.midiNotes = map.midiNotes.join(', ');
-        }
-
-        if (map.sections && map.sections.length > 0) {
-            obj.song.part = map.sections.map(section => ({
-                '@_name': section.label,
-                chords: section.chords || '',
-                lyrics: section.lyrics || ''
-            }));
-        } else {
-             obj.song.part = [];
-        }
-
-        return builder.build(obj);
+        xml += `</song>`;
+        return xml;
     }
 }

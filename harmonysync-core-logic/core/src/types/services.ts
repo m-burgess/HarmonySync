@@ -3,9 +3,34 @@
  * Base interfaces and abstract classes for Electron services
  */
 
-import { EventEmitter } from 'events';
 import { DisplayConfig } from './models';
 
+/**
+ * A simple isomorphic EventEmitter to replace the Node-specific `events` module
+ * so this shared package can compile cleanly in browser environments (Angular).
+ */
+export class SimpleEventEmitter {
+  private listeners: Record<string, Function[]> = {};
+
+  on(event: string, fn: Function) {
+    if (!this.listeners[event]) this.listeners[event] = [];
+    this.listeners[event].push(fn);
+  }
+
+  emit(event: string, ...args: any[]) {
+    if (this.listeners[event]) {
+      this.listeners[event].forEach(fn => fn(...args));
+    }
+  }
+
+  removeAllListeners(event?: string) {
+    if (event) {
+      this.listeners[event] = [];
+    } else {
+      this.listeners = {};
+    }
+  }
+}
 // ==================== Base Service Interface ====================
 
 /**
@@ -215,7 +240,7 @@ export interface IScriptingAPI {
   };
 }
 
-export abstract class BaseElectronService extends EventEmitter implements IService {
+export abstract class BaseElectronService extends SimpleEventEmitter implements IService {
   protected initialized: boolean = false;
   protected config: ServiceConfig;
   protected abstract readonly serviceName: string;

@@ -613,6 +613,7 @@ class ElectronApplication {
       appSettingsService,
       timerService,
       canvaService,
+      mediaEngineBridge,
       preserviceAutomationService: this.preserviceAutomationService,
     });
   }

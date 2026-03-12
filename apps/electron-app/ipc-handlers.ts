@@ -40,6 +40,7 @@ interface Services {
   appSettingsService: any;
   timerService: any;
   canvaService: any;
+  mediaEngineBridge: any;
   preserviceAutomationService: any;
 }
 
@@ -415,6 +416,45 @@ class IPCHandlerManager {
           tracks: [],
           audioFileCount: 0
         };
+      }
+    });
+
+    this.ipcMain.handle('service-order:loadSongMap', async (_event, songPath: string) => {
+      try {
+        const path = require('path');
+        const fs = require('fs-extra');
+        const xmlPath = path.join(songPath, 'Song-Map.xml');
+
+        if (await fs.pathExists(xmlPath)) {
+          // Use Go Media Engine to parse XML via Bridge
+          const result = await this.services.mediaEngineBridge.parseSongMap(xmlPath);
+          if (result && !result.error) {
+            return result;
+          }
+          console.error('[service-order:loadSongMap] Go engine parsing failed:', result?.error);
+        }
+
+        // Fallback or legacy .txt parsing
+        const lyricsPath = path.join(songPath, 'Song-Map.txt');
+        const legacyPath = path.join(songPath, 'lyrics.txt');
+        let content = '';
+
+        if (await fs.pathExists(lyricsPath)) {
+          content = await fs.readFile(lyricsPath, 'utf8');
+        } else if (await fs.pathExists(legacyPath)) {
+          content = await fs.readFile(legacyPath, 'utf8');
+        }
+
+        if (content) {
+          // If we have content but it's not XML, or Go failed,
+          // we can return the raw content for the frontend to parse with legacy mapper
+          return { raw: content, type: 'legacy' };
+        }
+
+        return null;
+      } catch (error) {
+        console.error('[service-order:loadSongMap] Error:', error);
+        return null;
       }
     });
 
