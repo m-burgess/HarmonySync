@@ -234,6 +234,8 @@ export class RemoteControlService extends BaseElectronService implements IRemote
    * Update application state (called from IPC handlers)
    */
   public updateState(updates: Partial<AppState>): void {
+    const folderChanged = updates.currentFolder !== undefined && updates.currentFolder !== this.appState.currentFolder;
+    
     Object.assign(this.appState, updates);
     this.emit('state-updated', this.appState);
 
@@ -245,6 +247,27 @@ export class RemoteControlService extends BaseElectronService implements IRemote
           client.send(message);
         }
       });
+    }
+
+    // Automatically load song map if folder changed
+    if (folderChanged && this.appState.currentFolder) {
+      this.loadCurrentSongMap(this.appState.currentFolder);
+    }
+  }
+
+  private async loadCurrentSongMap(folderPath: string): Promise<void> {
+    try {
+      const mapPath = path.join(folderPath, 'song-map.json');
+      if (await fs.pathExists(mapPath)) {
+        const data = await fs.readJson(mapPath);
+        const songName = path.basename(folderPath);
+        // Only update if the folder hasn't changed while we were reading
+        if (this.appState.currentFolder === folderPath) {
+          this.updateState({ currentSongMap: data, currentSongName: songName });
+        }
+      }
+    } catch (err) {
+      console.error('[RemoteControlService] Failed to load song map:', err);
     }
   }
 

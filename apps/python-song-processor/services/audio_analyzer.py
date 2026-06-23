@@ -138,18 +138,24 @@ class AudioAnalyzer:
             if not line:
                 continue
                 
-            # Check for header
+            # Check for header like "Come Alive [A, 76 bpm]"
             if i == 0 and '[' in line and ']' in line:
-                header_info = line[line.find('[')+1 : line.rfind(']')]
-                parts = header_info.split(',')
-                if len(parts) >= 1:
-                    detected_key = parts[0].strip()
-                    self.estimated_key = detected_key
-                continue
+                # If it's literally just a section tag, don't treat it as a header
+                if line.startswith('[') and line.endswith(']') and not ',' in line:
+                    pass # It's a section tag like [Verse 1], let it fall through
+                else:
+                    header_info = line[line.find('[')+1 : line.rfind(']')]
+                    parts = header_info.split(',')
+                    if len(parts) >= 1:
+                        detected_key = parts[0].strip()
+                        self.estimated_key = detected_key
+                    continue
                 
-            # Check for tags like [AMPD]
-            if line.startswith('[') and line.endswith(']') and len(line) <= 10:
-                continue
+            # Check for tags like [AMPD] but don't ignore valid sections like [Chorus]
+            if line.startswith('[') and line.endswith(']'):
+                tag_content = line[1:-1].strip().lower()
+                if tag_content == "ampd":
+                    continue
                 
             lower_line = line.lower()
             is_section = False
@@ -158,8 +164,13 @@ class AudioAnalyzer:
             # Common section keywords if brackets aren't used
             section_keywords = ["intro", "verse", "pre chorus", "chorus", "bridge", "interlude", "ending", "outro"]
             if line.startswith('[') and line.endswith(']'):
-                is_section = True
-                section_name = line[1:-1]
+                if lower_line.startswith('[chords') or lower_line.startswith('[break chords'):
+                    # Strip brackets so the chord logic below can parse it
+                    line = line[1:-1].strip()
+                    lower_line = line.lower()
+                else:
+                    is_section = True
+                    section_name = line[1:-1]
             else:
                 for keyword in section_keywords:
                     if lower_line.startswith(keyword):

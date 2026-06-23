@@ -63,19 +63,30 @@ export default function App() {
         return () => socket.close();
     }, []);
 
+    // Auto-select key when song changes
+    useEffect(() => {
+        if (state?.currentSongMap?.originalKey) {
+            setTargetKey(state.currentSongMap.originalKey);
+        }
+    }, [state?.currentSongMap]);
+
     // Capo Calculation
     const capo = useMemo(() => Transposer.calculateCapo(targetKey), [targetKey]);
 
-    const renderSection = (section: SongSection) => {
+    const renderSection = (section: SongSection, index: number) => {
         const displayKey = isCapoMode ? capo.keyToPlay : targetKey;
+        const isCurrent = state?.currentSlideIndex === index;
 
         // Transpose the progression (e.g. "1-4-5" -> "G-C-D")
         const transposedChords = Transposer.transposeProgression(section.chords || '', displayKey);
 
         return (
-            <div className="p-4 rounded-xl mb-4 bg-surface border border-white/10 shadow-xl">
+            <div className={cn(
+                "p-4 rounded-xl mb-4 bg-surface border shadow-xl transition-all duration-300",
+                isCurrent ? "border-primary shadow-primary/20 scale-[1.02] bg-primary/5" : "border-white/10"
+            )}>
                 <div className="flex justify-between items-center mb-4">
-                    <span className="text-accent font-bold uppercase tracking-wider text-sm">{section.label}</span>
+                    <span className={cn("font-bold uppercase tracking-wider text-sm", isCurrent ? "text-primary" : "text-accent")}>{section.label}</span>
                 </div>
 
                 {/* Chords Row */}
@@ -83,7 +94,7 @@ export default function App() {
                     <div className="flex flex-wrap gap-4 mb-4 pb-4 border-b border-white/5">
                         {transposedChords.map((chord, i) => (
                             <div key={i} className="flex items-center gap-2">
-                                <span className="text-2xl font-bold text-primary tracking-tight">{chord}</span>
+                                <span className={cn("text-2xl font-bold tracking-tight", isCurrent ? "text-white" : "text-primary")}>{chord}</span>
                                 {i < transposedChords.length - 1 && <ChevronRight className="w-4 h-4 text-white/10" />}
                             </div>
                         ))}
@@ -91,7 +102,7 @@ export default function App() {
                 )}
 
                 {/* Lyrics */}
-                <pre className="text-white/80 whitespace-pre-wrap font-sans leading-relaxed text-lg">
+                <pre className={cn("whitespace-pre-wrap font-sans leading-relaxed text-lg", isCurrent ? "text-white font-medium" : "text-white/80")}>
                     {section.lyrics}
                 </pre>
             </div>
@@ -189,7 +200,7 @@ export default function App() {
             <main>
                 {state?.currentSongMap?.sections.map((section, i) => (
                     <React.Fragment key={section.id}>
-                        {renderSection(section)}
+                        {renderSection(section, i)}
                     </React.Fragment>
                 ))}
             </main>

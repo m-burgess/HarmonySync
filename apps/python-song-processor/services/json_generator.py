@@ -37,7 +37,6 @@ class JSONGenerator:
                 start_idx = i * lines_per_section
                 end_idx = start_idx + lines_per_section if i < num_sections - 1 else total_lines
                 section_lyrics = self.aligned_lyrics[start_idx:end_idx]
-            
             lines_list = []
             raw_lines_text = []
             for line in section_lyrics:
@@ -48,7 +47,8 @@ class JSONGenerator:
                 raw_lines_text.append(line["text"])
 
             # Generate standard ID (lowercase, snake_case)
-            section_id = label.lower().replace(" ", "_")
+            base_id = label.lower().replace(" ", "_")
+            section_id = f"{base_id}_{i}"
 
             sections.append({
                 "id": section_id,
