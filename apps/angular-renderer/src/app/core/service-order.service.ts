@@ -139,6 +139,23 @@ export class ServiceOrderService {
                     // Load metadata
                     const metadata = await this.electron.invoke('service-order:loadSongMetadata', folderPath);
 
+                    // Auto-Ingest if song-map.json is missing
+                    if (metadata.type === 'song' && metadata.hasAudio) {
+                        const pathSep = folderPath.includes('\\') ? '\\' : '/';
+                        const xmlPath = `${folderPath}${pathSep}song-map.json`;
+                        const hasXml = await this.electron.invoke('fs:exists', xmlPath);
+                        
+                        if (!hasXml) {
+                            console.log(`[ServiceOrder] song-map.json missing. Triggering auto-ingestion for ${folderPath}`);
+                            const settings = this.config.settings();
+                            try {
+                                await this.electron.invoke('python:processSongFolder', folderPath, false);
+                            } catch (e) {
+                                console.error(`[ServiceOrder] Auto-ingestion failed:`, e);
+                            }
+                        }
+                    }
+
                     this.serviceOrder.update(order => [...order, metadata]);
 
                     // Auto-preload if it's a song

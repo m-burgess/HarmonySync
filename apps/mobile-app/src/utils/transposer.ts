@@ -84,7 +84,7 @@ export class Transposer {
      */
     static transposeProgression(progression: string, targetKey: string): string[] {
         if (!progression) return [];
-        return progression.split('-').map(c => this.transposeChord(c.trim(), targetKey));
+        return progression.split(/[\s,\-]+/).filter(c => c.length > 0).map(c => this.transposeChord(c.trim(), targetKey));
     }
 
     /**

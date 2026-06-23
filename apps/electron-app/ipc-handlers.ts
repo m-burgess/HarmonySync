@@ -31,7 +31,7 @@ interface Services {
   fileManager: any;
   googleDriveService: any;
   dropboxService: any;
-  scriptService: any;
+
   scriptingAPI: any;
   slidesService: any;
   displayConfigService: any;
@@ -42,6 +42,7 @@ interface Services {
   canvaService: any;
   mediaEngineBridge: any;
   preserviceAutomationService: any;
+  pythonProcessorService: any;
 }
 
 interface DialogOpenDirectoryOptions {
@@ -76,9 +77,6 @@ class IPCHandlerManager {
     this.registerMIDIHandlers();
     this.registerLyricsHandlers();
     this.registerCloudStorageHandlers();
-    this.registerScriptHandlers();
-    this.registerEventTriggerHandlers();
-    this.registerTemplateHandlers();
     this.registerHTTPServerHandlers();
     this.registerRemoteControlHandlers();
     this.registerCSSHandlers();
@@ -96,6 +94,7 @@ class IPCHandlerManager {
     this.registerAppSettingsHandlers();
     this.registerTimerHandlers();
     this.registerCanvaHandlers();
+    this.registerPythonHandlers();
   }
 
   /**
@@ -423,10 +422,30 @@ class IPCHandlerManager {
       try {
         const path = require('path');
         const fs = require('fs-extra');
+        
+        const jsonPath1 = path.join(songPath, 'song-map.json');
+        const jsonPath2 = path.join(songPath, 'Song-Map.json');
+        const jsonPath = (await fs.pathExists(jsonPath1)) ? jsonPath1 : ((await fs.pathExists(jsonPath2)) ? jsonPath2 : null);
+
+        if (jsonPath) {
+          try {
+            console.log('[service-order:loadSongMap] Loading JSON song map directly:', jsonPath);
+            const data = await fs.readJson(jsonPath);
+            return data;
+          } catch (e) {
+            console.error('[service-order:loadSongMap] Failed to read JSON song map directly, falling back to Go parser:', e);
+            const result = await this.services.mediaEngineBridge.parseSongMap(jsonPath);
+            if (result && !result.error) {
+              return result;
+            }
+          }
+        }
+
         const xmlPath = path.join(songPath, 'Song-Map.xml');
 
         if (await fs.pathExists(xmlPath)) {
           // Use Go Media Engine to parse XML via Bridge
+          console.log('[service-order:loadSongMap] Loading XML song map via Go parser:', xmlPath);
           const result = await this.services.mediaEngineBridge.parseSongMap(xmlPath);
           if (result && !result.error) {
             return result;
@@ -996,145 +1015,6 @@ class IPCHandlerManager {
   /**
    * Script handlers
    */
-  private registerScriptHandlers(): void {
-    this.ipcMain.handle('script:getAll', async () => {
-      return await this.services.scriptService.list();
-    });
-
-    this.ipcMain.handle('script:get', async (_event, scriptId: string) => {
-      return await this.services.scriptService.getScript(scriptId);
-    });
-
-    this.ipcMain.handle('script:create', async (_event, scriptData: any) => {
-      return await this.services.scriptService.save(scriptData);
-    });
-
-    this.ipcMain.handle('script:update', async (_event, scriptId: string, updates: any) => {
-      return await this.services.scriptService.updateScript(scriptId, updates);
-    });
-
-    this.ipcMain.handle('script:delete', async (_event, scriptId: string) => {
-      return await this.services.scriptService.delete(scriptId);
-    });
-
-    this.ipcMain.handle('script:validate', async (_event, code: string) => {
-      return this.services.scriptService.validateScript(code);
-    });
-
-    this.ipcMain.handle('script:execute', async (_event, scriptId: string, options?: any) => {
-      const harmonyAPI = this.services.scriptingAPI.createHarmonySyncAPI(this.services);
-      return await this.services.scriptService.executeScript(scriptId, harmonyAPI, options);
-    });
-
-    this.ipcMain.handle('script:export', async (_event, scriptId: string, exportPath: string) => {
-      return await this.services.scriptService.exportScript(scriptId, exportPath);
-    });
-
-    this.ipcMain.handle('script:import', async (_event, importPath: string) => {
-      return await this.services.scriptService.importScript(importPath);
-    });
-  }
-
-  /**
-   * Event Trigger handlers
-   */
-  private registerEventTriggerHandlers(): void {
-    const eventTriggerService = this.services.eventTriggerService;
-
-    this.ipcMain.handle('trigger:register', async (_event, eventType: string, scriptId: string, options?: any) => {
-      return await eventTriggerService.registerTrigger(eventType, scriptId, options);
-    });
-
-    this.ipcMain.handle('trigger:unregister', async (_event, triggerId: string) => {
-      return await eventTriggerService.unregisterTrigger(triggerId);
-    });
-
-    this.ipcMain.handle('trigger:getAll', async () => {
-      return await eventTriggerService.getAllTriggers();
-    });
-
-    this.ipcMain.handle('trigger:enable', async (_event, triggerId: string) => {
-      return await eventTriggerService.enableTrigger(triggerId);
-    });
-
-    this.ipcMain.handle('trigger:disable', async (_event, triggerId: string) => {
-      return await eventTriggerService.disableTrigger(triggerId);
-    });
-
-    this.ipcMain.handle('trigger:test', async (_event, triggerId: string, testData?: any) => {
-      return await eventTriggerService.testTrigger(triggerId, testData);
-    });
-
-    this.ipcMain.handle('event:list', async () => {
-      return eventTriggerService.getEventTypes();
-    });
-
-    this.ipcMain.handle('event:emit', async (_event, eventType: string, eventData?: any) => {
-      return await eventTriggerService.emitEvent(eventType, eventData);
-    });
-  }
-
-  /**
-   * Script Template handlers
-   */
-  private registerTemplateHandlers(): void {
-    this.ipcMain.handle('template:getAll', async () => {
-      const templatesDir = path.join(__dirname, '../harmonysync/script-templates');
-      try {
-        const files = await fs.readdir(templatesDir);
-        const templates = files.filter((f: string) => f.endsWith('.js'));
-
-        const templateList = [];
-        for (const file of templates) {
-          const filePath = path.join(templatesDir, file);
-          const content = await fs.readFile(filePath, 'utf8');
-
-          // Extract metadata
-          const nameMatch = content.match(/@name\s+(.+)/);
-          const descMatch = content.match(/@description\s+(.+)/);
-
-          templateList.push({
-            id: path.basename(file, '.js'),
-            name: nameMatch ? nameMatch[1] : file,
-            description: descMatch ? descMatch[1] : '',
-            filename: file,
-          });
-        }
-
-        return templateList;
-      } catch (error) {
-        console.error('Failed to load templates:', error);
-        return [];
-      }
-    });
-
-    this.ipcMain.handle('template:get', async (_event, templateId: string) => {
-      const templatesDir = path.join(__dirname, '../harmonysync/script-templates');
-      const templatePath = path.join(templatesDir, `${templateId}.js`);
-
-      if (await fs.pathExists(templatePath)) {
-        return await fs.readFile(templatePath, 'utf8');
-      } else {
-        throw new Error(`Template not found: ${templateId}`);
-      }
-    });
-
-    this.ipcMain.handle('template:load', async (_event, templateId: string) => {
-      const templatesDir = path.join(__dirname, '../harmonysync/script-templates');
-      const templatePath = path.join(templatesDir, `${templateId}.js`);
-
-      if (await fs.pathExists(templatePath)) {
-        const content = await fs.readFile(templatePath, 'utf8');
-        return {
-          id: templateId,
-          code: content,
-        };
-      } else {
-        throw new Error(`Template not found: ${templateId}`);
-      }
-    });
-  }
-
   /**
    * HTTP Server handlers
    */
@@ -2232,6 +2112,21 @@ class IPCHandlerManager {
   private registerCanvaHandlers(): void {
     this.ipcMain.handle('canva:importSlides', async (_event, options: any) => {
       return await this.services.canvaService.importSlides(options);
+    });
+  }
+
+  /**
+   * Python Processor Handlers
+   */
+  private registerPythonHandlers(): void {
+    if (this.services.pythonProcessorService && typeof this.services.pythonProcessorService.setMainWindowGetter === 'function') {
+      this.services.pythonProcessorService.setMainWindowGetter(this.services.mainWindow);
+    }
+    this.ipcMain.handle('python:processSongFolder', async (_event, folderPath?: string, separateStems?: boolean) => {
+      if (this.services.pythonProcessorService) {
+        return await this.services.pythonProcessorService.processSongFolder(folderPath, separateStems);
+      }
+      return { success: false, error: 'PythonProcessorService not initialized' };
     });
   }
 }

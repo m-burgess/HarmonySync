@@ -154,10 +154,10 @@ export class DisplayService extends BaseElectronService implements IDisplayServi
     if (isDev) {
       window.loadURL(`${devUrl}#/${route}`);
     } else {
-      window.loadFile(
-        path.join(__dirname, '../../../angular-renderer/dist/angular-renderer/browser/index.html'),
-        { hash: `/${route}` }
-      );
+      const basePath = app.isPackaged
+        ? path.join(process.resourcesPath, 'angular-renderer/dist/angular-renderer/browser/index.html')
+        : path.join(__dirname, '../../../angular-renderer/dist/angular-renderer/browser/index.html');
+      window.loadFile(basePath, { hash: `/${route}` });
     }
   }
 

@@ -33,6 +33,7 @@ const { getTimerService } = require('./electron/services/timer-service');
 const { mediaEngineBridge } = require('./electron/services/media-engine-bridge');
 const { getCanvaService } = require('./electron/services/canva-service');
 const { PreserviceAutomationService } = require('./electron/services/preservice-automation-service');
+const { pythonProcessorService } = require('./electron/services/python-processor');
 
 // MIDI manager with optional loading
 let midiManager: any = null;
@@ -354,6 +355,8 @@ class ElectronApplication {
       icon: path.join(__dirname, '../harmonysync/icons/icon.png'),
     });
 
+    mediaEngineBridge.addWindow(this.mainWindow);
+
     this.setupMainWindowMenu();
     this.setupMainWindowHandlers();
     this.loadMainWindowContent();
@@ -460,9 +463,10 @@ class ElectronApplication {
           console.error('[MainWindow] Error loading dev URL:', err);
         });
     } else {
-      this.mainWindow.loadFile(
-        path.join(__dirname, '../../angular-renderer/dist/angular-renderer/browser/index.html')
-      );
+      const basePath = app.isPackaged
+        ? path.join(process.resourcesPath, 'angular-renderer/dist/angular-renderer/browser/index.html')
+        : path.join(__dirname, '../../angular-renderer/dist/angular-renderer/browser/index.html');
+      this.mainWindow.loadFile(basePath);
     }
   }
 
@@ -615,6 +619,7 @@ class ElectronApplication {
       canvaService,
       mediaEngineBridge,
       preserviceAutomationService: this.preserviceAutomationService,
+      pythonProcessorService,
     });
   }
 

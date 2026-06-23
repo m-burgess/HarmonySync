@@ -55,6 +55,11 @@ export class MixerViewModel {
         this.audioService.setTrackVolume(trackId, volume);
     }
 
+    setGlobalVolume(volume: number) {
+        this.globalVolume.set(volume);
+        this.audioService.setGlobalVolume(volume);
+    }
+
     setPan(trackId: string, pan: number) {
         this.audioService.setTrackPan(trackId, pan);
     }

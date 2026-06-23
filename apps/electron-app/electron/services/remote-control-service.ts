@@ -9,7 +9,7 @@ import cors from 'cors';
 import * as path from 'path';
 import * as fs from 'fs-extra';
 import * as os from 'os';
-import { BrowserWindow } from 'electron';
+import { BrowserWindow, app } from 'electron';
 import { WebSocketServer, WebSocket } from 'ws';
 import { BaseElectronService, IRemoteControlService, ServiceConfig } from '@harmonysync/core';
 
@@ -132,7 +132,10 @@ export class RemoteControlService extends BaseElectronService implements IRemote
     this.app.use('/api', this.createRateLimiter());
 
     // Serve Musician View from mobile-app/dist
-    const musicianViewDir = path.join(__dirname, '../../../mobile-app/dist');
+    const isPackaged = app.isPackaged;
+    const musicianViewDir = isPackaged
+      ? path.join(process.resourcesPath, 'mobile-app/dist')
+      : path.join(__dirname, '../../../../mobile-app/dist');
     this.app.use(express.static(musicianViewDir));
     this.log('info', `Serving Musician View from: ${musicianViewDir}`);
 

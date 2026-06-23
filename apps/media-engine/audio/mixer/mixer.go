@@ -37,23 +37,32 @@ type Mixer struct {
 	ActiveSongID   string
 	Tracks         map[string]*Track // legacy flat map (kept for backward compat)
 	inner          *beep.Mixer
+	MasterVolume   *effects.Volume
 	SampleRate     beep.SampleRate
 	OnSongFinished func(songID string)
 	TotalSamples   int64
 }
 
-// Stream implements beep.Streamer, delegating to the inner mixer.
+// Stream implements beep.Streamer, delegating to the master volume node.
 func (m *Mixer) Stream(samples [][2]float64) (n int, ok bool) {
 	m.mu.Lock()
-	inner := m.inner
+	master := m.MasterVolume
 	m.mu.Unlock()
-	n, ok = inner.Stream(samples)
-	if n > 0 {
+	n, _ = master.Stream(samples)
+	
+	// Fill the remainder of the buffer with silence so the speaker never drops the mixer
+	for i := n; i < len(samples); i++ {
+		samples[i][0] = 0
+		samples[i][1] = 0
+	}
+
+	if n > 0 && m.IsPlaying() {
 		m.mu.Lock()
 		m.TotalSamples += int64(n)
 		m.mu.Unlock()
 	}
-	return n, ok
+	// Always return len(samples) and true so it plays forever
+	return len(samples), true
 }
 
 // GetPosition returns the current playback position in seconds
@@ -90,11 +99,15 @@ func (m *Mixer) Err() error {
 
 // NewMixer creates a new mixer instance
 func NewMixer(sr beep.SampleRate) *Mixer {
+	inner := &beep.Mixer{}
+	masterVol := &effects.Volume{Streamer: inner, Base: 2, Volume: 0, Silent: false}
+	
 	m := &Mixer{
-		Songs:      make(map[string]map[string]*Track),
-		Tracks:     make(map[string]*Track),
-		inner:      &beep.Mixer{},
-		SampleRate: sr,
+		Songs:        make(map[string]map[string]*Track),
+		Tracks:       make(map[string]*Track),
+		inner:        inner,
+		MasterVolume: masterVol,
+		SampleRate:   sr,
 	}
 	return m
 }
@@ -220,6 +233,7 @@ func (m *Mixer) ActivateSong(songID string) error {
 
 	// Rebuild inner mixer with only the new song's tracks
 	m.inner = &beep.Mixer{}
+	m.MasterVolume.Streamer = m.inner
 	newTracks := m.Songs[songID]
 	first := true
 	for _, t := range newTracks {
@@ -282,6 +296,7 @@ func (m *Mixer) ClearSong(songID string) {
 	// If clearing the active song, stop playback first
 	if m.ActiveSongID == songID {
 		m.inner = &beep.Mixer{}
+		m.MasterVolume.Streamer = m.inner
 		m.ActiveSongID = ""
 		m.Tracks = make(map[string]*Track)
 	}
@@ -365,4 +380,17 @@ func (m *Mixer) Clear() {
 	m.Songs = make(map[string]map[string]*Track)
 	m.ActiveSongID = ""
 	m.inner = &beep.Mixer{}
+	m.MasterVolume.Streamer = m.inner
+}
+
+// SetMasterVolume sets the overall volume of the mixer
+func (m *Mixer) SetMasterVolume(volume float64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if volume <= 0.001 {
+		m.MasterVolume.Silent = true
+	} else {
+		m.MasterVolume.Silent = false
+		m.MasterVolume.Volume = math.Log2(volume)
+	}
 }

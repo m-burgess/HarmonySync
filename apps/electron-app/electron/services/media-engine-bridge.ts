@@ -40,6 +40,10 @@ export class MediaEngineBridge {
         this.ws.on('message', (data: any) => {
             try {
                 const event: MediaEngineEvent = JSON.parse(data.toString());
+                // Only log non-spammy events or just log type
+                if (event.type !== 'playback_position') {
+                    console.log('[MediaEngineBridge] Received from Go:', event.type);
+                }
                 this.broadcastToRenderers(event);
             } catch (err) {
                 console.error('[MediaEngineBridge] Error parsing event:', err);
@@ -85,6 +89,9 @@ export class MediaEngineBridge {
         // Mixer controls
         ipcMain.handle('media-engine:set-volume', (_, trackId: string, volume: number) =>
             this.post('/mixer/volume', { trackId, volume })
+        );
+        ipcMain.handle('media-engine:set-master-volume', (_, volume: number) =>
+            this.post('/mixer/master-volume', { volume })
         );
         ipcMain.handle('media-engine:set-pan', (_, trackId: string, pan: number) =>
             // Go expects "trackId" in JSON body even though service says "trackId"

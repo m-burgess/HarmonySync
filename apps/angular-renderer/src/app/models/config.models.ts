@@ -13,6 +13,7 @@ export interface ServiceOrderSettings {
     maxServiceAge: number;
     advanceOnVideoEnd: boolean;
     lastImportedService?: string;
+    aiStemSeparation?: boolean;
 }
 
 export interface LyricsProjectionSettings {

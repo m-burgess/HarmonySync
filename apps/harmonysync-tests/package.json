@@ -5,6 +5,7 @@
   "main": "index.ts",
   "license": "UNLICENSED",
   "scripts": {
+    "test": "npm run test:local",
     "test:local": "jest -c ./jest.config.harmonysync.js",
     "typecheck": "tsc --noEmit -p ./tsconfig.json"
   },
@@ -19,6 +20,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@harmonysync/core": "workspace:*"
+    "@harmonysync/core": "workspace:*",
+    "@harmonysync/data-access": "workspace:*"
   }
 }

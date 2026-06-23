@@ -1,8 +1,9 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, OnChanges, SimpleChanges, ViewChild, ElementRef, HostListener } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, OnChanges, SimpleChanges, ViewChild, ElementRef, HostListener, signal, effect, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
-import { heroMusicalNote } from '@ng-icons/heroicons/outline';
+import { heroMusicalNote, heroPlay, heroStop } from '@ng-icons/heroicons/outline';
 import { ElectronService } from '../../../core/electron.service';
+import { AudioService } from '../../../core/audio.service';
 
 import { SongMap } from '@harmonysync/core';
 
@@ -12,6 +13,7 @@ interface ParsedLine {
     text: string;
     originalIndex: number;
     section?: string;
+    timestamp?: number;
 }
 
 export interface SelectionChangeData {
@@ -25,7 +27,7 @@ export interface SelectionChangeData {
     standalone: true,
     imports: [CommonModule, NgIconComponent],
     providers: [
-        provideIcons({ heroMusicalNote })
+        provideIcons({ heroMusicalNote, heroPlay, heroStop })
     ],
     templateUrl: './lyrics-column.html',
     styleUrl: './lyrics-column.scss'
@@ -37,6 +39,7 @@ export class LyricsColumnComponent implements OnInit, OnDestroy, OnChanges {
     @Output() onSelectionChange = new EventEmitter<SelectionChangeData>();
 
     selectedIndex = 0;
+
     hoveredIndex: number | null = null;
     parsedLines: ParsedLine[] = [];
     lyricLines: (ParsedLine & { section: string })[] = [];
@@ -44,16 +47,34 @@ export class LyricsColumnComponent implements OnInit, OnDestroy, OnChanges {
     @ViewChild('columnRef') columnRef!: ElementRef;
     @ViewChild('selectedRef') selectedRef!: ElementRef;
 
-    constructor(private electron: ElectronService) { }
+    private audioService = inject(AudioService);
+    private cdr = inject(ChangeDetectorRef);
+    isAutoAdvanceEnabled = signal(false);
+    hasTimestamps = signal(false);
+
+    constructor(private electron: ElectronService) {
+        effect(() => {
+            const isEnabled = this.isAutoAdvanceEnabled();
+            const pos = this.audioService.currentPosition();
+            if (!isEnabled) return;
+            
+            // Push calculation to the next tick to prevent effect dependency issues and ensure CDR works
+            setTimeout(() => {
+                this.checkAutoAdvance(pos);
+            });
+        });
+    }
 
     ngOnInit() { }
 
     ngOnDestroy() { }
 
     ngOnChanges(changes: SimpleChanges) {
-        if (changes['lyrics']) {
+        if (changes['lyrics'] || changes['songMap']) {
             this.parseLyrics();
-            this.selectedIndex = 0;
+            if (changes['lyrics']) {
+                this.selectedIndex = 0;
+            }
             this.emitSelection();
         }
     }
@@ -62,12 +83,33 @@ export class LyricsColumnComponent implements OnInit, OnDestroy, OnChanges {
         if (!this.lyrics) {
             this.parsedLines = [];
             this.lyricLines = [];
+            this.hasTimestamps.set(false);
+            this.isAutoAdvanceEnabled.set(false);
             return;
         }
 
         const lines: ParsedLine[] = [];
         let currentSection = 'Intro';
         const rawLines = this.lyrics.split(/\r?\n/);
+
+        // Build a flat list of timestamps from songMap to match against rawLines
+        const songMapTimestamps: { text: string, timestamp: number }[] = [];
+        if (this.songMap && this.songMap.sections) {
+            for (const sec of this.songMap.sections) {
+                if (sec.lines) {
+                    for (const l of sec.lines) {
+                        if (l.timestamp && l.text.trim().length > 0) {
+                            songMapTimestamps.push({
+                                text: l.text.trim(),
+                                timestamp: this.parseTimestampToSeconds(l.timestamp)
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        let mapIndex = 0;
 
         rawLines.forEach((line, idx) => {
             const trimmed = line.trim();
@@ -78,7 +120,15 @@ export class LyricsColumnComponent implements OnInit, OnDestroy, OnChanges {
                 currentSection = fullSection.split('|')[0].trim();
                 lines.push({ type: 'section', text: currentSection, originalIndex: idx });
             } else if (trimmed.length > 0) {
-                lines.push({ type: 'lyric', text: trimmed, section: currentSection, originalIndex: idx });
+                let timestamp: number | undefined = undefined;
+
+                if (mapIndex < songMapTimestamps.length) {
+                    // Just map sequentially
+                    timestamp = songMapTimestamps[mapIndex].timestamp;
+                    mapIndex++;
+                }
+
+                lines.push({ type: 'lyric', text: trimmed, section: currentSection, originalIndex: idx, timestamp });
             }
         });
 
@@ -86,6 +136,54 @@ export class LyricsColumnComponent implements OnInit, OnDestroy, OnChanges {
         this.lyricLines = lines.filter((line): line is ParsedLine & { section: string } =>
             line.type === 'lyric' && line.section !== undefined
         );
+
+        console.log('[AutoSync] Parsed lyricLines:', this.lyricLines.map(l => `${l.text} (${l.timestamp}s)`));
+
+        const hasValidTimestamps = this.lyricLines.length > 0 && this.lyricLines.every(l => l.timestamp !== undefined);
+        this.hasTimestamps.set(hasValidTimestamps);
+        if (!hasValidTimestamps) {
+            this.isAutoAdvanceEnabled.set(false);
+        }
+    }
+
+    private parseTimestampToSeconds(timeStr: string): number {
+        if (!timeStr) return 0;
+        const parts = timeStr.split(':');
+        if (parts.length === 2) {
+            return parseInt(parts[0], 10) * 60 + parseFloat(parts[1]);
+        }
+        return parseFloat(timeStr) || 0;
+    }
+
+    private checkAutoAdvance(currentPos: number) {
+        if (!this.lyricLines.length || !this.hasTimestamps()) return;
+
+        let targetIndex = 0;
+        for (let i = 0; i < this.lyricLines.length; i += 2) {
+            const line = this.lyricLines[i];
+            const nextPairLine = this.lyricLines[i + 2];
+
+            const startThreshold = line.timestamp !== undefined ? line.timestamp - 1.0 : 0;
+            const endThreshold = nextPairLine && nextPairLine.timestamp !== undefined ? nextPairLine.timestamp - 1.0 : Infinity;
+
+            if (currentPos >= startThreshold && currentPos < endThreshold) {
+                targetIndex = i;
+                break;
+            }
+        }
+
+        if (this.selectedIndex !== targetIndex) {
+            this.selectedIndex = targetIndex;
+            this.cdr.detectChanges();
+            this.emitSelection();
+            this.scrollToSelected();
+        }
+    }
+
+    toggleAutoAdvance() {
+        if (this.hasTimestamps()) {
+            this.isAutoAdvanceEnabled.update(v => !v);
+        }
     }
 
     @HostListener('window:keydown', ['$event'])
@@ -106,6 +204,7 @@ export class LyricsColumnComponent implements OnInit, OnDestroy, OnChanges {
     }
 
     handleLineClick(lyricIndex: number) {
+        this.isAutoAdvanceEnabled.set(false);
         this.selectedIndex = Math.floor(lyricIndex / 2) * 2;
         this.emitSelection();
         this.scrollToSelected();

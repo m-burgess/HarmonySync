@@ -64,14 +64,16 @@ func NewService(eb *events.EventBus) (*Service, error) {
 }
 
 func (s *Service) monitorPlayback() {
-	ticker := time.NewTicker(100 * time.Millisecond)
+	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
 
 	for {
 		<-ticker.C
 		if s.Mixer.ActiveSongID != "" {
-			if s.Mixer.IsPlaying() {
-				pos := s.Mixer.GetPosition()
+			isPlaying := s.Mixer.IsPlaying()
+			pos := s.Mixer.GetPosition()
+			log.Printf("monitorPlayback: ActiveSongID=%s, IsPlaying=%v, Pos=%.2f", s.Mixer.ActiveSongID, isPlaying, pos)
+			if isPlaying {
 				s.EventBus.Broadcast(map[string]interface{}{
 					"type":     "playback_position",
 					"songId":   s.Mixer.ActiveSongID,
@@ -213,6 +215,14 @@ func (s *Service) SetVolume(trackID string, volume float64) {
 		"type":    "audio_volume_changed",
 		"trackId": trackID,
 		"volume":  volume,
+	})
+}
+
+func (s *Service) SetMasterVolume(volume float64) {
+	s.Mixer.SetMasterVolume(volume)
+	s.EventBus.Broadcast(map[string]interface{}{
+		"type":   "audio_master_volume_changed",
+		"volume": volume,
 	})
 }
 

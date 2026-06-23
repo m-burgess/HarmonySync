@@ -8,10 +8,70 @@
   "scripts": {
     "dev": "concurrently -k \"pnpm run dev:build\" \"pnpm run dev:electron\"",
     "dev:build": "tsc -b --watch",
-    "dev:electron": "wait-on tcp:4200 && cross-env NODE_ENV=development electron dist/main.js",
+    "dev:electron": "wait-on tcp:4200 && cross-env NODE_ENV=development electron dist/main.js --no-sandbox",
     "build": "tsc -b",
     "typecheck": "tsc --noEmit",
-    "test": "jest --config=jest.config.electron.js --passWithNoTests --detectOpenHandles"
+    "test": "jest --config=jest.config.electron.js --passWithNoTests --detectOpenHandles",
+    "package:linux": "cd ../media-engine && GOOS=linux GOARCH=amd64 go build -o harmonysync-media-engine && cd ../python-song-processor && ./build.sh && cd ../angular-renderer && pnpm build && cd ../electron-app && pnpm build && electron-builder --linux",
+    "package:mac": "cd ../media-engine && GOOS=darwin GOARCH=arm64 go build -o harmonysync-media-engine && cd ../python-song-processor && ./build.sh && cd ../angular-renderer && pnpm build && cd ../electron-app && pnpm build && electron-builder --mac --arm64"
+  },
+  "build": {
+    "appId": "com.harmonysync.app",
+    "productName": "HarmonySync",
+    "directories": {
+      "output": "release"
+    },
+    "asarUnpack": [
+      "**/*.node",
+      "node_modules/sharp/**/*",
+      "node_modules/@img/**/*"
+    ],
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../mobile-app/dist",
+        "to": "mobile-app/dist"
+      },
+      {
+        "from": "../angular-renderer/dist",
+        "to": "angular-renderer/dist"
+      },
+      {
+        "from": "../media-engine/harmonysync-media-engine",
+        "to": "media-engine/harmonysync-media-engine"
+      },
+      {
+        "from": "../python-song-processor",
+        "to": "python-song-processor",
+        "filter": [
+          "**/*",
+          "!dist",
+          "!build",
+          "!__pycache__",
+          "!.git"
+        ]
+      }
+    ],
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "executableName": "HarmonySync",
+      "category": "AudioVideo",
+      "icon": "build/icon.png"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "executableName": "HarmonySync",
+      "category": "public.app-category.video",
+      "icon": "build/icon.png"
+    }
   },
   "dependencies": {
     "@harmonysync/core": "workspace:*",
@@ -48,9 +108,15 @@
     "concurrently": "^9.1.0",
     "cross-env": "^10.1.0",
     "electron": "^40.6.1",
+    "electron-builder": "^26.15.3",
     "jest": "^29.7.0",
     "ts-jest": "^29.1.0",
     "typescript": "^5.3.3",
     "wait-on": "^7.2.0"
+  },
+  "optionalDependencies": {
+    "@img/sharp-darwin-arm64": "^0.33.5",
+    "@img/sharp-darwin-x64": "^0.33.5",
+    "@img/sharp-linux-x64": "^0.33.5"
   }
 }

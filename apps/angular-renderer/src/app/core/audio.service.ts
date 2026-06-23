@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
+import { Injectable, inject, signal, computed, NgZone, effect } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, Subject, fromEvent, EMPTY, from } from 'rxjs';
 import { catchError, map, switchMap, tap } from 'rxjs/operators';
@@ -41,7 +41,27 @@ export class AudioService {
     private readonly http = inject(HttpClient);
     private readonly electron = inject(ElectronService);
     private readonly messaging = inject(MessagingService);
+    private readonly ngZone = inject(NgZone);
     private readonly base = environment.apiBaseUrl;
+
+    constructor() {
+        this.connectWebSocket();
+        
+        effect(() => {
+            const pos = this.currentPosition();
+            const status = this.playbackState();
+            const loadedTracks = this.tracks();
+            const folder = this.currentSongPath();
+            
+            // Sync state to Musician View via Electron backend
+            this.electron.invoke('remote:updateState', {
+                playbackPosition: pos,
+                playbackStatus: status,
+                loadedTracks: loadedTracks,
+                currentFolder: folder
+            }).catch(err => console.debug('Failed to sync state:', err));
+        });
+    }
 
     // ── Reactive state (Angular signals) ──────────────────────────────────────
     readonly tracks = signal<Track[]>([]);
@@ -70,10 +90,17 @@ export class AudioService {
     }
 
     connectWebSocket(): void {
+        if (this.connectionStatus() === 'connected') {
+            return; // Already connected
+        }
+        
         // Now using Electron Bridge for events
         this.electron.on('media-engine:event', (event: any) => {
-            this.wsEvents$.next(event);
-            this.handleWsEvent(event);
+            // console.log('[AudioService] Received media-engine:event', event);
+            this.ngZone.run(() => {
+                this.wsEvents$.next(event);
+                this.handleWsEvent(event);
+            });
         });
         this.connectionStatus.set('connected');
     }
@@ -223,6 +250,14 @@ export class AudioService {
                 tap(() => {
                     this.messaging.publish(EVENT_TYPES.AUDIO_VOLUME_CHANGED, { trackId, volume });
                 }),
+                catchError(() => EMPTY)
+            )
+            .subscribe();
+    }
+
+    setGlobalVolume(volume: number): void {
+        from(this.electron.invoke('media-engine:set-master-volume', volume))
+            .pipe(
                 catchError(() => EMPTY)
             )
             .subscribe();

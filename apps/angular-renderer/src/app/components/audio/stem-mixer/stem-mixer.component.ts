@@ -2,7 +2,7 @@ import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MixerViewModel } from '../../../viewmodels/mixer.viewmodel';
-import { VSCodePanelComponent } from '../../vscode-ui/vscode-panel/vscode-panel.component';
+
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import {
     heroPlaySolid,
@@ -11,13 +11,16 @@ import {
     heroSpeakerXMarkSolid,
     heroMicrophoneSolid,
     heroMusicalNoteSolid,
-    heroAdjustmentsHorizontalSolid
+    heroAdjustmentsHorizontalSolid,
+    heroClockSolid,
+    heroChatBubbleBottomCenterTextSolid,
+    heroBoltSolid
 } from '@ng-icons/heroicons/solid';
 
 @Component({
     selector: 'app-stem-mixer',
     standalone: true,
-    imports: [CommonModule, FormsModule, VSCodePanelComponent, NgIconComponent],
+    imports: [CommonModule, FormsModule, NgIconComponent],
     templateUrl: './stem-mixer.component.html',
     styleUrl: './stem-mixer.component.scss',
     providers: [
@@ -28,7 +31,10 @@ import {
             heroSpeakerXMarkSolid,
             heroMicrophoneSolid,
             heroMusicalNoteSolid,
-            heroAdjustmentsHorizontalSolid
+            heroAdjustmentsHorizontalSolid,
+            heroClockSolid,
+            heroChatBubbleBottomCenterTextSolid,
+            heroBoltSolid
         })
     ]
 })
@@ -41,7 +47,10 @@ export class StemMixerComponent implements OnInit {
 
     getTrackIcon(name: string): string {
         const lower = name.toLowerCase();
-        if (lower.includes('voc') || lower.includes('guide')) return 'heroMicrophoneSolid';
+        if (lower.includes('voc')) return 'heroMicrophoneSolid';
+        if (lower.includes('click') || lower.includes('metronome')) return 'heroClockSolid';
+        if (lower.includes('cue') || lower.includes('guide')) return 'heroChatBubbleBottomCenterTextSolid';
+        if (lower.includes('drum') || lower.includes('perc')) return 'heroBoltSolid';
         return 'heroMusicalNoteSolid';
     }
 }

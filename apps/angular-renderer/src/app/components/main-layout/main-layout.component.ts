@@ -15,23 +15,17 @@ import { ConfigService } from '../../core/config.service';
 import { CreateTimerRequest } from '../../models/timer.models';
 import { SettingsComponent } from '../settings/settings.component';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
-import { heroPresentationChartBar, heroClock, heroCog, heroComputerDesktop, heroTv, heroQueueList, heroAdjustmentsHorizontal, heroBolt, heroCalendarDays, heroCodeBracket, heroMusicalNote } from '@ng-icons/heroicons/outline';
-import { SchedulerComponent } from '../screens/scheduler/scheduler.component';
-import { ScriptEditorComponent } from '../screens/script-editor/script-editor.component';
+import { heroPresentationChartBar, heroClock, heroCog, heroComputerDesktop, heroTv, heroQueueList, heroAdjustmentsHorizontal, heroBolt, heroCalendarDays, heroCodeBracket, heroMusicalNote, heroPlay, heroPlus } from '@ng-icons/heroicons/outline';
 
 @Component({
     selector: 'app-main-layout',
     standalone: true,
     imports: [
         CommonModule,
-        ActivityBarIconComponent,
         StemMixerComponent,
         ServiceOrderComponent,
         SlideGridComponent,
         LyricsColumnComponent,
-        SettingsComponent,
-        SchedulerComponent,
-        ScriptEditorComponent,
         NgIconComponent,
         DialogModule
     ],
@@ -47,19 +41,15 @@ import { ScriptEditorComponent } from '../screens/script-editor/script-editor.co
             heroBolt,
             heroCalendarDays,
             heroCodeBracket,
-            heroMusicalNote
+            heroMusicalNote,
+            heroPlay,
+            heroPlus
         })
     ],
     templateUrl: './main-layout.component.html',
     styleUrl: './main-layout.component.scss'
 })
 export class MainLayoutComponent implements OnInit {
-    DEFAULT_SIDEBAR_WIDTH = 300;
-    DEFAULT_MIXER_WIDTH = 300;
-
-    sidebarWidth = this.DEFAULT_SIDEBAR_WIDTH;
-    mixerWidth = this.DEFAULT_MIXER_WIDTH;
-
     // Services
     serviceOrderService = inject(ServiceOrderService);
     slideService = inject(SlideService);
@@ -68,9 +58,6 @@ export class MainLayoutComponent implements OnInit {
     electronService = inject(ElectronService);
     configService = inject(ConfigService);
     private dialog = inject(Dialog);
-
-    // Sidebar state
-    activeSidebar = signal<'explorer' | 'timers' | 'settings' | 'scheduler' | 'scripts'>('explorer');
 
     // Presentation state
     currentLyrics = computed(() => this.serviceOrderService.currentSong()?.lyrics || null);
@@ -84,106 +71,11 @@ export class MainLayoutComponent implements OnInit {
         return count > 0 ? count : null;
     });
 
-    isBrowser: boolean;
-
-    private draggingState: { type: string; startX: number; startWidth: number } | null = null;
-    private rafId: number | null = null;
-
-    constructor(
-        @Inject(PLATFORM_ID) platformId: Object
-    ) {
-        this.isBrowser = isPlatformBrowser(platformId);
-
-        if (this.isBrowser) {
-            const storedSidebar = localStorage.getItem('rp_sidebarWidth');
-            if (storedSidebar && !isNaN(parseInt(storedSidebar, 10))) {
-                this.sidebarWidth = parseInt(storedSidebar, 10);
-            }
-
-            const storedMixer = localStorage.getItem('rp_mixerWidth');
-            if (storedMixer && !isNaN(parseInt(storedMixer, 10))) {
-                this.mixerWidth = parseInt(storedMixer, 10);
-            }
-        }
-    }
-
     ngOnInit() {
         if (this.electronService.isElectron) {
             this.displayService.refreshDisplays().subscribe();
         }
     }
-
-    async refreshDisplays() {
-        this.displayService.refreshDisplays().subscribe();
-    }
-
-    // VS Code style sidebar resizing
-    startSidebarResize(e: MouseEvent) {
-        e.preventDefault();
-        this.draggingState = { type: 'sidebar', startX: e.clientX, startWidth: this.sidebarWidth };
-        document.body.style.userSelect = 'none';
-        document.body.style.cursor = 'ew-resize';
-    }
-
-    resetSidebar() {
-        this.sidebarWidth = this.DEFAULT_SIDEBAR_WIDTH;
-        if (this.isBrowser) {
-            localStorage.removeItem('rp_sidebarWidth');
-        }
-    }
-
-    // Mixer sidebar resizing
-    startMixerResize(e: MouseEvent) {
-        e.preventDefault();
-        this.draggingState = { type: 'mixer', startX: e.clientX, startWidth: this.mixerWidth };
-        document.body.style.userSelect = 'none';
-        document.body.style.cursor = 'ew-resize';
-    }
-
-    resetMixer() {
-        this.mixerWidth = this.DEFAULT_MIXER_WIDTH;
-        if (this.isBrowser) {
-            localStorage.removeItem('rp_mixerWidth');
-        }
-    }
-
-    @HostListener('window:mousemove', ['$event'])
-    onMouseMove(e: MouseEvent) {
-        if (!this.draggingState) return;
-
-        const dx = e.clientX - this.draggingState.startX;
-
-        if (this.rafId) cancelAnimationFrame(this.rafId);
-
-        this.rafId = requestAnimationFrame(() => {
-            if (this.draggingState?.type === 'sidebar') {
-                let newWidth = Math.max(200, Math.min(600, this.draggingState.startWidth + dx));
-                this.sidebarWidth = newWidth;
-                if (this.isBrowser) localStorage.setItem('rp_sidebarWidth', String(newWidth));
-            } else if (this.draggingState?.type === 'mixer') {
-                // Reversed because we're resizing from the left edge of the right sidebar
-                let newWidth = Math.max(200, Math.min(600, this.draggingState.startWidth - dx));
-                this.mixerWidth = newWidth;
-                if (this.isBrowser) localStorage.setItem('rp_mixerWidth', String(newWidth));
-            }
-        });
-    }
-
-    @HostListener('window:mouseup')
-    onMouseUp() {
-        if (!this.draggingState) return;
-
-        this.draggingState = null;
-        document.body.style.userSelect = '';
-        document.body.style.cursor = '';
-
-        if (this.rafId) {
-            cancelAnimationFrame(this.rafId);
-            this.rafId = null;
-        }
-    }
-
-    // Presentation state handlers
     setAllTracks(tracks: any[], folderPath?: string) {
         console.log('Tracks loaded:', tracks.length, folderPath);
     }
@@ -207,34 +99,17 @@ export class MainLayoutComponent implements OnInit {
 
     openAudioSettings() { console.log('Open Audio Settings'); }
     openDisplaySettings() { console.log('Open Display Settings'); }
-    openPreferences() { this.activeSidebar.set('settings'); }
-
-    setActiveSidebar(sidebar: 'explorer' | 'timers' | 'settings' | 'scheduler' | 'scripts') {
-        this.activeSidebar.set(sidebar);
-    }
-
-    openTimers() {
-        this.activeSidebar.set('timers');
-    }
-
-    toggleScheduler() {
-        this.activeSidebar.set('scheduler');
-    }
-
-    toggleScriptEditor() {
-        this.activeSidebar.set('scripts');
-    }
-
-    openPreserviceMusic() {
-        if (this.electronService.isElectron) {
-            this.electronService.invoke('open_preservice_music_window').then(res => {
-                console.log('Pre-service music window opened:', res);
-            }).catch(err => {
-                console.error('Failed to open pre-service music window:', err);
-            });
-        } else {
-            window.open('/#/preservice', '_blank');
-        }
+    
+    openPreferences() {
+        this.dialog.open(SettingsComponent, {
+            width: '90vw',
+            height: '90vh',
+            maxWidth: '1200px',
+            maxHeight: '900px',
+            panelClass: ['bg-transparent', 'shadow-2xl', 'rounded-2xl', 'overflow-hidden'],
+            hasBackdrop: true,
+            backdropClass: 'bg-black/80'
+        });
     }
 
 

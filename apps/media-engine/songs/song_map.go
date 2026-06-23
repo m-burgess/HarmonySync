@@ -1,9 +1,11 @@
 package songs
 
 import (
+	"encoding/json"
 	"encoding/xml"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -32,35 +34,50 @@ type SongMap struct {
 	Sections    []SongSection `xml:"part" json:"sections"`
 }
 
-// ParseSongMap parses the Song-Map.xml file at the given path
+// ParseSongMap parses the Song-Map file (XML or JSON) at the given path
 func ParseSongMap(filePath string) (*SongMap, error) {
-	xmlFile, err := os.Open(filePath)
+	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
-	defer xmlFile.Close()
+	defer file.Close()
 
-	byteValue, _ := ioutil.ReadAll(xmlFile)
+	byteValue, err := ioutil.ReadAll(file)
+	if err != nil {
+		return nil, err
+	}
 
 	var song SongMap
-	err = xml.Unmarshal(byteValue, &song)
-	if err != nil {
-		return nil, err
+	ext := strings.ToLower(filepath.Ext(filePath))
+
+	if ext == ".json" {
+		err = json.Unmarshal(byteValue, &song)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		err = xml.Unmarshal(byteValue, &song)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	// Post-process to combine lines into lyrics field and generate IDs
+	// Post-process to combine lines into lyrics field and generate IDs if missing
 	for i := range song.Sections {
-		// Basic ID if missing (though usually we generate it in TS)
-		song.Sections[i].ID = strings.ReplaceAll(song.Sections[i].Label, " ", "_")
-		
-		var lyricsBuilder strings.Builder
-		for j, line := range song.Sections[i].Lines {
-			lyricsBuilder.WriteString(line.Text)
-			if j < len(song.Sections[i].Lines)-1 {
-				lyricsBuilder.WriteString("\n")
-			}
+		if song.Sections[i].ID == "" {
+			song.Sections[i].ID = strings.ReplaceAll(song.Sections[i].Label, " ", "_")
 		}
-		song.Sections[i].Lyrics = lyricsBuilder.String()
+		
+		if song.Sections[i].Lyrics == "" {
+			var lyricsBuilder strings.Builder
+			for j, line := range song.Sections[i].Lines {
+				lyricsBuilder.WriteString(line.Text)
+				if j < len(song.Sections[i].Lines)-1 {
+					lyricsBuilder.WriteString("\n")
+				}
+			}
+			song.Sections[i].Lyrics = lyricsBuilder.String()
+		}
 	}
 
 	return &song, nil

@@ -1,7 +1,5 @@
 import { Component, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { VSCodePanelComponent } from '../../vscode-ui/vscode-panel/vscode-panel.component';
-import { VSCodeInputComponent } from '../../vscode-ui/vscode-input/vscode-input.component';
 import { SlideItemComponent } from '../slide-item/slide-item.component';
 import { SlideImportModalComponent } from '../slide-import-modal/slide-import-modal.component';
 import { SlideViewModel } from '../../../viewmodels/slide.viewmodel';
@@ -9,7 +7,7 @@ import { SlideViewModel } from '../../../viewmodels/slide.viewmodel';
 @Component({
     selector: 'app-slide-grid',
     standalone: true,
-    imports: [CommonModule, VSCodePanelComponent, VSCodeInputComponent, SlideItemComponent, SlideImportModalComponent],
+    imports: [CommonModule, SlideItemComponent, SlideImportModalComponent],
     template: `
     <div class="h-full flex flex-col" id="slide-grid-container">
       <app-slide-import-modal 
@@ -18,41 +16,41 @@ import { SlideViewModel } from '../../../viewmodels/slide.viewmodel';
         (onSlidesImported)="handleSlidesImported($event)">
       </app-slide-import-modal>
 
-      <app-vscode-panel [title]="vm.hasSlides() ? 'Slides (' + vm.slideCount() + ')' : 'Slides'" className="pl-3 pt-3 pb-3 h-full flex flex-col">
+      <div class="flex flex-col h-full w-full">
         <!-- Grid Controls -->
-        <div class="flex items-center justify-between mb-3 pr-3">
+        <div class="flex items-center justify-between mb-4">
           <div class="flex items-center gap-4">
             <button
               (click)="openImportModal()"
               title="Import Slides"
-              class="vscode-button secondary text-xs py-1"
+              class="bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 text-slate-300 hover:text-white text-xs py-1.5 px-4 rounded-lg font-bold uppercase tracking-widest transition-all duration-200 shadow-sm flex items-center gap-2"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1 inline">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
               </svg>
               Import
             </button>
 
-            <div class="h-4 w-[1px] bg-white/10"></div>
+            <div class="h-4 w-[1px] bg-slate-700"></div>
 
-            <div class="flex items-center gap-2">
-              <label for="thumbnail-slider" class="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Zoom</label>
-              <app-vscode-input
+            <div class="flex items-center gap-3 bg-slate-900/40 px-3 py-1.5 rounded-lg border border-slate-800/50">
+              <label for="thumbnail-slider" class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Zoom</label>
+              <input
                 type="range"
                 id="thumbnail-slider"
                 min="120"
                 max="480"
-                [value]="thumbnailSize.toString()"
-                (onChange)="setThumbnailSize($event)"
-                className="w-32"
-              ></app-vscode-input>
+                [value]="thumbnailSize"
+                (input)="setThumbnailSize($any($event.target).value)"
+                class="w-32 accent-cyan-500"
+              />
             </div>
           </div>
 
           <button
             (click)="vm.clearSlides()"
             title="Clear All Slides"
-            class="vscode-button vscode-button-icon secondary opacity-50 hover:opacity-100 transition-opacity"
+            class="p-2 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors border border-transparent hover:border-rose-500/30"
             *ngIf="vm.hasSlides()"
           >
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
@@ -77,15 +75,15 @@ import { SlideViewModel } from '../../../viewmodels/slide.viewmodel';
           </div>
 
           @if (!vm.hasSlides() && !vm.isLoading()) {
-            <div class="col-span-full py-20 flex flex-col items-center justify-center opacity-20">
-               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor" class="w-20 h-20 mb-4">
+            <div class="col-span-full py-20 flex flex-col items-center justify-center opacity-30 mt-10">
+               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor" class="w-24 h-24 mb-6 text-slate-400">
                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
                </svg>
-               <span class="text-sm font-bold uppercase tracking-widest">No Slides Loaded</span>
+               <span class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">No Slides Loaded</span>
             </div>
           }
         </div>
-      </app-vscode-panel>
+      </div>
     </div>
   `,
     styles: [`

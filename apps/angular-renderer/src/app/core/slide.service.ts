@@ -12,6 +12,19 @@ export class SlideService {
     private readonly electron = inject(ElectronService);
     private readonly audio = inject(AudioService);
 
+    constructor() {
+        effect(() => {
+            const index = this.currentSlideIndex();
+            const slides = this.slides();
+            
+            // Sync state to Musician View via Electron backend
+            this.electron.invoke('remote:updateState', {
+                currentSlideIndex: index,
+                totalSlides: slides.length
+            }).catch(err => console.debug('Failed to sync slide state:', err));
+        });
+    }
+
     // ── Reactive State ──────────────────────────────────────────────────────────
     readonly slides = signal<Slide[]>([]);
     readonly currentSlideIndex = signal<number>(-1);

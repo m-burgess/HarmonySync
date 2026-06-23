@@ -145,6 +145,9 @@ interface ElectronAPI {
 
   // Canva integration
   canvaImportSlides: (options: any) => Promise<any>;
+
+  // Python integration
+  pythonProcessSongFolder: (folderPath?: string) => Promise<any>;
 }
 
 /**
@@ -368,6 +371,9 @@ class ElectronAPIBuilder {
 
       // Canva integration
       canvaImportSlides: (options: any) => ipcRenderer.invoke('canva:importSlides', options),
+
+      // Python integration
+      pythonProcessSongFolder: (folderPath?: string) => ipcRenderer.invoke('python:processSongFolder', folderPath),
     };
   }
 

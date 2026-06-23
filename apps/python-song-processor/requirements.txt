@@ -1,0 +1,15 @@
+PyMuPDF
+librosa
+stable-ts
+openai-whisper
+torch
+torchaudio
+lxml
+click
+pyinstaller
+demucs
+pyttsx3
+pydub
+soundfile
+pytest
+pytest-mock

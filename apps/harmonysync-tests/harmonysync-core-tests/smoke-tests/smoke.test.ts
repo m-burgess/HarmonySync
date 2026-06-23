@@ -1,36 +1,36 @@
-/**
- * Smoke Test for Core Logic
- * Quick verification that shared core packages load correctly
- */
-
 import { describe, test, expect } from '@jest/globals';
+import * as core from '@harmonysync/core';
+import * as dataAccess from '@harmonysync/data-access';
 
 describe('Core Logic Smoke Test', () => {
   test('should load @harmonysync/core package', () => {
-    expect(() => {
-      const core = require('@harmonysync/core');
-      expect(core).toBeDefined();
-    }).not.toThrow();
+    expect(core).toBeDefined();
+    expect(core.SongMapper).toBeDefined();
   });
 
   test('should load @harmonysync/data-access package', () => {
-    // Smoke test: data access package exists
-    expect(true).toBe(true);
+    expect(dataAccess).toBeDefined();
+    expect(dataAccess.Repository).toBeDefined();
+    expect(dataAccess.MemoryCacheProvider).toBeDefined();
+    expect(dataAccess.JsonStorageProvider).toBeDefined();
   });
 
   test('should create Repository instance', () => {
-    // Smoke test: Repository can be instantiated
-    expect(true).toBe(true);
+    const storageMock = {
+      read: async () => [],
+      write: async () => {},
+    } as any;
+    const repo = new dataAccess.Repository('test', storageMock);
+    expect(repo).toBeInstanceOf(dataAccess.Repository);
   });
 
   test('should create Cache instance', () => {
-    // Smoke test: Cache can be instantiated
-    expect(true).toBe(true);
+    const cache = new dataAccess.MemoryCacheProvider(10);
+    expect(cache).toBeInstanceOf(dataAccess.MemoryCacheProvider);
   });
 
   test('should export core types', () => {
-    const core = require('@harmonysync/core');
-    // Smoke test: types should be available
-    expect(core).toBeDefined();
+    // Basic check that types are available (via value check)
+    expect(core.SongMapper).toBeDefined();
   });
 });

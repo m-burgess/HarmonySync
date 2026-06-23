@@ -55,7 +55,7 @@ export class SongMapper {
                 const chords = parts.length > 1 ? parts[1].trim() : '';
 
                 currentSection = {
-                    id: crypto.randomUUID(),
+                    id: typeof crypto !== 'undefined' ? crypto.randomUUID() : Math.random().toString(36).substring(2),
                     label,
                     chords,
                     lyrics: ''
@@ -93,6 +93,11 @@ export class SongMapper {
             const keyMatch = content.match(/<key>(.*?)<\/key>/);
             if (keyMatch) songMap.originalKey = keyMatch[1];
 
+            const midiNotesMatch = content.match(/<midiNotes>(.*?)<\/midiNotes>/);
+            if (midiNotesMatch) {
+                songMap.midiNotes = midiNotesMatch[1].split(',').map(n => n.trim());
+            }
+
             // Extract parts (regex is primitive but enough for simple modal edits)
             const partRegex = /<part name="(.*?)">([\s\S]*?)<\/part>/g;
             let match;
@@ -100,13 +105,34 @@ export class SongMapper {
                 const label = match[1];
                 const inner = match[2];
                 const chordsMatch = inner.match(/<chords>(.*?)<\/chords>/);
-                const lyricsMatch = inner.match(/<lyrics>([\s\S]*?)<\/lyrics>/);
+                const lyricsInnerMatch = inner.match(/<lyrics>([\s\S]*?)<\/lyrics>/);
+                
+                const lines: { text: string; timestamp?: string }[] = [];
+                let lyricsText = '';
+
+                if (lyricsInnerMatch) {
+                    const lyricsInner = lyricsInnerMatch[1];
+                    const lineRegex = /<line(?: timestamp="(.*?)")?>(.*?)<\/line>/g;
+                    let lineMatch;
+                    while ((lineMatch = lineRegex.exec(lyricsInner)) !== null) {
+                        const timestamp = lineMatch[1];
+                        const text = lineMatch[2];
+                        lines.push({ text, timestamp });
+                    }
+                    
+                    if (lines.length > 0) {
+                        lyricsText = lines.map(l => l.text).join('\n');
+                    } else {
+                        lyricsText = lyricsInner.trim();
+                    }
+                }
 
                 songMap.sections.push({
-                    id: crypto.randomUUID(),
+                    id: typeof crypto !== 'undefined' ? crypto.randomUUID() : Math.random().toString(36).substring(2),
                     label,
                     chords: chordsMatch ? chordsMatch[1].trim() : '',
-                    lyrics: lyricsMatch ? lyricsMatch[1].replace(/<line.*?>/g, '').replace(/<\/line>/g, '').trim() : ''
+                    lyrics: lyricsText,
+                    lines: lines.length > 0 ? lines : undefined
                 });
             }
         } catch (e) {
