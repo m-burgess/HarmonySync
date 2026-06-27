@@ -59,3 +59,10 @@ coverage/
 
 # Environment files
 .env
+
+# Large binaries and artifacts
+apps/electron-app/release/
+apps/python-song-processor/build/
+apps/media-engine/harmonysync-media-engine*
+apps/harmonysync-audio-service/go-engine/audio-engine.exe
+repomix-output.*
