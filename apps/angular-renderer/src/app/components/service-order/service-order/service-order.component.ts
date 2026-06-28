@@ -12,7 +12,8 @@ import {
   heroPlus,
   heroTrash,
   heroPencil,
-  heroArrowDownTray
+  heroArrowDownTray,
+  heroArrowPath
 } from '@ng-icons/heroicons/outline';
 
 @Component({
@@ -30,7 +31,8 @@ import {
       heroPlus,
       heroTrash,
       heroPencil,
-      heroArrowDownTray
+      heroArrowDownTray,
+      heroArrowPath
     })
   ],
   template: `
@@ -62,15 +64,26 @@ import {
               }
             </div>
 
-            <!-- Add Button -->
-            <button
-              (click)="vm.addFolders()"
-              class="w-full bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 text-slate-300 hover:text-white text-xs py-2.5 rounded-xl font-bold uppercase tracking-widest transition-all duration-200 shadow-sm flex justify-center items-center gap-2 active:scale-95 disabled:opacity-50"
-              [disabled]="vm.isLoading()"
-            >
-              <ng-icon name="heroPlus" class="text-sm"></ng-icon>
-              Add Folders
-            </button>
+            <!-- Action Buttons -->
+            <div class="flex gap-2">
+                <button
+                  (click)="vm.addFolders()"
+                  class="flex-1 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 text-slate-300 hover:text-white text-xs py-2.5 rounded-xl font-bold uppercase tracking-widest transition-all duration-200 shadow-sm flex justify-center items-center gap-2 active:scale-95 disabled:opacity-50"
+                  [disabled]="vm.isLoading()"
+                >
+                  <ng-icon name="heroPlus" class="text-sm"></ng-icon>
+                  Add Folders
+                </button>
+
+                <button
+                  (click)="vm.refreshCurrentItem()"
+                  class="bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl font-bold transition-all duration-200 shadow-sm flex justify-center items-center active:scale-95 disabled:opacity-50"
+                  [disabled]="vm.isLoading() || !vm.hasSongs()"
+                  title="Reload Schedule Data"
+                >
+                  <ng-icon name="heroArrowPath" class="text-sm" [class.animate-spin]="vm.isLoading()"></ng-icon>
+                </button>
+            </div>
           </div>
 
           <!-- Items List -->

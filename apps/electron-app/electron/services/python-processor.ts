@@ -76,23 +76,33 @@ export class PythonProcessorService {
         const files = await fs.readdir(subDir);
 
         let audioPath = '';
+        let guidePath = '';
         let lyricsPath = '';
         let pdfPath = '';
 
         // First pass: look specifically for reference.mp3 and chords.pdf
-        const hasReference = files.some(f => f.toLowerCase() === 'reference.mp3');
+        const hasReference = files.some(f => f.toLowerCase() === 'reference.mp3' || f.toLowerCase() === 'reference.wav');
+        const hasGuide = files.some(f => f.toLowerCase() === 'guide.mp3' || f.toLowerCase() === 'guide.wav');
         const hasChordsPdf = files.some(f => f.toLowerCase() === 'chords.pdf');
 
         for (const file of files) {
           const lowerFile = file.toLowerCase();
           
           if (hasReference) {
-            if (lowerFile === 'reference.mp3') {
+            if (lowerFile === 'reference.mp3' || lowerFile === 'reference.wav') {
               audioPath = path.join(subDir, file);
             }
-          } else if (audioExtensions.some(ext => lowerFile.endsWith(ext)) && !audioPath) {
+          } else if (audioExtensions.some(ext => lowerFile.endsWith(ext)) && !audioPath && !lowerFile.includes('guide')) {
             // Fallback to first audio file if no reference.mp3 exists
             audioPath = path.join(subDir, file);
+          }
+          
+          if (hasGuide) {
+            if (lowerFile === 'guide.mp3' || lowerFile === 'guide.wav') {
+              guidePath = path.join(subDir, file);
+            }
+          } else if (audioExtensions.some(ext => lowerFile.endsWith(ext)) && lowerFile.includes('guide') && !guidePath) {
+            guidePath = path.join(subDir, file);
           }
           
           if (lowerFile === 'lyrics.txt' || lowerFile === 'lyrics.pdf') {
@@ -113,69 +123,80 @@ export class PythonProcessorService {
           console.log(`[PythonProcessor] Found song materials in: ${subDir}. Processing...`);
           const outputPath = path.join(subDir, 'song-map.json');
           
-          await new Promise<void>((resolve, reject) => {
-            const args = [
-              mainScript,
-              '--audio', audioPath,
-              '--output', outputPath
-            ];
+          try {
+            await new Promise<void>((resolve, reject) => {
+              const args = [
+                mainScript,
+                '--audio', audioPath,
+                '--output', outputPath
+              ];
 
-            if (lyricsPath) {
-              args.push('--lyrics', lyricsPath);
-            }
-            if (pdfPath) {
-              args.push('--pdf', pdfPath);
-            }
-            
-            if (separateStems) {
-              args.push('--separate-stems');
-            }
-
-            console.log(`[PythonProcessor] Spawning: ${pythonExecutable} ${args.join(' ')}`);
-            const pyProcess = spawn(pythonExecutable, args);
-
-            pyProcess.stdout.on('data', (data) => {
-              const output = data.toString().trim();
-              console.log(`[PythonProcessor] ${output}`);
+              if (guidePath) {
+                args.push('--guide', guidePath);
+              }
+              if (lyricsPath) {
+                args.push('--lyrics', lyricsPath);
+              }
+              if (pdfPath) {
+                args.push('--pdf', pdfPath);
+              }
               
-              const lines = output.split('\n');
-              for (const line of lines) {
-                if (line.includes('[PROGRESS]')) {
-                  try {
-                    const jsonStr = line.substring(line.indexOf('{'));
-                    const progressData = JSON.parse(jsonStr);
-                    const win = this.getMainWindow();
-                    if (win && !win.isDestroyed()) {
-                      win.webContents.send('python:process-progress', progressData);
+              if (separateStems) {
+                args.push('--separate-stems');
+              }
+              if (!hasReference) {
+                args.push('--skip-alignment');
+              }
+
+              console.log(`[PythonProcessor] Spawning: ${pythonExecutable} ${args.join(' ')}`);
+              const pyProcess = spawn(pythonExecutable, args);
+
+              pyProcess.stdout.on('data', (data) => {
+                const output = data.toString().trim();
+                console.log(`[PythonProcessor] ${output}`);
+                
+                const lines = output.split('\n');
+                for (const line of lines) {
+                  if (line.includes('[PROGRESS]')) {
+                    try {
+                      const jsonStr = line.substring(line.indexOf('{'));
+                      const progressData = JSON.parse(jsonStr);
+                      const win = this.getMainWindow();
+                      if (win && !win.isDestroyed()) {
+                        win.webContents.send('python:process-progress', progressData);
+                      }
+                    } catch (e) {
+                      console.error('Failed to parse progress JSON', e);
                     }
-                  } catch (e) {
-                    console.error('Failed to parse progress JSON', e);
                   }
                 }
-              }
-            });
+              });
 
-            pyProcess.stderr.on('data', (data) => {
-              const error = data.toString().trim();
-              console.error(`[PythonProcessor Error] ${error}`);
-            });
+              pyProcess.stderr.on('data', (data) => {
+                const error = data.toString().trim();
+                console.error(`[PythonProcessor Error] ${error}`);
+              });
 
-            pyProcess.on('error', (err) => {
-              console.error(`[PythonProcessor] Failed to start process:`, err);
-              reject(err);
-            });
+              pyProcess.on('error', (err) => {
+                console.error(`[PythonProcessor] Failed to start process:`, err);
+                reject(err);
+              });
 
-            pyProcess.on('close', (code) => {
-              if (code === 0) {
-                console.log(`[PythonProcessor] Process completed successfully for: ${subDir}`);
-                processedCount++;
-                resolve();
-              } else {
-                console.error(`[PythonProcessor] Process exited with code ${code} for: ${subDir}`);
-                reject(new Error(`Process exited with code ${code}`));
-              }
+              pyProcess.on('close', (code) => {
+                if (code === 0) {
+                  console.log(`[PythonProcessor] Process completed successfully for: ${subDir}`);
+                  processedCount++;
+                  resolve();
+                } else {
+                  console.error(`[PythonProcessor] Process exited with code ${code} for: ${subDir}`);
+                  reject(new Error(`Process exited with code ${code}`));
+                }
+              });
             });
-          });
+          } catch (err) {
+            console.error(`[PythonProcessor] Skipping ${subDir} due to an error:`, err);
+            // Continue to the next folder instead of aborting the entire batch process
+          }
         } else {
            console.log(`[PythonProcessor] Skipping ${subDir} (missing required song materials)`);
         }

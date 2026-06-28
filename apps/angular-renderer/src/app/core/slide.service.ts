@@ -160,6 +160,40 @@ export class SlideService {
         }
     }
 
+    private loopIntervalRef: any = null;
+
+    /**
+     * Start auto-advancing slides in an endless loop
+     */
+    startSlideLoop(intervalMs: number = 10000): void {
+        this.stopSlideLoop();
+        if (this.slides().length === 0) return;
+        
+        // Ensure we're on a valid slide
+        if (this.currentSlideIndex() < 0) {
+            this.selectSlide(0);
+        }
+        
+        this.loopIntervalRef = setInterval(() => {
+            const current = this.currentSlideIndex();
+            const total = this.slides().length;
+            if (total === 0) return;
+            
+            const nextIdx = (current + 1) % total;
+            this.selectSlide(nextIdx);
+        }, intervalMs);
+    }
+
+    /**
+     * Stop the auto-advancing slide loop
+     */
+    stopSlideLoop(): void {
+        if (this.loopIntervalRef) {
+            clearInterval(this.loopIntervalRef);
+            this.loopIntervalRef = null;
+        }
+    }
+
     /**
      * Clear all slides
      */

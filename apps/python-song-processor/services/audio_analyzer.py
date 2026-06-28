@@ -56,16 +56,56 @@ def get_core_loop(progression):
 class AudioAnalyzer:
     _model_cache = None
 
-    def __init__(self, audio_path, lyrics_path):
+    def __init__(self, audio_path, lyrics_path, guide_path=None):
         self.audio_path = audio_path
         self.lyrics_path = lyrics_path
+        self.guide_path = guide_path
         
+        if self.guide_path and os.path.exists(self.guide_path):
+            self.sync_reference_to_guide()
+            
         # We will load a small model by default for speed, can be customized
         if AudioAnalyzer._model_cache is None:
             AudioAnalyzer._model_cache = stable_whisper.load_model('base')
         self.model = AudioAnalyzer._model_cache
         self.bpm = 120
         self.original_duration = 0
+
+    def sync_reference_to_guide(self):
+        print(f"[Audio] Syncing reference track to guide track...")
+        import soundfile as sf
+        
+        # Calculate durations without loading full audio data
+        duration_r = librosa.get_duration(path=self.audio_path)
+        duration_g = librosa.get_duration(path=self.guide_path)
+        
+        delay_sec = duration_g - duration_r
+        
+        if delay_sec <= 0.1:
+            print(f"[Audio] Guide track is not significantly longer than reference track (diff: {delay_sec:.3f}s). No padding needed.")
+            return
+
+        print(f"[Audio] Calculated offset (duration difference): {delay_sec:.3f} seconds")
+        
+        synced_path = os.path.join(os.path.dirname(self.audio_path), "reference_synced.wav")
+        delay_ms = int(delay_sec * 1000)
+        
+        import subprocess
+        try:
+            # adelay delays all channels by the specified milliseconds
+            cmd = [
+                "ffmpeg", "-y", "-i", self.audio_path,
+                "-af", f"adelay={delay_ms}|{delay_ms}",
+                synced_path
+            ]
+            print(f"[Audio] Running ffmpeg padding: {' '.join(cmd)}")
+            subprocess.run(cmd, check=True, capture_output=True)
+            
+            print(f"[Audio] Saved synced reference to {synced_path}")
+            self.audio_path = synced_path
+        except subprocess.CalledProcessError as e:
+            print(f"[Audio] FFmpeg padding failed: {e.stderr.decode('utf-8', errors='ignore')}")
+            print("[Audio] Falling back to analyzing original reference file.")
 
     def analyze_bpm_and_key(self):
         """
@@ -102,7 +142,7 @@ class AudioAnalyzer:
             self.original_duration = 0
             return 120, "C"
 
-    def parse_and_align_lyrics(self):
+    def parse_and_align_lyrics(self, skip_alignment=False):
         """
         Parses the provided lyrics.txt for structure (e.g. [Verse 1] or Verse 1), 
         chords (e.g. Chords: F#m D), and aligns the raw text to audio.
@@ -217,9 +257,21 @@ class AudioAnalyzer:
         if not all_lyric_lines:
             return sections, []
 
-        print(f"[Whisper] Aligning {len(all_lyric_lines)} lines of provided lyrics to audio...")
-        lyrics_str = "\n".join(all_lyric_lines)
-        result = self.model.align(self.audio_path, lyrics_str, language='en', original_split=True)
+        if skip_alignment:
+            print(f"[Skip] Skipping lyric alignment. Generating 0.0 timestamps for {len(all_lyric_lines)} lines.")
+            class DummySegment:
+                def __init__(self, text):
+                    self.start = 0.0
+                    self.end = 0.0
+                    self.text = text
+            class DummyResult:
+                def __init__(self, lines):
+                    self.segments = [DummySegment(l) for l in lines]
+            result = DummyResult(all_lyric_lines)
+        else:
+            print(f"[Whisper] Aligning {len(all_lyric_lines)} lines of provided lyrics to audio...")
+            lyrics_str = "\n".join(all_lyric_lines)
+            result = self.model.align(self.audio_path, lyrics_str, language='en', original_split=True)
 
         aligned_lines = []
         segment_idx = 0

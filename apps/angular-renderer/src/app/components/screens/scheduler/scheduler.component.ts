@@ -14,6 +14,8 @@ import {
     heroListBullet
 } from '@ng-icons/heroicons/outline';
 import { ElectronService } from '../../../core/electron.service';
+import { ServiceOrderService } from '../../../core/service-order.service';
+import { SlideService } from '../../../core/slide.service';
 import commonMacros from '../../../data/common_macros.json';
 
 export type RecurrenceType = 'one-time' | 'daily' | 'weekly' | 'monthly';
@@ -269,6 +271,8 @@ export interface ScheduledEvent {
 })
 export class SchedulerComponent implements OnInit, OnDestroy {
     private readonly electron = inject(ElectronService);
+    private readonly serviceOrder = inject(ServiceOrderService);
+    private readonly slideService = inject(SlideService);
 
     @Input() localSettings: AppSettings | null = null;
     @Output() markDirty = new EventEmitter<void>();
@@ -332,11 +336,23 @@ export class SchedulerComponent implements OnInit, OnDestroy {
         const currentDay = this.daysOfWeek[now.getDay()];
         const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
+        // Global scheduled events
         this.scheduledEvents().forEach(event => {
             if (event.enabled && event.day === currentDay && event.time === currentTime) {
                 this.executeEvent(event);
             }
         });
+
+        // Folder schedule events
+        const folderEvents = this.serviceOrder.folderScheduleEvents();
+        if (folderEvents && folderEvents.length > 0) {
+            folderEvents.forEach(event => {
+                const triggerType = event.trigger || 'time';
+                if (triggerType === 'time' && event.time === currentTime) {
+                    this.serviceOrder.executeFolderEvent(event);
+                }
+            });
+        }
     }
 
     private async executeEvent(event: ScheduledEvent) {

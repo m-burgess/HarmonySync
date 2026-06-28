@@ -20,6 +20,7 @@ interface ElectronAPI {
   readFile: (path: string) => Promise<string>;
   writeFile: (path: string, content: string) => Promise<void>;
   readDir: (path: string) => Promise<string[]>;
+  readDirDetailed: (path: string) => Promise<any[]>;
   exists: (path: string) => Promise<boolean>;
   mkdir: (path: string) => Promise<void>;
   copyFile: (src: string, dest: string) => Promise<void>;
@@ -184,6 +185,7 @@ class ElectronAPIBuilder {
       readFile: (path: string) => ipcRenderer.invoke('fs:readFile', path),
       writeFile: (path: string, content: string) => ipcRenderer.invoke('fs:writeFile', path, content),
       readDir: (path: string) => ipcRenderer.invoke('fs:readDir', path),
+      readDirDetailed: (path: string) => ipcRenderer.invoke('fs:readDirDetailed', path),
       exists: (path: string) => ipcRenderer.invoke('fs:exists', path),
       mkdir: (path: string) => ipcRenderer.invoke('fs:mkdir', path),
       copyFile: (src: string, dest: string) => ipcRenderer.invoke('fs:copyFile', src, dest),

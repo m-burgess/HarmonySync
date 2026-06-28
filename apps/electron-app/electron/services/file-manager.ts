@@ -309,6 +309,10 @@ export async function readDir(dirPath: string): Promise<string[]> {
   return defaultInstance.readDir(dirPath);
 }
 
+export async function readDirDetailed(dirPath: string): Promise<DirectoryEntry[]> {
+  return defaultInstance.readDirDetailed(dirPath);
+}
+
 export async function exists(path: string): Promise<boolean> {
   return defaultInstance.exists(path);
 }

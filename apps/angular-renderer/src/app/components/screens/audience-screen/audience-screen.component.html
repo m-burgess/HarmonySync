@@ -19,8 +19,10 @@
     }
 
     <!-- 3. Lyrics/Content Overlay Layer -->
-    <div id="lyric-display" class="lyric-overlay transition-opacity duration-300" [style.opacity]="opacity"
-        [ngStyle]="lyricStyles()">
+    <div id="lyric-display" class="lyric-overlay transition-opacity" 
+         [style.transitionDuration.ms]="transitionTime()"
+         [style.opacity]="opacity()"
+         [ngStyle]="lyricStyles()">
 
         @if (lyricLines && lyricLines.length > 0) {
         <div class="lyrics-container w-full flex flex-col items-center justify-center">

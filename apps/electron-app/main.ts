@@ -539,22 +539,9 @@ class ElectronApplication {
 
       console.log('[Application] Auto-scanning watch folder:', settings.watchFolder);
 
-      // Scan for service order folders (user manually unzips)
-      const fs = require('fs-extra');
-      const entries = await fs.readdir(settings.watchFolder, { withFileTypes: true });
-      const serviceFolder = entries.find((entry: any) => entry.isDirectory());
-
-      if (!serviceFolder) {
-        console.log('[Application] No service order folders found');
-        return;
-      }
-
-      const folderPath = require('path').join(settings.watchFolder, serviceFolder.name);
-      console.log(`[Application] Found service order folder: ${serviceFolder.name}`);
-
       try {
-        // Parse the service order items directly from the folder
-        const items = await serviceOrderImporter.parseItems(folderPath);
+        // Parse the service order items directly from the watch folder
+        const items = await serviceOrderImporter.parseItems(settings.watchFolder);
 
         if (items.length > 0) {
           const itemsToSend = items.map((item: any) => ({
@@ -572,7 +559,7 @@ class ElectronApplication {
           console.log('[Application] No service items found in folder');
         }
       } catch (error) {
-        console.error(`[Application] ❌ Failed to load ${folderPath}:`, error);
+        console.error(`[Application] ❌ Failed to load ${settings.watchFolder}:`, error);
       }
     } catch (error) {
       console.error('[Application] Error during auto-scan:', error);

@@ -225,7 +225,7 @@ export class ServiceOrderImporter {
    * @param folderPath - Path to service order folder
    * @returns Sorted array of service items
    */
-  private async parseItems(folderPath: string): Promise<ServiceItem[]> {
+  public async parseItems(folderPath: string): Promise<ServiceItem[]> {
     const items: ServiceItem[] = [];
 
     try {

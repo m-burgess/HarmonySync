@@ -65,10 +65,20 @@ import { NgIconComponent } from '@ng-icons/core';
           <!-- Add Folder Button -->
           <div class="flex gap-2 mb-3">
             <app-vscode-button
+              (onClick)="addServiceOrderFolder()"
+              icon="heroFolderOpen"
+              className="flex-1 text-[10px] py-1"
+              [disabled]="serviceOrderService.isLoading()"
+              title="Load an entire Service Order folder"
+            >
+              Load Service
+            </app-vscode-button>
+            <app-vscode-button
               (onClick)="addFolders()"
               icon="heroPlus"
-              className="w-full text-xs py-1"
+              className="flex-1 text-[10px] py-1"
               [disabled]="serviceOrderService.isLoading()"
+              title="Add individual folders"
             >
               Add Folders
             </app-vscode-button>
@@ -148,6 +158,10 @@ export class ServiceOrderManagerComponent implements OnInit, OnDestroy {
 
     async addFolders() {
         await this.serviceOrderService.addFolders();
+    }
+
+    async addServiceOrderFolder() {
+        await this.serviceOrderService.addServiceOrderFolder();
     }
 
     handleItemClick(item: ServiceOrderItem, index: number) {

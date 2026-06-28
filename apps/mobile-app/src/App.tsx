@@ -28,6 +28,7 @@ interface AppState {
     currentSongName?: string;
     currentSongMap?: SongMap;
     playbackStatus: string;
+    currentSlideIndex?: number;
 }
 
 export default function App() {

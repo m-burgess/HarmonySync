@@ -13,11 +13,13 @@ def report_progress(step, total, message):
 
 @click.command()
 @click.option('--audio', required=True, type=click.Path(exists=True), help='Path to reference audio file')
+@click.option('--guide', required=False, type=click.Path(exists=True), help='Path to guide audio file for syncing reference')
 @click.option('--lyrics', required=False, type=click.Path(exists=True), help='Path to lyrics.txt file (Optional)')
 @click.option('--pdf', required=False, type=click.Path(exists=True), help='Path to PDF chord chart (Optional)')
 @click.option('--output', default='song-map.json', type=click.Path(), help='Output path for song-map.json')
 @click.option('--separate-stems', is_flag=True, help='Use AI to separate audio into 6 stems and generate click/cues')
-def process_song(audio, lyrics, pdf, output, separate_stems):
+@click.option('--skip-alignment', is_flag=True, help='Skip lyric alignment using Whisper')
+def process_song(audio, guide, lyrics, pdf, output, separate_stems, skip_alignment):
     """
     Processes an audio file, lyrics text file, and PDF chord chart
     to generate a song-map.json file for HarmonySync.
@@ -38,7 +40,7 @@ def process_song(audio, lyrics, pdf, output, separate_stems):
 
     # 2. Analyze Audio for BPM, Key, and Duration
     report_progress(2, total_steps, "Analyzing Audio (BPM & Key)...")
-    analyzer = AudioAnalyzer(audio, lyrics)
+    analyzer = AudioAnalyzer(audio, lyrics, guide)
     bpm, key = analyzer.analyze_bpm_and_key()
     
     # Override key if there's an indicator in the folder title
@@ -83,9 +85,12 @@ def process_song(audio, lyrics, pdf, output, separate_stems):
     
     if not separate_stems:
         if lyrics:
-            sections, aligned_lyrics = analyzer.parse_and_align_lyrics()
+            sections, aligned_lyrics = analyzer.parse_and_align_lyrics(skip_alignment=skip_alignment)
         else:
-            aligned_lyrics = analyzer.transcribe_lyrics()
+            if skip_alignment:
+                aligned_lyrics = []
+            else:
+                aligned_lyrics = analyzer.transcribe_lyrics()
             sections = []
 
         # Check if sections already have chords parsed from lyrics

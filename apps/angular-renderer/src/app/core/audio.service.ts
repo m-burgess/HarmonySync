@@ -133,6 +133,8 @@ export class AudioService {
                 const fullPaths = fileNames.map((f: string) => `${folderPath}${sep}${f}`);
                 return fullPaths.filter((fp: string) => {
                     const lower = fp.toLowerCase();
+                    const fileName = lower.split(/[\\/]/).pop() || '';
+                    if (fileName.includes('reference')) return false;
                     return this.SUPPORTED_FORMATS.some(ext => lower.endsWith(ext));
                 });
             }),

@@ -147,7 +147,11 @@ class IPCHandlerManager {
     });
 
     this.ipcMain.handle('fs:readDir', async (_event, dirPath: string) => {
-      return await this.services.fileManager.readDir(dirPath);
+      return this.services.fileManager.readDir(dirPath);
+    });
+
+    this.ipcMain.handle('fs:readDirDetailed', async (_event, dirPath: string) => {
+      return this.services.fileManager.readDirDetailed(dirPath);
     });
 
     this.ipcMain.handle('fs:exists', async (_event, filePath: string) => {
@@ -474,6 +478,35 @@ class IPCHandlerManager {
       } catch (error) {
         console.error('[service-order:loadSongMap] Error:', error);
         return null;
+      }
+    });
+
+    this.ipcMain.handle('service-order:loadSchedule', async (_event, folderPath: string) => {
+      try {
+        const path = require('path');
+        const fs = require('fs-extra');
+        const schedulePath = path.join(folderPath, 'schedule.json');
+        
+        if (await fs.pathExists(schedulePath)) {
+          return await fs.readJson(schedulePath);
+        }
+        return null;
+      } catch (error) {
+        console.error('[service-order:loadSchedule] Error reading schedule.json:', error);
+        return null;
+      }
+    });
+
+    this.ipcMain.handle('service-order:saveSchedule', async (_event, folderPath: string, data: any) => {
+      try {
+        const path = require('path');
+        const fs = require('fs-extra');
+        const schedulePath = path.join(folderPath, 'schedule.json');
+        await fs.writeJson(schedulePath, data, { spaces: 2 });
+        return { success: true };
+      } catch (error) {
+        console.error('[service-order:saveSchedule] Error writing schedule.json:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
       }
     });
 
@@ -1936,6 +1969,12 @@ class IPCHandlerManager {
         bounds: display.bounds,
         workArea: display.workArea,
       }));
+    });
+
+    this.ipcMain.handle('shell:openExternal', async (_event, url: string) => {
+      const { shell } = require('electron');
+      await shell.openExternal(url);
+      return { success: true };
     });
 
     this.ipcMain.handle('settings:getAudioDevices', async () => {

@@ -134,4 +134,18 @@ export class FileService {
             })
         );
     }
+
+    /**
+     * Read directory contents with detailed stats
+     * @param folderPath - Folder path
+     */
+    readDirDetailed(folderPath: string): Observable<any[]> {
+        return from(this.electron.invoke('fs:readDirDetailed', folderPath)).pipe(
+            map(res => res as any[]),
+            catchError(err => {
+                console.error('FileService.readDirDetailed failed:', err);
+                return of([]);
+            })
+        );
+    }
 }

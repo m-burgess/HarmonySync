@@ -29,6 +29,10 @@ export class ServiceOrderViewModel {
         await this.serviceOrderService.addFolders();
     }
 
+    async refreshCurrentItem() {
+        await this.serviceOrderService.refreshCurrentItem();
+    }
+
     loadItem(item: ServiceOrderItem, index: number) {
         this.serviceOrderService.loadItem(item, index);
     }

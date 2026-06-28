@@ -10,6 +10,7 @@ import { MessagingService } from './messaging.service';
 import { EVENT_TYPES } from '../models/messaging.models';
 import { ServiceMapper } from '../utils/service-mapper';
 import { SongMap, SongMapper } from '@harmonysync/core';
+import commonMacros from '../data/common_macros.json';
 
 export interface ServiceOrderItem {
     id?: string;
@@ -41,6 +42,10 @@ export class ServiceOrderService {
     readonly isLoading = signal<boolean>(false);
     readonly error = signal<string | null>(null);
     readonly autoplayEnabled = signal<boolean>(false);
+    readonly folderScheduleEvents = signal<any[]>([]);
+
+    private macros = commonMacros;
+
 
     // Derived state
     readonly hasSongs = computed(() => this.serviceOrder().length > 0);
@@ -52,14 +57,44 @@ export class ServiceOrderService {
 
     constructor() {
         // Listen for service-order-loaded event from Electron
-        this.electron.on('service-order-loaded', (data: { serviceOrder: ServiceOrderItem[] }) => {
+        this.electron.on('service-order-loaded', async (data: { serviceOrder: ServiceOrderItem[] }) => {
             if (data && data.serviceOrder) {
                 this.serviceOrder.set(data.serviceOrder);
                 this.currentSongIndex.set(-1); // Reset index on new list
+
+                // Attempt to load schedule.json from parent directories
+                if (data.serviceOrder.length > 0) {
+                    const parentDirs = new Set<string>();
+                    for (const item of data.serviceOrder) {
+                        const sep = item.path.includes('\\') ? '\\' : '/';
+                        const parts = item.path.split(sep);
+                        if (parts.length > 1) {
+                            parts.pop(); // remove item name
+                            parentDirs.add(parts.join(sep));
+                        }
+                    }
+
+                    const allEvents: any[] = [];
+                    for (const dir of parentDirs) {
+                        try {
+                            const scheduleData = await this.electron.invoke('service-order:loadSchedule', dir);
+                            if (scheduleData && scheduleData.events) {
+                                allEvents.push(...scheduleData.events.map((e: any) => ({...e, servicePath: dir})));
+                            }
+                        } catch (e) {
+                            console.error('[ServiceOrder] Failed to load schedule for dir:', dir, e);
+                        }
+                    }
+                    if (allEvents.length > 0) {
+                        console.log('[ServiceOrder] Loaded folder schedules:', allEvents);
+                        this.folderScheduleEvents.set(allEvents);
+                    }
+                }
             }
         });
 
         this.electron.on('video-ended', () => {
+            this.executeOnEndTriggers();
             const settings = this.config.settings();
             if (settings?.serviceOrder?.advanceOnVideoEnd) {
                 console.log('[ServiceOrder] Video ended, advancing because advanceOnVideoEnd is true');
@@ -68,39 +103,50 @@ export class ServiceOrderService {
         });
 
         this.messaging.subscribe<any>(EVENT_TYPES.AUDIO_PLAYBACK_FINISHED).subscribe(() => {
+            this.executeOnEndTriggers();
             const settings = this.config.settings();
             if (settings?.serviceOrder?.advanceOnVideoEnd) {
                 console.log('[ServiceOrder] Audio finished, advancing because advanceOnVideoEnd is true');
                 this.advanceToNext();
             }
         });
+    }
 
-        // Initialize watch folder if configured
-        setTimeout(() => this.initWatchFolder(), 2000);
+    private executeOnEndTriggers() {
+        const current = this.currentSong();
+        if (!current) return;
+        const folderEvents = this.folderScheduleEvents();
+        if (folderEvents && folderEvents.length > 0) {
+            folderEvents.forEach(event => {
+                if (event.trigger === 'onEnd' && event.servicePath === current.path) {
+                    this.executeFolderEvent(event);
+                }
+            });
+        }
     }
 
     initWatchFolder(): void {
-        const settings = this.config.settings();
-        if (!settings?.serviceOrder?.watchFolder) return;
-
-        const watchFolder = settings.serviceOrder.watchFolder;
-        console.log(`[ServiceOrder] Initializing watch folder scanning: ${watchFolder}`);
-
-        // Initial scan
-        this.scanWatchFolder(watchFolder);
-
-        // Setup polling every 30 seconds for new zips
-        setInterval(() => this.scanWatchFolder(watchFolder), 30000);
+        // Watch folder disabled per user request
     }
 
     private scanWatchFolder(path: string): void {
-        this.electron.invoke('service-order:scanForZips', path).then((res: any) => {
-            if (res.success && res.zips && res.zips.length > 0) {
-                console.log(`[ServiceOrder] Found ${res.zips.length} zips in watch folder`);
-                for (const zipPath of res.zips) {
-                    this.importZip(zipPath);
+        this.fileService.readDirDetailed(path).subscribe({
+            next: (entries) => {
+                if (!entries || entries.length === 0) return;
+                
+                const directories = entries.filter(e => e.isDirectory);
+                
+                for (const dir of directories) {
+                    // Only add if not already in the service order
+                    if (!this.serviceOrder().some(item => item.path === dir.path)) {
+                        console.log(`[ServiceOrder] Found new folder in watch directory: ${dir.name}`);
+                        this.addFolderToServiceOrder(dir.path).catch(err => {
+                            console.error(`[ServiceOrder] Failed to auto-add ${dir.name}:`, err);
+                        });
+                    }
                 }
-            }
+            },
+            error: (err) => console.error('[ServiceOrder] Failed to scan watch folder:', err)
         });
     }
 
@@ -131,37 +177,7 @@ export class ServiceOrderService {
                 }
 
                 for (const folderPath of filePaths) {
-                    // Check if already in service order
-                    if (this.serviceOrder().some(item => item.path === folderPath)) {
-                        continue;
-                    }
-
-                    // Load metadata
-                    const metadata = await this.electron.invoke('service-order:loadSongMetadata', folderPath);
-
-                    // Auto-Ingest if song-map.json is missing
-                    if (metadata.type === 'song' && metadata.hasAudio) {
-                        const pathSep = folderPath.includes('\\') ? '\\' : '/';
-                        const xmlPath = `${folderPath}${pathSep}song-map.json`;
-                        const hasXml = await this.electron.invoke('fs:exists', xmlPath);
-                        
-                        if (!hasXml) {
-                            console.log(`[ServiceOrder] song-map.json missing. Triggering auto-ingestion for ${folderPath}`);
-                            const settings = this.config.settings();
-                            try {
-                                await this.electron.invoke('python:processSongFolder', folderPath, false);
-                            } catch (e) {
-                                console.error(`[ServiceOrder] Auto-ingestion failed:`, e);
-                            }
-                        }
-                    }
-
-                    this.serviceOrder.update(order => [...order, metadata]);
-
-                    // Auto-preload if it's a song
-                    if (metadata.type === 'song' && metadata.hasAudio) {
-                        this.preloadSong(metadata);
-                    }
+                    await this.addFolderToServiceOrder(folderPath);
                 }
                 this.isLoading.set(false);
             },
@@ -171,6 +187,125 @@ export class ServiceOrderService {
                 this.isLoading.set(false);
             }
         });
+    }
+
+    async addServiceOrderFolder(): Promise<void> {
+        this.isLoading.set(true);
+        this.error.set(null);
+
+        this.fileService.selectFolders('Select Service Order Folder').subscribe({
+            next: async (filePaths) => {
+                if (!filePaths || filePaths.length === 0) {
+                    this.isLoading.set(false);
+                    return;
+                }
+
+                const folderPath = filePaths[0];
+                this.fileService.readDirDetailed(folderPath).subscribe({
+                    next: async (entries) => {
+                        const directories = entries.filter(e => e.isDirectory);
+                        for (const dir of directories) {
+                            await this.addFolderToServiceOrder(dir.path);
+                        }
+                        this.isLoading.set(false);
+                    },
+                    error: (err) => {
+                        console.error('Failed to read service order folder:', err);
+                        this.error.set(err instanceof Error ? err.message : String(err));
+                        this.isLoading.set(false);
+                    }
+                });
+            },
+            error: (err) => {
+                console.error('Failed to select service order folder:', err);
+                this.error.set(err instanceof Error ? err.message : String(err));
+                this.isLoading.set(false);
+            }
+        });
+    }
+
+    public async addFolderToServiceOrder(folderPath: string): Promise<void> {
+        // Check if already in service order
+        if (this.serviceOrder().some(item => item.path === folderPath)) {
+            return;
+        }
+
+        // Load metadata
+        const metadata = await this.electron.invoke('service-order:loadSongMetadata', folderPath);
+
+        // Load schedule.json if present
+        try {
+            const scheduleData = await this.electron.invoke('service-order:loadSchedule', folderPath);
+            if (scheduleData && scheduleData.events) {
+                console.log(`[ServiceOrder] Loaded schedule events from ${folderPath}`, scheduleData.events);
+                this.folderScheduleEvents.update(events => [
+                    ...events, 
+                    ...scheduleData.events.map((e: any) => ({...e, servicePath: folderPath}))
+                ]);
+            }
+        } catch (e) {
+            console.error('[ServiceOrder] Failed to load schedule.json:', e);
+        }
+
+        // Auto-Ingest if song-map.json is missing
+        if (metadata.type === 'song' && metadata.hasAudio) {
+            const pathSep = folderPath.includes('\\') ? '\\' : '/';
+            const xmlPath = `${folderPath}${pathSep}song-map.json`;
+            const hasXml = await this.electron.invoke('fs:exists', xmlPath);
+            
+            if (!hasXml) {
+                console.log(`[ServiceOrder] song-map.json missing. Triggering auto-ingestion for ${folderPath}`);
+                try {
+                    await this.electron.invoke('python:processSongFolder', folderPath, false);
+                } catch (e) {
+                    console.error(`[ServiceOrder] Auto-ingestion failed:`, e);
+                }
+            }
+        }
+
+        this.serviceOrder.update(order => {
+            const newOrder = [...order, metadata];
+            // Sort to ensure sequential folders stay ordered
+            return newOrder.sort((a, b) => a.name.localeCompare(b.name));
+        });
+
+        // Auto-preload if it's a song
+        if (metadata.type === 'song' && metadata.hasAudio) {
+            this.preloadSong(metadata);
+        }
+    }
+
+    async refreshCurrentItem(): Promise<void> {
+        this.isLoading.set(true);
+        try {
+            // Clear all existing folder schedules
+            this.folderScheduleEvents.set([]);
+            
+            // Reload schedule.json for all items
+            for (const item of this.serviceOrder()) {
+                try {
+                    const scheduleData = await this.electron.invoke('service-order:loadSchedule', item.path);
+                    if (scheduleData && scheduleData.events) {
+                        console.log(`[ServiceOrder] Reloaded schedule events from ${item.path}`);
+                        this.folderScheduleEvents.update(events => [
+                            ...events, 
+                            ...scheduleData.events.map((e: any) => ({...e, servicePath: item.path}))
+                        ]);
+                    }
+                } catch (e) {
+                    console.error(`[ServiceOrder] Failed to reload schedule.json for ${item.path}:`, e);
+                }
+            }
+
+            // Reload song-map.json for the current song if any
+            const current = this.currentSong();
+            const index = this.currentSongIndex();
+            if (current) {
+                await this.loadItem(current, index);
+            }
+        } finally {
+            this.isLoading.set(false);
+        }
     }
 
     async preloadSong(item: ServiceOrderItem): Promise<void> {
@@ -185,6 +320,7 @@ export class ServiceOrderService {
                 const sep = item.path.includes('/') ? '/' : '\\';
                 const audioFiles = fileNames
                     .filter((f: string) => audioExtensions.some(ext => f.toLowerCase().endsWith(ext)))
+                    .filter((f: string) => !f.toLowerCase().includes('reference'))
                     .map((f: string) => `${item.path}${sep}${f}`);
 
                 if (audioFiles.length > 0) {
@@ -227,6 +363,16 @@ export class ServiceOrderService {
     async loadItem(item: ServiceOrderItem, index: number): Promise<void> {
         this.currentSongIndex.set(index);
         this.isLoading.set(true);
+
+        // Execute onSelect triggers for this folder
+        const folderEvents = this.folderScheduleEvents();
+        if (folderEvents && folderEvents.length > 0) {
+            folderEvents.forEach(event => {
+                if (event.trigger === 'onSelect' && event.servicePath === item.path) {
+                    this.executeFolderEvent(event);
+                }
+            });
+        }
 
         try {
             // 1. Tell audio engine to load tracks (and set as active)
@@ -417,5 +563,60 @@ export class ServiceOrderService {
             if (!lyrics) return `[${header}]`;
             return `[${header}]\n${lyrics}`;
         }).join('\n\n');
+    }
+    async executeFolderEvent(event: any) {
+        console.log(`[ServiceOrder] Triggering folder event: ${event.title || event.type}`);
+        
+        // Stop any running slide loops if a new event happens
+        this.slideService.stopSlideLoop();
+
+        try {
+            switch(event.type) {
+                case 'audio':
+                case 'media':
+                    if (event.url) {
+                        this.electron.invoke('shell:openExternal', event.url);
+                    }
+                    break;
+                case 'youtube':
+                    if (event.url) {
+                        this.electron.emit('display-youtube-slide', { url: event.url });
+                    }
+                    break;
+                case 'slides':
+                case 'presentation':
+                    if (event.path && event.servicePath) {
+                        console.log(`[ServiceOrder] Loading slides: ${event.path}`);
+                        const path = await this.electron.invoke('path:join', event.servicePath, event.path);
+                        this.slideService.loadFromFolder(path).subscribe(() => {
+                            if (event.loop) {
+                                const intervalMs = event.loopInterval || 10000;
+                                console.log(`[ServiceOrder] Starting slide loop with interval ${intervalMs}ms`);
+                                this.slideService.startSlideLoop(intervalMs);
+                            }
+                        });
+                    }
+                    break;
+                case 'midi':
+                    if (event.note !== undefined) {
+                        this.electron.invoke('midi:sendNote', event.channel || 0, event.note, event.velocity || 127, event.duration || 500);
+                    }
+                    break;
+                case 'macro':
+                    if (event.macroId) {
+                        const macro = this.macros.find(m => m.id === event.macroId);
+                        if (macro) {
+                            await this.electron.invoke('execute_macro', {
+                                macroId: macro.id,
+                                macroAction: macro.action,
+                                midiNote: (macro as any).midiNote
+                            });
+                        }
+                    }
+                    break;
+            }
+        } catch (error) {
+            console.error(`[ServiceOrder] Failed to execute folder event ${event.title}:`, error);
+        }
     }
 }

@@ -43,6 +43,10 @@ export class AudienceScreenComponent implements OnInit, OnDestroy, AfterViewInit
     @ViewChild('backgroundVideoRef') backgroundVideoRef!: ElementRef<HTMLVideoElement>;
 
     currentContent = computed(() => this.transition.currentContent());
+    isTransitioning = computed(() => this.transition.isTransitioning());
+    opacity = computed(() => this.transition.contentOpacity());
+    transitionTime = computed(() => this.transition.transitionTimeMs());
+    
     backgroundVideo: string | null = null;
     isLooping: boolean = false;
     player: any = null;
@@ -167,7 +171,7 @@ export class AudienceScreenComponent implements OnInit, OnDestroy, AfterViewInit
                 type: 'image',
                 path: isUrl ? path : this.electronService.convertFileSrc(path),
                 name: payload.name
-            });
+            }, 800); // 800ms fade for images
         });
         if (ulImage) this.unlisteners.push(ulImage);
 
@@ -391,7 +395,5 @@ export class AudienceScreenComponent implements OnInit, OnDestroy, AfterViewInit
         return c?.type === 'image' ? c.name || null : null;
     }
 
-    get opacity(): number {
-        return this.transition.contentOpacity();
-    }
+
 }

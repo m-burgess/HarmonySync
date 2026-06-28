@@ -19,11 +19,13 @@ export class LyricTransitionService {
     readonly currentContent = signal<TransitionContent | null>(null);
     readonly isTransitioning = signal<boolean>(false);
     readonly contentOpacity = signal<number>(1);
+    readonly transitionTimeMs = signal<number>(300);
 
     /**
      * Smoothly transition to new content
      */
-    async transitionTo(newContent: TransitionContent | null): Promise<void> {
+    async transitionTo(newContent: TransitionContent | null, customDurationMs?: number): Promise<void> {
+        const duration = customDurationMs || this.transitionDuration;
         if (this.isTransitioning()) {
             // If already transitioning, we could queue, 
             // but for lyrics, latest is usually best.
@@ -31,12 +33,13 @@ export class LyricTransitionService {
         }
 
         this.isTransitioning.set(true);
+        this.transitionTimeMs.set(duration);
 
         try {
             // 1. Fade out current content
             if (this.currentContent() !== null) {
                 this.contentOpacity.set(0);
-                await this.wait(this.transitionDuration);
+                await this.wait(duration);
             }
 
             // 2. Switch content
@@ -45,9 +48,9 @@ export class LyricTransitionService {
             // 3. Fade in new content
             if (newContent !== null) {
                 // Ensure DOM has a moment to update if needed
-                await this.wait(20);
+                await this.wait(50);
                 this.contentOpacity.set(1);
-                await this.wait(this.transitionDuration);
+                await this.wait(duration);
             }
 
         } catch (error) {
