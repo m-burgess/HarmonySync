@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file>src/mobile/qml/main_mobile.qml</file>
+        <file>src/mobile/qml/views/StageLyricsView.qml</file>
+    </qresource>
+</RCC>

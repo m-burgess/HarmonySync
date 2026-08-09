@@ -8,6 +8,10 @@ dist-electron/
 target/
 apps/*/dist/
 packages/*/dist/
+build/
+build_asan/
+build_*/
+cmake-build-*/
 
 # Dependencies
 node_modules/

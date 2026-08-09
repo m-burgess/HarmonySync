@@ -1,59 +1,29 @@
 #!/bin/bash
+set -e
 
-# HarmonySync Full Repository Clean & Build Script
-# This script performs a clean rebuild of all apps and packages
+# HarmonySync C++ & Qt Clean & Build Script
 # Usage: ./dev-rebuild.sh
 
-set -e  # Exit on error
-
 echo "=========================================="
-echo "HarmonySync Full Repository Clean & Build"
+echo "HarmonySync C++ / Qt Rebuild"
 echo "=========================================="
 echo ""
 
-# Step 1: Clean all dist folders
-echo "Step 1: Cleaning all dist folders..."
-echo "  - Cleaning apps/electron-app..."
-rm -rf apps/electron-app/dist
+export PATH="$HOME/.local/bin:$PATH"
 
-echo "  - Cleaning apps/renderer..."
-rm -rf apps/renderer/dist
+echo "Step 1: Removing build directory..."
+rm -rf build
 
-echo "  - Cleaning apps/control-app..."
-rm -rf apps/control-app/dist
+echo "Step 2: Reconfiguring CMake build environment..."
+cmake -B build -DCMAKE_BUILD_TYPE=Debug
 
-echo "  - Cleaning apps/mobile-app..."
-rm -rf apps/mobile-app/dist
+echo "Step 3: Compiling C++ engine & targets..."
+cmake --build build
 
-echo "  - Cleaning harmonysync services..."
-rm -rf harmonysync-audio-service/dist
-rm -rf harmonysync-image-service/dist
-rm -rf harmonysync-video-service/dist
-rm -rf harmonysync-folder-service/dist
-rm -rf apps/harmonysync-audio-service/dist
-rm -rf apps/harmonysync-image-service/dist
-rm -rf apps/harmonysync-video-service/dist
-rm -rf apps/harmonysync-folder-service/dist
-
-echo "  - Cleaning packages/core..."
-rm -rf packages/core/dist
-
-echo "  - Cleaning packages/shared-logic..."
-rm -rf packages/shared-logic/dist
-
-echo "  - Cleaning packages/ui..."
-rm -rf packages/ui/dist
-
-echo "✅ All dist folders cleaned"
-echo ""
-
-# Step 2: Build all packages and apps
-echo "Step 2: Building all packages and applications..."
-pnpm run build
-echo "✅ Build complete"
-echo ""
+echo "Step 4: Running CTest test suite..."
+ctest --test-dir build --output-on-failure
 
 echo "=========================================="
-echo "Clean & Build Complete!"
-echo "Run './dev.sh' to start the dev server"
+echo "✅ Clean Rebuild & Verification Complete!"
+echo "Run './dev.sh' to launch HarmonySync"
 echo "=========================================="

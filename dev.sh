@@ -1,15 +1,24 @@
 #!/bin/bash
+set -e
 
-# HarmonySync Development Server Script
+# HarmonySync C++ & Qt Development Server Script
 # Usage: ./dev.sh
 
 echo "=========================================="
-echo "HarmonySync Full Stack Development Server"
+echo "HarmonySync C++20 / Qt 6 Engine"
 echo "=========================================="
 echo ""
 
-echo "Building Go Media Engine..."
-(cd apps/media-engine && go build -o harmonysync-media-engine)
+export PATH="$HOME/.local/bin:$PATH"
 
-echo "Starting Desktop App (Electron & Angular)..."
-pnpm run dev
+if [ ! -d "build" ]; then
+    echo "Configuring CMake build environment..."
+    cmake -B build -DCMAKE_BUILD_TYPE=Debug
+fi
+
+echo "Compiling C++ engine & running test suite..."
+cmake --build build
+ctest --test-dir build --output-on-failure
+
+echo "Launching HarmonySync executable..."
+./build/harmonysync_app

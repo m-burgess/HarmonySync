@@ -1,0 +1,129 @@
+# Test Models
+add_executable(test_models test_models.cpp)
+target_link_libraries(test_models PRIVATE harmonysync_core)
+add_test(NAME test_models COMMAND test_models)
+
+# Test Config Service
+add_executable(test_config_service test_config_service.cpp)
+target_link_libraries(test_config_service PRIVATE harmonysync_core)
+add_test(NAME test_config_service COMMAND test_config_service)
+
+# Test Folder Service
+add_executable(test_folder_service test_folder_service.cpp)
+target_link_libraries(test_folder_service PRIVATE harmonysync_core)
+add_test(NAME test_folder_service COMMAND test_folder_service)
+
+# Test Audio Engine & Mixer
+add_executable(test_audio_engine test_audio_engine.cpp)
+target_link_libraries(test_audio_engine PRIVATE harmonysync_media harmonysync_core)
+add_test(NAME test_audio_engine COMMAND test_audio_engine)
+
+# Test ViewModels
+add_executable(test_viewmodels test_viewmodels.cpp)
+target_link_libraries(test_viewmodels PRIVATE harmonysync_viewmodels harmonysync_media harmonysync_core)
+add_test(NAME test_viewmodels COMMAND test_viewmodels)
+
+# Test Display Manager
+add_executable(test_display_manager test_display_manager.cpp)
+target_link_libraries(test_display_manager PRIVATE harmonysync_viewmodels harmonysync_core)
+add_test(NAME test_display_manager COMMAND test_display_manager)
+
+# Test Audio DSP
+add_executable(test_audio_dsp test_audio_dsp.cpp)
+target_link_libraries(test_audio_dsp PRIVATE harmonysync_media harmonysync_core)
+add_test(NAME test_audio_dsp COMMAND test_audio_dsp)
+
+# Test Network Services
+add_executable(test_network_services test_network_services.cpp)
+target_link_libraries(test_network_services PRIVATE harmonysync_core)
+add_test(NAME test_network_services COMMAND test_network_services)
+
+# Test Automation
+add_executable(test_automation test_automation.cpp)
+target_link_libraries(test_automation PRIVATE harmonysync_media harmonysync_core)
+add_test(NAME test_automation COMMAND test_automation)
+
+# Test MIDI Hardware Integration
+add_executable(test_midi_hardware test_midi_hardware.cpp)
+target_link_libraries(test_midi_hardware PRIVATE harmonysync_viewmodels harmonysync_media harmonysync_core)
+add_test(NAME test_midi_hardware COMMAND test_midi_hardware)
+
+# Test Video Compositor & Presentation
+add_executable(test_video_compositor test_video_compositor.cpp)
+target_link_libraries(test_video_compositor PRIVATE harmonysync_viewmodels harmonysync_media harmonysync_core)
+add_test(NAME test_video_compositor COMMAND test_video_compositor)
+
+# Test Local Database & Fuzzy Search Index
+add_executable(test_local_database test_local_database.cpp)
+target_link_libraries(test_local_database PRIVATE harmonysync_core)
+add_test(NAME test_local_database COMMAND test_local_database)
+
+# Test Remote Control API
+add_executable(test_remote_api test_remote_api.cpp)
+target_link_libraries(test_remote_api PRIVATE harmonysync_core)
+add_test(NAME test_remote_api COMMAND test_remote_api)
+
+# Test Advanced Audio DSP (EQ & Compressor)
+add_executable(test_audio_dsp_advanced test_audio_dsp_advanced.cpp)
+target_link_libraries(test_audio_dsp_advanced PRIVATE harmonysync_viewmodels harmonysync_media harmonysync_core)
+add_test(NAME test_audio_dsp_advanced COMMAND test_audio_dsp_advanced)
+
+# Test Multi-Language Localization
+add_executable(test_localization test_localization.cpp)
+target_link_libraries(test_localization PRIVATE harmonysync_core)
+add_test(NAME test_localization COMMAND test_localization)
+
+# Test NDI Network Video Broadcast
+add_executable(test_ndi_broadcast test_ndi_broadcast.cpp)
+target_link_libraries(test_ndi_broadcast PRIVATE harmonysync_viewmodels harmonysync_media harmonysync_core)
+add_test(NAME test_ndi_broadcast COMMAND test_ndi_broadcast)
+
+# Test Cloud Sync & User Permissions
+add_executable(test_cloud_sync test_cloud_sync.cpp)
+target_link_libraries(test_cloud_sync PRIVATE harmonysync_viewmodels harmonysync_core)
+add_test(NAME test_cloud_sync COMMAND test_cloud_sync)
+
+# Test Enterprise Diagnostics & Auto-Update
+add_executable(test_diagnostics test_diagnostics.cpp)
+target_link_libraries(test_diagnostics PRIVATE harmonysync_core)
+add_test(NAME test_diagnostics COMMAND test_diagnostics)
+
+# Test Service Order Folder Scanner
+add_executable(test_service_order_folder_scanner test_service_order_folder_scanner.cpp)
+target_link_libraries(test_service_order_folder_scanner PRIVATE harmonysync_core)
+add_test(NAME test_service_order_folder_scanner COMMAND test_service_order_folder_scanner)
+
+# Test Setlist Folder Selection
+add_executable(test_setlist_folder_selection test_setlist_folder_selection.cpp)
+target_link_libraries(test_setlist_folder_selection PRIVATE harmonysync_viewmodels harmonysync_core)
+add_test(NAME test_setlist_folder_selection COMMAND test_setlist_folder_selection)
+
+# Test QML Service Reflow
+add_executable(test_qml_service_reflow test_qml_service_reflow.cpp)
+target_link_libraries(test_qml_service_reflow PRIVATE harmonysync_viewmodels harmonysync_core)
+add_test(NAME test_qml_service_reflow COMMAND test_qml_service_reflow)
+
+# Test App Settings Model & Storage
+add_executable(test_app_settings test_app_settings.cpp)
+target_link_libraries(test_app_settings PRIVATE harmonysync_core)
+add_test(NAME test_app_settings COMMAND test_app_settings)
+
+# Test Settings ViewModel
+add_executable(test_settings_viewmodel test_settings_viewmodel.cpp)
+target_link_libraries(test_settings_viewmodel PRIVATE harmonysync_viewmodels harmonysync_core)
+add_test(NAME test_settings_viewmodel COMMAND test_settings_viewmodel)
+
+# Test QML Settings Dialog
+add_executable(test_qml_settings_dialog test_qml_settings_dialog.cpp)
+target_link_libraries(test_qml_settings_dialog PRIVATE harmonysync_viewmodels harmonysync_core)
+add_test(NAME test_qml_settings_dialog COMMAND test_qml_settings_dialog)
+
+# Test Mobile API Client
+add_executable(test_mobile_api_client test_mobile_api_client.cpp)
+target_link_libraries(test_mobile_api_client PRIVATE harmonysync_core)
+add_test(NAME test_mobile_api_client COMMAND test_mobile_api_client)
+
+# Test Mobile ViewModels
+add_executable(test_mobile_viewmodels test_mobile_viewmodels.cpp)
+target_link_libraries(test_mobile_viewmodels PRIVATE harmonysync_viewmodels harmonysync_core)
+add_test(NAME test_mobile_viewmodels COMMAND test_mobile_viewmodels)
