@@ -1,9 +1,0 @@
-  File: harmonysync-media-engine
-  Size: 10125424  	Blocks: 19784      IO Block: 4096   regular file
-Device: 0,43	Inode: 413412      Links: 1
-Access: (0755/-rwxr-xr-x)  Uid: ( 1000/ burg316)   Gid: ( 1000/ burg316)
-Context: unconfined_u:object_r:user_home_t:s0
-Access: 2026-03-12 14:21:05.514139328 -0500
-Modify: 2026-03-12 14:21:05.522222002 -0500
-Change: 2026-03-12 14:21:05.525139432 -0500
- Birth: 2026-03-12 14:21:05.514139328 -0500

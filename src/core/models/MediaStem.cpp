@@ -9,6 +9,7 @@ struct MediaStem::Impl {
     std::string name;
     std::string filePath;
     float volume{1.0f};
+    float pan{0.0f};
     bool muted{false};
     bool solo{false};
     int pitchShiftSemitones{0};
@@ -62,6 +63,10 @@ float MediaStem::volume() const noexcept {
     return m_impl->volume;
 }
 
+float MediaStem::pan() const noexcept {
+    return m_impl->pan;
+}
+
 bool MediaStem::isMuted() const noexcept {
     return m_impl->muted;
 }
@@ -76,6 +81,10 @@ int MediaStem::pitchShiftSemitones() const noexcept {
 
 void MediaStem::setVolume(float newVolume) noexcept {
     m_impl->volume = std::clamp(newVolume, 0.0f, 1.0f);
+}
+
+void MediaStem::setPan(float newPan) noexcept {
+    m_impl->pan = std::clamp(newPan, -1.0f, 1.0f);
 }
 
 void MediaStem::setMuted(bool muted) noexcept {

@@ -83,6 +83,13 @@ bool SetlistViewModel::isLoading() const noexcept {
     return m_impl->isLoading;
 }
 
+std::vector<Core::MediaStem> SetlistViewModel::stemsAt(int index) const {
+    if (index >= 0 && index < itemCount()) {
+        return m_impl->serviceOrder.songs()[static_cast<size_t>(index)].stems();
+    }
+    return {};
+}
+
 #ifdef HARMONYSYNC_QT_AVAILABLE
 bool SetlistViewModel::openServiceOrderRootFolder(const QString& rootFolderPath) {
     std::string pathStr = rootFolderPath.toStdString();

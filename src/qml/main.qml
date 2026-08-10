@@ -98,36 +98,31 @@ ApplicationWindow {
             SplitView.preferredWidth: 340
         }
 
-        // Center / Right Panes: SplitView with Lyrics, Slide Output, and Audio Mixer
-        SplitView {
-            orientation: Qt.Vertical
+        // Center Pane: Row with Lyrics and Slide Output
+        RowLayout {
             SplitView.fillWidth: true
+            SplitView.fillHeight: true
+            spacing: 10
 
-            // Row for Lyrics & Slide Preview (Responsive reflow)
-            RowLayout {
-                SplitView.fillWidth: true
-                SplitView.fillHeight: true
-                spacing: 10
-
-                // LyricsPanel shown when song map is active
-                LyricsPanel {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    visible: setlistViewModel ? setlistViewModel.hasActiveSongMap : true
-                }
-
-                SlideDisplayPanel {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                }
+            // LyricsPanel shown when song map is active
+            LyricsPanel {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                visible: setlistViewModel ? setlistViewModel.hasActiveSongMap : true
             }
 
-            // Bottom Pane: Stem Mixer Panel (Collapses dynamically when no audio stems present)
-            StemMixerPanel {
-                SplitView.fillWidth: true
-                SplitView.preferredHeight: 260
-                visible: setlistViewModel ? setlistViewModel.hasActiveSongMap : false
+            SlideDisplayPanel {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
             }
+        }
+
+        // Right Pane: Stem Mixer Panel (Collapses dynamically when no audio stems present)
+        StemMixerPanel {
+            SplitView.preferredWidth: 300
+            SplitView.minimumWidth: 260
+            SplitView.fillHeight: true
+            visible: setlistViewModel ? setlistViewModel.hasActiveSongMap : false
         }
     }
 

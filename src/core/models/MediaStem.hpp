@@ -27,12 +27,14 @@ public:
     [[nodiscard]] const std::string& name() const noexcept;
     [[nodiscard]] const std::string& filePath() const noexcept;
     [[nodiscard]] float volume() const noexcept;
+    [[nodiscard]] float pan() const noexcept;
     [[nodiscard]] bool isMuted() const noexcept;
     [[nodiscard]] bool isSolo() const noexcept;
     [[nodiscard]] int pitchShiftSemitones() const noexcept;
 
     // Setters
     void setVolume(float newVolume) noexcept;
+    void setPan(float newPan) noexcept;
     void setMuted(bool muted) noexcept;
     void setSolo(bool solo) noexcept;
     void setPitchShiftSemitones(int semitones) noexcept;

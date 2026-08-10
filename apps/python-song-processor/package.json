@@ -1,8 +1,0 @@
-{
-  "name": "@harmonysync/python-song-processor",
-  "version": "1.0.0",
-  "private": true,
-  "scripts": {
-    "test": "PYTHONPATH=. venv/bin/pytest tests"
-  }
-}

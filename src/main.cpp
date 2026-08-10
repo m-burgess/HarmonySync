@@ -17,6 +17,11 @@
 int main(int argc, char* argv[]) {
     std::cout << "Starting HarmonySync C++20 / Qt6 Application..." << std::endl;
 
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    qputenv("QT_QUICK_CONTROLS_STYLE", "Basic");
+    QGuiApplication app(argc, argv);
+#endif
+
     auto folderService = std::make_shared<HarmonySync::Core::FolderService>();
     auto audioEngine = std::make_shared<HarmonySync::Media::AudioEngine>();
 
@@ -26,8 +31,6 @@ int main(int argc, char* argv[]) {
     HarmonySync::ViewModels::SettingsViewModel settingsViewModel;
 
 #ifdef HARMONYSYNC_QT_AVAILABLE
-    qputenv("QT_QUICK_CONTROLS_STYLE", "Basic");
-    QGuiApplication app(argc, argv);
 
     QQmlApplicationEngine engine;
     QQmlContext* context = engine.rootContext();
@@ -57,6 +60,18 @@ int main(int argc, char* argv[]) {
             }
         },
         Qt::QueuedConnection);
+
+    // Bind Setlist selection to AudioMixer Dual-Deck preloading
+    QObject::connect(
+        &setlistViewModel,
+        &HarmonySync::ViewModels::SetlistViewModel::currentSongIndexChanged,
+        &app,
+        [&setlistViewModel, &audioMixerViewModel](int index) {
+            if (index >= 0) {
+                auto stems = setlistViewModel.stemsAt(index);
+                audioMixerViewModel.loadNextSongStems(stems);
+            }
+        });
 
     engine.load(url);
 

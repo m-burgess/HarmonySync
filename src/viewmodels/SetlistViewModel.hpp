@@ -51,12 +51,19 @@ public:
 
     [[nodiscard]] int itemCount() const noexcept;
     [[nodiscard]] int currentSongIndex() const noexcept;
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    Q_INVOKABLE void setCurrentSongIndex(int index);
+#else
     void setCurrentSongIndex(int index);
+#endif
 
     [[nodiscard]] bool hasActiveSongMap() const noexcept;
     [[nodiscard]] bool isLoading() const noexcept;
 
     // Commands callable from QML View
+    // C++ strictly typed methods
+    [[nodiscard]] std::vector<Core::MediaStem> stemsAt(int index) const;
+
 #ifdef HARMONYSYNC_QT_AVAILABLE
     Q_INVOKABLE bool openServiceOrderRootFolder(const QString& rootFolderPath);
     Q_INVOKABLE bool addSongFolder(const QString& folderPath);

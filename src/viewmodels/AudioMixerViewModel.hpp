@@ -28,6 +28,7 @@ class AudioMixerViewModel
     Q_PROPERTY(double positionSeconds READ positionSeconds NOTIFY positionChanged)
     Q_PROPERTY(double durationSeconds READ durationSeconds NOTIFY durationChanged)
     Q_PROPERTY(int loadedStemCount READ loadedStemCount NOTIFY stemCountChanged)
+    Q_PROPERTY(float crossfadePosition READ crossfadePosition WRITE setCrossfadePosition NOTIFY crossfadePositionChanged)
 #endif
 
 public:
@@ -48,9 +49,30 @@ public:
     [[nodiscard]] double positionSeconds() const noexcept;
     [[nodiscard]] double durationSeconds() const noexcept;
     [[nodiscard]] int loadedStemCount() const noexcept;
+    [[nodiscard]] float crossfadePosition() const noexcept;
 
     // Commands
     bool loadSongStems(const std::vector<Core::MediaStem>& stems);
+    bool loadNextSongStems(const std::vector<Core::MediaStem>& stems);
+    
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    Q_INVOKABLE void setCrossfadePosition(float position) noexcept;
+    Q_INVOKABLE void finalizeCrossfade();
+    Q_INVOKABLE void play();
+    Q_INVOKABLE void pause();
+    Q_INVOKABLE void stop();
+    Q_INVOKABLE void seek(double position);
+    Q_INVOKABLE void setStemVolume(int stemIndex, float volume);
+    Q_INVOKABLE void toggleStemMute(int stemIndex);
+    Q_INVOKABLE void toggleStemSolo(int stemIndex);
+
+    Q_INVOKABLE QString stemName(int index) const;
+    Q_INVOKABLE float stemVolume(int index) const;
+    Q_INVOKABLE bool stemIsMuted(int index) const;
+    Q_INVOKABLE bool stemIsSoloed(int index) const;
+#else
+    void setCrossfadePosition(float position) noexcept;
+    void finalizeCrossfade();
     void play();
     void pause();
     void stop();
@@ -58,6 +80,12 @@ public:
     void setStemVolume(int stemIndex, float volume);
     void toggleStemMute(int stemIndex);
     void toggleStemSolo(int stemIndex);
+
+    std::string stemName(int index) const;
+    float stemVolume(int index) const;
+    bool stemIsMuted(int index) const;
+    bool stemIsSoloed(int index) const;
+#endif
 
 #ifdef HARMONYSYNC_QT_AVAILABLE
 signals:
@@ -67,6 +95,9 @@ signals:
     void positionChanged(double position);
     void durationChanged(double duration);
     void stemCountChanged(int count);
+    void crossfadePositionChanged(float position);
+    void nextSongLoaded();
+    void stemStateChanged(int index);
 #endif
 
 private:

@@ -9,6 +9,32 @@ Rectangle {
     border.width: 1
     radius: 6
 
+    Connections {
+        target: audioMixerViewModel
+        function onNextSongLoaded() {
+            if (audioMixerViewModel.isPlaying) {
+                crossfadeAnim.start()
+            } else {
+                audioMixerViewModel.setCrossfadePosition(1.0)
+                audioMixerViewModel.finalizeCrossfade()
+                audioMixerViewModel.play()
+            }
+        }
+    }
+
+    NumberAnimation {
+        id: crossfadeAnim
+        target: audioMixerViewModel
+        property: "crossfadePosition"
+        from: 0.0
+        to: 1.0
+        duration: 3000
+        easing.type: Easing.InOutQuad
+        onFinished: {
+            audioMixerViewModel.finalizeCrossfade()
+        }
+    }
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 14
@@ -160,6 +186,86 @@ Rectangle {
                 font.pixelSize: 12
                 font.bold: true
                 Layout.preferredWidth: 36
+            }
+        }
+
+        Rectangle {
+            Layout.fillWidth: true
+            height: 1
+            color: "#27272a"
+        }
+
+        // Individual Stem Faders
+        ScrollView {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            clip: true
+            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+            ScrollBar.vertical.policy: ScrollBar.AsNeeded
+
+            ColumnLayout {
+                width: parent.width
+                spacing: 8
+
+                Repeater {
+                    id: stemRepeater
+                    model: audioMixerViewModel ? audioMixerViewModel.loadedStemCount : 0
+                    
+                    delegate: RowLayout {
+                        width: parent ? parent.width : 0
+                        spacing: 10
+
+                        property bool isMuted: audioMixerViewModel ? audioMixerViewModel.stemIsMuted(index) : false
+                        property real vol: audioMixerViewModel ? audioMixerViewModel.stemVolume(index) : 1.0
+
+                        Connections {
+                            target: audioMixerViewModel
+                            function onStemStateChanged(idx) {
+                                if (idx === index) {
+                                    isMuted = audioMixerViewModel.stemIsMuted(index)
+                                    vol = audioMixerViewModel.stemVolume(index)
+                                }
+                            }
+                        }
+
+                        Button {
+                            text: audioMixerViewModel ? audioMixerViewModel.stemName(index) : "Stem"
+                            font.pixelSize: 11
+                            font.bold: true
+                            Layout.preferredWidth: 100
+                            background: Rectangle {
+                                color: isMuted ? "#7f1d1d" : "#27272a"
+                                border.color: isMuted ? "#ef4444" : "#3f3f46"
+                                radius: 4
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                            }
+                            contentItem: Text { 
+                                text: parent.text
+                                color: "#f4f4f5"
+                                font: parent.font
+                                elide: Text.ElideRight
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter 
+                            }
+                            onClicked: { if (audioMixerViewModel) audioMixerViewModel.toggleStemMute(index) }
+                        }
+
+                        Slider {
+                            Layout.fillWidth: true
+                            from: 0.0
+                            to: 1.0
+                            value: vol
+                            onMoved: { if (audioMixerViewModel) audioMixerViewModel.setStemVolume(index, value) }
+                        }
+
+                        Label {
+                            text: Math.round(vol * 100) + "%"
+                            color: "#a1a1aa"
+                            font.pixelSize: 11
+                            Layout.preferredWidth: 30
+                        }
+                    }
+                }
             }
         }
     }

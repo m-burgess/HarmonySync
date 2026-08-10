@@ -82,6 +82,32 @@ void testAudioMixerViewModel() {
     std::cout << "[PASS] testAudioMixerViewModel passed." << std::endl;
 }
 
+void testAudioMixerCrossfading() {
+    std::cout << "[TEST] Running testAudioMixerCrossfading..." << std::endl;
+    AudioMixerViewModel vm;
+
+    MediaStem s1("1", "Drums", "d.wav");
+    vm.loadSongStems({s1});
+    vm.play();
+    assert(vm.isPlaying() == true);
+    assert(vm.crossfadePosition() == 0.0f);
+
+    MediaStem s2("2", "Acoustic", "a.wav");
+    vm.loadNextSongStems({s2});
+    
+    vm.setCrossfadePosition(0.5f);
+    assert(vm.crossfadePosition() == 0.5f);
+    
+    // Simulate end of crossfade
+    vm.setCrossfadePosition(1.0f);
+    vm.finalizeCrossfade();
+    
+    // After finalize, crossfade is reset, and next deck is now active
+    assert(vm.crossfadePosition() == 0.0f);
+    
+    std::cout << "[PASS] testAudioMixerCrossfading passed." << std::endl;
+}
+
 void testSlideDisplayViewModel() {
     std::cout << "[TEST] Running testSlideDisplayViewModel..." << std::endl;
     SlideDisplayViewModel vm;
@@ -127,6 +153,7 @@ int main() {
     try {
         testSetlistViewModel();
         testAudioMixerViewModel();
+        testAudioMixerCrossfading();
         testSlideDisplayViewModel();
         std::cout << "\nALL VIEWMODEL UNIT TESTS PASSED (100% Success)" << std::endl;
         return EXIT_SUCCESS;

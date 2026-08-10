@@ -18,3 +18,7 @@ target_include_directories(harmonysync_media PUBLIC
 )
 
 target_link_libraries(harmonysync_media PUBLIC harmonysync_core)
+
+if(Qt6_FOUND)
+    target_link_libraries(harmonysync_media PRIVATE Qt6::Core Qt6::Multimedia)
+endif()
