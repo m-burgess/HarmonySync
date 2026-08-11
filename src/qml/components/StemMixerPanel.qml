@@ -1,13 +1,23 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import "../theme"
 
 Rectangle {
     id: root
-    color: "#1e1e24"
-    border.color: "#33333d"
+    color: Theme.backgroundCard
+    border.color: Theme.borderDark
     border.width: 1
-    radius: 6
+    radius: Theme.borderRadius
+
+    function formatTrackName(name) {
+        if (!name) return "";
+        var upperName = name.toUpperCase();
+        if (upperName.indexOf("CLICK") !== -1) {
+            return "CLICK";
+        }
+        return upperName;
+    }
 
     Connections {
         target: audioMixerViewModel
@@ -37,29 +47,34 @@ Rectangle {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 14
-        spacing: 12
+        anchors.margins: 16
+        spacing: 16
 
         // Mixer Header
         RowLayout {
             Layout.fillWidth: true
-            spacing: 8
+            spacing: 12
 
             Label {
-                text: "🎛️ Stem Mixer & Audio Engine"
-                font.pixelSize: 15
+                text: "AUDIO MIXER"
+                font.family: Theme.fontFamily
+                font.pixelSize: 13
                 font.bold: true
-                color: "#f4f4f5"
+                color: Theme.textPrimary
+                font.letterSpacing: 1.2
                 Layout.fillWidth: true
+                fontSizeMode: Text.Fit
+                minimumPixelSize: 9
+                elide: Text.ElideRight
             }
 
             // Pitch Shift Semitones Pill Badge
             Rectangle {
-                width: 130
+                width: 90
                 height: 24
                 radius: 12
-                color: "#1e1b4b"
-                border.color: "#6366f1"
+                color: Theme.backgroundDark
+                border.color: Theme.borderDark
                 border.width: 1
 
                 RowLayout {
@@ -67,8 +82,9 @@ Rectangle {
                     spacing: 6
 
                     Text {
-                        text: "KEY: " + (audioMixerViewModel ? (audioMixerViewModel.pitchShiftSemitones >= 0 ? "+" : "") + audioMixerViewModel.pitchShiftSemitones + " ST" : "0 ST")
-                        color: "#a5b4fc"
+                        text: "KEY: " + (audioMixerViewModel ? (audioMixerViewModel.pitchShiftSemitones >= 0 ? "+" : "") + audioMixerViewModel.pitchShiftSemitones : "0")
+                        color: Theme.accentPrimary
+                        font.family: Theme.fontFamily
                         font.pixelSize: 11
                         font.bold: true
                     }
@@ -77,31 +93,33 @@ Rectangle {
 
             Button {
                 id: pitchDownBtn
-                text: "♭ -1"
+                text: "-1"
                 font.pixelSize: 11
                 font.bold: true
+                font.family: Theme.fontFamily
                 background: Rectangle {
-                    color: pitchDownBtn.hovered ? "#3730a3" : "#27272a"
-                    border.color: "#3f3f46"
+                    color: pitchDownBtn.hovered ? Theme.borderDark : "transparent"
+                    border.color: Theme.borderDark
                     radius: 4
-                    Behavior on color { ColorAnimation { duration: 150 } }
+                    Behavior on color { ColorAnimation { duration: Theme.animDuration } }
                 }
-                contentItem: Text { text: pitchDownBtn.text; color: "#f4f4f5"; font: pitchDownBtn.font; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                contentItem: Text { text: pitchDownBtn.text; color: Theme.textPrimary; font: pitchDownBtn.font; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: { if (audioMixerViewModel) audioMixerViewModel.pitchShiftSemitones -= 1 }
             }
 
             Button {
                 id: pitchUpBtn
-                text: "♯ +1"
+                text: "+1"
                 font.pixelSize: 11
                 font.bold: true
+                font.family: Theme.fontFamily
                 background: Rectangle {
-                    color: pitchUpBtn.hovered ? "#3730a3" : "#27272a"
-                    border.color: "#3f3f46"
+                    color: pitchUpBtn.hovered ? Theme.borderDark : "transparent"
+                    border.color: Theme.borderDark
                     radius: 4
-                    Behavior on color { ColorAnimation { duration: 150 } }
+                    Behavior on color { ColorAnimation { duration: Theme.animDuration } }
                 }
-                contentItem: Text { text: pitchUpBtn.text; color: "#f4f4f5"; font: pitchUpBtn.font; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                contentItem: Text { text: pitchUpBtn.text; color: Theme.textPrimary; font: pitchUpBtn.font; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: { if (audioMixerViewModel) audioMixerViewModel.pitchShiftSemitones += 1 }
             }
         }
@@ -109,93 +127,10 @@ Rectangle {
         Rectangle {
             Layout.fillWidth: true
             height: 1
-            color: "#27272a"
+            color: Theme.borderDark
         }
 
-        // Playback Transport Controls
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 10
-
-            Button {
-                id: playBtn
-                text: audioMixerViewModel && audioMixerViewModel.isPlaying ? "⏸ Pause" : "▶ Play"
-                font.pixelSize: 13
-                font.bold: true
-                background: Rectangle {
-                    color: (audioMixerViewModel && audioMixerViewModel.isPlaying) ? "#15803d" : (playBtn.hovered ? "#4f46e5" : "#6366f1")
-                    radius: 6
-                    Behavior on color { ColorAnimation { duration: 150 } }
-                }
-                contentItem: Text { text: playBtn.text; color: "#ffffff"; font: playBtn.font; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: {
-                    if (!audioMixerViewModel) return
-                    if (audioMixerViewModel.isPlaying) audioMixerViewModel.pause()
-                    else audioMixerViewModel.play()
-                }
-            }
-
-            Button {
-                id: stopBtn
-                text: "⏹ Stop"
-                font.pixelSize: 13
-                font.bold: true
-                background: Rectangle {
-                    color: stopBtn.hovered ? "#3f3f46" : "#27272a"
-                    border.color: "#3f3f46"
-                    radius: 6
-                    Behavior on color { ColorAnimation { duration: 150 } }
-                }
-                contentItem: Text { text: stopBtn.text; color: "#f4f4f5"; font: stopBtn.font; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: { if (audioMixerViewModel) audioMixerViewModel.stop() }
-            }
-
-            Slider {
-                id: posSlider
-                Layout.fillWidth: true
-                from: 0
-                to: audioMixerViewModel ? audioMixerViewModel.durationSeconds : 100
-                value: audioMixerViewModel ? audioMixerViewModel.positionSeconds : 0
-                onMoved: { if (audioMixerViewModel) audioMixerViewModel.seek(posSlider.value) }
-            }
-        }
-
-        // Master Volume Bar
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 10
-
-            Label {
-                text: "🔊 Master Volume"
-                color: "#a1a1aa"
-                font.pixelSize: 12
-            }
-
-            Slider {
-                id: volSlider
-                Layout.fillWidth: true
-                from: 0.0
-                to: 1.0
-                value: audioMixerViewModel ? audioMixerViewModel.masterVolume : 1.0
-                onMoved: { if (audioMixerViewModel) audioMixerViewModel.setMasterVolume(value) }
-            }
-
-            Label {
-                text: Math.round((audioMixerViewModel ? audioMixerViewModel.masterVolume : 1.0) * 100) + "%"
-                color: "#f4f4f5"
-                font.pixelSize: 12
-                font.bold: true
-                Layout.preferredWidth: 36
-            }
-        }
-
-        Rectangle {
-            Layout.fillWidth: true
-            height: 1
-            color: "#27272a"
-        }
-
-        // Individual Stem Faders
+        // Individual Stem Faders (Vertical Layout)
         ScrollView {
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -203,20 +138,24 @@ Rectangle {
             ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
             ScrollBar.vertical.policy: ScrollBar.AsNeeded
 
-            ColumnLayout {
+            Flow {
                 width: parent.width
-                spacing: 8
+                spacing: 16
 
                 Repeater {
                     id: stemRepeater
                     model: audioMixerViewModel ? audioMixerViewModel.loadedStemCount : 0
                     
-                    delegate: RowLayout {
-                        width: parent ? parent.width : 0
-                        spacing: 10
+                    delegate: Item {
+                        width: 56
+                        height: 180
 
                         property bool isMuted: audioMixerViewModel ? audioMixerViewModel.stemIsMuted(index) : false
                         property real vol: audioMixerViewModel ? audioMixerViewModel.stemVolume(index) : 1.0
+
+                        ColumnLayout {
+                            anchors.fill: parent
+                            spacing: 8
 
                         Connections {
                             target: audioMixerViewModel
@@ -228,45 +167,239 @@ Rectangle {
                             }
                         }
 
-                        Button {
-                            text: audioMixerViewModel ? audioMixerViewModel.stemName(index) : "Stem"
-                            font.pixelSize: 11
+                        // Track Name Label
+                        Label {
+                            text: audioMixerViewModel ? root.formatTrackName(audioMixerViewModel.stemName(index)) : "CH " + (index+1)
+                            font.family: Theme.fontFamily
+                            font.pixelSize: 10
                             font.bold: true
-                            Layout.preferredWidth: 100
-                            background: Rectangle {
-                                color: isMuted ? "#7f1d1d" : "#27272a"
-                                border.color: isMuted ? "#ef4444" : "#3f3f46"
-                                radius: 4
-                                Behavior on color { ColorAnimation { duration: 150 } }
-                            }
-                            contentItem: Text { 
-                                text: parent.text
-                                color: "#f4f4f5"
-                                font: parent.font
-                                elide: Text.ElideRight
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter 
-                            }
-                            onClicked: { if (audioMixerViewModel) audioMixerViewModel.toggleStemMute(index) }
+                            color: Theme.textSecondary
+                            Layout.alignment: Qt.AlignHCenter
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            horizontalAlignment: Text.AlignHCenter
                         }
 
+                        // Vertical Fader Slider
                         Slider {
-                            Layout.fillWidth: true
+                            id: vFader
+                            Layout.fillHeight: true
+                            Layout.alignment: Qt.AlignHCenter
+                            orientation: Qt.Vertical
                             from: 0.0
                             to: 1.0
                             value: vol
                             onMoved: { if (audioMixerViewModel) audioMixerViewModel.setStemVolume(index, value) }
+
+                            background: Rectangle {
+                                x: vFader.leftPadding + (vFader.availableWidth - width) / 2
+                                y: vFader.topPadding
+                                width: 6
+                                height: vFader.availableHeight
+                                radius: 3
+                                color: Theme.backgroundDark
+                                border.color: Theme.borderDark
+                                border.width: 1
+
+                                Rectangle {
+                                    width: parent.width
+                                    height: vFader.visualPosition * parent.height
+                                    color: Theme.accentPrimary
+                                    radius: 3
+                                    y: parent.height - height
+                                }
+                            }
+
+                            handle: Rectangle {
+                                x: vFader.leftPadding + (vFader.availableWidth - width) / 2
+                                y: vFader.topPadding + vFader.visualPosition * (vFader.availableHeight - height)
+                                width: 28
+                                height: 14
+                                radius: 3
+                                color: vFader.pressed ? Theme.accentHover : Theme.textSecondary
+                                border.color: Theme.borderDark
+                                border.width: 1
+                            }
                         }
 
-                        Label {
-                            text: Math.round(vol * 100) + "%"
-                            color: "#a1a1aa"
+                        // Mute Button
+                        Button {
+                            text: "M"
                             font.pixelSize: 11
-                            Layout.preferredWidth: 30
-                        }
-                    }
+                            font.bold: true
+                            font.family: Theme.fontFamily
+                            Layout.preferredWidth: 32
+                            Layout.preferredHeight: 24
+                            Layout.alignment: Qt.AlignHCenter
+                            background: Rectangle {
+                                color: isMuted ? Theme.danger : Theme.backgroundDark
+                                border.color: Theme.borderDark
+                                radius: 4
+                                Behavior on color { ColorAnimation { duration: Theme.animDuration } }
+                            }
+                            contentItem: Text { 
+                                text: parent.text
+                                color: isMuted ? "#ffffff" : Theme.textSecondary
+                                font: parent.font
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter 
+                            }
+                            onClicked: { if (audioMixerViewModel) audioMixerViewModel.toggleStemMute(index) }
+                        } // Button
+                        } // ColumnLayout
+                    } // Item
+                } // Repeater
+            } // Flow
+        } // ScrollView
+
+        Rectangle {
+            Layout.fillWidth: true
+            height: 1
+            color: Theme.borderDark
+        }
+
+        // Transport & Master Section
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Button {
+                id: playBtn
+                text: audioMixerViewModel && audioMixerViewModel.isPlaying ? "PAUSE" : "PLAY"
+                font.pixelSize: 11
+                font.bold: true
+                font.family: Theme.fontFamily
+                font.letterSpacing: 1
+                Layout.preferredWidth: 80
+                background: Rectangle {
+                    color: (audioMixerViewModel && audioMixerViewModel.isPlaying) ? Theme.accentPrimary : (playBtn.hovered ? Theme.borderDark : "transparent")
+                    border.color: (audioMixerViewModel && audioMixerViewModel.isPlaying) ? Theme.accentPrimary : Theme.borderDark
+                    radius: 4
+                    Behavior on color { ColorAnimation { duration: Theme.animDuration } }
+                }
+                contentItem: Text { 
+                    text: playBtn.text; 
+                    color: (audioMixerViewModel && audioMixerViewModel.isPlaying) ? "#ffffff" : Theme.textPrimary; 
+                    font: playBtn.font; 
+                    horizontalAlignment: Text.AlignHCenter; 
+                    verticalAlignment: Text.AlignVCenter 
+                }
+                onClicked: {
+                    if (!audioMixerViewModel) return
+                    if (audioMixerViewModel.isPlaying) audioMixerViewModel.pause()
+                    else audioMixerViewModel.play()
                 }
             }
+
+            Button {
+                id: stopBtn
+                text: "STOP"
+                font.pixelSize: 11
+                font.bold: true
+                font.family: Theme.fontFamily
+                font.letterSpacing: 1
+                Layout.preferredWidth: 80
+                background: Rectangle {
+                    color: stopBtn.hovered ? Theme.borderDark : "transparent"
+                    border.color: Theme.borderDark
+                    radius: 4
+                    Behavior on color { ColorAnimation { duration: Theme.animDuration } }
+                }
+                contentItem: Text { 
+                    text: stopBtn.text; 
+                    color: Theme.textPrimary; 
+                    font: stopBtn.font; 
+                    horizontalAlignment: Text.AlignHCenter; 
+                    verticalAlignment: Text.AlignVCenter 
+                }
+                onClicked: { if (audioMixerViewModel) audioMixerViewModel.stop() }
+            }
+
+            Item { width: 10 } // Spacer
+
+            Slider {
+                id: posSlider
+                Layout.fillWidth: true
+                from: 0
+                to: audioMixerViewModel ? audioMixerViewModel.durationSeconds : 100
+                value: audioMixerViewModel ? audioMixerViewModel.positionSeconds : 0
+                onMoved: { if (audioMixerViewModel) audioMixerViewModel.seek(posSlider.value) }
+                
+                background: Rectangle {
+                    x: posSlider.leftPadding
+                    y: posSlider.topPadding + (posSlider.availableHeight - height) / 2
+                    width: posSlider.availableWidth
+                    height: 4
+                    radius: 2
+                    color: Theme.backgroundDark
+                    border.color: Theme.borderDark
+
+                    Rectangle {
+                        width: posSlider.visualPosition * parent.width
+                        height: parent.height
+                        color: Theme.accentPrimary
+                        radius: 2
+                    }
+                }
+                handle: Rectangle {
+                    x: posSlider.leftPadding + posSlider.visualPosition * (posSlider.availableWidth - width)
+                    y: posSlider.topPadding + (posSlider.availableHeight - height) / 2
+                    width: 12
+                    height: 12
+                    radius: 6
+                    color: Theme.textPrimary
+                }
+            }
+
+            Label {
+                text: {
+                    if (!audioMixerViewModel) return "00:00"
+                    let pos = Math.floor(audioMixerViewModel.positionSeconds)
+                    let mins = Math.floor(pos / 60)
+                    let secs = pos % 60
+                    return mins.toString().padStart(2, '0') + ":" + secs.toString().padStart(2, '0')
+                }
+                color: Theme.textSecondary
+                font.pixelSize: 11
+                font.family: Theme.fontFamily
+            }
+        }
+
+    } // End of ColumnLayout
+
+    // Transposing Overlay
+    Rectangle {
+        anchors.fill: parent
+        color: "#d9000000" // Semi-transparent black
+        radius: Theme.borderRadius
+        visible: audioMixerViewModel ? audioMixerViewModel.isTransposing : false
+        z: 100
+
+        ColumnLayout {
+            anchors.centerIn: parent
+            spacing: 16
+
+            BusyIndicator {
+                Layout.alignment: Qt.AlignHCenter
+                running: parent.visible
+            }
+
+            Label {
+                text: "TRANSPOSING AUDIO..."
+                color: Theme.textPrimary
+                font.family: Theme.fontFamily
+                font.pixelSize: 12
+                font.bold: true
+                font.letterSpacing: 1
+                Layout.alignment: Qt.AlignHCenter
+            }
+        }
+        
+        MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.AllButtons
+            onWheel: (wheel) => { wheel.accepted = true }
         }
     }
 }

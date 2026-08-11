@@ -18,8 +18,7 @@ class AudioMixerDevice : public QIODevice {
 public:
     struct StemBuffer {
         Core::MediaStem stem;
-        std::vector<float> pcmData; // Interleaved stereo floats
-        AudioStreamInfo info;
+        MappedAudioFile mappedFile;
     };
 
     std::vector<StemBuffer> m_buffers;
@@ -64,10 +63,13 @@ public:
                 if (buf.stem.isMuted()) continue;
                 if (anySolo && !buf.stem.isSolo()) continue;
 
-                int sampleIdx = frameIdx * 2;
-                if (sampleIdx + 1 < static_cast<int>(buf.pcmData.size())) {
-                    float sampleL = buf.pcmData[sampleIdx];
-                    float sampleR = buf.pcmData[sampleIdx + 1];
+                int sampleIdx = frameIdx * buf.mappedFile.info.channels;
+                if (sampleIdx < static_cast<int>(buf.mappedFile.sampleCount)) {
+                    float sampleL = static_cast<float>(buf.mappedFile.pcmData[sampleIdx]) / 32768.0f;
+                    float sampleR = sampleL;
+                    if (buf.mappedFile.info.channels >= 2 && sampleIdx + 1 < static_cast<int>(buf.mappedFile.sampleCount)) {
+                        sampleR = static_cast<float>(buf.mappedFile.pcmData[sampleIdx + 1]) / 32768.0f;
+                    }
 
                     float vol = buf.stem.volume();
                     float pan = buf.stem.pan();
@@ -185,13 +187,15 @@ bool AudioEngine::loadStems(const std::vector<Core::MediaStem>& stems) {
     for (const auto& stem : stems) {
         AudioMixerDevice::StemBuffer buf;
         buf.stem = stem;
-        if (decoder.decodeToPcmFloat(stem.filePath(), buf.pcmData, buf.info)) {
-            if (buf.info.durationSeconds > maxDuration) {
-                maxDuration = buf.info.durationSeconds;
+        MappedAudioFile mappedFile = decoder.mapAudioFile(stem.filePath());
+        if (mappedFile.info.isValid) {
+            if (mappedFile.info.durationSeconds > maxDuration) {
+                maxDuration = mappedFile.info.durationSeconds;
             }
+            buf.mappedFile = std::move(mappedFile);
             m_impl->mixerDevice.m_buffers.push_back(std::move(buf));
         } else {
-            std::cerr << "[AudioEngine] Failed to decode stem: " << stem.filePath() << std::endl;
+            std::cerr << "[AudioEngine] Failed to map stem: " << stem.filePath() << std::endl;
         }
     }
 
@@ -254,6 +258,39 @@ void AudioEngine::setMasterVolume(float volume) noexcept {
 void AudioEngine::setPitchShiftSemitones(int semitones) noexcept {
     int clamped = std::clamp(semitones, -12, 12);
     m_impl->pitchSemitones.store(clamped, std::memory_order_relaxed);
+}
+
+void AudioEngine::setStemVolume(int stemIndex, float volume) noexcept {
+    if (stemIndex >= 0 && stemIndex < static_cast<int>(m_impl->stems.size())) {
+        m_impl->stems[stemIndex].setVolume(volume);
+#ifdef HARMONYSYNC_HAS_QT
+        if (stemIndex < static_cast<int>(m_impl->mixerDevice.m_buffers.size())) {
+            m_impl->mixerDevice.m_buffers[stemIndex].stem.setVolume(volume);
+        }
+#endif
+    }
+}
+
+void AudioEngine::setStemMuted(int stemIndex, bool muted) noexcept {
+    if (stemIndex >= 0 && stemIndex < static_cast<int>(m_impl->stems.size())) {
+        m_impl->stems[stemIndex].setMuted(muted);
+#ifdef HARMONYSYNC_HAS_QT
+        if (stemIndex < static_cast<int>(m_impl->mixerDevice.m_buffers.size())) {
+            m_impl->mixerDevice.m_buffers[stemIndex].stem.setMuted(muted);
+        }
+#endif
+    }
+}
+
+void AudioEngine::setStemSolo(int stemIndex, bool solo) noexcept {
+    if (stemIndex >= 0 && stemIndex < static_cast<int>(m_impl->stems.size())) {
+        m_impl->stems[stemIndex].setSolo(solo);
+#ifdef HARMONYSYNC_HAS_QT
+        if (stemIndex < static_cast<int>(m_impl->mixerDevice.m_buffers.size())) {
+            m_impl->mixerDevice.m_buffers[stemIndex].stem.setSolo(solo);
+        }
+#endif
+    }
 }
 
 PlaybackState AudioEngine::playbackState() const noexcept {

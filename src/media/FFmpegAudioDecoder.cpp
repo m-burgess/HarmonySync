@@ -4,7 +4,25 @@
 #include <iostream>
 #include <cstring>
 
+#ifdef HARMONYSYNC_HAS_QT
+#include <QFile>
+#endif
+
 namespace HarmonySync::Media {
+
+struct MappedAudioFile::Impl {
+#ifdef HARMONYSYNC_HAS_QT
+    std::unique_ptr<QFile> file;
+    uchar* mappedData{nullptr};
+    ~Impl() {
+        if (file && mappedData) {
+            file->unmap(mappedData);
+        }
+    }
+#else
+    std::vector<int16_t> buffer;
+#endif
+};
 
 struct FFmpegAudioDecoder::Impl {
     Impl() = default;
@@ -126,6 +144,84 @@ bool FFmpegAudioDecoder::decodeToPcmFloat(const std::string& filePath, std::vect
     }
 
     return true;
+}
+
+MappedAudioFile FFmpegAudioDecoder::mapAudioFile(const std::string& filePath) const {
+    MappedAudioFile result;
+    result.info = inspectFile(filePath);
+    if (!result.info.isValid) {
+        return result;
+    }
+
+    result.impl = std::make_shared<MappedAudioFile::Impl>();
+
+#ifdef HARMONYSYNC_HAS_QT
+    result.impl->file = std::make_unique<QFile>(QString::fromStdString(filePath));
+    if (!result.impl->file->open(QIODevice::ReadOnly)) {
+        result.info.isValid = false;
+        return result;
+    }
+
+    // Fast-forward to data chunk offset
+    std::ifstream file(filePath, std::ios::binary);
+    char chunkId[4];
+    file.seekg(12, std::ios::beg); // skip RIFF + size + WAVE
+
+    uint32_t dataSize = 0;
+    uint32_t dataOffset = 0;
+    while (file.read(chunkId, 4)) {
+        uint32_t chunkSize;
+        file.read(reinterpret_cast<char*>(&chunkSize), 4);
+        if (std::strncmp(chunkId, "data", 4) == 0) {
+            dataSize = chunkSize;
+            dataOffset = static_cast<uint32_t>(file.tellg());
+            break;
+        } else {
+            file.seekg(chunkSize, std::ios::cur);
+        }
+    }
+
+    if (dataSize > 0 && dataOffset > 0) {
+        // Map the payload directly from disk to RAM via OS page cache
+        result.impl->mappedData = result.impl->file->map(dataOffset, dataSize);
+        if (result.impl->mappedData) {
+            result.pcmData = reinterpret_cast<const int16_t*>(result.impl->mappedData);
+            result.sampleCount = dataSize / sizeof(int16_t);
+        } else {
+            result.info.isValid = false; // Map failed
+        }
+    } else {
+        result.info.isValid = false;
+    }
+#else
+    // Fallback if Qt is not available: Load entirely into memory
+    std::ifstream file(filePath, std::ios::binary);
+    char chunkId[4];
+    file.seekg(12, std::ios::beg); // skip RIFF + size + WAVE
+
+    uint32_t dataSize = 0;
+    while (file.read(chunkId, 4)) {
+        uint32_t chunkSize;
+        file.read(reinterpret_cast<char*>(&chunkSize), 4);
+        if (std::strncmp(chunkId, "data", 4) == 0) {
+            dataSize = chunkSize;
+            break;
+        } else {
+            file.seekg(chunkSize, std::ios::cur);
+        }
+    }
+
+    if (dataSize > 0) {
+        result.impl->buffer.resize(dataSize / sizeof(int16_t));
+        file.read(reinterpret_cast<char*>(result.impl->buffer.data()), dataSize);
+        result.pcmData = result.impl->buffer.data();
+        result.sampleCount = result.impl->buffer.size();
+    } else {
+        result.info.isValid = false;
+    }
+#endif
+
+    return result;
 }
 
 } // namespace HarmonySync::Media

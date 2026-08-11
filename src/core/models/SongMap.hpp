@@ -8,6 +8,11 @@
 
 namespace HarmonySync::Core {
 
+struct SongSection {
+    std::string name;
+    std::vector<std::string> lines;
+};
+
 /**
  * @brief Domain model representing a song arrangement with key, tempo, stems, and lyrics.
  */
@@ -33,6 +38,7 @@ public:
     [[nodiscard]] const std::string& lyricsContent() const noexcept;
     [[nodiscard]] bool hasSongMap() const noexcept;
     [[nodiscard]] const std::string& folderPath() const noexcept;
+    [[nodiscard]] const std::string& backgroundVideoPath() const noexcept;
 
     // Setters / Modifiers
     void setKeys(std::string origKey, std::string curKey);
@@ -40,6 +46,7 @@ public:
     void setLyricsContent(std::string lyrics);
     void setHasSongMap(bool hasMap) noexcept;
     void setFolderPath(std::string path);
+    void setBackgroundVideoPath(std::string path);
     void addStem(MediaStem stem);
     void clearStems() noexcept;
 

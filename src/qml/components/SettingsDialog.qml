@@ -1,20 +1,21 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import "../theme"
 
 Dialog {
     id: root
-    title: "⚙️ HarmonySync Application Settings"
+    title: "SETTINGS"
     width: 640
     height: 540
     modal: true
     standardButtons: Dialog.Close
 
     background: Rectangle {
-        color: "#18181b"
-        border.color: "#3f3f46"
+        color: Theme.backgroundCard
+        border.color: Theme.borderDark
         border.width: 1
-        radius: 8
+        radius: Theme.borderRadius
     }
 
     ColumnLayout {
@@ -25,11 +26,11 @@ Dialog {
         TabBar {
             id: tabBar
             Layout.fillWidth: true
-            background: Rectangle { color: "#27272a"; radius: 6 }
+            background: Rectangle { color: Theme.backgroundDark; radius: Theme.borderRadius }
 
-            TabButton { text: "🖥️ Displays" }
-            TabButton { text: "🔤 Typography" }
-            TabButton { text: "📐 Alignment & Margins" }
+            TabButton { text: "DISPLAYS" }
+            TabButton { text: "TYPOGRAPHY" }
+            TabButton { text: "ALIGNMENT & MARGINS" }
         }
 
         StackLayout {
@@ -47,24 +48,26 @@ Dialog {
 
                     Label {
                         text: "Presentation Output Display:"
-                        color: "#f4f4f5"
+                        color: Theme.textPrimary
                         font.bold: true
                         font.pixelSize: 13
+                        font.family: Theme.fontFamily
                         Layout.fillWidth: true
                     }
 
                     Button {
                         id: refreshBtn
-                        text: "🔄 Refresh Displays"
+                        text: "REFRESH DISPLAYS"
                         font.pixelSize: 11
                         font.bold: true
+                        font.family: Theme.fontFamily
                         background: Rectangle {
-                            color: refreshBtn.hovered ? "#3730a3" : "#27272a"
-                            border.color: "#3f3f46"
+                            color: refreshBtn.hovered ? Theme.borderDark : "transparent"
+                            border.color: Theme.borderDark
                             radius: 4
-                            Behavior on color { ColorAnimation { duration: 150 } }
+                            Behavior on color { ColorAnimation { duration: Theme.animDuration } }
                         }
-                        contentItem: Text { text: refreshBtn.text; color: "#a5b4fc"; font: refreshBtn.font; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        contentItem: Text { text: refreshBtn.text; color: Theme.textSecondary; font: refreshBtn.font; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         onClicked: { if (settingsViewModel) settingsViewModel.refreshDisplays() }
                     }
                 }
@@ -81,9 +84,10 @@ Dialog {
 
                 Label {
                     text: "Stage Confidence Monitor Display:"
-                    color: "#f4f4f5"
+                    color: Theme.textPrimary
                     font.bold: true
                     font.pixelSize: 13
+                    font.family: Theme.fontFamily
                 }
 
                 ComboBox {
@@ -101,21 +105,21 @@ Dialog {
             ColumnLayout {
                 spacing: 14
 
-                Label { text: "Lyrics Font Size (pt):"; color: "#f4f4f5"; font.bold: true; font.pixelSize: 13 }
+                Label { text: "Lyrics Font Size (pt):"; color: Theme.textPrimary; font.bold: true; font.pixelSize: 13; font.family: Theme.fontFamily }
                 SpinBox {
                     from: 20; to: 120
                     value: settingsViewModel ? settingsViewModel.lyricsFontSize : 48
                     onValueChanged: if (settingsViewModel) settingsViewModel.lyricsFontSize = value
                 }
 
-                Label { text: "Lower Third Font Size (pt):"; color: "#f4f4f5"; font.bold: true; font.pixelSize: 13 }
+                Label { text: "Lower Third Font Size (pt):"; color: Theme.textPrimary; font.bold: true; font.pixelSize: 13; font.family: Theme.fontFamily }
                 SpinBox {
                     from: 14; to: 60
                     value: settingsViewModel ? settingsViewModel.lowerThirdFontSize : 26
                     onValueChanged: if (settingsViewModel) settingsViewModel.lowerThirdFontSize = value
                 }
 
-                Label { text: "Font Family:"; color: "#f4f4f5"; font.bold: true; font.pixelSize: 13 }
+                Label { text: "Font Family:"; color: Theme.textPrimary; font.bold: true; font.pixelSize: 13; font.family: Theme.fontFamily }
                 TextField {
                     text: settingsViewModel ? settingsViewModel.fontFamily : "Inter"
                     onTextChanged: if (settingsViewModel) settingsViewModel.fontFamily = text
@@ -126,14 +130,14 @@ Dialog {
             ColumnLayout {
                 spacing: 14
 
-                Label { text: "Text Alignment Offset X:"; color: "#f4f4f5"; font.bold: true; font.pixelSize: 13 }
+                Label { text: "Text Alignment Offset X:"; color: Theme.textPrimary; font.bold: true; font.pixelSize: 13; font.family: Theme.fontFamily }
                 SpinBox {
                     from: -500; to: 500
                     value: settingsViewModel ? settingsViewModel.marginOffsetX : 0
                     onValueChanged: if (settingsViewModel) settingsViewModel.marginOffsetX = value
                 }
 
-                Label { text: "Text Alignment Offset Y:"; color: "#f4f4f5"; font.bold: true; font.pixelSize: 13 }
+                Label { text: "Text Alignment Offset Y:"; color: Theme.textPrimary; font.bold: true; font.pixelSize: 13; font.family: Theme.fontFamily }
                 SpinBox {
                     from: -500; to: 500
                     value: settingsViewModel ? settingsViewModel.marginOffsetY : 40
@@ -145,7 +149,7 @@ Dialog {
         Rectangle {
             Layout.fillWidth: true
             height: 1
-            color: "#27272a"
+            color: Theme.borderDark
         }
 
         // Action Buttons Row
@@ -155,12 +159,14 @@ Dialog {
 
             Button {
                 id: saveBtn
-                text: "💾 Save Settings"
+                text: "SAVE SETTINGS"
                 font.bold: true
+                font.pixelSize: 11
+                font.family: Theme.fontFamily
                 background: Rectangle {
-                    color: saveBtn.hovered ? "#4f46e5" : "#6366f1"
-                    radius: 6
-                    Behavior on color { ColorAnimation { duration: 150 } }
+                    color: saveBtn.hovered ? Theme.accentHover : Theme.accentPrimary
+                    radius: 4
+                    Behavior on color { ColorAnimation { duration: Theme.animDuration } }
                 }
                 contentItem: Text { text: saveBtn.text; color: "#ffffff"; font: saveBtn.font; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: { if (settingsViewModel) settingsViewModel.saveSettings() }
@@ -168,29 +174,33 @@ Dialog {
 
             Button {
                 id: loadBtn
-                text: "📂 Load Settings"
+                text: "LOAD SETTINGS"
                 font.bold: true
+                font.pixelSize: 11
+                font.family: Theme.fontFamily
                 background: Rectangle {
-                    color: loadBtn.hovered ? "#3f3f46" : "#27272a"
-                    border.color: "#3f3f46"
-                    radius: 6
-                    Behavior on color { ColorAnimation { duration: 150 } }
+                    color: loadBtn.hovered ? Theme.borderDark : "transparent"
+                    border.color: Theme.borderDark
+                    radius: 4
+                    Behavior on color { ColorAnimation { duration: Theme.animDuration } }
                 }
-                contentItem: Text { text: loadBtn.text; color: "#f4f4f5"; font: loadBtn.font; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                contentItem: Text { text: loadBtn.text; color: Theme.textSecondary; font: loadBtn.font; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: { if (settingsViewModel) settingsViewModel.loadSettings() }
             }
 
             Button {
                 id: resetBtn
-                text: "🔄 Reset Defaults"
+                text: "RESET DEFAULTS"
                 font.bold: true
+                font.pixelSize: 11
+                font.family: Theme.fontFamily
                 background: Rectangle {
-                    color: resetBtn.hovered ? "#7f1d1d" : "#27272a"
-                    border.color: "#ef4444"
-                    radius: 6
-                    Behavior on color { ColorAnimation { duration: 150 } }
+                    color: resetBtn.hovered ? Theme.danger : "transparent"
+                    border.color: Theme.borderDark
+                    radius: 4
+                    Behavior on color { ColorAnimation { duration: Theme.animDuration } }
                 }
-                contentItem: Text { text: resetBtn.text; color: resetBtn.hovered ? "#ffffff" : "#fca5a5"; font: resetBtn.font; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                contentItem: Text { text: resetBtn.text; color: resetBtn.hovered ? "#ffffff" : Theme.danger; font: resetBtn.font; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: { if (settingsViewModel) settingsViewModel.resetToDefaults() }
             }
         }

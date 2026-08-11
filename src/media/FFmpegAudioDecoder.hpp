@@ -16,6 +16,15 @@ struct AudioStreamInfo {
     bool isValid{false};
 };
 
+struct MappedAudioFile {
+    AudioStreamInfo info;
+    const int16_t* pcmData{nullptr};
+    size_t sampleCount{0};
+    
+    struct Impl;
+    std::shared_ptr<Impl> impl;
+};
+
 /**
  * @brief Multi-format audio decoder abstraction for WAV, MP3, FLAC, M4A, and OGG media stems.
  */
@@ -32,6 +41,7 @@ public:
     // Decoding Operations
     [[nodiscard]] AudioStreamInfo inspectFile(const std::string& filePath) const;
     [[nodiscard]] bool decodeToPcmFloat(const std::string& filePath, std::vector<float>& outPcmBuffer, AudioStreamInfo& outInfo) const;
+    [[nodiscard]] MappedAudioFile mapAudioFile(const std::string& filePath) const;
 
 private:
     struct Impl;

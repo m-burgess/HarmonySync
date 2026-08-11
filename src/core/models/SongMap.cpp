@@ -13,6 +13,7 @@ struct SongMap::Impl {
     std::vector<MediaStem> stems;
     std::string lyricsContent;
     std::string folderPath;
+    std::string backgroundVideoPath;
     bool hasMap{false};
 
     Impl() = default;
@@ -88,6 +89,10 @@ const std::string& SongMap::folderPath() const noexcept {
     return m_impl->folderPath;
 }
 
+const std::string& SongMap::backgroundVideoPath() const noexcept {
+    return m_impl->backgroundVideoPath;
+}
+
 void SongMap::setKeys(std::string origKey, std::string curKey) {
     m_impl->originalKey = std::move(origKey);
     m_impl->currentKey = std::move(curKey);
@@ -107,6 +112,10 @@ void SongMap::setHasSongMap(bool hasMap) noexcept {
 
 void SongMap::setFolderPath(std::string path) {
     m_impl->folderPath = std::move(path);
+}
+
+void SongMap::setBackgroundVideoPath(std::string path) {
+    m_impl->backgroundVideoPath = std::move(path);
 }
 
 void SongMap::addStem(MediaStem stem) {

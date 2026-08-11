@@ -37,6 +37,9 @@ public:
     void seek(double positionSeconds) noexcept;
     void setMasterVolume(float volume) noexcept;
     void setPitchShiftSemitones(int semitones) noexcept;
+    void setStemVolume(int stemIndex, float volume) noexcept;
+    void setStemMuted(int stemIndex, bool muted) noexcept;
+    void setStemSolo(int stemIndex, bool solo) noexcept;
 
     // State Queries (Thread-Safe & Lock-Free)
     [[nodiscard]] PlaybackState playbackState() const noexcept;

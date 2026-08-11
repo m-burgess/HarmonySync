@@ -3,6 +3,7 @@ add_library(harmonysync_media STATIC
     StemMixer.cpp
     FFmpegAudioDecoder.cpp
     AudioPitchShifter.cpp
+    FFmpegTransposer.cpp
     DmxController.cpp
     EventTriggerEngine.cpp
     MidiHardwareDevice.cpp

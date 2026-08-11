@@ -3,6 +3,13 @@
 #include <fstream>
 #include <sstream>
 
+#if __has_include(<QJsonDocument>)
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QFile>
+#endif
+
 namespace HarmonySync::Core {
 
 namespace {
@@ -81,6 +88,9 @@ SongMap FolderService::loadSongFromFolder(const std::filesystem::path& folderPat
         return song;
     }
 
+    // Convert lyrics if needed
+    convertLyricsToSongMap(folderPath);
+
     // Load config.json if present
     ServiceItemConfig cfg = m_impl->configService->loadConfigFromDirectory(folderPath);
 
@@ -121,6 +131,8 @@ SongMap FolderService::loadSongFromFolder(const std::filesystem::path& folderPat
                 ss << lyricsFile.rdbuf();
                 song.setLyricsContent(ss.str());
             }
+        } else if (isVideoExtension(ext)) {
+            song.setBackgroundVideoPath(entry.path().string());
         }
     }
 
@@ -144,6 +156,9 @@ SongMap FolderService::loadSongFromFolder(const std::filesystem::path& folderPat
             std::transform(nameB.begin(), nameB.end(), nameB.begin(), ::tolower);
             return nameA < nameB;
         });
+
+        // Apply any saved mix state overrides
+        applyMixState(folderPath.string(), loadedStems);
 
         // Reassign IDs and add to song
         for (size_t i = 0; i < loadedStems.size(); ++i) {
@@ -203,6 +218,127 @@ std::vector<SlideItem> FolderService::loadSlidesFromFolder(const std::filesystem
     }
 
     return slides;
+}
+
+void FolderService::saveMixState(const std::string& folderPath, const std::vector<MediaStem>& stems) {
+#if __has_include(<QJsonDocument>)
+    if (folderPath.empty() || stems.empty()) return;
+
+    QJsonObject stemsObj;
+    for (const auto& stem : stems) {
+        QJsonObject stemState;
+        stemState["volume"] = stem.volume();
+        stemState["pan"] = stem.pan();
+        stemState["muted"] = stem.isMuted();
+        stemState["solo"] = stem.isSolo();
+        stemState["pitchShift"] = stem.pitchShiftSemitones();
+        
+        stemsObj[QString::fromStdString(stem.name())] = stemState;
+    }
+
+    QJsonObject rootObj;
+    rootObj["stems"] = stemsObj;
+
+    QJsonDocument doc(rootObj);
+    std::filesystem::path mixPath = std::filesystem::path(folderPath) / "mix.json";
+    
+    QFile file(QString::fromStdString(mixPath.string()));
+    if (file.open(QIODevice::WriteOnly)) {
+        file.write(doc.toJson(QJsonDocument::Indented));
+    }
+#endif
+}
+
+void FolderService::applyMixState(const std::string& folderPath, std::vector<MediaStem>& stems) {
+#if __has_include(<QJsonDocument>)
+    std::filesystem::path mixPath = std::filesystem::path(folderPath) / "mix.json";
+    if (!std::filesystem::exists(mixPath)) return;
+
+    QFile file(QString::fromStdString(mixPath.string()));
+    if (!file.open(QIODevice::ReadOnly)) return;
+
+    QByteArray data = file.readAll();
+    QJsonDocument doc = QJsonDocument::fromJson(data);
+    if (!doc.isObject()) return;
+
+    QJsonObject rootObj = doc.object();
+    QJsonObject stemsObj = rootObj["stems"].toObject();
+
+    for (auto& stem : stems) {
+        QString stemName = QString::fromStdString(stem.name());
+        if (stemsObj.contains(stemName)) {
+            QJsonObject state = stemsObj[stemName].toObject();
+            if (state.contains("volume")) stem.setVolume(static_cast<float>(state["volume"].toDouble()));
+            if (state.contains("pan")) stem.setPan(static_cast<float>(state["pan"].toDouble()));
+            if (state.contains("muted")) stem.setMuted(state["muted"].toBool());
+            if (state.contains("solo")) stem.setSolo(state["solo"].toBool());
+            if (state.contains("pitchShift")) stem.setPitchShiftSemitones(state["pitchShift"].toInt());
+        }
+    }
+#endif
+}
+bool FolderService::convertLyricsToSongMap(const std::filesystem::path& folderPath) {
+#if __has_include(<QJsonDocument>)
+    std::filesystem::path lyricsPath = folderPath / "lyrics.txt";
+    std::filesystem::path jsonPath = folderPath / "song-map.json";
+
+    if (std::filesystem::exists(jsonPath)) {
+        return true; // Already converted
+    }
+
+    if (!std::filesystem::exists(lyricsPath)) {
+        return false; // No lyrics to convert
+    }
+
+    std::ifstream file(lyricsPath);
+    if (!file.is_open()) return false;
+
+    QJsonObject rootObj;
+    QJsonArray sectionsArray;
+    
+    QJsonObject currentSection;
+    QString currentSectionName = "Intro";
+    QJsonArray currentLines;
+    
+    auto finalizeSection = [&]() {
+        if (!currentLines.isEmpty() || currentSectionName != "Intro") {
+            currentSection["name"] = currentSectionName;
+            currentSection["lines"] = currentLines;
+            sectionsArray.append(currentSection);
+            
+            // Reset
+            currentSection = QJsonObject();
+            currentLines = QJsonArray();
+        }
+    };
+
+    std::string line;
+    while (std::getline(file, line)) {
+        // Trim whitespace
+        line.erase(line.begin(), std::find_if(line.begin(), line.end(), [](unsigned char ch) { return !std::isspace(ch); }));
+        line.erase(std::find_if(line.rbegin(), line.rend(), [](unsigned char ch) { return !std::isspace(ch); }).base(), line.end());
+
+        if (line.empty()) continue;
+
+        if (line.front() == '[' && line.back() == ']') {
+            finalizeSection();
+            currentSectionName = QString::fromStdString(line.substr(1, line.length() - 2));
+        } else {
+            currentLines.append(QString::fromStdString(line));
+        }
+    }
+    finalizeSection();
+
+    rootObj["sections"] = sectionsArray;
+
+    QJsonDocument doc(rootObj);
+    QFile outFile(QString::fromStdString(jsonPath.string()));
+    if (outFile.open(QIODevice::WriteOnly)) {
+        outFile.write(doc.toJson(QJsonDocument::Indented));
+        return true;
+    }
+#endif
+    return false;
 }
 
 } // namespace HarmonySync::Core

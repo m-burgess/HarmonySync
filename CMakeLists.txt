@@ -71,6 +71,7 @@ if(Qt6_FOUND)
         FILES
             src/qml/main.qml
             src/qml/theme/Theme.qml
+            src/qml/theme/qmldir
             src/qml/components/LyricsPanel.qml
             src/qml/components/ServiceOrderPanel.qml
             src/qml/components/SlideDisplayPanel.qml

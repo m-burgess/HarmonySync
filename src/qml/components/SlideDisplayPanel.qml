@@ -1,13 +1,17 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtMultimedia
+import "../theme"
 
 Rectangle {
     id: root
-    color: "#1e1e24"
-    border.color: "#33333d"
+    property int outputMode: 0 // 0: Audience, 1: Stage Monitor, 2: Lower Thirds
+    
+    color: Theme.backgroundCard
+    border.color: Theme.borderDark
     border.width: 1
-    radius: 6
+    radius: Theme.borderRadius
 
     ColumnLayout {
         anchors.fill: parent
@@ -20,19 +24,24 @@ Rectangle {
             spacing: 8
 
             Label {
-                text: "🖥️ Live Audience Output Preview"
-                font.pixelSize: 15
+                text: "PRESENTATION OUTPUT"
+                font.family: Theme.fontFamily
+                font.pixelSize: 13
                 font.bold: true
-                color: "#f4f4f5"
+                color: Theme.textPrimary
+                font.letterSpacing: 1.2
                 Layout.fillWidth: true
+                fontSizeMode: Text.Fit
+                minimumPixelSize: 9
+                elide: Text.ElideRight
             }
 
             Rectangle {
-                width: slideDisplayViewModel && slideDisplayViewModel.isBlackScreen ? 88 : 110
+                width: slideDisplayViewModel && slideDisplayViewModel.isBlackScreen ? 88 : 115
                 height: 22
                 radius: 11
-                color: slideDisplayViewModel && slideDisplayViewModel.isBlackScreen ? "#450a0a" : "#064e3b"
-                border.color: slideDisplayViewModel && slideDisplayViewModel.isBlackScreen ? "#ef4444" : "#10b981"
+                color: slideDisplayViewModel && slideDisplayViewModel.isBlackScreen ? Qt.darker(Theme.danger, 1.5) : Qt.darker(Theme.success, 1.5)
+                border.color: slideDisplayViewModel && slideDisplayViewModel.isBlackScreen ? Theme.danger : Theme.success
                 border.width: 1
 
                 RowLayout {
@@ -40,18 +49,45 @@ Rectangle {
                     spacing: 5
 
                     Rectangle {
-                        width: 8
-                        height: 8
-                        radius: 4
-                        color: slideDisplayViewModel && slideDisplayViewModel.isBlackScreen ? "#ef4444" : "#10b981"
+                        width: 6
+                        height: 6
+                        radius: 3
+                        color: slideDisplayViewModel && slideDisplayViewModel.isBlackScreen ? Theme.danger : Theme.success
                     }
 
                     Text {
                         text: slideDisplayViewModel && slideDisplayViewModel.isBlackScreen ? "BLACKOUT" : "LIVE BROADCAST"
-                        color: slideDisplayViewModel && slideDisplayViewModel.isBlackScreen ? "#fca5a5" : "#6ee7b7"
+                        color: "#ffffff"
+                        font.family: Theme.fontFamily
                         font.pixelSize: 10
                         font.bold: true
                     }
+                }
+            }
+
+            Item { Layout.fillWidth: true } // Spacer
+
+            ComboBox {
+                id: modeCombo
+                model: ["Audience", "Stage Monitor", "Lower Thirds"]
+                currentIndex: root.outputMode
+                onActivated: function(index) { root.outputMode = index }
+                font.pixelSize: 11
+                font.bold: true
+                font.family: Theme.fontFamily
+                Layout.preferredHeight: 24
+                Layout.preferredWidth: 120
+                background: Rectangle {
+                    color: Theme.backgroundDark
+                    border.color: Theme.borderDark
+                    radius: 4
+                }
+                contentItem: Text {
+                    text: modeCombo.currentText
+                    color: Theme.textPrimary
+                    font: modeCombo.font
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment: Text.AlignHCenter
                 }
             }
         }
@@ -61,24 +97,168 @@ Rectangle {
             id: previewFrame
             Layout.fillWidth: true
             Layout.fillHeight: true
-            color: slideDisplayViewModel && slideDisplayViewModel.isBlackScreen ? "#000000" : "#0f0f12"
-            border.color: slideDisplayViewModel && slideDisplayViewModel.isBlackScreen ? "#7f1d1d" : "#6366f1"
-            border.width: 2
-            radius: 6
+            color: (slideDisplayViewModel && slideDisplayViewModel.isBlackScreen) ? "#000000" :
+                   (root.outputMode === 1) ? "#000000" :
+                   (root.outputMode === 2) ? "#00FF00" : Theme.backgroundDark
+            border.color: slideDisplayViewModel && slideDisplayViewModel.isBlackScreen ? Theme.danger : Theme.borderDark
+            border.width: 1
+            radius: Theme.borderRadius
+            clip: true
+            
+            Behavior on border.color { ColorAnimation { duration: Theme.animDuration } }
 
+            MediaPlayer {
+                id: bgMediaPlayer
+                source: (audioMixerViewModel && audioMixerViewModel.activeBackgroundVideo !== "") ? "file://" + audioMixerViewModel.activeBackgroundVideo : ""
+                loops: MediaPlayer.Infinite
+                audioOutput: null
+                videoOutput: videoOutput
+            }
+
+            VideoOutput {
+                id: videoOutput
+                anchors.fill: parent
+                fillMode: VideoOutput.PreserveAspectCrop
+                visible: bgMediaPlayer.hasVideo && !(slideDisplayViewModel && slideDisplayViewModel.isBlackScreen) && root.outputMode === 0
+            }
+
+            Connections {
+                target: audioMixerViewModel
+                function onPlayStateChanged(playing) {
+                    if (playing) bgMediaPlayer.play();
+                    else bgMediaPlayer.pause();
+                }
+            }
+
+            Connections {
+                target: bgMediaPlayer
+                function onSourceChanged() {
+                    if (audioMixerViewModel && audioMixerViewModel.isPlaying) {
+                        bgMediaPlayer.play();
+                    }
+                }
+            }
+
+            // Audience View (Mode 0)
             Text {
+                visible: root.outputMode === 0 && ((slideDisplayViewModel && slideDisplayViewModel.isBlackScreen) || 
+                         window.activeLyricText !== "" ||
+                         !bgMediaPlayer.hasVideo)
                 anchors.centerIn: parent
+                z: 1
                 text: slideDisplayViewModel && slideDisplayViewModel.isBlackScreen ? "[ BLACK SCREEN ]" :
-                      (slideDisplayViewModel && slideDisplayViewModel.activeSlideTitle !== "" ? slideDisplayViewModel.activeSlideTitle : "No Active Slide")
+                      (window.activeLyricText !== "" ? window.activeLyricText : "NO ACTIVE SLIDE")
                 color: "#ffffff"
-                font.pixelSize: 22
+                font.pixelSize: 32
                 font.bold: true
-                font.family: "Inter, Roboto, sans-serif"
+                font.family: Theme.fontFamily
                 horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.WordWrap
-                width: parent.width - 40
+                width: parent.width - 60
+                style: Text.Outline
+                styleColor: "#000000"
             }
-        }
+
+            // Lower Thirds View (Mode 2)
+            Text {
+                visible: root.outputMode === 2 && ((slideDisplayViewModel && slideDisplayViewModel.isBlackScreen) || 
+                         window.activeLyricText !== "")
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: 30
+                anchors.horizontalCenter: parent.horizontalCenter
+                z: 1
+                text: slideDisplayViewModel && slideDisplayViewModel.isBlackScreen ? "[ BLACK SCREEN ]" : window.activeLyricText
+                color: "#ffffff"
+                font.pixelSize: 18
+                fontSizeMode: Text.Fit
+                minimumPixelSize: 12
+                font.bold: true
+                font.family: Theme.fontFamily
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.WordWrap
+                width: parent.width - 60
+                style: Text.Outline
+                styleColor: "#000000"
+            }
+
+            // Stage Monitor View
+            Item {
+                anchors.fill: parent
+                visible: root.outputMode === 1
+
+                // Clock
+                Text {
+                    id: clockText
+                    anchors.top: parent.top
+                    anchors.topMargin: 10
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    color: "#ffffff"
+                    font.pixelSize: 20
+                    font.bold: true
+                    font.family: Theme.fontFamily
+                    z: 2
+                    
+                    Timer {
+                        interval: 1000; running: parent.visible; repeat: true
+                        onTriggered: {
+                            var date = new Date()
+                            var hours = date.getHours() % 12 || 12
+                            var minutes = date.getMinutes()
+                            var ampm = date.getHours() >= 12 ? "PM" : "AM"
+                            clockText.text = hours + ":" + (minutes < 10 ? "0" + minutes : minutes) + " " + ampm
+                        }
+                    }
+                    Component.onCompleted: {
+                        var date = new Date()
+                        var hours = date.getHours() % 12 || 12
+                        var minutes = date.getMinutes()
+                        var ampm = date.getHours() >= 12 ? "PM" : "AM"
+                        clockText.text = hours + ":" + (minutes < 10 ? "0" + minutes : minutes) + " " + ampm
+                    }
+                }
+                
+                // Current Lyric
+                Text {
+                    anchors.top: clockText.bottom
+                    anchors.bottom: parent.verticalCenter
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.margins: 10
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    wrapMode: Text.WordWrap
+                    fontSizeMode: Text.Fit
+                    minimumPixelSize: 12
+                    font.pixelSize: 22
+                    font.bold: true
+                    font.family: Theme.fontFamily
+                    color: "#ffffff"
+                    text: slideDisplayViewModel && slideDisplayViewModel.isBlackScreen ? "[ BLACK SCREEN ]" : (window.activeLyricText !== "" ? window.activeLyricText : "NO ACTIVE SLIDE")
+                    z: 2
+                }
+
+                // Next Lyric
+                Text {
+                    anchors.top: parent.verticalCenter
+                    anchors.bottom: parent.bottom
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.margins: 10
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    wrapMode: Text.WordWrap
+                    fontSizeMode: Text.Fit
+                    minimumPixelSize: 12
+                    font.pixelSize: 22
+                    font.bold: true
+                    font.family: Theme.fontFamily
+                    color: Theme.warning
+                    text: window.nextLyricText !== "" ? window.nextLyricText : ""
+                    visible: !(slideDisplayViewModel && slideDisplayViewModel.isBlackScreen)
+                    z: 2
+                }
+            }
+        } // End of previewFrame
 
         // Navigation & Control Bar
         RowLayout {
@@ -87,63 +267,68 @@ Rectangle {
 
             Button {
                 id: prevBtn
-                text: "◀ Prev"
-                font.pixelSize: 12
+                text: "PREV"
+                font.pixelSize: 11
                 font.bold: true
+                font.family: Theme.fontFamily
                 background: Rectangle {
-                    color: prevBtn.hovered ? "#3730a3" : "#27272a"
-                    border.color: prevBtn.hovered ? "#6366f1" : "#3f3f46"
-                    radius: 6
-                    Behavior on color { ColorAnimation { duration: 150 } }
+                    color: prevBtn.hovered ? Theme.borderDark : "transparent"
+                    border.color: Theme.borderDark
+                    radius: 4
+                    Behavior on color { ColorAnimation { duration: Theme.animDuration } }
                 }
-                contentItem: Text { text: prevBtn.text; color: "#f4f4f5"; font: prevBtn.font; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                contentItem: Text { text: prevBtn.text; color: Theme.textPrimary; font: prevBtn.font; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: { if (slideDisplayViewModel) slideDisplayViewModel.previousSlide() }
             }
 
             Button {
                 id: nextBtn
-                text: "Next ▶"
-                font.pixelSize: 12
+                text: "NEXT"
+                font.pixelSize: 11
                 font.bold: true
+                font.family: Theme.fontFamily
                 background: Rectangle {
-                    color: nextBtn.hovered ? "#4f46e5" : "#6366f1"
-                    radius: 6
-                    Behavior on color { ColorAnimation { duration: 150 } }
+                    color: nextBtn.hovered ? Theme.accentHover : Theme.accentPrimary
+                    border.color: nextBtn.hovered ? Theme.accentHover : Theme.accentPrimary
+                    radius: 4
+                    Behavior on color { ColorAnimation { duration: Theme.animDuration } }
                 }
                 contentItem: Text { text: nextBtn.text; color: "#ffffff"; font: nextBtn.font; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: { if (slideDisplayViewModel) slideDisplayViewModel.nextSlide() }
             }
 
-            Item { Layout.fillWidth: true }
-
-            Button {
-                id: blackBtn
-                text: "⬛ Black"
-                font.pixelSize: 12
-                font.bold: true
-                background: Rectangle {
-                    color: (slideDisplayViewModel && slideDisplayViewModel.isBlackScreen) ? "#ef4444" : (blackBtn.hovered ? "#3f3f46" : "#27272a")
-                    border.color: "#ef4444"
-                    radius: 6
-                    Behavior on color { ColorAnimation { duration: 150 } }
-                }
-                contentItem: Text { text: blackBtn.text; color: (slideDisplayViewModel && slideDisplayViewModel.isBlackScreen) ? "#ffffff" : "#fca5a5"; font: blackBtn.font; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: { if (slideDisplayViewModel) slideDisplayViewModel.toggleBlackScreen() }
-            }
+            Item { Layout.fillWidth: true } // Spacer
 
             Button {
                 id: clearBtn
-                text: "❄ Clear"
-                font.pixelSize: 12
+                text: "CLEAR"
+                font.pixelSize: 11
                 font.bold: true
+                font.family: Theme.fontFamily
                 background: Rectangle {
-                    color: (slideDisplayViewModel && slideDisplayViewModel.isClearScreen) ? "#0284c7" : (clearBtn.hovered ? "#3f3f46" : "#27272a")
-                    border.color: "#0284c7"
-                    radius: 6
-                    Behavior on color { ColorAnimation { duration: 150 } }
+                    color: (slideDisplayViewModel && slideDisplayViewModel.isClearScreen) ? Theme.info : (clearBtn.hovered ? Theme.borderDark : "transparent")
+                    border.color: Theme.borderDark
+                    radius: 4
+                    Behavior on color { ColorAnimation { duration: Theme.animDuration } }
                 }
-                contentItem: Text { text: clearBtn.text; color: (slideDisplayViewModel && slideDisplayViewModel.isClearScreen) ? "#ffffff" : "#38bdf8"; font: clearBtn.font; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                contentItem: Text { text: clearBtn.text; color: (slideDisplayViewModel && slideDisplayViewModel.isClearScreen) ? "#ffffff" : Theme.textPrimary; font: clearBtn.font; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: { if (slideDisplayViewModel) slideDisplayViewModel.toggleClearScreen() }
+            }
+
+            Button {
+                id: blackBtn
+                text: "BLACKOUT"
+                font.pixelSize: 11
+                font.bold: true
+                font.family: Theme.fontFamily
+                background: Rectangle {
+                    color: (slideDisplayViewModel && slideDisplayViewModel.isBlackScreen) ? Theme.danger : (blackBtn.hovered ? Theme.borderDark : "transparent")
+                    border.color: Theme.borderDark
+                    radius: 4
+                    Behavior on color { ColorAnimation { duration: Theme.animDuration } }
+                }
+                contentItem: Text { text: blackBtn.text; color: (slideDisplayViewModel && slideDisplayViewModel.isBlackScreen) ? "#ffffff" : Theme.textPrimary; font: blackBtn.font; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                onClicked: { if (slideDisplayViewModel) slideDisplayViewModel.toggleBlackScreen() }
             }
         }
     }

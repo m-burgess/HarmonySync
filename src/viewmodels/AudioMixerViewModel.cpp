@@ -1,5 +1,12 @@
 #include "AudioMixerViewModel.hpp"
 #include <utility>
+#include <filesystem>
+#include "FolderService.hpp"
+#include "FFmpegTransposer.hpp"
+
+#ifdef HARMONYSYNC_QT_AVAILABLE
+#include <QTimer>
+#endif
 
 namespace HarmonySync::ViewModels {
 
@@ -8,6 +15,15 @@ struct AudioMixerViewModel::Impl {
     std::shared_ptr<Media::AudioEngine> m_nextDeck;
     Media::StemMixer stemMixer;
     float m_crossfadePos{0.0f};
+    std::string activeBackgroundVideo;
+    std::string nextBackgroundVideo;
+    bool isTransposing{false};
+    Media::FFmpegTransposer transposer;
+
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    std::unique_ptr<QTimer> autosaveTimer;
+    std::unique_ptr<QTimer> transposeDebounceTimer;
+#endif
 
     Impl(std::shared_ptr<Media::AudioEngine> engine)
         : m_activeDeck(std::move(engine))
@@ -16,12 +32,67 @@ struct AudioMixerViewModel::Impl {
             m_activeDeck = std::make_shared<Media::AudioEngine>();
         }
         m_nextDeck = std::make_shared<Media::AudioEngine>();
+
+#ifdef HARMONYSYNC_QT_AVAILABLE
+        autosaveTimer = std::make_unique<QTimer>();
+        autosaveTimer->setSingleShot(true);
+        autosaveTimer->setInterval(500); // 500ms debounce
+        
+        transposeDebounceTimer = std::make_unique<QTimer>();
+        transposeDebounceTimer->setSingleShot(true);
+        transposeDebounceTimer->setInterval(700); // 700ms debounce before starting ffmpeg
+#endif
     }
 };
 
 AudioMixerViewModel::AudioMixerViewModel(std::shared_ptr<Media::AudioEngine> audioEngine)
     : m_impl(std::make_unique<Impl>(std::move(audioEngine)))
-{}
+{
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    QObject::connect(m_impl->autosaveTimer.get(), &QTimer::timeout, this, [this]() {
+        auto stems = m_impl->m_activeDeck->loadedStems();
+        if (!stems.empty()) {
+            std::string folderPath = std::filesystem::path(stems[0].filePath()).parent_path().string();
+            Core::FolderService::saveMixState(folderPath, stems);
+        }
+    });
+    
+    QObject::connect(m_impl->transposeDebounceTimer.get(), &QTimer::timeout, this, [this]() {
+        auto stems = m_impl->m_activeDeck->loadedStems();
+        if (stems.empty()) return;
+        
+        std::filesystem::path folderPath = std::filesystem::path(stems[0].filePath()).parent_path();
+        // If transposed stems are from a subfolder, we need the actual root folder
+        if (folderPath.filename().string().find("Transposed_") != std::string::npos) {
+            folderPath = folderPath.parent_path();
+        }
+        
+        m_impl->isTransposing = true;
+        emit isTransposingChanged(true);
+        
+        bool wasPlaying = m_impl->m_activeDeck->isPlaying();
+        double currentPos = m_impl->m_activeDeck->positionSeconds();
+        
+        if (wasPlaying) {
+            m_impl->m_activeDeck->pause();
+        }
+        
+        int targetSemitones = pitchShiftSemitones();
+        
+        m_impl->transposer.transposeStemsAsync(stems, folderPath, targetSemitones, [this, wasPlaying, currentPos](std::vector<Core::MediaStem> newStems) {
+            QMetaObject::invokeMethod(this, [this, newStems, wasPlaying, currentPos]() {
+                m_impl->m_activeDeck->loadStems(newStems);
+                m_impl->m_activeDeck->seek(currentPos);
+                if (wasPlaying) {
+                    m_impl->m_activeDeck->play();
+                }
+                m_impl->isTransposing = false;
+                emit isTransposingChanged(false);
+            }, Qt::QueuedConnection);
+        });
+    });
+#endif
+}
 
 AudioMixerViewModel::~AudioMixerViewModel() = default;
 
@@ -49,8 +120,13 @@ void AudioMixerViewModel::setPitchShiftSemitones(int semitones) noexcept {
         m_impl->m_activeDeck->setPitchShiftSemitones(semitones);
 #ifdef HARMONYSYNC_QT_AVAILABLE
         emit pitchShiftChanged(semitones);
+        m_impl->transposeDebounceTimer->start();
 #endif
     }
+}
+
+bool AudioMixerViewModel::isTransposing() const noexcept {
+    return m_impl->isTransposing;
 }
 
 bool AudioMixerViewModel::isPlaying() const noexcept {
@@ -83,6 +159,24 @@ bool AudioMixerViewModel::loadSongStems(const std::vector<Core::MediaStem>& stem
 #endif
     return result;
 }
+
+#ifdef HARMONYSYNC_QT_AVAILABLE
+QString AudioMixerViewModel::activeBackgroundVideo() const {
+    return QString::fromStdString(m_impl->activeBackgroundVideo);
+}
+
+void AudioMixerViewModel::loadNextBackgroundVideo(const QString& path) {
+    m_impl->nextBackgroundVideo = path.toStdString();
+}
+#else
+std::string AudioMixerViewModel::activeBackgroundVideo() const {
+    return m_impl->activeBackgroundVideo;
+}
+
+void AudioMixerViewModel::loadNextBackgroundVideo(const std::string& path) {
+    m_impl->nextBackgroundVideo = path;
+}
+#endif
 
 bool AudioMixerViewModel::loadNextSongStems(const std::vector<Core::MediaStem>& stems) {
     // Load stems into the inactive/next deck without altering active deck playback
@@ -127,12 +221,16 @@ void AudioMixerViewModel::finalizeCrossfade() {
     // Swap decks
     std::swap(m_impl->m_activeDeck, m_impl->m_nextDeck);
     
+    // Swap background video
+    m_impl->activeBackgroundVideo = m_impl->nextBackgroundVideo;
+    
     // Reset crossfade position silently
     m_impl->m_crossfadePos = 0.0f;
     m_impl->m_activeDeck->setMasterVolume(1.0f);
     
 #ifdef HARMONYSYNC_QT_AVAILABLE
     // Broadcast all new states of the newly active deck
+    emit activeBackgroundVideoChanged(QString::fromStdString(m_impl->activeBackgroundVideo));
     emit stemCountChanged(loadedStemCount());
     emit durationChanged(durationSeconds());
     emit positionChanged(positionSeconds());
@@ -171,23 +269,20 @@ void AudioMixerViewModel::seek(double position) {
 }
 
 void AudioMixerViewModel::setStemVolume(int stemIndex, float volume) {
-    auto stems = m_impl->m_activeDeck->loadedStems();
-    if (stemIndex >= 0 && stemIndex < static_cast<int>(stems.size())) {
-        stems[static_cast<size_t>(stemIndex)].setVolume(volume);
-        m_impl->m_activeDeck->loadStems(stems);
+    m_impl->m_activeDeck->setStemVolume(stemIndex, volume);
 #ifdef HARMONYSYNC_QT_AVAILABLE
-        emit stemStateChanged(stemIndex);
+    m_impl->autosaveTimer->start();
+    emit stemStateChanged(stemIndex);
 #endif
-    }
 }
 
 void AudioMixerViewModel::toggleStemMute(int stemIndex) {
     auto stems = m_impl->m_activeDeck->loadedStems();
     if (stemIndex >= 0 && stemIndex < static_cast<int>(stems.size())) {
         bool currentMute = stems[static_cast<size_t>(stemIndex)].isMuted();
-        stems[static_cast<size_t>(stemIndex)].setMuted(!currentMute);
-        m_impl->m_activeDeck->loadStems(stems);
+        m_impl->m_activeDeck->setStemMuted(stemIndex, !currentMute);
 #ifdef HARMONYSYNC_QT_AVAILABLE
+        m_impl->autosaveTimer->start();
         emit stemStateChanged(stemIndex);
 #endif
     }
@@ -197,9 +292,9 @@ void AudioMixerViewModel::toggleStemSolo(int stemIndex) {
     auto stems = m_impl->m_activeDeck->loadedStems();
     if (stemIndex >= 0 && stemIndex < static_cast<int>(stems.size())) {
         bool currentSolo = stems[static_cast<size_t>(stemIndex)].isSolo();
-        stems[static_cast<size_t>(stemIndex)].setSolo(!currentSolo);
-        m_impl->m_activeDeck->loadStems(stems);
+        m_impl->m_activeDeck->setStemSolo(stemIndex, !currentSolo);
 #ifdef HARMONYSYNC_QT_AVAILABLE
+        m_impl->autosaveTimer->start();
         emit stemStateChanged(stemIndex);
 #endif
     }

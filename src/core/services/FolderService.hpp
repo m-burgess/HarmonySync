@@ -40,6 +40,18 @@ public:
      */
     [[nodiscard]] bool isSongFolder(const std::filesystem::path& folderPath) const;
 
+    /**
+     * @brief Save and apply the song's multitrack mix state to mix.json.
+     */
+    static void saveMixState(const std::string& folderPath, const std::vector<MediaStem>& stems);
+    static void applyMixState(const std::string& folderPath, std::vector<MediaStem>& stems);
+
+    /**
+     * @brief Parses a lyrics.txt file in the given folder and generates a song-map.json.
+     * @return true if successfully converted and saved, false otherwise.
+     */
+    static bool convertLyricsToSongMap(const std::filesystem::path& folderPath);
+
 private:
     struct Impl;
     std::unique_ptr<Impl> m_impl;

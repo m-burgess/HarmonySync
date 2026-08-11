@@ -69,6 +69,7 @@ public:
     Q_INVOKABLE bool addSongFolder(const QString& folderPath);
     Q_INVOKABLE QString itemNameAt(int index) const;
     Q_INVOKABLE bool itemHasSongMapAt(int index) const;
+    Q_INVOKABLE QString backgroundVideoPathAt(int index) const;
     Q_INVOKABLE void removeSongAt(int index);
     Q_INVOKABLE void clearSetlist();
 #else
@@ -76,6 +77,7 @@ public:
     bool addSongFolder(const std::string& folderPath);
     std::string itemNameAt(int index) const;
     bool itemHasSongMapAt(int index) const;
+    std::string backgroundVideoPathAt(int index) const;
     void removeSongAt(int index);
     void clearSetlist();
 #endif

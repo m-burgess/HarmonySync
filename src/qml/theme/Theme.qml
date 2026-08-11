@@ -2,17 +2,17 @@ pragma Singleton
 import QtQuick
 
 QtObject {
-    // Color Palette - Premium Modern Glassmorphic Dark Mode
-    readonly property color backgroundDark: "#0f0f12"
-    readonly property color backgroundCard: "#1e1e24"
-    readonly property color backgroundHeader: "#09090b"
-    readonly property color borderDark: "#33333d"
-    readonly property color borderGlow: "#6366f1"
+    // Color Palette - Premium Modern Dark Mode
+    readonly property color backgroundDark: "#1e1e1e"
+    readonly property color backgroundCard: "#252526"
+    readonly property color backgroundHeader: "#252526"
+    readonly property color borderDark: "#3c3c3c"
+    readonly property color borderGlow: "#007acc"
 
-    readonly property color accentPrimary: "#6366f1" // Neon Indigo
-    readonly property color accentHover: "#818cf8"
-    readonly property color accentActive: "#4f46e5"
-    readonly property color accentGlow: "#a5b4fc"
+    readonly property color accentPrimary: "#007acc"
+    readonly property color accentHover: "#0098ff"
+    readonly property color accentActive: "#0062a3"
+    readonly property color accentGlow: "#4db8ff"
 
     readonly property color textPrimary: "#f4f4f5"
     readonly property color textSecondary: "#a1a1aa"

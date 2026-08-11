@@ -131,6 +131,13 @@ bool SetlistViewModel::itemHasSongMapAt(int index) const {
     return false;
 }
 
+QString SetlistViewModel::backgroundVideoPathAt(int index) const {
+    if (index >= 0 && index < itemCount()) {
+        return QString::fromStdString(m_impl->serviceOrder.songs()[static_cast<size_t>(index)].backgroundVideoPath());
+    }
+    return QString();
+}
+
 bool SetlistViewModel::addSongFolder(const QString& folderPath) {
     std::string pathStr = folderPath.toStdString();
 #else
@@ -146,6 +153,13 @@ bool SetlistViewModel::itemHasSongMapAt(int index) const {
         return m_impl->serviceOrder.songs()[static_cast<size_t>(index)].hasSongMap();
     }
     return false;
+}
+
+std::string SetlistViewModel::backgroundVideoPathAt(int index) const {
+    if (index >= 0 && index < itemCount()) {
+        return m_impl->serviceOrder.songs()[static_cast<size_t>(index)].backgroundVideoPath();
+    }
+    return std::string();
 }
 
 bool SetlistViewModel::addSongFolder(const std::string& pathStr) {

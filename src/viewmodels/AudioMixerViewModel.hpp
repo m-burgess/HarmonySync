@@ -24,11 +24,13 @@ class AudioMixerViewModel
     Q_OBJECT
     Q_PROPERTY(float masterVolume READ masterVolume WRITE setMasterVolume NOTIFY masterVolumeChanged)
     Q_PROPERTY(int pitchShiftSemitones READ pitchShiftSemitones WRITE setPitchShiftSemitones NOTIFY pitchShiftChanged)
+    Q_PROPERTY(bool isTransposing READ isTransposing NOTIFY isTransposingChanged)
     Q_PROPERTY(bool isPlaying READ isPlaying NOTIFY playStateChanged)
     Q_PROPERTY(double positionSeconds READ positionSeconds NOTIFY positionChanged)
     Q_PROPERTY(double durationSeconds READ durationSeconds NOTIFY durationChanged)
     Q_PROPERTY(int loadedStemCount READ loadedStemCount NOTIFY stemCountChanged)
     Q_PROPERTY(float crossfadePosition READ crossfadePosition WRITE setCrossfadePosition NOTIFY crossfadePositionChanged)
+    Q_PROPERTY(QString activeBackgroundVideo READ activeBackgroundVideo NOTIFY activeBackgroundVideoChanged)
 #endif
 
 public:
@@ -44,6 +46,7 @@ public:
 
     [[nodiscard]] int pitchShiftSemitones() const noexcept;
     void setPitchShiftSemitones(int semitones) noexcept;
+    [[nodiscard]] bool isTransposing() const noexcept;
 
     [[nodiscard]] bool isPlaying() const noexcept;
     [[nodiscard]] double positionSeconds() const noexcept;
@@ -54,6 +57,14 @@ public:
     // Commands
     bool loadSongStems(const std::vector<Core::MediaStem>& stems);
     bool loadNextSongStems(const std::vector<Core::MediaStem>& stems);
+    
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    [[nodiscard]] QString activeBackgroundVideo() const;
+    Q_INVOKABLE void loadNextBackgroundVideo(const QString& path);
+#else
+    [[nodiscard]] std::string activeBackgroundVideo() const;
+    void loadNextBackgroundVideo(const std::string& path);
+#endif
     
 #ifdef HARMONYSYNC_QT_AVAILABLE
     Q_INVOKABLE void setCrossfadePosition(float position) noexcept;
@@ -91,6 +102,7 @@ public:
 signals:
     void masterVolumeChanged(float volume);
     void pitchShiftChanged(int semitones);
+    void isTransposingChanged(bool transposing);
     void playStateChanged(bool playing);
     void positionChanged(double position);
     void durationChanged(double duration);
@@ -98,6 +110,7 @@ signals:
     void crossfadePositionChanged(float position);
     void nextSongLoaded();
     void stemStateChanged(int index);
+    void activeBackgroundVideoChanged(const QString& path);
 #endif
 
 private:

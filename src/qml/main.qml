@@ -2,14 +2,21 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import "components"
+import "theme"
 
 ApplicationWindow {
     id: window
     width: 1360
     height: 850
+    minimumWidth: 1024
+    minimumHeight: 768
     visible: true
-    title: "HarmonySync - C++ & Qt Worship Media System"
-    color: "#0f0f12"
+    visibility: Window.Maximized
+    title: "HarmonySync Pro"
+    color: Theme.backgroundDark
+    
+    property string activeLyricText: ""
+    property string nextLyricText: ""
 
     SettingsDialog {
         id: settingsDialog
@@ -18,8 +25,8 @@ ApplicationWindow {
     // Top Navigation & Header Bar
     header: ToolBar {
         background: Rectangle {
-            color: "#09090b"
-            border.color: "#27272a"
+            color: Theme.backgroundCard
+            border.color: Theme.borderDark
             border.width: 1
         }
 
@@ -31,18 +38,13 @@ ApplicationWindow {
             RowLayout {
                 spacing: 8
 
-                Rectangle {
-                    width: 10
-                    height: 10
-                    radius: 5
-                    color: "#10b981"
-                }
-
                 Label {
-                    text: "🎵 HarmonySync C++ / Qt 6 Engine"
+                    text: "HARMONYSYNC PRO"
+                    font.family: Theme.fontFamily
                     font.pixelSize: 16
                     font.bold: true
-                    color: "#f4f4f5"
+                    color: Theme.textPrimary
+                    font.letterSpacing: 1.5
                 }
             }
 
@@ -51,33 +53,35 @@ ApplicationWindow {
             Rectangle {
                 width: 180
                 height: 24
-                radius: 12
-                color: "#18181b"
-                border.color: "#27272a"
+                radius: 4
+                color: Theme.backgroundDark
+                border.color: Theme.borderDark
 
                 Text {
                     anchors.centerIn: parent
                     text: setlistViewModel ? setlistViewModel.title : "Sunday Service Order"
-                    color: "#a1a1aa"
+                    color: Theme.textSecondary
                     font.pixelSize: 12
+                    font.family: Theme.fontFamily
                 }
             }
 
             Button {
                 id: settingsBtn
-                text: "⚙️ Settings"
-                font.pixelSize: 12
+                text: "SETTINGS"
+                font.pixelSize: 11
                 font.bold: true
+                font.family: Theme.fontFamily
 
                 background: Rectangle {
-                    color: settingsBtn.hovered ? "#3f3f46" : "#27272a"
-                    border.color: "#3f3f46"
-                    radius: 6
-                    Behavior on color { ColorAnimation { duration: 150 } }
+                    color: settingsBtn.hovered ? Theme.borderDark : "transparent"
+                    border.color: settingsBtn.hovered ? Theme.accentPrimary : Theme.borderDark
+                    radius: 3
+                    Behavior on color { ColorAnimation { duration: Theme.animDuration } }
                 }
                 contentItem: Text {
                     text: settingsBtn.text
-                    color: "#f4f4f5"
+                    color: Theme.textPrimary
                     font: settingsBtn.font
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
@@ -91,6 +95,11 @@ ApplicationWindow {
     SplitView {
         anchors.fill: parent
         orientation: Qt.Horizontal
+        
+        handle: Rectangle {
+            implicitWidth: 1
+            color: Theme.borderDark
+        }
 
         // Left Pane: Service Order Subfolders List
         ServiceOrderPanel {
@@ -98,39 +107,57 @@ ApplicationWindow {
             SplitView.preferredWidth: 340
         }
 
-        // Center Pane: Row with Lyrics and Slide Output
-        RowLayout {
+        // Main Content Area (Lyrics + Preview over Mixer)
+        SplitView {
+            orientation: Qt.Vertical
             SplitView.fillWidth: true
             SplitView.fillHeight: true
-            spacing: 10
-
-            // LyricsPanel shown when song map is active
-            LyricsPanel {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                visible: setlistViewModel ? setlistViewModel.hasActiveSongMap : true
+            
+            handle: Rectangle {
+                implicitHeight: 1
+                color: Theme.borderDark
             }
 
-            SlideDisplayPanel {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-            }
-        }
+            // Top Half: Lyrics & Preview side-by-side
+            SplitView {
+                orientation: Qt.Horizontal
+                SplitView.fillWidth: true
+                SplitView.fillHeight: true
 
-        // Right Pane: Stem Mixer Panel (Collapses dynamically when no audio stems present)
-        StemMixerPanel {
-            SplitView.preferredWidth: 300
-            SplitView.minimumWidth: 260
-            SplitView.fillHeight: true
-            visible: setlistViewModel ? setlistViewModel.hasActiveSongMap : false
+                handle: Rectangle {
+                    implicitWidth: 1
+                    color: Theme.borderDark
+                }
+
+                LyricsPanel {
+                    SplitView.fillWidth: true
+                    SplitView.fillHeight: true
+                    visible: setlistViewModel ? setlistViewModel.hasActiveSongMap : true
+                }
+
+                SlideDisplayPanel {
+                    SplitView.preferredWidth: 340
+                    SplitView.minimumWidth: 300
+                    SplitView.fillHeight: true
+                }
+            }
+
+            // Bottom Half: Mixer spans the entire width of the main content area
+            StemMixerPanel {
+                SplitView.fillWidth: true
+                SplitView.preferredHeight: 260
+                SplitView.minimumHeight: 260
+                visible: setlistViewModel ? setlistViewModel.hasActiveSongMap : false
+            }
         }
     }
 
     // Status Footer Bar
     footer: ToolBar {
         background: Rectangle {
-            color: "#09090b"
-            border.color: "#27272a"
+            color: Theme.backgroundCard
+            border.color: Theme.borderDark
+            border.width: 1
         }
 
         RowLayout {
@@ -139,16 +166,19 @@ ApplicationWindow {
             spacing: 10
 
             Rectangle {
-                width: 8
-                height: 8
-                radius: 4
-                color: "#10b981"
+                width: 6
+                height: 6
+                radius: 3
+                color: Theme.accentPrimary
             }
 
             Label {
-                text: "Status: Ready | Mode: Cloud Service Order Directory | Engine: C++20 / Qt 6.10.2"
-                color: "#71717a"
-                font.pixelSize: 12
+                text: "STATUS: READY  |  MODE: CLOUD SERVICE ORDER"
+                color: Theme.textMuted
+                font.pixelSize: 10
+                font.family: Theme.fontFamily
+                font.bold: true
+                font.letterSpacing: 1
             }
         }
     }

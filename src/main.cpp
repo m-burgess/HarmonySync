@@ -69,6 +69,7 @@ int main(int argc, char* argv[]) {
         [&setlistViewModel, &audioMixerViewModel](int index) {
             if (index >= 0) {
                 auto stems = setlistViewModel.stemsAt(index);
+                audioMixerViewModel.loadNextBackgroundVideo(setlistViewModel.backgroundVideoPathAt(index));
                 audioMixerViewModel.loadNextSongStems(stems);
             }
         });
