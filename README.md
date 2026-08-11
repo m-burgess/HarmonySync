@@ -8,6 +8,14 @@ Modern worship presentation software with multitrack audio, DMX lighting control
 
 HarmonySync is a comprehensive presentation solution designed for modern worship environments. It integrates multitrack audio playback, synchronized lighting control, and multi-screen display management into a single, cohesive system.
 
+### Product Vision & Core Workflow
+
+The core philosophy of HarmonySync is to be a **zero-layout, packaged presentation software**. Unlike traditional presentation software that forces users to manually build slide layouts, import media, and configure complex presentations every week, HarmonySync is entirely driven by folder structures and simple configuration files.
+
+- **JSON-Driven Configuration**: Everything is configured via simple `.json` files that can be stored and collaborated on via Google Drive.
+- **Automated Service Orders**: The service order folder is downloaded from the cloud. Once the main service folder is selected in the app, all subfolders automatically populate as clickable, ready-to-run service order items.
+- **Ready to Display**: Media and lyrics are instantly ready to be displayed on Audience, Stage, and Livestream (Lower Thirds) outputs without *any* manual slide building or extra configuration required.
+
 ### Key Features
 
 - **Multitrack Audio**: High-performance audio playback with real-time transposition, stem mixing, and MIDI synchronization.
