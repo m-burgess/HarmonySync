@@ -2,6 +2,14 @@
 #include <algorithm>
 #include <vector>
 #include <utility>
+#if __has_include(<QJsonDocument>)
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QFile>
+#endif
+#include <vector>
+#include <utility>
 
 namespace HarmonySync::Core {
 
@@ -42,6 +50,26 @@ ServiceOrder ServiceOrderFolderScanner::scanServiceOrderDirectory(const std::fil
 
     std::string rootName = rootPath.filename().string();
     order.setDateString(rootName);
+
+    std::filesystem::path serviceMapPath = rootPath / "service-map.json";
+    if (std::filesystem::exists(serviceMapPath)) {
+#if __has_include(<QJsonDocument>)
+        QFile file(QString::fromStdString(serviceMapPath.string()));
+        if (file.open(QIODevice::ReadOnly)) {
+            QByteArray data = file.readAll();
+            QJsonDocument doc = QJsonDocument::fromJson(data);
+            if (doc.isObject()) {
+                QJsonObject obj = doc.object();
+                if (obj.contains("playlist")) {
+                    QJsonObject playlistObj = obj["playlist"].toObject();
+                    if (playlistObj.contains("url")) {
+                        order.setPlaylistUrl(playlistObj["url"].toString().toStdString());
+                    }
+                }
+            }
+        }
+#endif
+    }
 
     std::vector<std::filesystem::path> subfolderPaths;
     for (const auto& entry : std::filesystem::directory_iterator(rootPath)) {

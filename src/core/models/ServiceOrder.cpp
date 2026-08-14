@@ -8,6 +8,7 @@ struct ServiceOrder::Impl {
     std::string id;
     std::string title;
     std::string dateString;
+    std::string playlistUrl;
     std::vector<SongMap> songs;
     std::vector<SlideItem> slides;
 
@@ -64,6 +65,10 @@ const std::vector<SlideItem>& ServiceOrder::slides() const noexcept {
     return m_impl->slides;
 }
 
+const std::string& ServiceOrder::playlistUrl() const noexcept {
+    return m_impl->playlistUrl;
+}
+
 void ServiceOrder::setTitle(std::string title) {
     m_impl->title = std::move(title);
 }
@@ -90,6 +95,10 @@ void ServiceOrder::removeSongAt(size_t index) {
     if (index < m_impl->songs.size()) {
         m_impl->songs.erase(m_impl->songs.begin() + static_cast<ptrdiff_t>(index));
     }
+}
+
+void ServiceOrder::setPlaylistUrl(std::string url) {
+    m_impl->playlistUrl = std::move(url);
 }
 
 void ServiceOrder::clearAll() noexcept {

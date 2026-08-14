@@ -33,6 +33,7 @@ class SetlistViewModel
     Q_PROPERTY(QString currentLyricsContent READ currentLyricsContent NOTIFY currentLyricsContentChanged)
     Q_PROPERTY(QString activeLyricText READ activeLyricText NOTIFY activeLyricTextChanged)
     Q_PROPERTY(QString nextLyricText READ nextLyricText NOTIFY nextLyricTextChanged)
+    Q_PROPERTY(QString playlistUrl READ playlistUrl NOTIFY playlistUrlChanged)
     Q_PROPERTY(int activeLyricIndex READ activeLyricIndex WRITE setActiveLyricIndex NOTIFY activeLyricIndexChanged)
     Q_PROPERTY(bool autoLyricsEnabled READ autoLyricsEnabled WRITE setAutoLyricsEnabled NOTIFY autoLyricsEnabledChanged)
     Q_PROPERTY(bool isGeneratingTimestamps READ isGeneratingTimestamps NOTIFY isGeneratingTimestampsChanged)
@@ -82,6 +83,7 @@ public:
     [[nodiscard]] QString currentLyricsContent() const;
     [[nodiscard]] QString activeLyricText() const;
     [[nodiscard]] QString nextLyricText() const;
+    [[nodiscard]] QString playlistUrl() const;
     [[nodiscard]] int activeLyricIndex() const noexcept;
     Q_INVOKABLE void setActiveLyricIndex(int index);
 
@@ -122,6 +124,7 @@ signals:
     void currentLyricsContentChanged();
     void activeLyricTextChanged();
     void nextLyricTextChanged();
+    void playlistUrlChanged();
     void activeLyricIndexChanged(int index);
     void autoLyricsEnabledChanged(bool enabled);
     void isGeneratingTimestampsChanged(bool generating);

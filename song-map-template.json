@@ -1,0 +1,35 @@
+{
+  "title": "Song Title",
+  "artist": "Artist Name",
+  "bpm": 78,
+  "timing": "4/4",
+  "length": "3:00",
+  "key": "C",
+  "lyricsURL": "",
+  "backgroundVideo": "Background.mp4",
+  "sections": [
+    {
+      "name": "Intro",
+      "chords": "1-6m-5-4",
+      "lines": []
+    },
+    {
+      "name": "Verse 1",
+      "chords": "1-6m-5-4",
+      "lines": [
+        "Paste lyrics here...",
+        "Second line of lyrics..."
+      ]
+    }
+  ],
+  "timedLyrics": [
+    {
+      "time": 0.0,
+      "text": "Paste lyrics here..."
+    },
+    {
+      "time": 10.0,
+      "text": "Second line of lyrics..."
+    }
+  ]
+}

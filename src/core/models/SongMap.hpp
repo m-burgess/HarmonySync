@@ -10,6 +10,7 @@ namespace HarmonySync::Core {
 
 struct SongSection {
     std::string name;
+    std::string chords;
     std::vector<std::string> lines;
 };
 
@@ -40,6 +41,7 @@ public:
     [[nodiscard]] const std::string& currentKey() const noexcept;
     [[nodiscard]] double tempoBpm() const noexcept;
     [[nodiscard]] const std::vector<MediaStem>& stems() const noexcept;
+    [[nodiscard]] const std::vector<SongSection>& sections() const noexcept;
     [[nodiscard]] const std::string& lyricsContent() const noexcept;
     [[nodiscard]] const std::vector<TimedLyricLine>& timedLyrics() const noexcept;
     [[nodiscard]] bool hasSongMap() const noexcept;
@@ -49,6 +51,7 @@ public:
     // Setters / Modifiers
     void setKeys(std::string origKey, std::string curKey);
     void setTempoBpm(double bpm) noexcept;
+    void setSections(std::vector<SongSection> sections);
     void setLyricsContent(std::string lyrics);
     void setTimedLyrics(std::vector<TimedLyricLine> timedLyrics);
     void setHasSongMap(bool hasMap) noexcept;

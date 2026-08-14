@@ -67,6 +67,32 @@ ApplicationWindow {
             }
 
             Button {
+                id: walkInBtn
+                text: "WALK-IN MUSIC"
+                font.pixelSize: 11
+                font.bold: true
+                font.family: Theme.fontFamily
+                visible: hasWebEngine && setlistViewModel && setlistViewModel.playlistUrl !== ""
+
+                background: Rectangle {
+                    color: playlistLoader.active ? Theme.accentPrimary : (walkInBtn.hovered ? Theme.borderDark : "transparent")
+                    border.color: walkInBtn.hovered ? Theme.accentPrimary : Theme.borderDark
+                    radius: 3
+                    Behavior on color { ColorAnimation { duration: Theme.animDuration } }
+                }
+                contentItem: Text {
+                    text: walkInBtn.text
+                    color: playlistLoader.active ? Theme.textOnAccent : Theme.textPrimary
+                    font: walkInBtn.font
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                onClicked: {
+                    playlistLoader.active = !playlistLoader.active;
+                }
+            }
+
+            Button {
                 id: settingsBtn
                 text: "SETTINGS"
                 font.pixelSize: 11
@@ -179,6 +205,19 @@ ApplicationWindow {
                 font.family: Theme.fontFamily
                 font.bold: true
                 font.letterSpacing: 1
+            }
+        }
+    }
+
+    // Dynamic Loader for the Web Engine Playlist Player
+    Loader {
+        id: playlistLoader
+        active: false
+        source: "components/PlaylistWebPlayer.qml"
+        onLoaded: {
+            if (item && setlistViewModel) {
+                item.playlistUrl = setlistViewModel.playlistUrl;
+                item.show();
             }
         }
     }

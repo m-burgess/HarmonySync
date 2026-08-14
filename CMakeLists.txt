@@ -31,6 +31,12 @@ endif()
 # Find Qt 6 Packages (Optional Fallback for standalone C++ core testing)
 find_package(Qt6 COMPONENTS Core Gui Quick QuickControls2 Multimedia Test QUIET)
 
+find_package(Qt6 COMPONENTS WebEngineQuick QUIET)
+if (Qt6WebEngineQuick_FOUND)
+    message(STATUS "Qt6 WebEngineQuick found. Playlist automation will be enabled.")
+    add_compile_definitions(HARMONYSYNC_HAS_WEBENGINE=1)
+endif()
+
 if(Qt6_FOUND)
     message(STATUS "Qt6 found version: ${Qt6_VERSION}")
     set(CMAKE_AUTOMOC ON)
@@ -66,6 +72,9 @@ target_link_libraries(harmonysync_app PRIVATE harmonysync_viewmodels harmonysync
 
 if(Qt6_FOUND)
     target_link_libraries(harmonysync_app PRIVATE Qt6::Core Qt6::Quick Qt6::QuickControls2 Qt6::Multimedia)
+    if (Qt6WebEngineQuick_FOUND)
+        target_link_libraries(harmonysync_app PRIVATE Qt6::WebEngineQuick)
+    endif()
     qt_add_resources(harmonysync_app "qml_resources"
         PREFIX "/"
         FILES

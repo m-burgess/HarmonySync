@@ -29,6 +29,7 @@ public:
     [[nodiscard]] const std::string& dateString() const noexcept;
     [[nodiscard]] const std::vector<SongMap>& songs() const noexcept;
     [[nodiscard]] const std::vector<SlideItem>& slides() const noexcept;
+    [[nodiscard]] const std::string& playlistUrl() const noexcept;
 
     // Modifiers
     void setTitle(std::string title);
@@ -37,6 +38,7 @@ public:
     void updateSongAt(size_t index, const SongMap& song);
     void addSlide(SlideItem slide);
     void removeSongAt(size_t index);
+    void setPlaylistUrl(std::string url);
     void clearAll() noexcept;
 
 private:

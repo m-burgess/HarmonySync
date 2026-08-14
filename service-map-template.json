@@ -1,0 +1,39 @@
+{
+  "playlist": {
+    "url": "https://youtube.com/playlist?list=PL12345",
+    "services": [
+      {
+        "name": "morning",
+        "start": "8:30AM",
+        "end": "8:55AM"
+      },
+      {
+        "name": "midmorning",
+        "start": "10:30AM",
+        "end": "10:55AM"
+      }
+    ]
+  },
+  "canva": {
+    "url": "Paste canva link"
+  },
+  "items": [
+    {
+      "name": "Filename.png/mov/mp4",
+      "midi": "A-4, B-4",
+      "timer": "05:00",
+      "timerTarget": "audience, confidence",
+      "autoAdvanceWhenComplete": true
+    },
+    {
+      "name": "Countdown.mp4",
+      "start": "8:25AM",
+      "end": "8:30AM",
+      "autoAdvanceWhenComplete": true
+    },
+    {
+      "name": "AnotherFilename.mov",
+      "url": "https://example.com/video"
+    }
+  ]
+}

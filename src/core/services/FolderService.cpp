@@ -115,21 +115,31 @@ SongMap FolderService::loadSongFromFolder(const std::filesystem::path& folderPat
                 }
 
                 if (obj.contains("sections")) {
-                    QJsonArray sections = obj["sections"].toArray();
+                    QJsonArray jsonSections = obj["sections"].toArray();
+                    std::vector<SongSection> sections;
                     std::string lyricsContent;
-                    for (int i = 0; i < sections.size(); ++i) {
-                        QJsonObject section = sections[i].toObject();
-                        if (section.contains("name")) {
-                            lyricsContent += "[" + section["name"].toString().toStdString() + "]\n";
+                    for (int i = 0; i < jsonSections.size(); ++i) {
+                        QJsonObject jsonSection = jsonSections[i].toObject();
+                        SongSection section;
+                        if (jsonSection.contains("name")) {
+                            section.name = jsonSection["name"].toString().toStdString();
+                            lyricsContent += "[" + section.name + "]\n";
                         }
-                        if (section.contains("lines")) {
-                            QJsonArray lines = section["lines"].toArray();
+                        if (jsonSection.contains("chords")) {
+                            section.chords = jsonSection["chords"].toString().toStdString();
+                        }
+                        if (jsonSection.contains("lines")) {
+                            QJsonArray lines = jsonSection["lines"].toArray();
                             for (int j = 0; j < lines.size(); ++j) {
-                                lyricsContent += lines[j].toString().toStdString() + "\n";
+                                std::string lineStr = lines[j].toString().toStdString();
+                                section.lines.push_back(lineStr);
+                                lyricsContent += lineStr + "\n";
                             }
                         }
                         lyricsContent += "\n";
+                        sections.push_back(section);
                     }
+                    song.setSections(sections);
                     song.setLyricsContent(lyricsContent);
                 }
 

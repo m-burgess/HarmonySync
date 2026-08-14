@@ -164,6 +164,7 @@ void SetlistViewModel::setCurrentSongIndex(int index) {
         emit activeLyricIndexChanged(m_impl->activeLyricIndex);
         emit activeLyricTextChanged();
         emit nextLyricTextChanged();
+        emit playlistUrlChanged();
 #endif
     }
 }
@@ -309,6 +310,9 @@ QString SetlistViewModel::activeLyricText() const {
 QString SetlistViewModel::nextLyricText() const {
     return QString::fromStdString(m_impl->nextLyricText);
 }
+QString SetlistViewModel::playlistUrl() const {
+    return QString::fromStdString(m_impl->serviceOrder.playlistUrl());
+}
 void SetlistViewModel::setActiveLyricIndex(int index) {
     if (m_impl->activeLyricIndex != index) {
         m_impl->activeLyricIndex = index;
@@ -330,6 +334,9 @@ std::string SetlistViewModel::activeLyricText() const {
 }
 std::string SetlistViewModel::nextLyricText() const {
     return m_impl->nextLyricText;
+}
+std::string SetlistViewModel::playlistUrl() const {
+    return m_impl->serviceOrder.playlistUrl();
 }
 void SetlistViewModel::setActiveLyricIndex(int index) {
     if (m_impl->activeLyricIndex != index) {

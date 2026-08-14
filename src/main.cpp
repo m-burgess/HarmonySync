@@ -13,6 +13,9 @@
 #include <QQmlContext>
 #include <QQuickStyle>
 #include <QUrl>
+#ifdef HARMONYSYNC_HAS_WEBENGINE
+#include <QtWebEngineQuick>
+#endif
 #endif
 
 int main(int argc, char *argv[]) {
@@ -23,6 +26,11 @@ int main(int argc, char *argv[]) {
   qputenv("QT_QUICK_CONTROLS_STYLE", "Fusion");
   qputenv("QT_QUICK_CONTROLS_FALLBACK_STYLE", "Fusion");
   QQuickStyle::setStyle("Fusion");
+
+#ifdef HARMONYSYNC_HAS_WEBENGINE
+  QtWebEngineQuick::initialize();
+#endif
+
   QGuiApplication app(argc, argv);
 #endif
 
@@ -44,6 +52,12 @@ int main(int argc, char *argv[]) {
   context->setContextProperty("audioMixerViewModel", &audioMixerViewModel);
   context->setContextProperty("slideDisplayViewModel", &slideDisplayViewModel);
   context->setContextProperty("settingsViewModel", &settingsViewModel);
+
+#ifdef HARMONYSYNC_HAS_WEBENGINE
+  context->setContextProperty("hasWebEngine", true);
+#else
+  context->setContextProperty("hasWebEngine", false);
+#endif
 
   QUrl url(QStringLiteral("qrc:/src/qml/main.qml"));
   if (!QFile::exists(QStringLiteral(":/src/qml/main.qml"))) {
