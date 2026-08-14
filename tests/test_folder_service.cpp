@@ -62,15 +62,73 @@ void testLyricsToSongMapConversion() {
     assert(content.find("\"Verse 1\"") != std::string::npos);
     assert(content.find("Amazing grace") != std::string::npos);
     assert(content.find("\"Chorus\"") != std::string::npos);
+    jsonFile.seekg(0, std::ios::end);
+    assert(jsonFile.tellg() > 0);
+    jsonFile.close();
 
     std::filesystem::remove_all(tempDir);
     std::cout << "[PASS] testLyricsToSongMapConversion passed." << std::endl;
+}
+
+void testJsonParsing() {
+    std::cout << "[TEST] Running testJsonParsing..." << std::endl;
+    std::filesystem::path tempDir = std::filesystem::temp_directory_path() / "harmonysync_test_json";
+    std::filesystem::create_directories(tempDir);
+
+    std::ofstream json(tempDir / "song-map.json");
+    json << R"({
+        "title": "Test Title",
+        "artist": "Test Artist",
+        "backgroundVideo": "bg.mp4",
+        "sections": [
+            {
+                "name": "Chorus",
+                "lines": ["Line 1", "Line 2"]
+            }
+        ],
+        "timedLyrics": [
+            { "time": 0.0, "text": "[Chorus]" },
+            { "time": 2.5, "text": "Line 1" },
+            { "time": 5.0, "text": "Line 2" }
+        ]
+    })";
+    json.close();
+
+    FolderService folderSvc;
+    SongMap song = folderSvc.loadSongFromFolder(tempDir);
+    
+    if (song.title() != "Test Title") throw std::runtime_error("Title mismatch");
+    if (song.artist() != "Test Artist") throw std::runtime_error("Artist mismatch");
+    if (song.backgroundVideoPath() != (tempDir / "bg.mp4").string()) throw std::runtime_error("Background video mismatch");
+    if (song.lyricsContent().find("Line 1") == std::string::npos) throw std::runtime_error("Lyrics mismatch");
+    if (song.timedLyrics().size() != 3) throw std::runtime_error("Timed lyrics count mismatch");
+    if (song.timedLyrics()[1].timestampSeconds != 2.5) throw std::runtime_error("Timed lyrics time mismatch");
+    if (song.timedLyrics()[1].text != "Line 1") throw std::runtime_error("Timed lyrics text mismatch");
+
+    // Test save
+    song.setTimedLyrics({
+        {0.0, "[Chorus]"},
+        {2.5, "Line 1"},
+        {5.0, "Line 2"},
+        {7.5, "Line 3 added"}
+    });
+    
+    bool saved = FolderService::saveSongMap(song);
+    if (!saved) throw std::runtime_error("saveSongMap failed");
+    
+    SongMap reloaded = folderSvc.loadSongFromFolder(tempDir);
+    if (reloaded.timedLyrics().size() != 4) throw std::runtime_error("Reloaded timed lyrics count mismatch");
+    if (reloaded.timedLyrics()[3].text != "Line 3 added") throw std::runtime_error("Reloaded timed lyrics text mismatch");
+
+    std::filesystem::remove_all(tempDir);
+    std::cout << "[PASS] testJsonParsing passed." << std::endl;
 }
 
 int main() {
     try {
         testFolderScanningWithDummyFiles();
         testLyricsToSongMapConversion();
+        testJsonParsing();
         std::cout << "\nALL FOLDER SERVICE UNIT TESTS PASSED (100% Success)" << std::endl;
         return EXIT_SUCCESS;
     } catch (const std::exception& ex) {

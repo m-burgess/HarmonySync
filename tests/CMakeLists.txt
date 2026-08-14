@@ -127,3 +127,11 @@ add_test(NAME test_mobile_api_client COMMAND test_mobile_api_client)
 add_executable(test_mobile_viewmodels test_mobile_viewmodels.cpp)
 target_link_libraries(test_mobile_viewmodels PRIVATE harmonysync_viewmodels harmonysync_core)
 add_test(NAME test_mobile_viewmodels COMMAND test_mobile_viewmodels)
+
+# Test AI Lyric Sync Service
+add_executable(test_ai_lyric_sync test_ai_lyric_sync.cpp)
+target_link_libraries(test_ai_lyric_sync PRIVATE harmonysync_core)
+if(Qt6_FOUND)
+    target_link_libraries(test_ai_lyric_sync PRIVATE Qt6::Core)
+endif()
+add_test(NAME test_ai_lyric_sync COMMAND test_ai_lyric_sync)

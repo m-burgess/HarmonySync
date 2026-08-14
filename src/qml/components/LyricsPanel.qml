@@ -11,8 +11,9 @@ Rectangle {
     radius: Theme.borderRadius
 
     property bool isEditing: false
-    property string rawLyricsText: "[ VERSE 1 ]\nAmazing grace how sweet the sound\nThat saved a wretch like me\nI once was lost, but now am found\nWas blind, but now I see\n\n[ CHORUS ]\nMy chains are gone, I've been set free\nMy God, my Savior has ransomed me\nAnd like a flood His mercy reigns\nUnending love, amazing grace"
-    property int activeSlideIndex: -1
+    property string rawLyricsText: setlistViewModel ? setlistViewModel.currentLyricsContent : ""
+    onRawLyricsTextChanged: parseLyrics()
+    property int activeSlideIndex: setlistViewModel ? setlistViewModel.activeLyricIndex : -1
 
     // Dynamic Column Collapsing Requirement
     visible: setlistViewModel ? setlistViewModel.hasActiveSongMap : true
@@ -108,6 +109,55 @@ Rectangle {
                 color: Theme.textPrimary
                 font.letterSpacing: 1.2
                 Layout.fillWidth: true
+            }
+
+            // AUTO-SYNC TOGGLE
+            RowLayout {
+                spacing: 4
+                Label {
+                    text: "AUTO-SYNC"
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 10
+                    font.bold: true
+                    color: Theme.textSecondary
+                }
+                Switch {
+                    id: autoSyncSwitch
+                    checked: setlistViewModel ? setlistViewModel.autoLyricsEnabled : false
+                    onCheckedChanged: {
+                        if (setlistViewModel && setlistViewModel.autoLyricsEnabled !== checked) {
+                            setlistViewModel.autoLyricsEnabled = checked
+                        }
+                    }
+                }
+            }
+
+            // AI ALIGN LYRICS BUTTON
+            Button {
+                id: aiAlignBtn
+                text: (setlistViewModel && setlistViewModel.isGeneratingTimestamps) ? "GENERATING..." : "AI ALIGN LYRICS"
+                enabled: setlistViewModel && !setlistViewModel.isGeneratingTimestamps
+                font.pixelSize: 10
+                font.bold: true
+                font.family: Theme.fontFamily
+                Layout.preferredHeight: 22
+                background: Rectangle {
+                    color: aiAlignBtn.enabled ? (aiAlignBtn.hovered ? Theme.accentPrimaryHover : Theme.accentPrimary) : Theme.borderDark
+                    radius: 4
+                    Behavior on color { ColorAnimation { duration: Theme.animDuration } }
+                }
+                contentItem: Text {
+                    text: aiAlignBtn.text
+                    color: "#ffffff"
+                    font: aiAlignBtn.font
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                onClicked: {
+                    if (setlistViewModel) {
+                        setlistViewModel.generateAITimestamps("reference")
+                    }
+                }
             }
 
             Button {
@@ -214,19 +264,9 @@ Rectangle {
                         hoverEnabled: true
                         onClicked: {
                             if (!isHeader) {
-                                root.activeSlideIndex = index
-                                window.activeLyricText = textBlock
-                                
-                                let foundNext = false
-                                for (let i = index + 1; i < lyricsModel.count; i++) {
-                                    let item = lyricsModel.get(i)
-                                    if (!item.isHeader) {
-                                        window.nextLyricText = item.textBlock
-                                        foundNext = true
-                                        break
-                                    }
+                                if (setlistViewModel) {
+                                    setlistViewModel.setActiveLyricIndex(index)
                                 }
-                                if (!foundNext) window.nextLyricText = "---"
                             }
                         }
                     }

@@ -12,6 +12,7 @@ struct SongMap::Impl {
     double tempoBpm{120.0};
     std::vector<MediaStem> stems;
     std::string lyricsContent;
+    std::vector<TimedLyricLine> timedLyrics;
     std::string folderPath;
     std::string backgroundVideoPath;
     bool hasMap{false};
@@ -81,6 +82,10 @@ const std::string& SongMap::lyricsContent() const noexcept {
     return m_impl->lyricsContent;
 }
 
+const std::vector<TimedLyricLine>& SongMap::timedLyrics() const noexcept {
+    return m_impl->timedLyrics;
+}
+
 bool SongMap::hasSongMap() const noexcept {
     return m_impl->hasMap;
 }
@@ -104,6 +109,10 @@ void SongMap::setTempoBpm(double bpm) noexcept {
 
 void SongMap::setLyricsContent(std::string lyrics) {
     m_impl->lyricsContent = std::move(lyrics);
+}
+
+void SongMap::setTimedLyrics(std::vector<TimedLyricLine> timedLyrics) {
+    m_impl->timedLyrics = std::move(timedLyrics);
 }
 
 void SongMap::setHasSongMap(bool hasMap) noexcept {

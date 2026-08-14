@@ -19,6 +19,7 @@ add_library(harmonysync_core STATIC
     services/ServiceOrderFolderScanner.cpp
     services/SettingsStorageService.cpp
     services/MobileApiClient.cpp
+    services/AILyricSyncService.cpp
 )
 
 target_include_directories(harmonysync_core PUBLIC

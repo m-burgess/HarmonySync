@@ -61,9 +61,11 @@ public:
 #ifdef HARMONYSYNC_QT_AVAILABLE
     [[nodiscard]] QString activeBackgroundVideo() const;
     Q_INVOKABLE void loadNextBackgroundVideo(const QString& path);
+    Q_INVOKABLE void setActiveBackgroundVideo(const QString& path);
 #else
     [[nodiscard]] std::string activeBackgroundVideo() const;
     void loadNextBackgroundVideo(const std::string& path);
+    void setActiveBackgroundVideo(const std::string& path);
 #endif
     
 #ifdef HARMONYSYNC_QT_AVAILABLE

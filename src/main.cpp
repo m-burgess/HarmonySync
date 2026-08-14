@@ -61,7 +61,7 @@ int main(int argc, char* argv[]) {
         },
         Qt::QueuedConnection);
 
-    // Bind Setlist selection to AudioMixer Dual-Deck preloading
+    // Bind Setlist selection to AudioMixer preloading and immediate video switch
     QObject::connect(
         &setlistViewModel,
         &HarmonySync::ViewModels::SetlistViewModel::currentSongIndexChanged,
@@ -69,9 +69,20 @@ int main(int argc, char* argv[]) {
         [&setlistViewModel, &audioMixerViewModel](int index) {
             if (index >= 0) {
                 auto stems = setlistViewModel.stemsAt(index);
-                audioMixerViewModel.loadNextBackgroundVideo(setlistViewModel.backgroundVideoPathAt(index));
+                QString videoPath = setlistViewModel.backgroundVideoPathAt(index);
+                audioMixerViewModel.setActiveBackgroundVideo(videoPath);
+                audioMixerViewModel.loadNextBackgroundVideo(videoPath);
                 audioMixerViewModel.loadNextSongStems(stems);
             }
+        });
+
+    // Bind audio playback position to AI lyric syncing
+    QObject::connect(
+        &audioMixerViewModel,
+        &HarmonySync::ViewModels::AudioMixerViewModel::positionChanged,
+        &app,
+        [&setlistViewModel](double positionSeconds) {
+            setlistViewModel.syncToPlaybackPosition(positionSeconds);
         });
 
     engine.load(url);

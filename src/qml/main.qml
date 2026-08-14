@@ -15,8 +15,8 @@ ApplicationWindow {
     title: "HarmonySync Pro"
     color: Theme.backgroundDark
     
-    property string activeLyricText: ""
-    property string nextLyricText: ""
+    property string activeLyricText: setlistViewModel ? setlistViewModel.activeLyricText : ""
+    property string nextLyricText: setlistViewModel ? setlistViewModel.nextLyricText : ""
 
     SettingsDialog {
         id: settingsDialog

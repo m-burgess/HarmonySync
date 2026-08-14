@@ -91,6 +91,64 @@ SongMap FolderService::loadSongFromFolder(const std::filesystem::path& folderPat
     // Convert lyrics if needed
     convertLyricsToSongMap(folderPath);
 
+#if __has_include(<QJsonDocument>)
+    std::filesystem::path jsonPath = folderPath / "song-map.json";
+    if (std::filesystem::exists(jsonPath)) {
+        QFile file(QString::fromStdString(jsonPath.string()));
+        if (file.open(QIODevice::ReadOnly)) {
+            QByteArray data = file.readAll();
+            QJsonDocument doc = QJsonDocument::fromJson(data);
+            if (doc.isObject()) {
+                QJsonObject obj = doc.object();
+                if (obj.contains("title")) {
+                    song = SongMap(folderName, obj["title"].toString().toStdString(), 
+                                   obj.contains("artist") ? obj["artist"].toString().toStdString() : "Unknown Artist");
+                    song.setFolderPath(folderPath.string());
+                }
+                
+                if (obj.contains("backgroundVideo")) {
+                    std::string bgVideo = obj["backgroundVideo"].toString().toStdString();
+                    if (!bgVideo.empty()) {
+                        std::filesystem::path bgPath = folderPath / bgVideo;
+                        song.setBackgroundVideoPath(bgPath.string());
+                    }
+                }
+
+                if (obj.contains("sections")) {
+                    QJsonArray sections = obj["sections"].toArray();
+                    std::string lyricsContent;
+                    for (int i = 0; i < sections.size(); ++i) {
+                        QJsonObject section = sections[i].toObject();
+                        if (section.contains("name")) {
+                            lyricsContent += "[" + section["name"].toString().toStdString() + "]\n";
+                        }
+                        if (section.contains("lines")) {
+                            QJsonArray lines = section["lines"].toArray();
+                            for (int j = 0; j < lines.size(); ++j) {
+                                lyricsContent += lines[j].toString().toStdString() + "\n";
+                            }
+                        }
+                        lyricsContent += "\n";
+                    }
+                    song.setLyricsContent(lyricsContent);
+                }
+
+                if (obj.contains("timedLyrics")) {
+                    QJsonArray tLyrics = obj["timedLyrics"].toArray();
+                    std::vector<TimedLyricLine> timedLines;
+                    for (int i = 0; i < tLyrics.size(); ++i) {
+                        QJsonObject tLine = tLyrics[i].toObject();
+                        if (tLine.contains("time") && tLine.contains("text")) {
+                            timedLines.push_back({ tLine["time"].toDouble(), tLine["text"].toString().toStdString() });
+                        }
+                    }
+                    song.setTimedLyrics(timedLines);
+                }
+            }
+        }
+    }
+#endif
+
     // Load config.json if present
     ServiceItemConfig cfg = m_impl->configService->loadConfigFromDirectory(folderPath);
 
@@ -335,6 +393,52 @@ bool FolderService::convertLyricsToSongMap(const std::filesystem::path& folderPa
     QFile outFile(QString::fromStdString(jsonPath.string()));
     if (outFile.open(QIODevice::WriteOnly)) {
         outFile.write(doc.toJson(QJsonDocument::Indented));
+        return true;
+    }
+#endif
+    return false;
+}
+
+bool FolderService::saveSongMap(const SongMap& songMap) {
+    if (songMap.folderPath().empty()) return false;
+    
+    std::filesystem::path jsonPath = std::filesystem::path(songMap.folderPath()) / "song-map.json";
+    
+#if __has_include(<QJsonDocument>)
+    QJsonObject rootObj;
+    
+    if (std::filesystem::exists(jsonPath)) {
+        QFile fileIn(QString::fromStdString(jsonPath.string()));
+        if (fileIn.open(QIODevice::ReadOnly)) {
+            QByteArray data = fileIn.readAll();
+            QJsonDocument doc = QJsonDocument::fromJson(data);
+            if (doc.isObject()) {
+                rootObj = doc.object();
+            }
+            fileIn.close();
+        }
+    }
+    
+    rootObj["title"] = QString::fromStdString(songMap.title());
+    rootObj["artist"] = QString::fromStdString(songMap.artist());
+    
+    auto timedLines = songMap.timedLyrics();
+    if (!timedLines.empty()) {
+        QJsonArray timedArray;
+        for (const auto& tl : timedLines) {
+            QJsonObject lineObj;
+            lineObj["time"] = tl.timestampSeconds;
+            lineObj["text"] = QString::fromStdString(tl.text);
+            timedArray.append(lineObj);
+        }
+        rootObj["timedLyrics"] = timedArray;
+    }
+
+    QJsonDocument outDoc(rootObj);
+    QFile fileOut(QString::fromStdString(jsonPath.string()));
+    if (fileOut.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        fileOut.write(outDoc.toJson(QJsonDocument::Indented));
+        fileOut.close();
         return true;
     }
 #endif

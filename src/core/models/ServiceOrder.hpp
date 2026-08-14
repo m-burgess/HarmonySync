@@ -34,6 +34,7 @@ public:
     void setTitle(std::string title);
     void setDateString(std::string dateString);
     void addSong(SongMap song);
+    void updateSongAt(size_t index, const SongMap& song);
     void addSlide(SlideItem slide);
     void removeSongAt(size_t index);
     void clearAll() noexcept;

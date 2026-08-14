@@ -76,6 +76,12 @@ void ServiceOrder::addSong(SongMap song) {
     m_impl->songs.push_back(std::move(song));
 }
 
+void ServiceOrder::updateSongAt(size_t index, const SongMap& song) {
+    if (index < m_impl->songs.size()) {
+        m_impl->songs[index] = song;
+    }
+}
+
 void ServiceOrder::addSlide(SlideItem slide) {
     m_impl->slides.push_back(std::move(slide));
 }

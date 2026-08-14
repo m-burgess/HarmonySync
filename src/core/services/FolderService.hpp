@@ -52,6 +52,12 @@ public:
      */
     static bool convertLyricsToSongMap(const std::filesystem::path& folderPath);
 
+    /**
+     * @brief Saves the given SongMap back to its folder's song-map.json file.
+     * @return true if successfully saved, false otherwise.
+     */
+    static bool saveSongMap(const SongMap& songMap);
+
 private:
     struct Impl;
     std::unique_ptr<Impl> m_impl;

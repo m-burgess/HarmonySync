@@ -168,6 +168,14 @@ QString AudioMixerViewModel::activeBackgroundVideo() const {
 void AudioMixerViewModel::loadNextBackgroundVideo(const QString& path) {
     m_impl->nextBackgroundVideo = path.toStdString();
 }
+
+void AudioMixerViewModel::setActiveBackgroundVideo(const QString& path) {
+    std::string pathStr = path.toStdString();
+    if (m_impl->activeBackgroundVideo != pathStr) {
+        m_impl->activeBackgroundVideo = pathStr;
+        emit activeBackgroundVideoChanged(path);
+    }
+}
 #else
 std::string AudioMixerViewModel::activeBackgroundVideo() const {
     return m_impl->activeBackgroundVideo;
@@ -175,6 +183,12 @@ std::string AudioMixerViewModel::activeBackgroundVideo() const {
 
 void AudioMixerViewModel::loadNextBackgroundVideo(const std::string& path) {
     m_impl->nextBackgroundVideo = path;
+}
+
+void AudioMixerViewModel::setActiveBackgroundVideo(const std::string& path) {
+    if (m_impl->activeBackgroundVideo != path) {
+        m_impl->activeBackgroundVideo = path;
+    }
 }
 #endif
 

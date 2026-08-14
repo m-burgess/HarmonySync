@@ -51,6 +51,61 @@ void testSetlistViewModel() {
     std::cout << "[PASS] testSetlistViewModel passed." << std::endl;
 }
 
+void testLyricNavigation() {
+    std::cout << "[TEST] Running testLyricNavigation..." << std::endl;
+    SetlistViewModel vm;
+
+    std::filesystem::path tempDir = std::filesystem::temp_directory_path() / "vm_song_folder_lyrics";
+    std::filesystem::create_directories(tempDir);
+
+    std::ofstream json(tempDir / "song-map.json");
+    json << R"({
+        "title": "Lyrics Test",
+        "sections": [
+            {
+                "name": "VERSE 1",
+                "lines": ["Line 1", "Line 2"]
+            },
+            {
+                "name": "CHORUS",
+                "lines": ["Chorus Line"]
+            }
+        ]
+    })";
+    json.close();
+
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    vm.addSongFolder(QString::fromStdString(tempDir.string()));
+#else
+    vm.addSongFolder(tempDir.string());
+#endif
+
+    // The lyrics content should be generated:
+    // [VERSE 1]\nLine 1\nLine 2\n\n[CHORUS]\nChorus Line\n\n
+    // So Blocks should be: "[VERSE 1]", "Line 1\nLine 2", "[CHORUS]", "Chorus Line"
+    
+    vm.setActiveLyricIndex(1);
+
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    if (vm.activeLyricText().toStdString() != "Line 1\nLine 2") throw std::runtime_error("activeLyricText mismatch");
+    if (vm.nextLyricText().toStdString() != "Chorus Line") throw std::runtime_error("nextLyricText mismatch");
+
+    vm.setActiveLyricIndex(3);
+    if (vm.activeLyricText().toStdString() != "Chorus Line") throw std::runtime_error("activeLyricText mismatch 2");
+    if (vm.nextLyricText().toStdString() != "") throw std::runtime_error("nextLyricText mismatch 2");
+#else
+    if (vm.activeLyricText() != "Line 1\nLine 2") throw std::runtime_error("activeLyricText mismatch");
+    if (vm.nextLyricText() != "Chorus Line") throw std::runtime_error("nextLyricText mismatch");
+
+    vm.setActiveLyricIndex(3);
+    if (vm.activeLyricText() != "Chorus Line") throw std::runtime_error("activeLyricText mismatch 2");
+    if (vm.nextLyricText() != "") throw std::runtime_error("nextLyricText mismatch 2");
+#endif
+
+    std::filesystem::remove_all(tempDir);
+    std::cout << "[PASS] testLyricNavigation passed." << std::endl;
+}
+
 void testAudioMixerViewModel() {
     std::cout << "[TEST] Running testAudioMixerViewModel..." << std::endl;
     AudioMixerViewModel vm;
@@ -77,7 +132,13 @@ void testAudioMixerViewModel() {
     assert(!vm.isPlaying());
 
     vm.toggleStemMute(0); // mute drums
+    assert(vm.stemIsMuted(0) == true);
+
     vm.toggleStemSolo(1); // solo acoustic
+    assert(vm.stemIsSoloed(1) == true);
+    
+    vm.setStemVolume(0, 0.5f);
+    assert(vm.stemVolume(0) == 0.5f);
 
     std::cout << "[PASS] testAudioMixerViewModel passed." << std::endl;
 }
@@ -106,6 +167,21 @@ void testAudioMixerCrossfading() {
     assert(vm.crossfadePosition() == 0.0f);
     
     std::cout << "[PASS] testAudioMixerCrossfading passed." << std::endl;
+}
+
+void testBackgroundVideoUpdate() {
+    std::cout << "[TEST] Running testBackgroundVideoUpdate..." << std::endl;
+    AudioMixerViewModel vm;
+    
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    vm.setActiveBackgroundVideo(QStringLiteral("test_bg.mp4"));
+    assert(vm.activeBackgroundVideo().toStdString() == "test_bg.mp4");
+#else
+    vm.setActiveBackgroundVideo("test_bg.mp4");
+    assert(vm.activeBackgroundVideo() == "test_bg.mp4");
+#endif
+    
+    std::cout << "[PASS] testBackgroundVideoUpdate passed." << std::endl;
 }
 
 void testSlideDisplayViewModel() {
@@ -149,12 +225,65 @@ void testSlideDisplayViewModel() {
     std::cout << "[PASS] testSlideDisplayViewModel passed." << std::endl;
 }
 
+void testAILyricSyncIntegration() {
+    std::cout << "[TEST] Running testAILyricSyncIntegration..." << std::endl;
+    SetlistViewModel vm;
+    std::filesystem::path tempDir = std::filesystem::temp_directory_path() / "hs_test_ai_sync";
+    std::filesystem::create_directories(tempDir);
+    
+    std::ofstream json(tempDir / "song-map.json");
+    json << R"({
+        "title": "Sync Test",
+        "sections": [ { "name": "VERSE", "lines": ["L1", "L2"] } ],
+        "timedLyrics": [
+            { "time": 0.0, "text": "[VERSE]" },
+            { "time": 2.0, "text": "L1" },
+            { "time": 4.0, "text": "L2" }
+        ]
+    })";
+    json.close();
+    
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    vm.addSongFolder(QString::fromStdString(tempDir.string()));
+#else
+    vm.addSongFolder(tempDir.string());
+#endif
+
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    vm.setAutoLyricsEnabled(true);
+    vm.syncToPlaybackPosition(1.5);
+    if (vm.activeLyricIndex() != 0) throw std::runtime_error("Playback sync failed 1.5");
+    
+    vm.syncToPlaybackPosition(2.5);
+    if (vm.activeLyricIndex() != 1) throw std::runtime_error("Playback sync failed 2.5");
+    
+    vm.syncToPlaybackPosition(4.5);
+    if (vm.activeLyricIndex() != 2) throw std::runtime_error("Playback sync failed 4.5");
+#else
+    vm.setAutoLyricsEnabled(true);
+    vm.syncToPlaybackPosition(1.5);
+    if (vm.activeLyricIndex() != 0) throw std::runtime_error("Playback sync failed 1.5");
+    
+    vm.syncToPlaybackPosition(2.5);
+    if (vm.activeLyricIndex() != 1) throw std::runtime_error("Playback sync failed 2.5");
+    
+    vm.syncToPlaybackPosition(4.5);
+    if (vm.activeLyricIndex() != 2) throw std::runtime_error("Playback sync failed 4.5");
+#endif
+
+    std::filesystem::remove_all(tempDir);
+    std::cout << "[PASS] testAILyricSyncIntegration passed." << std::endl;
+}
+
 int main() {
     try {
         testSetlistViewModel();
+        testLyricNavigation();
         testAudioMixerViewModel();
         testAudioMixerCrossfading();
+        testBackgroundVideoUpdate();
         testSlideDisplayViewModel();
+        testAILyricSyncIntegration();
         std::cout << "\nALL VIEWMODEL UNIT TESTS PASSED (100% Success)" << std::endl;
         return EXIT_SUCCESS;
     } catch (const std::exception& ex) {

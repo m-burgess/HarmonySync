@@ -30,6 +30,12 @@ class SetlistViewModel
     Q_PROPERTY(int currentSongIndex READ currentSongIndex WRITE setCurrentSongIndex NOTIFY currentSongIndexChanged)
     Q_PROPERTY(bool hasActiveSongMap READ hasActiveSongMap NOTIFY activeSongMapChanged)
     Q_PROPERTY(bool isLoading READ isLoading NOTIFY loadingStateChanged)
+    Q_PROPERTY(QString currentLyricsContent READ currentLyricsContent NOTIFY currentLyricsContentChanged)
+    Q_PROPERTY(QString activeLyricText READ activeLyricText NOTIFY activeLyricTextChanged)
+    Q_PROPERTY(QString nextLyricText READ nextLyricText NOTIFY nextLyricTextChanged)
+    Q_PROPERTY(int activeLyricIndex READ activeLyricIndex WRITE setActiveLyricIndex NOTIFY activeLyricIndexChanged)
+    Q_PROPERTY(bool autoLyricsEnabled READ autoLyricsEnabled WRITE setAutoLyricsEnabled NOTIFY autoLyricsEnabledChanged)
+    Q_PROPERTY(bool isGeneratingTimestamps READ isGeneratingTimestamps NOTIFY isGeneratingTimestampsChanged)
 #endif
 
 public:
@@ -72,6 +78,18 @@ public:
     Q_INVOKABLE QString backgroundVideoPathAt(int index) const;
     Q_INVOKABLE void removeSongAt(int index);
     Q_INVOKABLE void clearSetlist();
+
+    [[nodiscard]] QString currentLyricsContent() const;
+    [[nodiscard]] QString activeLyricText() const;
+    [[nodiscard]] QString nextLyricText() const;
+    [[nodiscard]] int activeLyricIndex() const noexcept;
+    Q_INVOKABLE void setActiveLyricIndex(int index);
+
+    [[nodiscard]] bool autoLyricsEnabled() const noexcept;
+    Q_INVOKABLE void setAutoLyricsEnabled(bool enabled);
+    [[nodiscard]] bool isGeneratingTimestamps() const noexcept;
+    Q_INVOKABLE void generateAITimestamps(const QString& referenceStemName = "reference");
+    Q_INVOKABLE void syncToPlaybackPosition(double positionSeconds);
 #else
     bool openServiceOrderRootFolder(const std::string& rootFolderPath);
     bool addSongFolder(const std::string& folderPath);
@@ -80,6 +98,18 @@ public:
     std::string backgroundVideoPathAt(int index) const;
     void removeSongAt(int index);
     void clearSetlist();
+
+    [[nodiscard]] std::string currentLyricsContent() const;
+    [[nodiscard]] std::string activeLyricText() const;
+    [[nodiscard]] std::string nextLyricText() const;
+    [[nodiscard]] int activeLyricIndex() const noexcept;
+    void setActiveLyricIndex(int index);
+
+    [[nodiscard]] bool autoLyricsEnabled() const noexcept;
+    void setAutoLyricsEnabled(bool enabled);
+    [[nodiscard]] bool isGeneratingTimestamps() const noexcept;
+    void generateAITimestamps(const std::string& referenceStemName = "reference");
+    void syncToPlaybackPosition(double positionSeconds);
 #endif
 
 #ifdef HARMONYSYNC_QT_AVAILABLE
@@ -89,6 +119,12 @@ signals:
     void currentSongIndexChanged(int index);
     void activeSongMapChanged(bool hasMap);
     void loadingStateChanged(bool loading);
+    void currentLyricsContentChanged();
+    void activeLyricTextChanged();
+    void nextLyricTextChanged();
+    void activeLyricIndexChanged(int index);
+    void autoLyricsEnabledChanged(bool enabled);
+    void isGeneratingTimestampsChanged(bool generating);
 #endif
 
 private:
