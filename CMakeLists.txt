@@ -29,7 +29,7 @@ else()
 endif()
 
 # Find Qt 6 Packages (Optional Fallback for standalone C++ core testing)
-find_package(Qt6 COMPONENTS Core Gui Quick Multimedia Test QUIET)
+find_package(Qt6 COMPONENTS Core Gui Quick QuickControls2 Multimedia Test QUIET)
 
 if(Qt6_FOUND)
     message(STATUS "Qt6 found version: ${Qt6_VERSION}")
@@ -65,7 +65,7 @@ add_executable(harmonysync_app src/main.cpp)
 target_link_libraries(harmonysync_app PRIVATE harmonysync_viewmodels harmonysync_media harmonysync_core)
 
 if(Qt6_FOUND)
-    target_link_libraries(harmonysync_app PRIVATE Qt6::Core Qt6::Quick Qt6::Multimedia)
+    target_link_libraries(harmonysync_app PRIVATE Qt6::Core Qt6::Quick Qt6::QuickControls2 Qt6::Multimedia)
     qt_add_resources(harmonysync_app "qml_resources"
         PREFIX "/"
         FILES

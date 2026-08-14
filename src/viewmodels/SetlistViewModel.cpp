@@ -33,6 +33,7 @@ struct SetlistViewModel::Impl {
         std::istringstream stream(raw);
         std::string line;
         std::string currentBlock;
+        int lineCount = 0;
 
         auto trim = [](std::string& s) {
             s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) { return !std::isspace(ch); }));
@@ -49,6 +50,7 @@ struct SetlistViewModel::Impl {
                 if (!currentBlock.empty()) {
                     lyricBlocks.push_back(currentBlock);
                     currentBlock.clear();
+                    lineCount = 0;
                 }
                 continue;
             }
@@ -57,13 +59,25 @@ struct SetlistViewModel::Impl {
                 if (!currentBlock.empty()) {
                     lyricBlocks.push_back(currentBlock);
                     currentBlock.clear();
+                    lineCount = 0;
                 }
                 lyricBlocks.push_back(line); // Header block
                 continue;
             }
 
-            if (!currentBlock.empty()) currentBlock += "\n";
-            currentBlock += line;
+            if (currentBlock.empty()) {
+                currentBlock = line;
+                lineCount = 1;
+            } else {
+                currentBlock += "\n" + line;
+                lineCount++;
+            }
+
+            if (lineCount == 2) {
+                lyricBlocks.push_back(currentBlock);
+                currentBlock.clear();
+                lineCount = 0;
+            }
         }
         if (!currentBlock.empty()) {
             lyricBlocks.push_back(currentBlock);
@@ -389,17 +403,35 @@ void SetlistViewModel::syncToPlaybackPosition(double positionSeconds) {
     auto timedLyrics = song.timedLyrics();
     if (timedLyrics.empty()) return;
 
-    int newIndex = -1;
+    int timedIndex = -1;
     for (size_t i = 0; i < timedLyrics.size(); ++i) {
         if (timedLyrics[i].timestampSeconds <= positionSeconds) {
-            newIndex = static_cast<int>(i);
+            timedIndex = static_cast<int>(i);
         } else {
             break;
         }
     }
     
-    if (newIndex >= 0 && newIndex != m_impl->activeLyricIndex) {
-        setActiveLyricIndex(newIndex);
+    if (timedIndex >= 0) {
+        int currentTimedIdx = 0;
+        int mappedBlockIndex = -1;
+        for (size_t b = 0; b < m_impl->lyricBlocks.size(); ++b) {
+            int linesInBlock = 0;
+            std::istringstream stream(m_impl->lyricBlocks[b]);
+            std::string line;
+            while (std::getline(stream, line)) {
+                if (!line.empty()) linesInBlock++;
+            }
+            if (timedIndex >= currentTimedIdx && timedIndex < currentTimedIdx + linesInBlock) {
+                mappedBlockIndex = static_cast<int>(b);
+                break;
+            }
+            currentTimedIdx += linesInBlock;
+        }
+
+        if (mappedBlockIndex >= 0 && mappedBlockIndex != m_impl->activeLyricIndex) {
+            setActiveLyricIndex(mappedBlockIndex);
+        }
     }
 }
 #else
@@ -461,17 +493,35 @@ void SetlistViewModel::syncToPlaybackPosition(double positionSeconds) {
     auto timedLyrics = song.timedLyrics();
     if (timedLyrics.empty()) return;
 
-    int newIndex = -1;
+    int timedIndex = -1;
     for (size_t i = 0; i < timedLyrics.size(); ++i) {
         if (timedLyrics[i].timestampSeconds <= positionSeconds) {
-            newIndex = static_cast<int>(i);
+            timedIndex = static_cast<int>(i);
         } else {
             break;
         }
     }
     
-    if (newIndex >= 0 && newIndex != m_impl->activeLyricIndex) {
-        setActiveLyricIndex(newIndex);
+    if (timedIndex >= 0) {
+        int currentTimedIdx = 0;
+        int mappedBlockIndex = -1;
+        for (size_t b = 0; b < m_impl->lyricBlocks.size(); ++b) {
+            int linesInBlock = 0;
+            std::istringstream stream(m_impl->lyricBlocks[b]);
+            std::string line;
+            while (std::getline(stream, line)) {
+                if (!line.empty()) linesInBlock++;
+            }
+            if (timedIndex >= currentTimedIdx && timedIndex < currentTimedIdx + linesInBlock) {
+                mappedBlockIndex = static_cast<int>(b);
+                break;
+            }
+            currentTimedIdx += linesInBlock;
+        }
+
+        if (mappedBlockIndex >= 0 && mappedBlockIndex != m_impl->activeLyricIndex) {
+            setActiveLyricIndex(mappedBlockIndex);
+        }
     }
 }
 #endif

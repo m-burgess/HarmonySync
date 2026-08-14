@@ -258,7 +258,7 @@ void testAILyricSyncIntegration() {
     if (vm.activeLyricIndex() != 1) throw std::runtime_error("Playback sync failed 2.5");
     
     vm.syncToPlaybackPosition(4.5);
-    if (vm.activeLyricIndex() != 2) throw std::runtime_error("Playback sync failed 4.5");
+    if (vm.activeLyricIndex() != 1) throw std::runtime_error("Playback sync failed 4.5");
 #else
     vm.setAutoLyricsEnabled(true);
     vm.syncToPlaybackPosition(1.5);
@@ -268,7 +268,7 @@ void testAILyricSyncIntegration() {
     if (vm.activeLyricIndex() != 1) throw std::runtime_error("Playback sync failed 2.5");
     
     vm.syncToPlaybackPosition(4.5);
-    if (vm.activeLyricIndex() != 2) throw std::runtime_error("Playback sync failed 4.5");
+    if (vm.activeLyricIndex() != 1) throw std::runtime_error("Playback sync failed 4.5");
 #endif
 
     std::filesystem::remove_all(tempDir);

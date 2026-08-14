@@ -12,13 +12,17 @@
 #include <QQmlContext>
 #include <QUrl>
 #include <QFile>
+#include <QQuickStyle>
 #endif
 
 int main(int argc, char* argv[]) {
     std::cout << "Starting HarmonySync C++20 / Qt6 Application..." << std::endl;
 
 #ifdef HARMONYSYNC_QT_AVAILABLE
-    qputenv("QT_QUICK_CONTROLS_STYLE", "Basic");
+    qputenv("QT_QPA_PLATFORMTHEME", "generic");
+    qputenv("QT_QUICK_CONTROLS_STYLE", "Fusion");
+    qputenv("QT_QUICK_CONTROLS_FALLBACK_STYLE", "Fusion");
+    QQuickStyle::setStyle("Fusion");
     QGuiApplication app(argc, argv);
 #endif
 
