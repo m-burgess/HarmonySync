@@ -31,7 +31,8 @@ endif()
 # Find Qt 6 Packages (Optional Fallback for standalone C++ core testing)
 find_package(Qt6 COMPONENTS Core Gui Quick QuickControls2 Multimedia Test QUIET)
 
-find_package(Qt6 COMPONENTS WebEngineQuick QUIET)
+# Use find_package(Qt6WebEngineQuick) instead of COMPONENTS to prevent overriding Qt6_FOUND if not installed
+find_package(Qt6WebEngineQuick QUIET)
 if (Qt6WebEngineQuick_FOUND)
     message(STATUS "Qt6 WebEngineQuick found. Playlist automation will be enabled.")
     add_compile_definitions(HARMONYSYNC_HAS_WEBENGINE=1)

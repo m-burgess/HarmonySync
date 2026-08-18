@@ -29,7 +29,8 @@ public:
      * @param onError Callback invoked when generation fails, providing an error message.
      */
     void generateTimestamps(
-        const std::string& audioPath,
+        const std::string& referenceAudioPath,
+        const std::string& multitrackAudioPath,
         const std::string& rawLyrics,
         std::function<void(std::vector<TimedLyricLine>)> onSuccess,
         std::function<void(std::string)> onError);

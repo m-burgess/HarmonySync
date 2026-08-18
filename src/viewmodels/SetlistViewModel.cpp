@@ -365,16 +365,36 @@ void SetlistViewModel::generateAITimestamps(const QString& referenceStemName) {
     if (m_impl->currentSongIndex < 0 || m_impl->isGeneratingTimestamps) return;
     
     auto& song = m_impl->serviceOrder.songs()[m_impl->currentSongIndex];
-    std::string audioPath;
+    std::string referenceAudioPath;
+    std::string multitrackAudioPath;
+
+    // Find the reference track
     for (const auto& stem : song.stems()) {
-        if (QString::fromStdString(stem.name()).contains(referenceStemName, Qt::CaseInsensitive)) {
-            audioPath = stem.filePath();
+        std::string lowerStem = stem.name();
+        std::transform(lowerStem.begin(), lowerStem.end(), lowerStem.begin(), ::tolower);
+        std::string lowerRef = referenceStemName.toStdString();
+        std::transform(lowerRef.begin(), lowerRef.end(), lowerRef.begin(), ::tolower);
+        if (lowerStem.find(lowerRef) != std::string::npos) {
+            referenceAudioPath = stem.filePath();
+            break;
+        }
+    }
+
+    // Find a multitrack (click, guide, split, or stereo) to align against
+    for (const auto& stem : song.stems()) {
+        std::string lowerStem = stem.name();
+        std::transform(lowerStem.begin(), lowerStem.end(), lowerStem.begin(), ::tolower);
+        if (lowerStem.find("click") != std::string::npos ||
+            lowerStem.find("guide") != std::string::npos ||
+            lowerStem.find("split") != std::string::npos ||
+            lowerStem.find("stereo") != std::string::npos) {
+            multitrackAudioPath = stem.filePath();
             break;
         }
     }
     
-    if (audioPath.empty()) {
-        std::cerr << "Reference stem not found." << std::endl;
+    if (referenceAudioPath.empty() || multitrackAudioPath.empty()) {
+        std::cerr << "Reference or multitrack stem not found." << std::endl;
         return;
     }
 
@@ -400,7 +420,7 @@ void SetlistViewModel::generateAITimestamps(const QString& referenceStemName) {
         emit isGeneratingTimestampsChanged(false);
     };
 
-    m_impl->aiSyncService->generateTimestamps(audioPath, song.lyricsContent(), onSuccess, onError);
+    m_impl->aiSyncService->generateTimestamps(referenceAudioPath, multitrackAudioPath, song.lyricsContent(), onSuccess, onError);
 }
 
 void SetlistViewModel::syncToPlaybackPosition(double positionSeconds) {
@@ -420,24 +440,8 @@ void SetlistViewModel::syncToPlaybackPosition(double positionSeconds) {
     }
     
     if (timedIndex >= 0) {
-        int currentTimedIdx = 0;
-        int mappedBlockIndex = -1;
-        for (size_t b = 0; b < m_impl->lyricBlocks.size(); ++b) {
-            int linesInBlock = 0;
-            std::istringstream stream(m_impl->lyricBlocks[b]);
-            std::string line;
-            while (std::getline(stream, line)) {
-                if (!line.empty()) linesInBlock++;
-            }
-            if (timedIndex >= currentTimedIdx && timedIndex < currentTimedIdx + linesInBlock) {
-                mappedBlockIndex = static_cast<int>(b);
-                break;
-            }
-            currentTimedIdx += linesInBlock;
-        }
-
-        if (mappedBlockIndex >= 0 && mappedBlockIndex != m_impl->activeLyricIndex) {
-            setActiveLyricIndex(mappedBlockIndex);
+        if (timedIndex != m_impl->activeLyricIndex) {
+            setActiveLyricIndex(timedIndex);
         }
     }
 }
@@ -458,19 +462,33 @@ void SetlistViewModel::generateAITimestamps(const std::string& referenceStemName
     if (m_impl->currentSongIndex < 0 || m_impl->isGeneratingTimestamps) return;
     
     auto& song = m_impl->serviceOrder.songs()[m_impl->currentSongIndex];
-    std::string audioPath;
+    std::string referenceAudioPath;
+    std::string multitrackAudioPath;
+
     for (const auto& stem : song.stems()) {
         std::string lowerStem = stem.name();
         std::transform(lowerStem.begin(), lowerStem.end(), lowerStem.begin(), ::tolower);
         std::string lowerRef = referenceStemName;
         std::transform(lowerRef.begin(), lowerRef.end(), lowerRef.begin(), ::tolower);
         if (lowerStem.find(lowerRef) != std::string::npos) {
-            audioPath = stem.filePath();
+            referenceAudioPath = stem.filePath();
             break;
         }
     }
     
-    if (audioPath.empty()) return;
+    for (const auto& stem : song.stems()) {
+        std::string lowerStem = stem.name();
+        std::transform(lowerStem.begin(), lowerStem.end(), lowerStem.begin(), ::tolower);
+        if (lowerStem.find("click") != std::string::npos ||
+            lowerStem.find("guide") != std::string::npos ||
+            lowerStem.find("split") != std::string::npos ||
+            lowerStem.find("stereo") != std::string::npos) {
+            multitrackAudioPath = stem.filePath();
+            break;
+        }
+    }
+
+    if (referenceAudioPath.empty() || multitrackAudioPath.empty()) return;
 
     m_impl->isGeneratingTimestamps = true;
 
@@ -490,7 +508,7 @@ void SetlistViewModel::generateAITimestamps(const std::string& referenceStemName
         m_impl->isGeneratingTimestamps = false;
     };
 
-    m_impl->aiSyncService->generateTimestamps(audioPath, song.lyricsContent(), onSuccess, onError);
+    m_impl->aiSyncService->generateTimestamps(referenceAudioPath, multitrackAudioPath, song.lyricsContent(), onSuccess, onError);
 }
 
 void SetlistViewModel::syncToPlaybackPosition(double positionSeconds) {

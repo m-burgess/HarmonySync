@@ -37,12 +37,14 @@ Rectangle {
         let currentBlock = ""
         let lineCount = 0
         let isSectionHeader = false
+        let globalLineIndex = 0
+        let blockLineStart = 0
 
         for (let i = 0; i < lines.length; i++) {
             let line = lines[i].trim()
             if (line === "") {
                 if (currentBlock !== "") {
-                    lyricsModel.append({ "textBlock": currentBlock, "isHeader": false })
+                    lyricsModel.append({ "textBlock": currentBlock, "isHeader": false, "lineStart": blockLineStart })
                     currentBlock = ""
                     lineCount = 0
                 }
@@ -52,11 +54,12 @@ Rectangle {
             // Check if line is a section header e.g., [ VERSE 1 ]
             if (line.startsWith("[") && line.endsWith("]")) {
                 if (currentBlock !== "") {
-                    lyricsModel.append({ "textBlock": currentBlock, "isHeader": isSectionHeader })
+                    lyricsModel.append({ "textBlock": currentBlock, "isHeader": isSectionHeader, "lineStart": blockLineStart })
                     currentBlock = ""
                     lineCount = 0
                 }
-                lyricsModel.append({ "textBlock": line, "isHeader": true })
+                lyricsModel.append({ "textBlock": line, "isHeader": true, "lineStart": globalLineIndex })
+                globalLineIndex++
                 continue
             }
 
@@ -64,13 +67,16 @@ Rectangle {
                 currentBlock = line
                 isSectionHeader = false
                 lineCount = 1
+                blockLineStart = globalLineIndex
+                globalLineIndex++
             } else {
                 currentBlock += "\n" + line
                 lineCount++
+                globalLineIndex++
             }
 
             if (lineCount === 2) {
-                lyricsModel.append({ "textBlock": currentBlock, "isHeader": false })
+                lyricsModel.append({ "textBlock": currentBlock, "isHeader": false, "lineStart": blockLineStart })
                 currentBlock = ""
                 lineCount = 0
             }
@@ -78,7 +84,7 @@ Rectangle {
         
         // Append any remaining
         if (currentBlock !== "") {
-            lyricsModel.append({ "textBlock": currentBlock, "isHeader": false })
+            lyricsModel.append({ "textBlock": currentBlock, "isHeader": false, "lineStart": blockLineStart })
         }
     }
 
@@ -142,7 +148,7 @@ Rectangle {
                 font.family: Theme.fontFamily
                 Layout.preferredHeight: 22
                 background: Rectangle {
-                    color: aiAlignBtn.enabled ? (aiAlignBtn.hovered ? Theme.accentPrimaryHover : Theme.accentPrimary) : Theme.borderDark
+                    color: aiAlignBtn.enabled ? (aiAlignBtn.hovered ? Theme.accentHover : Theme.accentPrimary) : Theme.borderDark
                     radius: 4
                     Behavior on color { ColorAnimation { duration: Theme.animDuration } }
                 }
@@ -236,6 +242,7 @@ Rectangle {
                 ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
 
                 delegate: Rectangle {
+                    property int blockIndex: index
                     width: ListView.view.width
                     height: isHeader ? 28 : 60
                     radius: 4

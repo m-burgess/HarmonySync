@@ -1,6 +1,8 @@
 #include "AudioMixerViewModel.hpp"
 #include <utility>
 #include <filesystem>
+#include <algorithm>
+#include <cmath>
 #include "FolderService.hpp"
 #include "FFmpegTransposer.hpp"
 

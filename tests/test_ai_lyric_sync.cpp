@@ -30,7 +30,7 @@ void testGenerateTimestamps() {
         throw std::runtime_error("Error callback invoked: " + err);
     };
 
-    service.generateTimestamps("dummy.wav", "Line 1\nLine 2\n", onSuccess, onError);
+    service.generateTimestamps("dummy_ref.wav", "dummy_multi.wav", "Line 1\nLine 2\n", onSuccess, onError);
 
 #ifdef HARMONYSYNC_QT_AVAILABLE
     // Allow event loop to process QProcess output

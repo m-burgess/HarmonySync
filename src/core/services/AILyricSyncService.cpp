@@ -35,7 +35,8 @@ AILyricSyncService::AILyricSyncService()
 AILyricSyncService::~AILyricSyncService() = default;
 
 void AILyricSyncService::generateTimestamps(
-    const std::string& audioPath,
+    const std::string& referenceAudioPath,
+    const std::string& multitrackAudioPath,
     const std::string& rawLyrics,
     std::function<void(std::vector<TimedLyricLine>)> onSuccess,
     std::function<void(std::string)> onError)
@@ -93,8 +94,17 @@ void AILyricSyncService::generateTimestamps(
         process->deleteLater();
     });
 
-    process->start("python3", QStringList() << QString::fromStdString(m_impl->scriptPath) 
-                                            << QString::fromStdString(audioPath) 
+    // Try to find a virtual environment python first to avoid externally-managed-environment errors on modern Linux
+    std::filesystem::path scriptDir = std::filesystem::path(m_impl->scriptPath).parent_path();
+    std::filesystem::path venvPython = scriptDir / "venv" / "bin" / "python3";
+    QString pythonExec = "python3";
+    if (std::filesystem::exists(venvPython)) {
+        pythonExec = QString::fromStdString(venvPython.string());
+    }
+
+    process->start(pythonExec, QStringList() << QString::fromStdString(m_impl->scriptPath) 
+                                            << QString::fromStdString(referenceAudioPath) 
+                                            << QString::fromStdString(multitrackAudioPath)
                                             << QString::fromStdString(lyricsPath.string()));
 #else
     // Mock implementation for non-Qt environments (tests)
