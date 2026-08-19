@@ -113,6 +113,7 @@ Rectangle {
                 loops: MediaPlayer.Infinite
                 audioOutput: null
                 videoOutput: videoOutput
+                autoPlay: true
             }
 
             VideoOutput {
@@ -120,23 +121,6 @@ Rectangle {
                 anchors.fill: parent
                 fillMode: VideoOutput.PreserveAspectCrop
                 visible: bgMediaPlayer.hasVideo && !(slideDisplayViewModel && slideDisplayViewModel.isBlackScreen) && root.outputMode === 0
-            }
-
-            Connections {
-                target: audioMixerViewModel
-                function onPlayStateChanged(playing) {
-                    if (playing) bgMediaPlayer.play();
-                    else bgMediaPlayer.pause();
-                }
-            }
-
-            Connections {
-                target: bgMediaPlayer
-                function onSourceChanged() {
-                    if (audioMixerViewModel && audioMixerViewModel.isPlaying) {
-                        bgMediaPlayer.play();
-                    }
-                }
             }
 
             // Audience View (Mode 0)

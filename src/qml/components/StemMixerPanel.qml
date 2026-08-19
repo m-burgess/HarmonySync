@@ -130,124 +130,67 @@ Rectangle {
             color: Theme.borderDark
         }
 
-        // Individual Stem Faders (Vertical Layout)
+        // Individual Stem Faders (Horizontal Layout)
         ScrollView {
+            id: stemScrollView
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
-            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-            ScrollBar.vertical.policy: ScrollBar.AsNeeded
+            ScrollBar.horizontal.policy: ScrollBar.AsNeeded
+            ScrollBar.vertical.policy: ScrollBar.AlwaysOff
+            contentWidth: stemRow.implicitWidth
+            contentHeight: availableHeight
 
-            Flow {
-                width: parent.width
+            Row {
+                id: stemRow
                 spacing: 16
 
                 Repeater {
                     id: stemRepeater
                     model: audioMixerViewModel ? audioMixerViewModel.loadedStemCount : 0
                     
-                    delegate: Item {
-                        width: 56
-                        height: 180
+                    delegate: Rectangle {
+                        id: stemDelegate
+                        width: nameText.implicitWidth + 32
+                        height: 36
+                        anchors.verticalCenter: parent.verticalCenter
+                        radius: 18
+                        color: isMuted ? Theme.danger : Theme.backgroundDark
+                        border.color: isMuted ? Theme.danger : Theme.borderDark
+                        border.width: 1
 
                         property bool isMuted: audioMixerViewModel ? audioMixerViewModel.stemIsMuted(index) : false
-                        property real vol: audioMixerViewModel ? audioMixerViewModel.stemVolume(index) : 1.0
-
-                        ColumnLayout {
-                            anchors.fill: parent
-                            spacing: 8
 
                         Connections {
                             target: audioMixerViewModel
                             function onStemStateChanged(idx) {
                                 if (idx === index) {
                                     isMuted = audioMixerViewModel.stemIsMuted(index)
-                                    vol = audioMixerViewModel.stemVolume(index)
                                 }
                             }
                         }
 
-                        // Track Name Label
-                        Label {
+                        Text {
+                            id: nameText
+                            anchors.centerIn: parent
                             text: audioMixerViewModel ? root.formatTrackName(audioMixerViewModel.stemName(index)) : "CH " + (index+1)
                             font.family: Theme.fontFamily
-                            font.pixelSize: 10
-                            font.bold: true
-                            color: Theme.textSecondary
-                            Layout.alignment: Qt.AlignHCenter
-                            Layout.fillWidth: true
-                            wrapMode: Text.WordWrap
-                            horizontalAlignment: Text.AlignHCenter
-                        }
-
-                        // Vertical Fader Slider
-                        Slider {
-                            id: vFader
-                            Layout.fillHeight: true
-                            Layout.alignment: Qt.AlignHCenter
-                            orientation: Qt.Vertical
-                            from: 0.0
-                            to: 1.0
-                            value: vol
-                            onMoved: { if (audioMixerViewModel) audioMixerViewModel.setStemVolume(index, value) }
-
-                            background: Rectangle {
-                                x: vFader.leftPadding + (vFader.availableWidth - width) / 2
-                                y: vFader.topPadding
-                                width: 6
-                                height: vFader.availableHeight
-                                radius: 3
-                                color: Theme.backgroundDark
-                                border.color: Theme.borderDark
-                                border.width: 1
-
-                                Rectangle {
-                                    width: parent.width
-                                    height: vFader.visualPosition * parent.height
-                                    color: Theme.accentPrimary
-                                    radius: 3
-                                    y: parent.height - height
-                                }
-                            }
-
-                            handle: Rectangle {
-                                x: vFader.leftPadding + (vFader.availableWidth - width) / 2
-                                y: vFader.topPadding + vFader.visualPosition * (vFader.availableHeight - height)
-                                width: 28
-                                height: 14
-                                radius: 3
-                                color: vFader.pressed ? Theme.accentHover : Theme.textSecondary
-                                border.color: Theme.borderDark
-                                border.width: 1
-                            }
-                        }
-
-                        // Mute Button
-                        Button {
-                            text: "M"
                             font.pixelSize: 11
                             font.bold: true
-                            font.family: Theme.fontFamily
-                            Layout.preferredWidth: 32
-                            Layout.preferredHeight: 24
-                            Layout.alignment: Qt.AlignHCenter
-                            background: Rectangle {
-                                color: isMuted ? Theme.danger : Theme.backgroundDark
-                                border.color: Theme.borderDark
-                                radius: 4
-                                Behavior on color { ColorAnimation { duration: Theme.animDuration } }
-                            }
-                            contentItem: Text { 
-                                text: parent.text
-                                color: isMuted ? "#ffffff" : Theme.textSecondary
-                                font: parent.font
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter 
-                            }
+                            color: isMuted ? "#ffffff" : Theme.textPrimary
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            hoverEnabled: true
+                            onEntered: stemDelegate.opacity = 0.8
+                            onExited: stemDelegate.opacity = 1.0
                             onClicked: { if (audioMixerViewModel) audioMixerViewModel.toggleStemMute(index) }
-                        } // Button
-                        } // ColumnLayout
-                    } // Item
+                        }
+                        
+                        Behavior on color { ColorAnimation { duration: Theme.animDuration } }
+                    } // Rectangle
                 } // Repeater
             } // Flow
         } // ScrollView

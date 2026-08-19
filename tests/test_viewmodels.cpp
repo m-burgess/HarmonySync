@@ -169,6 +169,32 @@ void testAudioMixerCrossfading() {
     std::cout << "[PASS] testAudioMixerCrossfading passed." << std::endl;
 }
 
+void testAudioMixerInitialization() {
+    std::cout << "[TEST] Running testAudioMixerInitialization..." << std::endl;
+    AudioMixerViewModel vm;
+
+    assert(vm.loadedStemCount() == 0);
+
+    // Simulate loading a song with many stems to ensure Repeater data is ready
+    std::vector<MediaStem> stems;
+    for (int i = 0; i < 10; ++i) {
+        stems.emplace_back(std::to_string(i), "Stem " + std::to_string(i), "path.wav");
+    }
+
+    bool result = vm.loadSongStems(stems);
+    assert(result == true);
+    
+    // Verify properties bound to UI
+    assert(vm.loadedStemCount() == 10);
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    assert(vm.stemName(5).toStdString() == "Stem 5");
+#else
+    assert(vm.stemName(5) == "Stem 5");
+#endif
+
+    std::cout << "[PASS] testAudioMixerInitialization passed." << std::endl;
+}
+
 void testBackgroundVideoUpdate() {
     std::cout << "[TEST] Running testBackgroundVideoUpdate..." << std::endl;
     AudioMixerViewModel vm;
@@ -281,6 +307,7 @@ int main() {
         testLyricNavigation();
         testAudioMixerViewModel();
         testAudioMixerCrossfading();
+        testAudioMixerInitialization();
         testBackgroundVideoUpdate();
         testSlideDisplayViewModel();
         testAILyricSyncIntegration();

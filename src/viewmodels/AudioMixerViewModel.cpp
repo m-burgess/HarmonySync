@@ -25,6 +25,7 @@ struct AudioMixerViewModel::Impl {
 #ifdef HARMONYSYNC_QT_AVAILABLE
     std::unique_ptr<QTimer> autosaveTimer;
     std::unique_ptr<QTimer> transposeDebounceTimer;
+    std::unique_ptr<QTimer> positionTimer;
 #endif
 
     Impl(std::shared_ptr<Media::AudioEngine> engine)
@@ -43,6 +44,9 @@ struct AudioMixerViewModel::Impl {
         transposeDebounceTimer = std::make_unique<QTimer>();
         transposeDebounceTimer->setSingleShot(true);
         transposeDebounceTimer->setInterval(700); // 700ms debounce before starting ffmpeg
+
+        positionTimer = std::make_unique<QTimer>();
+        positionTimer->setInterval(33); // ~30 fps UI update
 #endif
     }
 };
@@ -56,6 +60,12 @@ AudioMixerViewModel::AudioMixerViewModel(std::shared_ptr<Media::AudioEngine> aud
         if (!stems.empty()) {
             std::string folderPath = std::filesystem::path(stems[0].filePath()).parent_path().string();
             Core::FolderService::saveMixState(folderPath, stems);
+        }
+    });
+
+    QObject::connect(m_impl->positionTimer.get(), &QTimer::timeout, this, [this]() {
+        if (m_impl->m_activeDeck->isPlaying()) {
+            emit positionChanged(positionSeconds());
         }
     });
     
@@ -252,12 +262,19 @@ void AudioMixerViewModel::finalizeCrossfade() {
     emit positionChanged(positionSeconds());
     emit playStateChanged(isPlaying());
     emit crossfadePositionChanged(0.0f);
+    
+    if (m_impl->m_activeDeck->isPlaying()) {
+        m_impl->positionTimer->start();
+    } else {
+        m_impl->positionTimer->stop();
+    }
 #endif
 }
 
 void AudioMixerViewModel::play() {
     m_impl->m_activeDeck->play();
 #ifdef HARMONYSYNC_QT_AVAILABLE
+    m_impl->positionTimer->start();
     emit playStateChanged(isPlaying());
 #endif
 }
@@ -265,6 +282,7 @@ void AudioMixerViewModel::play() {
 void AudioMixerViewModel::pause() {
     m_impl->m_activeDeck->pause();
 #ifdef HARMONYSYNC_QT_AVAILABLE
+    m_impl->positionTimer->stop();
     emit playStateChanged(isPlaying());
 #endif
 }
@@ -272,6 +290,7 @@ void AudioMixerViewModel::pause() {
 void AudioMixerViewModel::stop() {
     m_impl->m_activeDeck->stop();
 #ifdef HARMONYSYNC_QT_AVAILABLE
+    m_impl->positionTimer->stop();
     emit playStateChanged(isPlaying());
     emit positionChanged(positionSeconds());
 #endif

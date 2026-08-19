@@ -172,7 +172,7 @@ AudioEngine& AudioEngine::operator=(AudioEngine&&) noexcept = default;
 
 bool AudioEngine::loadStems(const std::vector<Core::MediaStem>& stems) {
     stop();
-    m_impl->stems = stems;
+    m_impl->stems.clear();
     m_impl->position.store(0.0, std::memory_order_relaxed);
     
 #ifdef HARMONYSYNC_HAS_QT
@@ -182,15 +182,32 @@ bool AudioEngine::loadStems(const std::vector<Core::MediaStem>& stems) {
 
     m_impl->mixerDevice.m_buffers.clear();
     double maxDuration = 0.0;
+    double fallbackDuration = 0.0;
     FFmpegAudioDecoder decoder;
 
     for (const auto& stem : stems) {
+        std::string lowerName = stem.name();
+        std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
+        if (lowerName.find("reference") != std::string::npos) {
+            continue;
+        }
+        
+        m_impl->stems.push_back(stem);
+
         AudioMixerDevice::StemBuffer buf;
         buf.stem = stem;
         MappedAudioFile mappedFile = decoder.mapAudioFile(stem.filePath());
         if (mappedFile.info.isValid) {
-            if (mappedFile.info.durationSeconds > maxDuration) {
-                maxDuration = mappedFile.info.durationSeconds;
+            if (lowerName.find("click") != std::string::npos || 
+                lowerName.find("guide") != std::string::npos || 
+                lowerName.find("split") != std::string::npos || 
+                lowerName.find("stereo") != std::string::npos) {
+                if (mappedFile.info.durationSeconds > maxDuration) {
+                    maxDuration = mappedFile.info.durationSeconds;
+                }
+            }
+            if (mappedFile.info.durationSeconds > fallbackDuration) {
+                fallbackDuration = mappedFile.info.durationSeconds;
             }
             buf.mappedFile = std::move(mappedFile);
             m_impl->mixerDevice.m_buffers.push_back(std::move(buf));
@@ -198,6 +215,8 @@ bool AudioEngine::loadStems(const std::vector<Core::MediaStem>& stems) {
             std::cerr << "[AudioEngine] Failed to map stem: " << stem.filePath() << std::endl;
         }
     }
+    
+    if (maxDuration == 0.0) maxDuration = fallbackDuration;
 
     std::cout << "[AudioEngine] Loaded " << m_impl->mixerDevice.m_buffers.size() << " stems. Max duration: " << maxDuration << "s" << std::endl;
     m_impl->mixerDevice.m_duration = maxDuration;
@@ -207,6 +226,14 @@ bool AudioEngine::loadStems(const std::vector<Core::MediaStem>& stems) {
         m_impl->audioSink->start(&m_impl->mixerDevice);
     }
 #else
+    for (const auto& stem : stems) {
+        std::string lowerName = stem.name();
+        std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
+        if (lowerName.find("reference") != std::string::npos) {
+            continue;
+        }
+        m_impl->stems.push_back(stem);
+    }
     m_impl->duration.store(m_impl->stems.empty() ? 0.0 : 180.0, std::memory_order_relaxed);
 #endif
 
