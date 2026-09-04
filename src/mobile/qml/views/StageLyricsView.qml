@@ -4,6 +4,9 @@ import QtQuick.Layouts
 
 Rectangle {
     color: "#0f0f12"
+    
+    // Hardcoded keys for simplicity in the demo
+    property var keys: ["C", "C#", "Db", "D", "Eb", "E", "F", "F#", "Gb", "G", "Ab", "A", "Bb", "B"]
 
     ColumnLayout {
         anchors.fill: parent
@@ -17,7 +20,7 @@ Rectangle {
             Label {
                 text: confidenceViewModel ? confidenceViewModel.currentSongTitle : "No Active Song"
                 color: "#a5b4fc"
-                font.pixelSize: 18
+                font.pixelSize: 22
                 font.bold: true
                 Layout.fillWidth: true
                 wrapMode: Text.WordWrap
@@ -39,6 +42,48 @@ Rectangle {
                 }
             }
         }
+        
+        // Transposition Controls
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 16
+            
+            Label {
+                text: "Key:"
+                color: "#ffffff"
+                font.pixelSize: 16
+            }
+            
+            ComboBox {
+                model: keys
+                currentIndex: confidenceViewModel ? keys.indexOf(confidenceViewModel.selectedKey) : 0
+                onActivated: {
+                    if (confidenceViewModel) {
+                        confidenceViewModel.selectedKey = currentText
+                    }
+                }
+            }
+            
+            Switch {
+                text: "Capo"
+                checked: confidenceViewModel ? confidenceViewModel.capoEnabled : false
+                onCheckedChanged: {
+                    if (confidenceViewModel) {
+                        confidenceViewModel.capoEnabled = checked
+                    }
+                }
+            }
+            
+            Switch {
+                text: "CAGED Lead"
+                checked: confidenceViewModel ? confidenceViewModel.cagedEnabled : false
+                onCheckedChanged: {
+                    if (confidenceViewModel) {
+                        confidenceViewModel.cagedEnabled = checked
+                    }
+                }
+            }
+        }
 
         Rectangle {
             Layout.fillWidth: true
@@ -46,53 +91,55 @@ Rectangle {
             color: "#27272a"
         }
 
-        // Active Lyric Line (Current)
-        Rectangle {
+        // Song Structure View
+        ListView {
             Layout.fillWidth: true
-            Layout.preferredHeight: 180
-            color: "#1e1e24"
-            radius: 12
-            border.color: "#4f46e5"
-            border.width: 2
-
-            Text {
-                anchors.fill: parent
-                anchors.margins: 16
-                text: confidenceViewModel ? confidenceViewModel.currentLyricLine : "No Active Lyric"
-                color: "#ffffff"
-                font.pixelSize: 32
-                font.bold: true
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-                wrapMode: Text.WordWrap
-                minimumPixelSize: 16
-                fontSizeMode: Text.Fit
+            Layout.fillHeight: true
+            clip: true
+            model: confidenceViewModel ? confidenceViewModel.songStructure : null
+            spacing: 24
+            
+            delegate: ColumnLayout {
+                width: ListView.view.width
+                spacing: 8
+                
+                // Section Name
+                Label {
+                    text: modelData.name
+                    color: "#818cf8"
+                    font.pixelSize: 18
+                    font.bold: true
+                    topPadding: 8
+                }
+                
+                // Lines in Section
+                Repeater {
+                    model: modelData.lines
+                    delegate: ColumnLayout {
+                        width: parent.width
+                        spacing: 2
+                        
+                        // Chords
+                        Label {
+                            text: modelData.chords
+                            color: "#fcd34d" // Yellow for chords
+                            font.pixelSize: 18
+                            font.bold: true
+                            font.family: "Monospace"
+                            visible: text.length > 0
+                        }
+                        
+                        // Lyrics
+                        Label {
+                            text: modelData.lyric
+                            color: "#ffffff"
+                            font.pixelSize: 18
+                            wrapMode: Text.WordWrap
+                            Layout.fillWidth: true
+                        }
+                    }
+                }
             }
         }
-
-        // Next Lyric Line (Preview)
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 120
-            color: "#18181b"
-            radius: 12
-            border.color: "#3f3f46"
-            border.width: 1
-
-            Text {
-                anchors.fill: parent
-                anchors.margins: 16
-                text: confidenceViewModel ? confidenceViewModel.nextLyricLine : ""
-                color: "#a1a1aa"
-                font.pixelSize: 22
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-                wrapMode: Text.WordWrap
-                minimumPixelSize: 14
-                fontSizeMode: Text.Fit
-            }
-        }
-
-        Item { Layout.fillHeight: true } // spacer
     }
 }

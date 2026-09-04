@@ -37,6 +37,8 @@ class SetlistViewModel
     Q_PROPERTY(int activeLyricIndex READ activeLyricIndex WRITE setActiveLyricIndex NOTIFY activeLyricIndexChanged)
     Q_PROPERTY(bool autoLyricsEnabled READ autoLyricsEnabled WRITE setAutoLyricsEnabled NOTIFY autoLyricsEnabledChanged)
     Q_PROPERTY(bool isGeneratingTimestamps READ isGeneratingTimestamps NOTIFY isGeneratingTimestampsChanged)
+    Q_PROPERTY(QString aiSyncProgressMessage READ aiSyncProgressMessage NOTIFY aiSyncProgressMessageChanged)
+    Q_PROPERTY(QString currentSongMapJson READ currentSongMapJson NOTIFY currentSongMapJsonChanged)
 #endif
 
 public:
@@ -92,6 +94,10 @@ public:
     [[nodiscard]] bool isGeneratingTimestamps() const noexcept;
     Q_INVOKABLE void generateAITimestamps(const QString& referenceStemName = "reference");
     Q_INVOKABLE void syncToPlaybackPosition(double positionSeconds);
+    
+    [[nodiscard]] QString aiSyncProgressMessage() const;
+    [[nodiscard]] QString currentSongMapJson() const;
+    Q_INVOKABLE bool saveSongMapJson(const QString& jsonString);
 #else
     bool openServiceOrderRootFolder(const std::string& rootFolderPath);
     bool addSongFolder(const std::string& folderPath);
@@ -112,6 +118,9 @@ public:
     [[nodiscard]] bool isGeneratingTimestamps() const noexcept;
     void generateAITimestamps(const std::string& referenceStemName = "reference");
     void syncToPlaybackPosition(double positionSeconds);
+
+    [[nodiscard]] std::string currentSongMapJson() const;
+    bool saveSongMapJson(const std::string& jsonString);
 #endif
 
 #ifdef HARMONYSYNC_QT_AVAILABLE
@@ -128,6 +137,8 @@ signals:
     void activeLyricIndexChanged(int index);
     void autoLyricsEnabledChanged(bool enabled);
     void isGeneratingTimestampsChanged(bool generating);
+    void aiSyncProgressMessageChanged();
+    void currentSongMapJsonChanged();
 #endif
 
 private:

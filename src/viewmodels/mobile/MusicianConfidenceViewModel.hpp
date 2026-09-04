@@ -8,6 +8,7 @@
 #if defined(HARMONYSYNC_HAS_QT) || __has_include(<QObject>)
 #include <QObject>
 #include <QString>
+#include <QVariantList>
 #define HARMONYSYNC_QT_AVAILABLE 1
 #endif
 
@@ -27,6 +28,13 @@ class MusicianConfidenceViewModel
     Q_PROPERTY(QString currentLyricLine READ currentLyricLine NOTIFY lyricsUpdated)
     Q_PROPERTY(QString nextLyricLine READ nextLyricLine NOTIFY lyricsUpdated)
     Q_PROPERTY(QString timerText READ timerText NOTIFY timerUpdated)
+    
+    // New properties for Transposition & Structure
+    Q_PROPERTY(bool capoEnabled READ capoEnabled WRITE setCapoEnabled NOTIFY transpositionSettingsChanged)
+    Q_PROPERTY(bool cagedEnabled READ cagedEnabled WRITE setCagedEnabled NOTIFY transpositionSettingsChanged)
+    Q_PROPERTY(QString selectedKey READ selectedKey WRITE setSelectedKey NOTIFY transpositionSettingsChanged)
+    Q_PROPERTY(QString originalKey READ originalKey NOTIFY songMapUpdated)
+    Q_PROPERTY(QVariantList songStructure READ songStructure NOTIFY songMapUpdated)
 #endif
 
 public:
@@ -41,6 +49,18 @@ public:
     [[nodiscard]] QString currentLyricLine() const;
     [[nodiscard]] QString nextLyricLine() const;
     [[nodiscard]] QString timerText() const;
+    
+    [[nodiscard]] bool capoEnabled() const;
+    void setCapoEnabled(bool enabled);
+    
+    [[nodiscard]] bool cagedEnabled() const;
+    void setCagedEnabled(bool enabled);
+    
+    [[nodiscard]] QString selectedKey() const;
+    void setSelectedKey(const QString& key);
+    
+    [[nodiscard]] QString originalKey() const;
+    [[nodiscard]] QVariantList songStructure() const;
 #else
     [[nodiscard]] std::string currentSongTitle() const;
     [[nodiscard]] std::string currentLyricLine() const;
@@ -52,6 +72,8 @@ public:
 signals:
     void lyricsUpdated();
     void timerUpdated();
+    void songMapUpdated();
+    void transpositionSettingsChanged();
 #endif
 
 private:

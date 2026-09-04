@@ -5,6 +5,14 @@
 #include <algorithm>
 #include <iostream>
 
+#ifdef HARMONYSYNC_QT_AVAILABLE
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonParseError>
+#include <QFile>
+#include <filesystem>
+#endif
+
 namespace HarmonySync::ViewModels {
 
 struct SetlistViewModel::Impl {
@@ -17,6 +25,7 @@ struct SetlistViewModel::Impl {
     bool isLoading{false};
     bool autoLyricsEnabled{false};
     bool isGeneratingTimestamps{false};
+    std::string aiSyncProgressMessage;
 
     int activeLyricIndex{-1};
     std::string activeLyricText;
@@ -40,6 +49,11 @@ struct SetlistViewModel::Impl {
             s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) { return !std::isspace(ch); }).base(), s.end());
         };
 
+        auto toLower = [](std::string s) {
+            std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+            return s;
+        };
+
         while (std::getline(stream, line)) {
             if (!line.empty() && line.back() == '\r') {
                 line.pop_back();
@@ -54,8 +68,26 @@ struct SetlistViewModel::Impl {
                 }
                 continue;
             }
+            
+            std::string lowerLine = toLower(line);
+            if (lowerLine.find("title:") == 0 ||
+                lowerLine.find("artist:") == 0 ||
+                lowerLine.find("bpm:") == 0 ||
+                lowerLine.find("key:") == 0 ||
+                lowerLine.find("original key:") == 0 ||
+                lowerLine.find("timing:") == 0 ||
+                lowerLine.find("length:") == 0 ||
+                lowerLine.find("chords:") == 0 ||
+                lowerLine.find("lyricsurl:") == 0 ||
+                lowerLine.find("backgroundvideo:") == 0) {
+                continue;
+            }
 
             if (!line.empty() && line.front() == '[' && line.back() == ']') {
+                if (lowerLine.find("chords:") != std::string::npos) {
+                    continue;
+                }
+                
                 if (!currentBlock.empty()) {
                     lyricBlocks.push_back(currentBlock);
                     currentBlock.clear();
@@ -165,6 +197,7 @@ void SetlistViewModel::setCurrentSongIndex(int index) {
         emit activeLyricTextChanged();
         emit nextLyricTextChanged();
         emit playlistUrlChanged();
+        emit currentSongMapJsonChanged();
 #endif
     }
 }
@@ -395,53 +428,195 @@ void SetlistViewModel::generateAITimestamps(const QString& referenceStemName) {
     
     if (referenceAudioPath.empty() || multitrackAudioPath.empty()) {
         std::cerr << "Reference or multitrack stem not found." << std::endl;
+        m_impl->aiSyncProgressMessage = "Error: Missing 'reference' audio or multitrack stem (Click/Guide/Split/Stereo).";
+        emit aiSyncProgressMessageChanged();
+        
+        m_impl->isGeneratingTimestamps = true;
+        emit isGeneratingTimestampsChanged(true);
+        m_impl->isGeneratingTimestamps = false;
+        emit isGeneratingTimestampsChanged(false);
         return;
     }
 
     m_impl->isGeneratingTimestamps = true;
+    m_impl->aiSyncProgressMessage = "Initializing AI Sync...";
     emit isGeneratingTimestampsChanged(true);
+    emit aiSyncProgressMessageChanged();
+
+    // Construct a pure lyrics string (no metadata, no section headers) to send to AI
+    std::string cleanLyrics;
+    for (const auto& sec : song.sections()) {
+        for (const auto& line : sec.lines) {
+            cleanLyrics += line.text + "\n";
+        }
+    }
 
     auto onSuccess = [this](std::vector<Core::TimedLyricLine> lines) {
-        m_impl->isGeneratingTimestamps = false;
         if (m_impl->currentSongIndex >= 0) {
             Core::SongMap songCopy = m_impl->serviceOrder.songs()[m_impl->currentSongIndex];
-            songCopy.setTimedLyrics(lines);
+            
+            // Map AI output directly into sections
+            auto sections = songCopy.sections();
+            size_t flatIndex = 0;
+            for (auto& sec : sections) {
+                for (auto& line : sec.lines) {
+                    if (flatIndex < lines.size()) {
+                        line.timestampSeconds = lines[flatIndex].timestampSeconds;
+                        flatIndex++;
+                    }
+                }
+            }
+            songCopy.setSections(sections);
+            songCopy.setTimedLyrics({}); // Clear out the deprecated timedLyrics array
+
             m_impl->serviceOrder.updateSongAt(m_impl->currentSongIndex, songCopy);
             if (m_impl->folderService) {
                 Core::FolderService::saveSongMap(songCopy);
             }
         }
+        
+        m_impl->aiSyncProgressMessage = "Success: Lyrics aligned!";
+        emit aiSyncProgressMessageChanged();
+        
+        m_impl->isGeneratingTimestamps = false;
         emit isGeneratingTimestampsChanged(false);
     };
 
     auto onError = [this](std::string error) {
         std::cerr << "AI Lyric Sync failed: " << error << std::endl;
         m_impl->isGeneratingTimestamps = false;
+        m_impl->aiSyncProgressMessage = "Error: " + error;
+        emit aiSyncProgressMessageChanged();
         emit isGeneratingTimestampsChanged(false);
     };
+    
+    auto onProgress = [this](std::string msg) {
+        m_impl->aiSyncProgressMessage = msg;
+        emit aiSyncProgressMessageChanged();
+    };
 
-    m_impl->aiSyncService->generateTimestamps(referenceAudioPath, multitrackAudioPath, song.lyricsContent(), onSuccess, onError);
+    m_impl->aiSyncService->generateTimestamps(referenceAudioPath, multitrackAudioPath, cleanLyrics, onSuccess, onError, onProgress);
+}
+
+QString SetlistViewModel::aiSyncProgressMessage() const {
+    return QString::fromStdString(m_impl->aiSyncProgressMessage);
+}
+
+QString SetlistViewModel::currentSongMapJson() const {
+    if (m_impl->currentSongIndex < 0 || m_impl->currentSongIndex >= itemCount()) return QString();
+    
+    auto& song = m_impl->serviceOrder.songs()[m_impl->currentSongIndex];
+    std::string folderPath = song.folderPath();
+    if (folderPath.empty()) return QString();
+
+    std::filesystem::path jsonPath = std::filesystem::path(folderPath) / "song-map.json";
+    if (std::filesystem::exists(jsonPath)) {
+        QFile file(QString::fromStdString(jsonPath.string()));
+        if (file.open(QIODevice::ReadOnly)) {
+            return QString::fromUtf8(file.readAll());
+        }
+    }
+
+    // Default template if missing
+    std::filesystem::path templatePath = std::filesystem::current_path() / "song-map-template.json";
+    if (std::filesystem::exists(templatePath)) {
+        QFile templateFile(QString::fromStdString(templatePath.string()));
+        if (templateFile.open(QIODevice::ReadOnly)) {
+            QString templateStr = QString::fromUtf8(templateFile.readAll());
+            templateStr.replace("\"Song Title\"", "\"" + QString::fromStdString(song.title()) + "\"");
+            return templateStr;
+        }
+    }
+    
+    return "{\n  \"title\": \"" + QString::fromStdString(song.title()) + "\",\n  \"sections\": []\n}";
+}
+
+bool SetlistViewModel::saveSongMapJson(const QString& jsonString) {
+    if (m_impl->currentSongIndex < 0 || m_impl->currentSongIndex >= itemCount()) return false;
+    
+    QJsonParseError error;
+    QJsonDocument doc = QJsonDocument::fromJson(jsonString.toUtf8(), &error);
+    
+    if (error.error != QJsonParseError::NoError) {
+        // Return false to indicate failure. UI can parse the string again to get exact error.
+        return false;
+    }
+
+    auto& song = m_impl->serviceOrder.songs()[m_impl->currentSongIndex];
+    std::string folderPath = song.folderPath();
+    if (folderPath.empty()) return false;
+
+    std::filesystem::path jsonPath = std::filesystem::path(folderPath) / "song-map.json";
+    QFile file(QString::fromStdString(jsonPath.string()));
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        file.write(doc.toJson(QJsonDocument::Indented));
+        file.close();
+        
+        // Reload the song from folder to apply changes
+        if (m_impl->folderService) {
+            Core::SongMap updatedSong = m_impl->folderService->loadSongFromFolder(folderPath);
+            m_impl->serviceOrder.updateSongAt(m_impl->currentSongIndex, updatedSong);
+            
+            // Trigger updates
+            emit titleChanged(QString::fromStdString(updatedSong.title()));
+            m_impl->updateLyricBlocks();
+            m_impl->calculateActiveLyrics();
+            emit currentLyricsContentChanged();
+            emit activeLyricTextChanged();
+            emit nextLyricTextChanged();
+            emit activeSongMapChanged(hasActiveSongMap());
+            emit currentSongMapJsonChanged();
+        }
+        return true;
+    }
+    return false;
 }
 
 void SetlistViewModel::syncToPlaybackPosition(double positionSeconds) {
     if (!m_impl->autoLyricsEnabled || m_impl->currentSongIndex < 0) return;
     
     auto& song = m_impl->serviceOrder.songs()[m_impl->currentSongIndex];
-    auto timedLyrics = song.timedLyrics();
-    if (timedLyrics.empty()) return;
+    auto sections = song.sections();
+    if (sections.empty()) return;
+
+    // Create a flat array of timestamps mapping to the raw lyric lines
+    std::vector<double> flatTimestamps;
+    for (const auto& sec : sections) {
+        for (const auto& line : sec.lines) {
+            flatTimestamps.push_back(line.timestampSeconds);
+        }
+    }
+    
+    if (flatTimestamps.empty()) return;
 
     int timedIndex = -1;
-    for (size_t i = 0; i < timedLyrics.size(); ++i) {
-        if (timedLyrics[i].timestampSeconds <= positionSeconds) {
+    for (size_t i = 0; i < flatTimestamps.size(); ++i) {
+        if (flatTimestamps[i] <= positionSeconds && flatTimestamps[i] > 0.0) {
             timedIndex = static_cast<int>(i);
-        } else {
+        } else if (flatTimestamps[i] > positionSeconds) {
             break;
         }
     }
     
     if (timedIndex >= 0) {
-        if (timedIndex != m_impl->activeLyricIndex) {
-            setActiveLyricIndex(timedIndex);
+        int currentTimedIdx = 0;
+        int mappedBlockIndex = -1;
+        for (size_t b = 0; b < m_impl->lyricBlocks.size(); ++b) {
+            int linesInBlock = 0;
+            std::istringstream stream(m_impl->lyricBlocks[b]);
+            std::string line;
+            while (std::getline(stream, line)) {
+                if (!line.empty()) linesInBlock++;
+            }
+            if (timedIndex >= currentTimedIdx && timedIndex < currentTimedIdx + linesInBlock) {
+                mappedBlockIndex = static_cast<int>(b);
+                break;
+            }
+            currentTimedIdx += linesInBlock;
+        }
+
+        if (mappedBlockIndex >= 0 && mappedBlockIndex != m_impl->activeLyricIndex) {
+            setActiveLyricIndex(mappedBlockIndex);
         }
     }
 }
@@ -508,7 +683,15 @@ void SetlistViewModel::generateAITimestamps(const std::string& referenceStemName
         m_impl->isGeneratingTimestamps = false;
     };
 
-    m_impl->aiSyncService->generateTimestamps(referenceAudioPath, multitrackAudioPath, song.lyricsContent(), onSuccess, onError);
+    m_impl->aiSyncService->generateTimestamps(referenceAudioPath, multitrackAudioPath, song.lyricsContent(), onSuccess, onError, nullptr);
+}
+
+std::string SetlistViewModel::currentSongMapJson() const {
+    return "";
+}
+
+bool SetlistViewModel::saveSongMapJson(const std::string& jsonString) {
+    return false;
 }
 
 void SetlistViewModel::syncToPlaybackPosition(double positionSeconds) {

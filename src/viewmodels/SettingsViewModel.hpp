@@ -38,6 +38,7 @@ class SettingsViewModel
     Q_PROPERTY(int marginOffsetX READ marginOffsetX WRITE setMarginOffsetX NOTIFY settingsChanged)
     Q_PROPERTY(int marginOffsetY READ marginOffsetY WRITE setMarginOffsetY NOTIFY settingsChanged)
     Q_PROPERTY(QStringList availableDisplayNames READ availableDisplayNames NOTIFY availableDisplaysChanged)
+    Q_PROPERTY(QString localIpAddress READ localIpAddress CONSTANT)
 #endif
 
 public:
@@ -72,6 +73,7 @@ public:
     Q_INVOKABLE bool saveSettings();
     Q_INVOKABLE bool loadSettings();
     Q_INVOKABLE void resetToDefaults();
+    [[nodiscard]] QString localIpAddress() const;
 #else
     [[nodiscard]] std::string fontFamily() const;
     void setFontFamily(const std::string& family);

@@ -1,8 +1,14 @@
 #include "MobileApiClient.hpp"
 #include <mutex>
-#include <thread>
-#include <atomic>
-#include <chrono>
+#include <iostream>
+
+#ifdef HARMONYSYNC_QT_AVAILABLE
+#include <QtWebSockets/QWebSocket>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QUrl>
+#include <QTimer>
+#endif
 
 namespace HarmonySync::Core {
 
@@ -11,84 +17,115 @@ struct MobileApiClient::Impl {
     uint16_t currentPort{0};
     std::string currentPin;
     
-    std::atomic<ConnectionState> state{ConnectionState::Disconnected};
+    ConnectionState state{ConnectionState::Disconnected};
     ClientStateCallback stateCallback;
     ClientEventCallback eventCallback;
     
-    std::mutex mutex;
-    std::atomic<bool> keepRunning{false};
-    std::unique_ptr<std::thread> networkThread;
-    
+    mutable std::mutex mutex;
+
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    QWebSocket* webSocket{nullptr};
+#endif
+
     void updateState(ConnectionState newState) {
         state = newState;
         if (stateCallback) {
             stateCallback(newState);
         }
     }
-    
-    void mockNetworkLoop() {
-        updateState(ConnectionState::Connecting);
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        
-        if (!keepRunning) return;
-        
-        // Mock authentication check
-        if (currentPin.length() >= 4) { // Accept any 4+ char PIN for mock testing
-            updateState(ConnectionState::Connected);
-            
-            // Mock receiving an initial event
-            if (eventCallback) {
-                eventCallback("SESSION_STARTED", "{\"status\":\"ok\"}");
-            }
-        } else {
-            updateState(ConnectionState::AuthenticationFailed);
-            return;
-        }
-        
-        while (keepRunning) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        }
-    }
 };
 
 MobileApiClient::MobileApiClient()
     : m_impl(std::make_unique<Impl>())
-{}
+{
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    m_impl->webSocket = new QWebSocket(QString(), QWebSocketProtocol::VersionLatest, this);
+    
+    connect(m_impl->webSocket, &QWebSocket::connected, this, [this]() {
+        std::lock_guard<std::mutex> lock(m_impl->mutex);
+        m_impl->updateState(ConnectionState::Connected);
+        std::cout << "[MobileApiClient] Connected to host." << std::endl;
+        
+        // Optionally send a connect/auth message with the PIN here
+        QJsonObject authObj;
+        authObj["action"] = "auth";
+        authObj["payload"] = QString::fromStdString(m_impl->currentPin);
+        QJsonDocument doc(authObj);
+        m_impl->webSocket->sendTextMessage(QString::fromUtf8(doc.toJson(QJsonDocument::Compact)));
+    });
+    
+    connect(m_impl->webSocket, &QWebSocket::disconnected, this, [this]() {
+        std::lock_guard<std::mutex> lock(m_impl->mutex);
+        m_impl->updateState(ConnectionState::Disconnected);
+        std::cout << "[MobileApiClient] Disconnected from host." << std::endl;
+    });
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+    connect(m_impl->webSocket, &QWebSocket::errorOccurred, this, [this](QAbstractSocket::SocketError error) {
+#else
+    connect(m_impl->webSocket, QOverload<QAbstractSocket::SocketError>::of(&QWebSocket::error), this, [this](QAbstractSocket::SocketError error) {
+#endif
+        std::lock_guard<std::mutex> lock(m_impl->mutex);
+        std::cerr << "[MobileApiClient] WebSocket Error: " << error << std::endl;
+        m_impl->updateState(ConnectionState::ConnectionFailed);
+    });
+    
+    connect(m_impl->webSocket, &QWebSocket::textMessageReceived, this, [this](const QString &message) {
+        ClientEventCallback cb;
+        {
+            std::lock_guard<std::mutex> lock(m_impl->mutex);
+            cb = m_impl->eventCallback;
+        }
+        if (cb) {
+            QJsonDocument doc = QJsonDocument::fromJson(message.toUtf8());
+            if (!doc.isNull() && doc.isObject()) {
+                QJsonObject obj = doc.object();
+                QString event = obj["event"].toString();
+                QString payload = obj["payload"].toString();
+                cb(event.toStdString(), payload.toStdString());
+            }
+        }
+    });
+#endif
+}
 
 MobileApiClient::~MobileApiClient() {
     disconnect();
 }
 
-MobileApiClient::MobileApiClient(MobileApiClient&&) noexcept = default;
-MobileApiClient& MobileApiClient::operator=(MobileApiClient&&) noexcept = default;
-
 void MobileApiClient::connectToHost(const std::string& ipAddress, uint16_t port, const std::string& pin) {
     std::lock_guard<std::mutex> lock(m_impl->mutex);
-    if (m_impl->keepRunning) {
-        return; // Already connecting or connected
-    }
     
     m_impl->currentIp = ipAddress;
     m_impl->currentPort = port;
     m_impl->currentPin = pin;
     
-    m_impl->keepRunning = true;
-    m_impl->networkThread = std::make_unique<std::thread>(&Impl::mockNetworkLoop, m_impl.get());
+    m_impl->updateState(ConnectionState::Connecting);
+
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    QUrl url;
+    url.setScheme("ws");
+    url.setHost(QString::fromStdString(ipAddress));
+    url.setPort(port);
+    m_impl->webSocket->open(url);
+#else
+    // Mock for non-Qt builds
+    m_impl->updateState(ConnectionState::Connected);
+#endif
 }
 
 void MobileApiClient::disconnect() {
     std::lock_guard<std::mutex> lock(m_impl->mutex);
-    if (m_impl->keepRunning) {
-        m_impl->keepRunning = false;
-        if (m_impl->networkThread && m_impl->networkThread->joinable()) {
-            m_impl->networkThread->join();
-        }
-        m_impl->networkThread.reset();
-        m_impl->updateState(ConnectionState::Disconnected);
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    if (m_impl->webSocket) {
+        m_impl->webSocket->close();
     }
+#endif
+    m_impl->updateState(ConnectionState::Disconnected);
 }
 
 ConnectionState MobileApiClient::currentState() const noexcept {
+    std::lock_guard<std::mutex> lock(m_impl->mutex);
     return m_impl->state;
 }
 
@@ -103,13 +140,21 @@ void MobileApiClient::setEventCallback(ClientEventCallback callback) {
 }
 
 bool MobileApiClient::sendCommand(const std::string& action, const std::string& payload) {
+    std::lock_guard<std::mutex> lock(m_impl->mutex);
     if (m_impl->state != ConnectionState::Connected) {
-        return false; // Cannot send commands if disconnected
+        return false;
     }
     
-    // Simulate sending command to server
-    // In a real Qt implementation, this would post a QNetworkRequest or send a WebSocket frame.
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    QJsonObject obj;
+    obj["action"] = QString::fromStdString(action);
+    obj["payload"] = QString::fromStdString(payload);
+    QJsonDocument doc(obj);
+    m_impl->webSocket->sendTextMessage(QString::fromUtf8(doc.toJson(QJsonDocument::Compact)));
     return true;
+#else
+    return true;
+#endif
 }
 
 } // namespace HarmonySync::Core

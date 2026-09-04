@@ -31,6 +31,7 @@ Dialog {
             TabButton { text: "DISPLAYS" }
             TabButton { text: "TYPOGRAPHY" }
             TabButton { text: "ALIGNMENT & MARGINS" }
+            TabButton { text: "NETWORK & SYNC" }
         }
 
         StackLayout {
@@ -143,6 +144,60 @@ Dialog {
                     value: settingsViewModel ? settingsViewModel.marginOffsetY : 40
                     onValueChanged: if (settingsViewModel) settingsViewModel.marginOffsetY = value
                 }
+            }
+
+            // Tab 4: Network & Sync
+            ColumnLayout {
+                spacing: 14
+                
+                Label {
+                    text: "Musician Web App (QR Code)"
+                    color: Theme.accentPrimary
+                    font.bold: true
+                    font.pixelSize: 18
+                    font.family: Theme.fontFamily
+                }
+                
+                Label {
+                    text: "Scan this code with a mobile device to open the Musician View."
+                    color: Theme.textSecondary
+                    font.pixelSize: 13
+                    wrapMode: Text.WordWrap
+                    Layout.fillWidth: true
+                }
+                
+                Item {
+                    Layout.alignment: Qt.AlignHCenter
+                    width: 220
+                    height: 220
+                    
+                    Rectangle {
+                        anchors.fill: parent
+                        color: "white"
+                        radius: 8
+                        border.color: Theme.borderDark
+                        border.width: 1
+                    }
+                    
+                    Image {
+                        anchors.centerIn: parent
+                        width: 200
+                        height: 200
+                        source: settingsViewModel ? "image://qrcode/http://" + settingsViewModel.localIpAddress + ":3000" : ""
+                        fillMode: Image.PreserveAspectFit
+                        smooth: false // Important for crisp QR codes
+                    }
+                }
+                
+                Label {
+                    Layout.alignment: Qt.AlignHCenter
+                    text: settingsViewModel ? "http://" + settingsViewModel.localIpAddress + ":3000" : ""
+                    color: Theme.textPrimary
+                    font.bold: true
+                    font.pixelSize: 16
+                }
+                
+                Item { Layout.fillHeight: true }
             }
         }
 

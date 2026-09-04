@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import "../theme"
+import HarmonySync.Helpers 1.0
 
 Rectangle {
     id: root
@@ -11,6 +12,7 @@ Rectangle {
     radius: Theme.borderRadius
 
     property bool isEditing: false
+    property string jsonErrorMsg: ""
     property string rawLyricsText: setlistViewModel ? setlistViewModel.currentLyricsContent : ""
     onRawLyricsTextChanged: parseLyrics()
     property int activeSlideIndex: setlistViewModel ? setlistViewModel.activeLyricIndex : -1
@@ -51,8 +53,28 @@ Rectangle {
                 continue
             }
 
+            // Check for metadata or chords and ignore them
+            let lowerLine = line.toLowerCase()
+            if (lowerLine.startsWith("title:") || 
+                lowerLine.startsWith("artist:") || 
+                lowerLine.startsWith("bpm:") || 
+                lowerLine.startsWith("key:") || 
+                lowerLine.startsWith("original key:") || 
+                lowerLine.startsWith("timing:") || 
+                lowerLine.startsWith("length:") || 
+                lowerLine.startsWith("chords:") || 
+                lowerLine.startsWith("lyricsurl:") ||
+                lowerLine.startsWith("backgroundvideo:")) {
+                continue
+            }
+
             // Check if line is a section header e.g., [ VERSE 1 ]
             if (line.startsWith("[") && line.endsWith("]")) {
+                // Ignore chord tags within brackets e.g. [Chords: 1-5-6-4]
+                if (lowerLine.indexOf("chords:") !== -1) {
+                    continue
+                }
+                
                 if (currentBlock !== "") {
                     lyricsModel.append({ "textBlock": currentBlock, "isHeader": isSectionHeader, "lineStart": blockLineStart })
                     currentBlock = ""
@@ -189,12 +211,23 @@ Rectangle {
                 onClicked: {
                     if (root.isEditing) {
                         // Saving
-                        root.rawLyricsText = lyricsEditor.text
-                        parseLyrics()
-                        root.isEditing = false
+                        try {
+                            let parsed = JSON.parse(lyricsEditor.text)
+                            let formatted = JSON.stringify(parsed, null, 2)
+                            if (setlistViewModel.saveSongMapJson(formatted)) {
+                                root.jsonErrorMsg = ""
+                                root.isEditing = false
+                                // Since currentLyricsContent changed, parseLyrics gets called automatically
+                            } else {
+                                root.jsonErrorMsg = "Backend validation failed."
+                            }
+                        } catch (e) {
+                            root.jsonErrorMsg = "Syntax Error: " + e.message
+                        }
                     } else {
                         // Editing
-                        lyricsEditor.text = root.rawLyricsText
+                        lyricsEditor.text = setlistViewModel.currentSongMapJson
+                        root.jsonErrorMsg = ""
                         root.isEditing = true
                     }
                 }
@@ -281,27 +314,122 @@ Rectangle {
             }
 
             // Edit Mode: Raw Text Editor
-            ScrollView {
+            ColumnLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                clip: true
-                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-                ScrollBar.vertical.policy: ScrollBar.AsNeeded
+                spacing: 4
 
-                TextArea {
-                    id: lyricsEditor
-                    color: Theme.textPrimary
-                    font.pixelSize: 14
-                    font.family: Theme.fontFamily
-                    wrapMode: Text.Wrap
-                    background: Rectangle {
-                        color: Theme.backgroundDark
-                        border.color: Theme.accentPrimary
-                        border.width: 1
-                        radius: 4
+                ScrollView {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+                    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                    ScrollBar.vertical.policy: ScrollBar.AsNeeded
+
+                    TextArea {
+                        id: lyricsEditor
+                        color: Theme.textPrimary
+                        font.pixelSize: 13
+                        font.family: "Monospace"
+                        wrapMode: Text.Wrap
+                        background: Rectangle {
+                            color: Theme.backgroundDark
+                            border.color: root.jsonErrorMsg !== "" ? Theme.danger : Theme.accentPrimary
+                            border.width: root.jsonErrorMsg !== "" ? 2 : 1
+                            radius: 4
+                        }
+                        selectByMouse: true
+                        
+                        JsonSyntaxHighlighter {
+                            textDocument: lyricsEditor.textDocument
+                        }
                     }
-                    selectByMouse: true
                 }
+
+                Label {
+                    text: root.jsonErrorMsg
+                    color: Theme.danger
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 12
+                    font.bold: true
+                    visible: root.jsonErrorMsg !== ""
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                }
+            }
+        }
+    }
+
+    // AI Progress Overlay
+    Rectangle {
+        id: aiProgressOverlay
+        property bool isError: setlistViewModel ? setlistViewModel.aiSyncProgressMessage.startsWith("Error:") : false
+        property bool isSuccess: setlistViewModel ? setlistViewModel.aiSyncProgressMessage.startsWith("Success:") : false
+        property bool showMessage: isError || isSuccess
+        
+        anchors.fill: parent
+        visible: (setlistViewModel && setlistViewModel.isGeneratingTimestamps) || (showMessage && hideTimer.running)
+        color: Qt.rgba(Theme.backgroundDark.r, Theme.backgroundDark.g, Theme.backgroundDark.b, 0.95)
+        radius: root.radius
+        z: 10
+
+        onShowMessageChanged: {
+            if (showMessage) {
+                hideTimer.restart()
+            }
+        }
+
+        Timer {
+            id: hideTimer
+            interval: 4000 // Show success/errors for 4 seconds
+            repeat: false
+            onTriggered: {
+                if (setlistViewModel) setlistViewModel.aiSyncProgressMessage = ""
+            }
+        }
+
+        // Block mouse events
+        MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+        }
+
+        ColumnLayout {
+            anchors.centerIn: parent
+            spacing: 24
+
+            BusyIndicator {
+                Layout.alignment: Qt.AlignHCenter
+                running: aiProgressOverlay.visible && !aiProgressOverlay.showMessage
+                visible: !aiProgressOverlay.showMessage
+                width: 64
+                height: 64
+            }
+            
+            Rectangle {
+                Layout.alignment: Qt.AlignHCenter
+                visible: aiProgressOverlay.showMessage
+                width: 64
+                height: 64
+                color: "transparent"
+                Text {
+                    anchors.centerIn: parent
+                    text: aiProgressOverlay.isError ? "⚠" : "✓"
+                    color: aiProgressOverlay.isError ? Theme.danger : Theme.success
+                    font.pixelSize: 48
+                }
+            }
+
+            Label {
+                text: setlistViewModel ? setlistViewModel.aiSyncProgressMessage : ""
+                font.family: Theme.fontFamily
+                font.pixelSize: 22
+                font.bold: true
+                color: aiProgressOverlay.isError ? Theme.danger : (aiProgressOverlay.isSuccess ? Theme.success : Theme.textPrimary)
+                Layout.alignment: Qt.AlignHCenter
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.WordWrap
+                Layout.maximumWidth: root.width * 0.8
             }
         }
     }

@@ -2,6 +2,30 @@
 #include <algorithm>
 #include <fstream>
 #include <sstream>
+#include <filesystem>
+#include <iostream>
+
+namespace {
+    double parseTimestamp(const std::string& ts) {
+        size_t colon = ts.find(':');
+        if (colon == std::string::npos) return std::stod(ts);
+        try {
+            double m = std::stod(ts.substr(0, colon));
+            double s = std::stod(ts.substr(colon + 1));
+            return m * 60.0 + s;
+        } catch (...) {
+            return 0.0;
+        }
+    }
+
+    std::string formatTimestamp(double seconds) {
+        int m = static_cast<int>(seconds) / 60;
+        double s = seconds - (m * 60);
+        char buf[32];
+        snprintf(buf, sizeof(buf), "%02d:%05.2f", m, s);
+        return std::string(buf);
+    }
+}
 
 #if __has_include(<QJsonDocument>)
 #include <QJsonDocument>
@@ -106,6 +130,27 @@ SongMap FolderService::loadSongFromFolder(const std::filesystem::path& folderPat
                     song.setFolderPath(folderPath.string());
                 }
                 
+                if (obj.contains("bpm")) {
+                    song.setTempoBpm(obj["bpm"].toDouble());
+                }
+                if (obj.contains("key")) {
+                    std::string key = obj["key"].toString().toStdString();
+                    song.setKeys(key, key);
+                } else if (obj.contains("originalKey")) { // Fallback for older maps
+                    std::string key = obj["originalKey"].toString().toStdString();
+                    song.setKeys(key, key);
+                }
+                
+                if (obj.contains("timing")) {
+                    song.setTiming(obj["timing"].toString().toStdString());
+                }
+                if (obj.contains("length")) {
+                    song.setLength(obj["length"].toString().toStdString());
+                }
+                if (obj.contains("lyricsURL")) {
+                    song.setLyricsURL(obj["lyricsURL"].toString().toStdString());
+                }
+                
                 if (obj.contains("backgroundVideo")) {
                     std::string bgVideo = obj["backgroundVideo"].toString().toStdString();
                     if (!bgVideo.empty()) {
@@ -131,9 +176,22 @@ SongMap FolderService::loadSongFromFolder(const std::filesystem::path& folderPat
                         if (jsonSection.contains("lines")) {
                             QJsonArray lines = jsonSection["lines"].toArray();
                             for (int j = 0; j < lines.size(); ++j) {
-                                std::string lineStr = lines[j].toString().toStdString();
-                                section.lines.push_back(lineStr);
-                                lyricsContent += lineStr + "\n";
+                                SongLine sLine;
+                                if (lines[j].isString()) {
+                                    sLine.text = lines[j].toString().toStdString();
+                                } else if (lines[j].isObject()) {
+                                    QJsonObject lObj = lines[j].toObject();
+                                    if (lObj.contains("text")) sLine.text = lObj["text"].toString().toStdString();
+                                    if (lObj.contains("timestamp")) {
+                                        sLine.timestampSeconds = parseTimestamp(lObj["timestamp"].toString().toStdString());
+                                    } else if (lObj.contains("timestampSeconds")) {
+                                        sLine.timestampSeconds = lObj["timestampSeconds"].toDouble();
+                                    }
+                                    if (lObj.contains("nextSlideMidiNote")) sLine.nextSlideMidiNote = lObj["nextSlideMidiNote"].toString().toStdString();
+                                    if (lObj.contains("lightSceneMidiNote")) sLine.lightSceneMidiNote = lObj["lightSceneMidiNote"].toString().toStdString();
+                                }
+                                section.lines.push_back(sLine);
+                                lyricsContent += sLine.text + "\n";
                             }
                         }
                         lyricsContent += "\n";
@@ -148,8 +206,16 @@ SongMap FolderService::loadSongFromFolder(const std::filesystem::path& folderPat
                     std::vector<TimedLyricLine> timedLines;
                     for (int i = 0; i < tLyrics.size(); ++i) {
                         QJsonObject tLine = tLyrics[i].toObject();
-                        if (tLine.contains("time") && tLine.contains("text")) {
-                            timedLines.push_back({ tLine["time"].toDouble(), tLine["text"].toString().toStdString() });
+                        if (tLine.contains("time")) {
+                            double t = 0.0;
+                            if (tLine["time"].isString()) {
+                                t = parseTimestamp(tLine["time"].toString().toStdString());
+                            } else {
+                                t = tLine["time"].toDouble();
+                            }
+                            if (tLine.contains("text")) {
+                                timedLines.push_back({ t, tLine["text"].toString().toStdString() });
+                            }
                         }
                     }
                     song.setTimedLyrics(timedLines);
@@ -388,9 +454,30 @@ bool FolderService::convertLyricsToSongMap(const std::filesystem::path& folderPa
 
         if (line.empty()) continue;
 
-        if (line.front() == '[' && line.back() == ']') {
-            finalizeSection();
-            currentSectionName = QString::fromStdString(line.substr(1, line.length() - 2));
+        if (line.find("Title:") == 0) {
+            std::string titleStr = line.substr(6);
+            titleStr.erase(titleStr.begin(), std::find_if(titleStr.begin(), titleStr.end(), [](unsigned char ch) { return !std::isspace(ch); }));
+            rootObj["title"] = QString::fromStdString(titleStr);
+        } else if (line.find("BPM:") == 0) {
+            std::string bpmStr = line.substr(4);
+            bpmStr.erase(bpmStr.begin(), std::find_if(bpmStr.begin(), bpmStr.end(), [](unsigned char ch) { return !std::isspace(ch); }));
+            try {
+                rootObj["bpm"] = std::stod(bpmStr);
+            } catch (...) {}
+        } else if (line.find("Original Key:") == 0) {
+            std::string keyStr = line.substr(13);
+            keyStr.erase(keyStr.begin(), std::find_if(keyStr.begin(), keyStr.end(), [](unsigned char ch) { return !std::isspace(ch); }));
+            rootObj["originalKey"] = QString::fromStdString(keyStr);
+        } else if (line.front() == '[' && line.back() == ']') {
+            std::string inner = line.substr(1, line.length() - 2);
+            if (inner.find("Chords:") == 0) {
+                std::string chordsStr = inner.substr(7);
+                chordsStr.erase(chordsStr.begin(), std::find_if(chordsStr.begin(), chordsStr.end(), [](unsigned char ch) { return !std::isspace(ch); }));
+                currentSection["chords"] = QString::fromStdString(chordsStr);
+            } else {
+                finalizeSection();
+                currentSectionName = QString::fromStdString(inner);
+            }
         } else {
             currentLines.append(QString::fromStdString(line));
         }
@@ -432,16 +519,65 @@ bool FolderService::saveSongMap(const SongMap& songMap) {
     rootObj["title"] = QString::fromStdString(songMap.title());
     rootObj["artist"] = QString::fromStdString(songMap.artist());
     
+    if (songMap.tempoBpm() > 0) {
+        rootObj["bpm"] = songMap.tempoBpm();
+    }
+    
+    rootObj["timing"] = QString::fromStdString(songMap.timing());
+    rootObj["length"] = QString::fromStdString(songMap.length());
+    
+    if (!songMap.originalKey().empty()) {
+        rootObj["key"] = QString::fromStdString(songMap.originalKey());
+    } else {
+        rootObj["key"] = "C";
+    }
+    
+    rootObj["lyricsURL"] = QString::fromStdString(songMap.lyricsURL());
+    
+    if (!songMap.backgroundVideoPath().empty()) {
+        std::filesystem::path bgPath(songMap.backgroundVideoPath());
+        rootObj["backgroundVideo"] = QString::fromStdString(bgPath.filename().string());
+    } else {
+        rootObj["backgroundVideo"] = "";
+    }
+    
     auto timedLines = songMap.timedLyrics();
     if (!timedLines.empty()) {
         QJsonArray timedArray;
         for (const auto& tl : timedLines) {
             QJsonObject lineObj;
-            lineObj["time"] = tl.timestampSeconds;
+            lineObj["time"] = QString::fromStdString(formatTimestamp(tl.timestampSeconds));
             lineObj["text"] = QString::fromStdString(tl.text);
             timedArray.append(lineObj);
         }
         rootObj["timedLyrics"] = timedArray;
+    } else {
+        rootObj.remove("timedLyrics");
+    }
+
+    auto sections = songMap.sections();
+    if (!sections.empty()) {
+        QJsonArray sectionsArray;
+        for (const auto& sec : sections) {
+            QJsonObject secObj;
+            if (!sec.name.empty()) secObj["name"] = QString::fromStdString(sec.name);
+            if (!sec.chords.empty()) secObj["chords"] = QString::fromStdString(sec.chords);
+            
+            if (!sec.lines.empty()) {
+                QJsonArray linesArray;
+                for (const auto& line : sec.lines) {
+                    QJsonObject lineObj;
+                    lineObj["text"] = QString::fromStdString(line.text);
+                    if (line.timestampSeconds > 0) lineObj["timestamp"] = QString::fromStdString(formatTimestamp(line.timestampSeconds));
+                    if (!line.nextSlideMidiNote.empty()) lineObj["nextSlideMidiNote"] = QString::fromStdString(line.nextSlideMidiNote);
+                    if (!line.lightSceneMidiNote.empty()) lineObj["lightSceneMidiNote"] = QString::fromStdString(line.lightSceneMidiNote);
+                    linesArray.append(lineObj);
+                }
+                secObj["lines"] = linesArray;
+            }
+            sectionsArray.append(secObj);
+        }
+        rootObj["sections"] = sectionsArray;
     }
 
     QJsonDocument outDoc(rootObj);

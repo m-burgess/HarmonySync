@@ -7,6 +7,11 @@
 #include <functional>
 #include <cstdint>
 
+#if defined(HARMONYSYNC_HAS_QT) || __has_include(<QObject>)
+#include <QObject>
+#define HARMONYSYNC_QT_AVAILABLE 1
+#endif
+
 namespace HarmonySync::Core {
 
 using ApiCommandCallback = std::function<void(const std::string& action, const std::string& payload)>;
@@ -14,16 +19,20 @@ using ApiCommandCallback = std::function<void(const std::string& action, const s
 /**
  * @brief Thread-safe embedded HTTP & WebSocket server exposing REST endpoints and push notifications for mobile remote control.
  */
-class RemoteApiServer {
+class RemoteApiServer
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    : public QObject
+#endif
+{
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    Q_OBJECT
+#endif
 public:
-    RemoteApiServer();
-    explicit RemoteApiServer(uint16_t port);
+    explicit RemoteApiServer(uint16_t port = 8080);
     ~RemoteApiServer();
 
     RemoteApiServer(const RemoteApiServer&) = delete;
     RemoteApiServer& operator=(const RemoteApiServer&) = delete;
-    RemoteApiServer(RemoteApiServer&&) noexcept;
-    RemoteApiServer& operator=(RemoteApiServer&&) noexcept;
 
     bool startServer();
     void stopServer();

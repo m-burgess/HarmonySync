@@ -20,6 +20,9 @@ add_library(harmonysync_core STATIC
     services/SettingsStorageService.cpp
     services/MobileApiClient.cpp
     services/AILyricSyncService.cpp
+    services/ChordTransposer.cpp
+    services/qrcodegen.cpp
+    services/QrCodeImageProvider.cpp
 )
 
 target_include_directories(harmonysync_core PUBLIC
@@ -29,5 +32,5 @@ target_include_directories(harmonysync_core PUBLIC
 )
 
 if(Qt6_FOUND)
-    target_link_libraries(harmonysync_core PUBLIC Qt6::Core Qt6::Gui)
+    target_link_libraries(harmonysync_core PUBLIC Qt6::Core Qt6::Gui Qt6::WebSockets Qt6::Quick)
 endif()

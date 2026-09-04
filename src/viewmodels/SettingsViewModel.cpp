@@ -1,5 +1,8 @@
 #include "SettingsViewModel.hpp"
 #include <utility>
+#ifdef HARMONYSYNC_QT_AVAILABLE
+#include <QNetworkInterface>
+#endif
 
 namespace HarmonySync::ViewModels {
 
@@ -227,5 +230,17 @@ void SettingsViewModel::setMarginOffsetY(int offset) noexcept {
 #endif
     }
 }
+
+#ifdef HARMONYSYNC_QT_AVAILABLE
+QString SettingsViewModel::localIpAddress() const {
+    const QHostAddress &localhost = QHostAddress(QHostAddress::LocalHost);
+    for (const QHostAddress &address : QNetworkInterface::allAddresses()) {
+        if (address.protocol() == QAbstractSocket::IPv4Protocol && address != localhost) {
+            return address.toString();
+        }
+    }
+    return QStringLiteral("127.0.0.1");
+}
+#endif
 
 } // namespace HarmonySync::ViewModels

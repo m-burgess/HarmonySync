@@ -9,6 +9,7 @@ add_library(harmonysync_viewmodels STATIC
     LowerThirdOverlayViewModel.cpp
     UserSessionViewModel.cpp
     SettingsViewModel.cpp
+    JsonSyntaxHighlighter.cpp
     mobile/MusicianSessionViewModel.cpp
     mobile/MusicianConfidenceViewModel.cpp
 )
@@ -24,5 +25,5 @@ target_include_directories(harmonysync_viewmodels PUBLIC
 target_link_libraries(harmonysync_viewmodels PUBLIC harmonysync_core harmonysync_media)
 
 if(Qt6_FOUND)
-    target_link_libraries(harmonysync_viewmodels PUBLIC Qt6::Core)
+    target_link_libraries(harmonysync_viewmodels PUBLIC Qt6::Core Qt6::Gui Qt6::Quick)
 endif()

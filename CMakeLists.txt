@@ -29,7 +29,7 @@ else()
 endif()
 
 # Find Qt 6 Packages (Optional Fallback for standalone C++ core testing)
-find_package(Qt6 COMPONENTS Core Gui Quick QuickControls2 Multimedia Test QUIET)
+find_package(Qt6 COMPONENTS Core Gui Quick QuickControls2 Multimedia WebSockets Test QUIET)
 
 # Use find_package(Qt6WebEngineQuick) instead of COMPONENTS to prevent overriding Qt6_FOUND if not installed
 find_package(Qt6WebEngineQuick QUIET)
@@ -63,6 +63,10 @@ enable_testing()
 
 # Include Subdirectories
 add_subdirectory(src/core)
+
+# Copy python scripts to build directory so tests and apps can access them
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/scripts DESTINATION ${CMAKE_BINARY_DIR})
+
 add_subdirectory(src/media)
 add_subdirectory(src/viewmodels)
 add_subdirectory(tests)
@@ -72,7 +76,7 @@ add_executable(harmonysync_app src/main.cpp)
 target_link_libraries(harmonysync_app PRIVATE harmonysync_viewmodels harmonysync_media harmonysync_core)
 
 if(Qt6_FOUND)
-    target_link_libraries(harmonysync_app PRIVATE Qt6::Core Qt6::Quick Qt6::QuickControls2 Qt6::Multimedia)
+    target_link_libraries(harmonysync_app PRIVATE Qt6::Core Qt6::Quick Qt6::QuickControls2 Qt6::Multimedia Qt6::WebSockets)
     if (Qt6WebEngineQuick_FOUND)
         target_link_libraries(harmonysync_app PRIVATE Qt6::WebEngineQuick)
     endif()
@@ -91,7 +95,7 @@ if(Qt6_FOUND)
 
     # Mobile Musician App Executable
     add_executable(harmonysync_musician_app src/mobile/main_mobile.cpp)
-    target_link_libraries(harmonysync_musician_app PRIVATE harmonysync_viewmodels harmonysync_core Qt6::Core Qt6::Quick Qt6::Gui)
+    target_link_libraries(harmonysync_musician_app PRIVATE harmonysync_viewmodels harmonysync_core Qt6::Core Qt6::Quick Qt6::Gui Qt6::WebSockets)
     qt_add_resources(harmonysync_musician_app "mobile_qml_resources"
         PREFIX "/"
         FILES

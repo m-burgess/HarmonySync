@@ -3,6 +3,8 @@ import sys
 import json
 import warnings
 import os
+import subprocess
+import shutil
 
 # Suppress warnings from whisper/librosa
 warnings.filterwarnings("ignore")
@@ -32,15 +34,20 @@ def find_audio_offset(ref_path, multi_path, sr=22050):
     y_ref = y_ref[:max_len]
     y_multi = y_multi[:max_len]
     
-    # Cross-correlate
-    correlation = signal.correlate(y_multi, y_ref, mode='full')
-    lags = signal.correlation_lags(len(y_multi), len(y_ref), mode='full')
+    # Calculate onset envelopes (captures rhythm and transients)
+    # This ensures a click track can successfully correlate against a studio mix
+    env_ref = librosa.onset.onset_strength(y=y_ref, sr=sr)
+    env_multi = librosa.onset.onset_strength(y=y_multi, sr=sr)
+    
+    # Cross-correlate envelopes
+    correlation = signal.correlate(env_multi, env_ref, mode='full')
+    lags = signal.correlation_lags(len(env_multi), len(env_ref), mode='full')
     
     peak_idx = np.argmax(correlation)
     lag = lags[peak_idx]
     
-    # Calculate offset in seconds
-    offset_seconds = lag / float(sr)
+    # Calculate offset in seconds (onset_strength uses default hop_length of 512)
+    offset_seconds = lag * (512.0 / sr)
     
     # Ensure it's not negative (if reference starts earlier than multitrack, which is rare for click tracks)
     if offset_seconds < 0:
@@ -48,12 +55,21 @@ def find_audio_offset(ref_path, multi_path, sr=22050):
         
     return offset_seconds
 
-def align_lyrics(ref_path, lyrics_path, offset, lead_time=1.5):
+def align_lyrics(ref_path, lyrics_path, lead_time=0.5):
     """
     Uses Whisper to transcribe the reference audio, constrained by the known lyrics,
-    and returns timestamped lines adjusted by the offset and lead time.
+    and returns timestamped lines adjusted by the lead time.
     """
-    model = whisper.load_model("base") # Use base model for speed vs accuracy balance
+    import torch
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    
+    try:
+        # First try to load on whatever device is available
+        model = whisper.load_model("base", device=device)
+    except Exception as e:
+        # If CUDA initialization fails (e.g., incompatible architecture), fallback to CPU
+        print_progress("CUDA error detected, falling back to CPU mode...")
+        model = whisper.load_model("base", device="cpu")
     
     # We read the lyrics, though standard Whisper transcription might not perfectly match the exact text.
     # A true forced aligner like whisperX is better, but raw Whisper gives decent segment timestamps.
@@ -62,41 +78,20 @@ def align_lyrics(ref_path, lyrics_path, offset, lead_time=1.5):
             raw_lines = [line.strip() for line in f.readlines()]
             
             blocks = []
-            current_block = ""
-            line_count = 0
-            is_header = False
             for line in raw_lines:
                 if line == "":
-                    if current_block != "":
-                        blocks.append(current_block)
-                        current_block = ""
-                        line_count = 0
                     continue
                 
+                # Ignore metadata lines
+                if line.startswith("Title:") or line.startswith("BPM:") or line.startswith("Original Key:"):
+                    continue
+                    
                 if line.startswith("[") and line.endswith("]"):
-                    if current_block != "":
-                        blocks.append(current_block)
-                        current_block = ""
-                        line_count = 0
-                    blocks.append(line)
                     continue
                 
-                if current_block == "":
-                    current_block = line
-                    line_count = 1
-                else:
-                    current_block += "\n" + line
-                    line_count += 1
-                    
-                if line_count == 2:
-                    blocks.append(current_block)
-                    current_block = ""
-                    line_count = 0
-                    
-            if current_block != "":
-                blocks.append(current_block)
+                blocks.append(line)
                 
-            lyrics_text = " ".join([b.replace("\n", " ") for b in blocks])
+            lyrics_text = " ".join(blocks)
     except Exception as e:
         print(f"Error reading lyrics: {e}", file=sys.stderr)
         sys.exit(1)
@@ -115,11 +110,8 @@ def align_lyrics(ref_path, lyrics_path, offset, lead_time=1.5):
         segment_text = segment["text"].strip()
         start_time = segment["start"]
         
-        # Apply cross-correlation offset (so it matches the click track timeline)
-        adjusted_time = start_time + offset
-        
-        # Subtract lead time (so lyrics show up before the singer sings)
-        final_time = adjusted_time - lead_time
+        # Audio is already physically aligned, just subtract lead time
+        final_time = start_time - lead_time
         if final_time < 0:
             final_time = 0.0
             
@@ -143,6 +135,34 @@ def align_lyrics(ref_path, lyrics_path, offset, lead_time=1.5):
             
     return output
 
+def pad_audio_with_ffmpeg(ref_path, multi_path, offset_seconds):
+    """
+    Uses FFmpeg to pad the reference track with silence so its timeline and length 
+    exactly match the multitrack.
+    """
+    try:
+        multi_dur = librosa.get_duration(path=multi_path)
+    except TypeError:
+        # Fallback for older librosa versions
+        multi_dur = librosa.get_duration(filename=multi_path)
+        
+    delay_ms = int(offset_seconds * 1000)
+    temp_out = ref_path + ".padded.mp3"
+    
+    cmd = [
+        "ffmpeg", "-y",
+        "-i", ref_path,
+        "-af", f"adelay={delay_ms}|{delay_ms},apad",
+        "-t", str(multi_dur),
+        temp_out
+    ]
+    
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+    shutil.move(temp_out, ref_path)
+
+def print_progress(msg):
+    print(json.dumps({"progress": msg}), flush=True)
+
 def main():
     if len(sys.argv) < 4:
         print("Usage: python ai_lyric_sync.py <ref_path> <multi_path> <lyrics_path>", file=sys.stderr)
@@ -153,14 +173,24 @@ def main():
     lyrics_path = sys.argv[3]
 
     try:
+        print_progress("Initializing AI Sync...")
+        
         # Step 1: Find the offset caused by the count-in on the multitrack
+        print_progress("Calculating count-in offset...")
         offset = find_audio_offset(ref_path, multi_path)
         
-        # Step 2: Align with Whisper and adjust timestamps
-        timestamped_lines = align_lyrics(ref_path, lyrics_path, offset, lead_time=1.5)
+        # Step 2: Pad the reference audio file with silence and overwrite it
+        print_progress("Aligning and padding audio tracks...")
+        pad_audio_with_ffmpeg(ref_path, multi_path, offset)
+        
+        # Step 3: Align with Whisper
+        print_progress("Transcribing lyrics using Whisper AI (this may take a minute)...")
+        timestamped_lines = align_lyrics(ref_path, lyrics_path)
+        
+        print_progress("Finalizing timestamps...")
         
         # Output JSON for C++ to parse
-        print(json.dumps(timestamped_lines))
+        print(json.dumps(timestamped_lines), flush=True)
         
     except Exception as e:
         print(f"Error during AI synchronization: {e}", file=sys.stderr)

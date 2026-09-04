@@ -1,6 +1,8 @@
 #ifndef HARMONYSYNC_AI_LYRIC_SYNC_SERVICE_HPP
 #define HARMONYSYNC_AI_LYRIC_SYNC_SERVICE_HPP
 
+#define HARMONYSYNC_QT_AVAILABLE 1
+
 #include "../models/SongMap.hpp"
 #include <string>
 #include <vector>
@@ -33,7 +35,8 @@ public:
         const std::string& multitrackAudioPath,
         const std::string& rawLyrics,
         std::function<void(std::vector<TimedLyricLine>)> onSuccess,
-        std::function<void(std::string)> onError);
+        std::function<void(std::string)> onError,
+        std::function<void(std::string)> onProgress = nullptr);
 
 private:
     struct Impl;

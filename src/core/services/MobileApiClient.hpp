@@ -6,6 +6,11 @@
 #include <functional>
 #include <cstdint>
 
+#if defined(HARMONYSYNC_HAS_QT) || __has_include(<QObject>)
+#include <QObject>
+#define HARMONYSYNC_QT_AVAILABLE 1
+#endif
+
 namespace HarmonySync::Core {
 
 enum class ConnectionState {
@@ -22,15 +27,20 @@ using ClientEventCallback = std::function<void(const std::string& eventName, con
 /**
  * @brief Thread-safe network client for mobile devices to connect to the main HarmonySync host via WebSocket/REST.
  */
-class MobileApiClient {
+class MobileApiClient
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    : public QObject
+#endif
+{
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    Q_OBJECT
+#endif
 public:
     MobileApiClient();
     ~MobileApiClient();
 
     MobileApiClient(const MobileApiClient&) = delete;
     MobileApiClient& operator=(const MobileApiClient&) = delete;
-    MobileApiClient(MobileApiClient&&) noexcept;
-    MobileApiClient& operator=(MobileApiClient&&) noexcept;
 
     // Connection Management
     void connectToHost(const std::string& ipAddress, uint16_t port, const std::string& pin);

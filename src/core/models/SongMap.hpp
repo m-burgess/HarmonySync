@@ -8,10 +8,17 @@
 
 namespace HarmonySync::Core {
 
+struct SongLine {
+    std::string text;
+    double timestampSeconds{0.0};
+    std::string nextSlideMidiNote;
+    std::string lightSceneMidiNote;
+};
+
 struct SongSection {
     std::string name;
     std::string chords;
-    std::vector<std::string> lines;
+    std::vector<SongLine> lines;
 };
 
 struct TimedLyricLine {
@@ -39,6 +46,9 @@ public:
     [[nodiscard]] const std::string& artist() const noexcept;
     [[nodiscard]] const std::string& originalKey() const noexcept;
     [[nodiscard]] const std::string& currentKey() const noexcept;
+    [[nodiscard]] const std::string& timing() const noexcept;
+    [[nodiscard]] const std::string& length() const noexcept;
+    [[nodiscard]] const std::string& lyricsURL() const noexcept;
     [[nodiscard]] double tempoBpm() const noexcept;
     [[nodiscard]] const std::vector<MediaStem>& stems() const noexcept;
     [[nodiscard]] const std::vector<SongSection>& sections() const noexcept;
@@ -51,6 +61,9 @@ public:
     // Setters / Modifiers
     void setKeys(std::string origKey, std::string curKey);
     void setTempoBpm(double bpm) noexcept;
+    void setTiming(std::string timing);
+    void setLength(std::string length);
+    void setLyricsURL(std::string url);
     void setSections(std::vector<SongSection> sections);
     void setLyricsContent(std::string lyrics);
     void setTimedLyrics(std::vector<TimedLyricLine> timedLyrics);

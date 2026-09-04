@@ -2,6 +2,9 @@
 #include "SetlistViewModel.hpp"
 #include "SettingsViewModel.hpp"
 #include "SlideDisplayViewModel.hpp"
+#include "JsonSyntaxHighlighter.hpp"
+#include "RemoteApiServer.hpp"
+#include "QrCodeImageProvider.hpp"
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -46,6 +49,7 @@ int main(int argc, char *argv[]) {
 #ifdef HARMONYSYNC_QT_AVAILABLE
 
   QQmlApplicationEngine engine;
+  engine.addImageProvider(QLatin1String("qrcode"), new HarmonySync::Core::QrCodeImageProvider());
   QQmlContext *context = engine.rootContext();
 
   context->setContextProperty("setlistViewModel", &setlistViewModel);
@@ -93,6 +97,25 @@ int main(int argc, char *argv[]) {
         }
       });
 
+  // Create and start Remote API Server
+  auto remoteApiServer = std::make_shared<HarmonySync::Core::RemoteApiServer>(8080);
+  remoteApiServer->startServer();
+
+  // Push initial song map if it exists
+  QString initialJson = setlistViewModel.currentSongMapJson();
+  if (!initialJson.isEmpty()) {
+      remoteApiServer->broadcastEvent("SONG_MAP_UPDATED", initialJson.toStdString());
+  }
+
+  // Broadcast song map JSON when it changes (i.e. on song change or edits)
+  QObject::connect(
+      &setlistViewModel,
+      &HarmonySync::ViewModels::SetlistViewModel::currentSongMapJsonChanged, &app,
+      [&setlistViewModel, remoteApiServer]() {
+          QString jsonStr = setlistViewModel.currentSongMapJson();
+          remoteApiServer->broadcastEvent("SONG_MAP_UPDATED", jsonStr.toStdString());
+      });
+
   // Bind audio playback position to AI lyric syncing
   QObject::connect(
       &audioMixerViewModel,
@@ -101,6 +124,7 @@ int main(int argc, char *argv[]) {
         setlistViewModel.syncToPlaybackPosition(positionSeconds);
       });
 
+  qmlRegisterType<QmlJsonHighlighter>("HarmonySync.Helpers", 1, 0, "JsonSyntaxHighlighter");
   engine.load(url);
 
   return app.exec();

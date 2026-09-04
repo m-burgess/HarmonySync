@@ -9,6 +9,9 @@ struct SongMap::Impl {
     std::string artist;
     std::string originalKey{"C"};
     std::string currentKey{"C"};
+    std::string timing{"4/4"};
+    std::string length{"0:00"};
+    std::string lyricsURL{""};
     double tempoBpm{120.0};
     std::vector<MediaStem> stems;
     std::vector<SongSection> sections;
@@ -71,6 +74,18 @@ const std::string& SongMap::currentKey() const noexcept {
     return m_impl->currentKey;
 }
 
+const std::string& SongMap::timing() const noexcept {
+    return m_impl->timing;
+}
+
+const std::string& SongMap::length() const noexcept {
+    return m_impl->length;
+}
+
+const std::string& SongMap::lyricsURL() const noexcept {
+    return m_impl->lyricsURL;
+}
+
 double SongMap::tempoBpm() const noexcept {
     return m_impl->tempoBpm;
 }
@@ -110,6 +125,18 @@ void SongMap::setKeys(std::string origKey, std::string curKey) {
 
 void SongMap::setTempoBpm(double bpm) noexcept {
     m_impl->tempoBpm = bpm;
+}
+
+void SongMap::setTiming(std::string timing) {
+    m_impl->timing = std::move(timing);
+}
+
+void SongMap::setLength(std::string length) {
+    m_impl->length = std::move(length);
+}
+
+void SongMap::setLyricsURL(std::string url) {
+    m_impl->lyricsURL = std::move(url);
 }
 
 void SongMap::setSections(std::vector<SongSection> sections) {

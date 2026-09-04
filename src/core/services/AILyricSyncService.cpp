@@ -39,7 +39,8 @@ void AILyricSyncService::generateTimestamps(
     const std::string& multitrackAudioPath,
     const std::string& rawLyrics,
     std::function<void(std::vector<TimedLyricLine>)> onSuccess,
-    std::function<void(std::string)> onError)
+    std::function<void(std::string)> onError,
+    std::function<void(std::string)> onProgress)
 {
     if (!std::filesystem::exists(m_impl->scriptPath)) {
         if (onError) onError("AI Lyric Sync script not found at: " + m_impl->scriptPath);
@@ -63,12 +64,31 @@ void AILyricSyncService::generateTimestamps(
 
     QProcess* process = new QProcess();
     
-    QObject::connect(process, &QProcess::finished, [process, onSuccess, onError](int exitCode, QProcess::ExitStatus exitStatus) {
+    std::shared_ptr<QByteArray> accumulatedOutput = std::make_shared<QByteArray>();
+
+    QObject::connect(process, &QProcess::readyReadStandardOutput, [process, accumulatedOutput, onProgress]() {
+        while (process->canReadLine()) {
+            QByteArray line = process->readLine();
+            QJsonDocument doc = QJsonDocument::fromJson(line);
+            if (doc.isObject() && doc.object().contains("progress")) {
+                if (onProgress) onProgress(doc.object()["progress"].toString().toStdString());
+            } else {
+                accumulatedOutput->append(line);
+            }
+        }
+    });
+
+    QObject::connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), [process, accumulatedOutput, onSuccess, onError](int exitCode, QProcess::ExitStatus exitStatus) {
         if (exitStatus == QProcess::CrashExit || exitCode != 0) {
-            if (onError) onError("Python script failed with exit code: " + std::to_string(exitCode));
+            QString errorOutput = process->readAllStandardError().trimmed();
+            QString errorMsg = "Python script failed with exit code: " + QString::number(exitCode);
+            if (!errorOutput.isEmpty()) {
+                errorMsg += ". Error: " + errorOutput;
+            }
+            if (onError) onError(errorMsg.toStdString());
         } else {
-            QByteArray output = process->readAllStandardOutput();
-            QJsonDocument doc = QJsonDocument::fromJson(output);
+            accumulatedOutput->append(process->readAllStandardOutput());
+            QJsonDocument doc = QJsonDocument::fromJson(*accumulatedOutput);
             if (doc.isArray()) {
                 QJsonArray arr = doc.array();
                 std::vector<TimedLyricLine> lines;
