@@ -1,6 +1,3 @@
-This project will entirely be written with Rust and tauri with html, css, and javascript as UI. Only use those to build out this application.
-to run this application run "cargo run --bin HarmonySync"
-
 ## Architecture & Structure
 - Project uses clean architecture: core, data, and presentation layers.
 - Modular folder structure with clear separation of concerns.
@@ -18,11 +15,9 @@ to run this application run "cargo run --bin HarmonySync"
 - Supported video: MP4, MOV, etc.
 - Supported images: PNG, JPG, JPEG, etc.
 - Backgrounds folder holds all videos and images for lyric display.
-- Video backgrounds for the audience screen are handled by a separate egui+egui_video process for smooth playback.
-- Every lyric or image transition uses a 0.2s fade in/out. (Audience screen video/lyrics fade handled in egui process.)
+- Every lyric or image transition uses a 0.2s fade in/out.
 
 ## GUI & Presentation
-- Main GUI built with iced, dark themed, resizable.
 - Add to setlist button allows user to pick folder. folder name is added to listbox to be clickable
 - Directory chooser for folder selection.
 - Display configuration menu for setting confidence monitor and audience screens.
@@ -37,10 +32,6 @@ to run this application run "cargo run --bin HarmonySync"
 ## Confidence Monitor
 - Will display current and next lyrics, clock at top, video countdown at bottom.
 - Full screen and font configuration supported.
-
-## IPC & Integration
-- Main app and audience screen communicate via TCP socket (JSON).
-- Audience screen is a separate binary using egui and egui_video for smooth video loops and overlays.
 
 # Remaining/Planned Features
 - Save mixer configuration per song (done for audio, extend for video if needed).

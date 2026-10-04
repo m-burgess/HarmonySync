@@ -28,8 +28,6 @@ A comprehensive presentation software built with C++ and Qt, designed for worshi
 
 ## ⚡ Performance & System Requirements
 
-HarmonySync has been entirely migrated from Node.js/Electron to a native C++ and Qt architecture, drastically improving memory efficiency, audio latency, and visual rendering speeds.
-
 ### Recommended System Requirements
 - **CPU**: Quad-core processor (Intel Core i5/i7 or AMD Ryzen 5/7)
 - **RAM**: 8-16 GB
