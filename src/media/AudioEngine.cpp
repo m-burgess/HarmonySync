@@ -5,6 +5,7 @@
 #include <vector>
 #include <atomic>
 #include <cmath>
+#include <cctype>
 
 #ifdef HARMONYSYNC_HAS_QT
 #include <QIODevice>
@@ -119,8 +120,28 @@ public:
 
 namespace HarmonySync::Media {
 
+namespace {
+
+bool isReferenceStemName(std::string name) {
+    std::transform(name.begin(), name.end(), name.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return name.find("reference") != std::string::npos;
+}
+
+bool isDurationGuideStemName(std::string name) {
+    std::transform(name.begin(), name.end(), name.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return name.find("click") != std::string::npos
+        || name.find("guide") != std::string::npos
+        || name.find("split") != std::string::npos
+        || name.find("stereo") != std::string::npos;
+}
+
+} // namespace
+
 struct AudioEngine::Impl {
     std::vector<Core::MediaStem> stems;
+    std::vector<Core::MediaStem> preloadedStems;
     std::atomic<PlaybackState> state{PlaybackState::Stopped};
     std::atomic<double> position{0.0};
     std::atomic<double> duration{0.0};
@@ -130,6 +151,8 @@ struct AudioEngine::Impl {
 #ifdef HARMONYSYNC_HAS_QT
     std::unique_ptr<QAudioSink> audioSink;
     AudioMixerDevice mixerDevice;
+    std::vector<AudioMixerDevice::StemBuffer> preloadedBuffers;
+    double preloadedDuration = 0.0;
 #endif
 
     Impl() = default;
@@ -173,6 +196,7 @@ AudioEngine& AudioEngine::operator=(AudioEngine&&) noexcept = default;
 bool AudioEngine::loadStems(const std::vector<Core::MediaStem>& stems) {
     stop();
     m_impl->stems.clear();
+    m_impl->preloadedStems.clear();
     m_impl->position.store(0.0, std::memory_order_relaxed);
     
 #ifdef HARMONYSYNC_HAS_QT
@@ -181,14 +205,14 @@ bool AudioEngine::loadStems(const std::vector<Core::MediaStem>& stems) {
     }
 
     m_impl->mixerDevice.m_buffers.clear();
+    m_impl->preloadedBuffers.clear();
+    m_impl->preloadedDuration = 0.0;
     double maxDuration = 0.0;
     double fallbackDuration = 0.0;
     FFmpegAudioDecoder decoder;
 
     for (const auto& stem : stems) {
-        std::string lowerName = stem.name();
-        std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
-        if (lowerName.find("reference") != std::string::npos) {
+        if (isReferenceStemName(stem.name())) {
             continue;
         }
         
@@ -198,10 +222,7 @@ bool AudioEngine::loadStems(const std::vector<Core::MediaStem>& stems) {
         buf.stem = stem;
         MappedAudioFile mappedFile = decoder.mapAudioFile(stem.filePath());
         if (mappedFile.info.isValid) {
-            if (lowerName.find("click") != std::string::npos || 
-                lowerName.find("guide") != std::string::npos || 
-                lowerName.find("split") != std::string::npos || 
-                lowerName.find("stereo") != std::string::npos) {
+            if (isDurationGuideStemName(stem.name())) {
                 if (mappedFile.info.durationSeconds > maxDuration) {
                     maxDuration = mappedFile.info.durationSeconds;
                 }
@@ -227,9 +248,7 @@ bool AudioEngine::loadStems(const std::vector<Core::MediaStem>& stems) {
     }
 #else
     for (const auto& stem : stems) {
-        std::string lowerName = stem.name();
-        std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
-        if (lowerName.find("reference") != std::string::npos) {
+        if (isReferenceStemName(stem.name())) {
             continue;
         }
         m_impl->stems.push_back(stem);
@@ -238,6 +257,89 @@ bool AudioEngine::loadStems(const std::vector<Core::MediaStem>& stems) {
 #endif
 
     return !m_impl->stems.empty();
+}
+
+bool AudioEngine::preloadStems(const std::vector<Core::MediaStem>& stems) {
+    // Do not stop or clear the currently playing set (#177).
+    m_impl->preloadedStems.clear();
+
+#ifdef HARMONYSYNC_HAS_QT
+    m_impl->preloadedBuffers.clear();
+    m_impl->preloadedDuration = 0.0;
+    double maxDuration = 0.0;
+    double fallbackDuration = 0.0;
+    FFmpegAudioDecoder decoder;
+
+    for (const auto& stem : stems) {
+        if (isReferenceStemName(stem.name())) {
+            continue;
+        }
+
+        m_impl->preloadedStems.push_back(stem);
+
+        AudioMixerDevice::StemBuffer buf;
+        buf.stem = stem;
+        MappedAudioFile mappedFile = decoder.mapAudioFile(stem.filePath());
+        if (mappedFile.info.isValid) {
+            if (isDurationGuideStemName(stem.name())) {
+                if (mappedFile.info.durationSeconds > maxDuration) {
+                    maxDuration = mappedFile.info.durationSeconds;
+                }
+            }
+            if (mappedFile.info.durationSeconds > fallbackDuration) {
+                fallbackDuration = mappedFile.info.durationSeconds;
+            }
+            buf.mappedFile = std::move(mappedFile);
+            m_impl->preloadedBuffers.push_back(std::move(buf));
+        } else {
+            std::cerr << "[AudioEngine] Failed to map preloaded stem: " << stem.filePath() << std::endl;
+        }
+    }
+
+    if (maxDuration == 0.0) maxDuration = fallbackDuration;
+    m_impl->preloadedDuration = maxDuration;
+#else
+    for (const auto& stem : stems) {
+        if (isReferenceStemName(stem.name())) {
+            continue;
+        }
+        m_impl->preloadedStems.push_back(stem);
+    }
+#endif
+
+    return !m_impl->preloadedStems.empty();
+}
+
+bool AudioEngine::switchToPreloaded() {
+    if (m_impl->preloadedStems.empty()) {
+        return false;
+    }
+
+    // Swap in already-decoded stems; drop A. Keep playback state.
+    m_impl->stems = std::move(m_impl->preloadedStems);
+    m_impl->preloadedStems.clear();
+    m_impl->position.store(0.0, std::memory_order_relaxed);
+
+#ifdef HARMONYSYNC_HAS_QT
+    m_impl->mixerDevice.m_buffers = std::move(m_impl->preloadedBuffers);
+    m_impl->preloadedBuffers.clear();
+    m_impl->mixerDevice.m_duration = m_impl->preloadedDuration;
+    m_impl->duration.store(m_impl->preloadedDuration, std::memory_order_relaxed);
+    m_impl->preloadedDuration = 0.0;
+
+    if (m_impl->audioSink && !m_impl->mixerDevice.m_buffers.empty()
+        && m_impl->audioSink->state() != QAudio::ActiveState) {
+        m_impl->audioSink->start(&m_impl->mixerDevice);
+    }
+#else
+    m_impl->duration.store(m_impl->stems.empty() ? 0.0 : 180.0, std::memory_order_relaxed);
+#endif
+
+    return !m_impl->stems.empty();
+}
+
+bool AudioEngine::hasPreloadedStems() const noexcept {
+    return !m_impl->preloadedStems.empty();
 }
 
 void AudioEngine::play() {
