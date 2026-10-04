@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cassert>
 #include <cstdlib>
+#include <chrono>
 
 using namespace HarmonySync::Core;
 using namespace HarmonySync::Media;
@@ -75,10 +76,46 @@ void testStemMixerCalculation() {
     std::cout << "[PASS] testStemMixerCalculation passed." << std::endl;
 }
 
+// #177 — load B while A plays, switch under 100ms, drop A
+void testPreloadNextSongWhilePlaying() {
+    std::cout << "[TEST] Running testPreloadNextSongWhilePlaying..." << std::endl;
+    AudioEngine engine;
+
+    MediaStem songA("a1", "DrumsA", "song_a_drums.wav");
+    MediaStem songB("b1", "DrumsB", "song_b_drums.wav");
+
+    assert(engine.loadStems({songA}));
+    engine.play();
+    assert(engine.isPlaying());
+    assert(engine.loadedStems().size() == 1);
+    assert(engine.loadedStems()[0].id() == "a1");
+
+    assert(engine.preloadStems({songB}));
+    assert(engine.hasPreloadedStems());
+    // A must still be the loaded/playing set
+    assert(engine.isPlaying());
+    assert(engine.loadedStems().size() == 1);
+    assert(engine.loadedStems()[0].id() == "a1");
+
+    const auto t0 = std::chrono::steady_clock::now();
+    assert(engine.switchToPreloaded());
+    const auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - t0).count();
+
+    assert(elapsedMs < 100);
+    assert(engine.isPlaying());
+    assert(!engine.hasPreloadedStems());
+    assert(engine.loadedStems().size() == 1);
+    assert(engine.loadedStems()[0].id() == "b1"); // A dropped, B current
+
+    std::cout << "[PASS] testPreloadNextSongWhilePlaying passed (switch " << elapsedMs << "ms)." << std::endl;
+}
+
 int main() {
     try {
         testAudioEngineStates();
         testStemMixerCalculation();
+        testPreloadNextSongWhilePlaying();
         std::cout << "\nALL AUDIO ENGINE UNIT TESTS PASSED (100% Success)" << std::endl;
         return EXIT_SUCCESS;
     } catch (const std::exception& ex) {
