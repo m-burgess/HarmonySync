@@ -169,6 +169,30 @@ void testAudioMixerCrossfading() {
     std::cout << "[PASS] testAudioMixerCrossfading passed." << std::endl;
 }
 
+
+void testLoadNextSongSwitchesToPreloaded() {
+    std::cout << "[TEST] Running testLoadNextSongSwitchesToPreloaded..." << std::endl;
+    AudioMixerViewModel vm;
+
+    MediaStem songA("a1", "DrumsA", "song_a_drums.wav");
+    MediaStem songB("b1", "DrumsB", "song_b_drums.wav");
+
+    vm.loadSongStems({songA});
+    vm.play();
+    assert(vm.isPlaying());
+
+    assert(vm.loadNextSongStems({songB}) == true);
+    assert(vm.isPlaying());
+    assert(vm.loadedStemCount() == 1);
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    assert(vm.stemName(0).toStdString() == "DrumsB");
+#else
+    assert(vm.stemName(0) == "DrumsB");
+#endif
+
+    std::cout << "[PASS] testLoadNextSongSwitchesToPreloaded passed." << std::endl;
+}
+
 void testAudioMixerInitialization() {
     std::cout << "[TEST] Running testAudioMixerInitialization..." << std::endl;
     AudioMixerViewModel vm;
@@ -307,6 +331,7 @@ int main() {
         testLyricNavigation();
         testAudioMixerViewModel();
         testAudioMixerCrossfading();
+        testLoadNextSongSwitchesToPreloaded();
         testAudioMixerInitialization();
         testBackgroundVideoUpdate();
         testSlideDisplayViewModel();
