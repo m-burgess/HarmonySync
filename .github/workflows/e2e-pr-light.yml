@@ -8,16 +8,16 @@ concurrency:
   group: pr-smoke-${{ github.head_ref }}
   cancel-in-progress: true
 
-# Honest light smoke for this C++/Qt repo: no root package.json / pnpm workspace exists.
-# Build and run the C++ tests this PR owns without installing Qt (HARMONYSYNC_HAS_QT off).
+# C++/Qt smoke for this repo: no root package.json / pnpm workspace.
+# Qt is required because AILyricSyncService.hpp hard-defines HARMONYSYNC_QT_AVAILABLE.
 jobs:
   build-and-smoke:
     name: Build workspace and run smoke tests
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.4.0
 
       - name: Install C++ build tools
         shell: bash
@@ -28,12 +28,24 @@ jobs:
             cmake \
             ninja-build
 
-      - name: Configure CMake (C++ core/media, no Qt)
+      - name: Install Qt 6.8.2
+        uses: jurplel/install-qt-action@v4.4.1
+        with:
+          version: '6.8.2'
+          target: desktop
+          cache: true
+          install-deps: 'true'
+          # Matches root CMakeLists find_package(Qt6 COMPONENTS ... Multimedia WebSockets ...)
+          # Core/Gui/Quick/QuickControls2/Test come with the default desktop archives.
+          modules: 'qtmultimedia qtwebsockets'
+
+      - name: Configure CMake (C++ core/media with Qt)
         shell: bash
         run: |
           cmake -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_CXX_STANDARD=20
+            -DCMAKE_CXX_STANDARD=20 \
+            -DCMAKE_PREFIX_PATH="${QT_ROOT_DIR}"
 
       - name: Build smoke test targets
         shell: bash
