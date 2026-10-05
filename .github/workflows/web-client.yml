@@ -1,0 +1,49 @@
+name: Web Client Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/web_client/**'
+      - '.github/workflows/web-client.yml'
+  pull_request:
+    paths:
+      - 'src/web_client/**'
+      - '.github/workflows/web-client.yml'
+
+concurrency:
+  group: web-client-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+# Musician View lives at src/web_client (npm + package-lock.json).
+# There is no root package.json / pnpm workspace — do not reintroduce root pnpm.
+jobs:
+  npm-test:
+    name: npm test (src/web_client)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: src/web_client
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.4.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: src/web_client/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        shell: bash
+        run: |
+          if node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts.test ? 0 : 1)"; then
+            npm test
+          else
+            echo "::notice title=Web client tests not on this branch yet::package.json has no 'test' script (expected until Musician View PR #198 merges). Skipping npm test so this workflow can stay green."
+          fi
