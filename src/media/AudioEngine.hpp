@@ -31,6 +31,17 @@ public:
 
     // Control Methods
     bool loadStems(const std::vector<Core::MediaStem>& stems);
+    /**
+     * @brief Decode/store the next song's stems without stopping current playback (#177).
+     * Does not replace loadedStems() until switchToPreloaded().
+     */
+    bool preloadStems(const std::vector<Core::MediaStem>& stems);
+    /**
+     * @brief Make the preloaded stems current and drop the previous set.
+     * Keeps playback state; intended to complete in under 100ms.
+     */
+    bool switchToPreloaded();
+    [[nodiscard]] bool hasPreloadedStems() const noexcept;
     void play();
     void pause();
     void stop();

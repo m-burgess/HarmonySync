@@ -205,11 +205,18 @@ void AudioMixerViewModel::setActiveBackgroundVideo(const std::string& path) {
 #endif
 
 bool AudioMixerViewModel::loadNextSongStems(const std::vector<Core::MediaStem>& stems) {
-    // Load stems into the inactive/next deck without altering active deck playback
-    bool result = m_impl->m_nextDeck->loadStems(stems);
+    // Preload on the active deck, then switch. Do not fill the next deck.
+    if (!m_impl->m_activeDeck->preloadStems(stems)) {
+        return false;
+    }
+    bool result = m_impl->m_activeDeck->switchToPreloaded();
 #ifdef HARMONYSYNC_QT_AVAILABLE
     if (result) {
         emit nextSongLoaded();
+        emit stemCountChanged(loadedStemCount());
+        emit durationChanged(durationSeconds());
+        emit positionChanged(positionSeconds());
+        emit playStateChanged(isPlaying());
     }
 #endif
     return result;
