@@ -8,51 +8,58 @@ concurrency:
   group: pr-smoke-${{ github.head_ref }}
   cancel-in-progress: true
 
+# C++/Qt smoke for this repo: no root package.json / pnpm workspace.
+# Qt is required because AILyricSyncService.hpp hard-defines HARMONYSYNC_QT_AVAILABLE.
 jobs:
   build-and-smoke:
     name: Build workspace and run smoke tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.4.0
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Install C++ build tools
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            cmake \
+            ninja-build
+
+      - name: Install Qt 6.8.2
+        uses: jurplel/install-qt-action@v4.4.1
         with:
-          node-version: '18'
+          version: '6.8.2'
+          target: desktop
+          cache: true
+          install-deps: 'true'
+          # Matches root CMakeLists find_package(Qt6 COMPONENTS ... Multimedia WebSockets ...)
+          # Core/Gui/Quick/QuickControls2/Test come with the default desktop archives.
+          modules: 'qtmultimedia qtwebsockets'
 
-      - name: Enable corepack and prepare pnpm
+      - name: Configure CMake (C++ core/media with Qt)
         shell: bash
         run: |
-          corepack enable
-          corepack prepare pnpm@latest --activate
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_STANDARD=20 \
+            -DCMAKE_PREFIX_PATH="${QT_ROOT_DIR}"
 
-      - name: Install dependencies (fast)
+      - name: Build smoke test targets
         shell: bash
         run: |
-          pnpm install -w --frozen-lockfile --prefer-offline
+          cmake --build build --target \
+            test_audio_engine \
+            test_models \
+            test_audio_dsp \
+            -j "$(nproc)"
 
-      - name: Build workspace
+      - name: Run smoke CTest suite
         shell: bash
         run: |
-          pnpm -w build
-
-      - name: Install Playwright browsers
-        shell: bash
-        run: |
-          pnpm -w exec playwright install --with-deps
-
-      - name: Run Playwright smoke tests (@smoke)
-        shell: bash
-        env:
-          CI: true
-        run: |
-          pnpm -w exec playwright test --grep @smoke --reporter=github
-
-      - name: Upload Playwright report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: playwright-report
+          ctest --test-dir build \
+            -R '^(test_audio_engine|test_models|test_audio_dsp)$' \
+            --output-on-failure \
+            --no-tests=error
