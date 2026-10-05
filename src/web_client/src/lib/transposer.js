@@ -28,16 +28,19 @@ export const nashvilleToStandard = (nashville, targetKey) => {
     const rootIdx = getNoteIndex(targetKey);
     if (rootIdx === -1) return nashville;
     
+    const scaleIntervals = [0, 2, 4, 5, 7, 9, 11];
+    const degreeToNote = (degree) => CHROMATIC_SCALE[(rootIdx + scaleIntervals[degree - 1]) % 12];
+
     const match = nashville.match(/^([1-7])(.*)$/);
     if (match) {
         const degree = parseInt(match[1], 10);
-        const modifier = match[2];
-        const scaleIntervals = [0, 2, 4, 5, 7, 9, 11];
-        
-        if (degree >= 1 && degree <= 7) {
-            const noteIdx = (rootIdx + scaleIntervals[degree - 1]) % 12;
-            return CHROMATIC_SCALE[noteIdx] + modifier;
+        let modifier = match[2];
+        // Slash chords: the bass is a scale degree too, e.g. "1/3" -> "C/E" in C.
+        const slash = modifier.match(/^(.*)\/([1-7])$/);
+        if (slash) {
+            modifier = `${slash[1]}/${degreeToNote(parseInt(slash[2], 10))}`;
         }
+        return degreeToNote(degree) + modifier;
     }
     return nashville;
 };
