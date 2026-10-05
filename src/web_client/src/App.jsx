@@ -3,6 +3,35 @@ import { suggestCapoKey, nashvilleToStandard, toCagedLeadShape, getCapoFret } fr
 import './index.css'
 
 const KEYS = ["C", "C#", "Db", "D", "Eb", "E", "F", "F#", "Gb", "G", "Ab", "A", "Bb", "B"]
+const KEY_ALIASES = { "D#": "Eb", "G#": "Ab", "A#": "Bb" }
+const RECONNECT_DELAY_MS = 2000
+
+// Verbose protocol logging only in dev builds (`npm run dev`).
+const debugLog = (...args) => {
+  if (import.meta.env.DEV) console.log(...args)
+}
+
+// Map a song-map key string onto one of the selectable KEYS, or null if unknown.
+const normalizeKey = (key) => {
+  if (typeof key !== 'string') return null
+  const trimmed = key.trim()
+  if (!trimmed) return null
+  const k = trimmed[0].toUpperCase() + trimmed.slice(1)
+  if (KEYS.includes(k)) return k
+  return KEY_ALIASES[k] || null
+}
+
+// Transpose a whitespace/dash separated list of Nashville chords.
+const transposeChordList = (chordString, separator, targetKey, applyCaged) => {
+  if (typeof chordString !== 'string' || !chordString.trim()) return null
+  return chordString
+    .split(separator)
+    .filter(Boolean)
+    .map(part => {
+      const stdChord = nashvilleToStandard(part, targetKey)
+      return applyCaged ? toCagedLeadShape(stdChord) : stdChord
+    })
+}
 
 function App() {
   const [connected, setConnected] = useState(false)
@@ -14,66 +43,109 @@ function App() {
 
   // Initialize WebSocket connection
   useEffect(() => {
-    // Determine the host dynamically based on where the web app is served from
+    // Connect back to the machine that served this page (the desktop host on the LAN).
+    // The desktop RemoteApiServer listens on 8080; override with VITE_WS_PORT if needed.
     const wsHost = window.location.hostname || 'localhost';
-    const wsUrl = `ws://${wsHost}:8080`;
-    
-    let ws;
-    let reconnectTimer;
-    
+    const wsPort = import.meta.env.VITE_WS_PORT || '8080';
+    const wsUrl = `ws://${wsHost}:${wsPort}`;
+
+    let ws = null;
+    let reconnectTimer = null;
+    let disposed = false;
+
+    const scheduleReconnect = () => {
+      if (disposed || reconnectTimer) return;
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        connect();
+      }, RECONNECT_DELAY_MS);
+    };
+
     const connect = () => {
-      console.log(`Connecting to ${wsUrl}...`);
-      ws = new WebSocket(wsUrl);
-      
+      if (disposed) return;
+      debugLog(`Connecting to ${wsUrl}...`);
+      try {
+        ws = new WebSocket(wsUrl);
+      } catch (err) {
+        console.error("Failed to create WebSocket:", err);
+        scheduleReconnect();
+        return;
+      }
+
       ws.onopen = () => {
-        console.log("Connected to HarmonySync Host!");
+        debugLog("Connected to HarmonySync Host!");
         setConnected(true);
       };
-      
+
       ws.onmessage = (event) => {
-        console.log("Received raw WS message:", event.data);
+        debugLog("Received raw WS message:", event.data);
+        let data;
         try {
-          const data = JSON.parse(event.data);
-          console.log("Parsed WS event:", data);
-          if (data.event === 'SONG_MAP_UPDATED') {
-            if (!data.payload) {
-                console.warn("Payload is empty or missing!");
-                setRawSongData(null);
-                return;
-            }
-            try {
-              const payload = JSON.parse(data.payload);
-              console.log("Parsed song map payload:", payload);
-              setRawSongData(payload);
-              if (payload.originalKey) {
-                setSelectedKey(payload.originalKey);
-              }
-            } catch(err) {
-              console.error("Failed to parse the JSON inside data.payload:", err);
-            }
-          }
+          data = JSON.parse(event.data);
         } catch (e) {
           console.error("Failed to parse top-level WS message", e);
+          return;
+        }
+        if (!data || data.event !== 'SONG_MAP_UPDATED') return;
+
+        if (!data.payload) {
+          // Desktop sends an empty payload when no song is active.
+          setRawSongData(null);
+          return;
+        }
+        try {
+          const payload = JSON.parse(data.payload);
+          debugLog("Parsed song map payload:", payload);
+          if (!payload || typeof payload !== 'object') {
+            console.warn("Song map payload is not an object; ignoring.");
+            return;
+          }
+          setRawSongData(payload);
+          // Desktop song maps store the key as "key"; older maps used "originalKey"
+          // (FolderService accepts both, so do the same here).
+          const songKey = normalizeKey(payload.key ?? payload.originalKey);
+          if (songKey) {
+            setSelectedKey(songKey);
+          }
+        } catch (err) {
+          console.error("Failed to parse the JSON inside data.payload:", err);
         }
       };
-      
+
       ws.onclose = () => {
         setConnected(false);
-        console.log("Disconnected. Reconnecting in 2s...");
-        reconnectTimer = setTimeout(connect, 2000);
+        if (disposed) return;
+        debugLog(`Disconnected. Reconnecting in ${RECONNECT_DELAY_MS / 1000}s...`);
+        scheduleReconnect();
       };
-      
+
       ws.onerror = (err) => {
         console.error("WebSocket Error:", err);
-        ws.close();
+        // onclose follows an error and handles the reconnect.
       };
     };
+
+    // Phones suspend background tabs; reconnect right away when the page is shown again.
+    const handleVisibility = () => {
+      if (document.visibilityState !== 'visible' || disposed) return;
+      if (!ws || ws.readyState === WebSocket.CLOSED) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+        connect();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
 
     connect();
 
     return () => {
+      disposed = true;
+      document.removeEventListener('visibilitychange', handleVisibility);
       clearTimeout(reconnectTimer);
-      if (ws) ws.close();
+      if (ws) {
+        ws.onopen = ws.onmessage = ws.onclose = ws.onerror = null;
+        ws.close();
+      }
     };
   }, []);
 
@@ -90,49 +162,31 @@ function App() {
         }
     }
     
-    return rawSongData.sections.map(section => {
-      let transposedSectionChords = section.chords;
-      if (transposedSectionChords) {
-          const chordParts = transposedSectionChords.split(/[\s-]+/).filter(Boolean);
-          const replacedChords = chordParts.map(part => {
-            let stdChord = nashvilleToStandard(part, targetKey);
-            if (cagedEnabled && capoMode === "Off") {
-              stdChord = toCagedLeadShape(stdChord);
-            }
-            return stdChord;
-          });
-          // Reconstruct with dashes since we split by dash/space
-          transposedSectionChords = replacedChords.join(" - ");
-      }
-      
-      const lines = (section.lines || []).map(line => {
-        let text = typeof line === 'string' ? line : (line.text || line.lyric || "");
-        let chords = typeof line === 'object' ? line.chords : null;
-        
-        if (chords) {
-          const chordParts = chords.split(/\s+/).filter(Boolean);
-          const transposedChords = chordParts.map(part => {
-            let stdChord = nashvilleToStandard(part, targetKey);
-            if (cagedEnabled && capoMode === "Off") {
-              stdChord = toCagedLeadShape(stdChord);
-            }
-            return stdChord;
-          });
-          chords = transposedChords.join(" ");
-        }
-        
-        return { text, chords };
+    const applyCaged = cagedEnabled && capoMode === "Off";
+
+    return rawSongData.sections
+      .filter(section => section && typeof section === 'object')
+      .map(section => {
+        // Section chords are written like "1-6m-5-4"; show them joined with dashes.
+        const sectionChords = transposeChordList(section.chords, /[\s-]+/, targetKey, applyCaged);
+
+        const lines = (Array.isArray(section.lines) ? section.lines : []).map(line => {
+          if (typeof line === 'string') return { text: line, chords: null };
+          if (!line || typeof line !== 'object') return { text: "", chords: null };
+          const text = line.text || line.lyric || "";
+          const chords = transposeChordList(line.chords, /\s+/, targetKey, applyCaged);
+          return { text, chords: chords ? chords.join(" ") : null };
+        });
+
+        return { ...section, chords: sectionChords ? sectionChords.join(" - ") : null, lines };
       });
-      
-      return { ...section, chords: transposedSectionChords, lines };
-    });
   }, [rawSongData, selectedKey, capoMode, cagedEnabled]);
 
   return (
     <div className="app-container">
       <header className="header">
         <div className="song-title">
-          {rawSongData ? rawSongData.title : "HarmonySync Musician View"}
+          {(rawSongData && typeof rawSongData.title === 'string' && rawSongData.title) || "HarmonySync Musician View"}
         </div>
         <div className={`status-badge ${!connected ? 'disconnected' : ''}`}>
           <div style={{
