@@ -8,51 +8,46 @@ concurrency:
   group: pr-smoke-${{ github.head_ref }}
   cancel-in-progress: true
 
+# Honest light smoke for this C++/Qt repo: no root package.json / pnpm workspace exists.
+# Build and run the C++ tests this PR owns without installing Qt (HARMONYSYNC_HAS_QT off).
 jobs:
   build-and-smoke:
     name: Build workspace and run smoke tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      - name: Enable corepack and prepare pnpm
+      - name: Install C++ build tools
         shell: bash
         run: |
-          corepack enable
-          corepack prepare pnpm@latest --activate
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            cmake \
+            ninja-build
 
-      - name: Install dependencies (fast)
+      - name: Configure CMake (C++ core/media, no Qt)
         shell: bash
         run: |
-          pnpm install -w --frozen-lockfile --prefer-offline
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_STANDARD=20
 
-      - name: Build workspace
+      - name: Build smoke test targets
         shell: bash
         run: |
-          pnpm -w build
+          cmake --build build --target \
+            test_audio_engine \
+            test_models \
+            test_audio_dsp \
+            -j "$(nproc)"
 
-      - name: Install Playwright browsers
+      - name: Run smoke CTest suite
         shell: bash
         run: |
-          pnpm -w exec playwright install --with-deps
-
-      - name: Run Playwright smoke tests (@smoke)
-        shell: bash
-        env:
-          CI: true
-        run: |
-          pnpm -w exec playwright test --grep @smoke --reporter=github
-
-      - name: Upload Playwright report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: playwright-report
+          ctest --test-dir build \
+            -R '^(test_audio_engine|test_models|test_audio_dsp)$' \
+            --output-on-failure \
+            --no-tests=error
