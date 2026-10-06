@@ -19,29 +19,15 @@ Rectangle {
         return upperName;
     }
 
+    // #177/#188: loadNextSongStems already preloaded and switched the next song on the
+    // active deck. Do not swap decks or crossfade here; that would move the song off
+    // the active deck. Only start playback if nothing is playing yet.
     Connections {
         target: audioMixerViewModel
         function onNextSongLoaded() {
-            if (audioMixerViewModel.isPlaying) {
-                crossfadeAnim.start()
-            } else {
-                audioMixerViewModel.setCrossfadePosition(1.0)
-                audioMixerViewModel.finalizeCrossfade()
+            if (!audioMixerViewModel.isPlaying) {
                 audioMixerViewModel.play()
             }
-        }
-    }
-
-    NumberAnimation {
-        id: crossfadeAnim
-        target: audioMixerViewModel
-        property: "crossfadePosition"
-        from: 0.0
-        to: 1.0
-        duration: 3000
-        easing.type: Easing.InOutQuad
-        onFinished: {
-            audioMixerViewModel.finalizeCrossfade()
         }
     }
 
