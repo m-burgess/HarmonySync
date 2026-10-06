@@ -193,6 +193,28 @@ void testLoadNextSongSwitchesToPreloaded() {
     std::cout << "[PASS] testLoadNextSongSwitchesToPreloaded passed." << std::endl;
 }
 
+void testLoadNextSongWhileStoppedCues() {
+    std::cout << "[TEST] Running testLoadNextSongWhileStoppedCues..." << std::endl;
+    AudioMixerViewModel vm;
+
+    // #202: opening a service order cues the first song.
+    assert(vm.loadNextSongStems({MediaStem("a1", "DrumsA", "song_a_drums.wav")}) == true);
+    assert(!vm.isPlaying());
+    assert(vm.positionSeconds() == 0.0);
+
+    // Advancing while stopped cues the next song.
+    assert(vm.loadNextSongStems({MediaStem("b1", "DrumsB", "song_b_drums.wav")}) == true);
+    assert(!vm.isPlaying());
+    assert(vm.positionSeconds() == 0.0);
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    assert(vm.stemName(0).toStdString() == "DrumsB");
+#else
+    assert(vm.stemName(0) == "DrumsB");
+#endif
+
+    std::cout << "[PASS] testLoadNextSongWhileStoppedCues passed." << std::endl;
+}
+
 void testAudioMixerInitialization() {
     std::cout << "[TEST] Running testAudioMixerInitialization..." << std::endl;
     AudioMixerViewModel vm;
@@ -332,6 +354,7 @@ int main() {
         testAudioMixerViewModel();
         testAudioMixerCrossfading();
         testLoadNextSongSwitchesToPreloaded();
+        testLoadNextSongWhileStoppedCues();
         testAudioMixerInitialization();
         testBackgroundVideoUpdate();
         testSlideDisplayViewModel();

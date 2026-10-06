@@ -56,6 +56,8 @@ public:
 
     // Commands
     bool loadSongStems(const std::vector<Core::MediaStem>& stems);
+    /// Switches to the next song on the active deck and keeps the play state (#202):
+    /// playing continues from 0 on the new song; stopped cues it at 0 without playing.
     bool loadNextSongStems(const std::vector<Core::MediaStem>& stems);
     
 #ifdef HARMONYSYNC_QT_AVAILABLE

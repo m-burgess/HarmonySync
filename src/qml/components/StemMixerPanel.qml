@@ -19,17 +19,8 @@ Rectangle {
         return upperName;
     }
 
-    // #177/#188: loadNextSongStems already preloaded and switched the next song on the
-    // active deck. Do not swap decks or crossfade here; that would move the song off
-    // the active deck. Only start playback if nothing is playing yet.
-    Connections {
-        target: audioMixerViewModel
-        function onNextSongLoaded() {
-            if (!audioMixerViewModel.isPlaying) {
-                audioMixerViewModel.play()
-            }
-        }
-    }
+    // Play-or-cue after a song switch is decided in AudioMixerViewModel::loadNextSongStems
+    // (#202). The panel does not react to nextSongLoaded.
 
     ColumnLayout {
         anchors.fill: parent

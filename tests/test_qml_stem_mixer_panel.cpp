@@ -1,4 +1,4 @@
-// #188: loading the next song through the real StemMixerPanel.qml must leave
+// #188/#202: loading the next song through the real StemMixerPanel.qml must leave
 // Song B on the active deck. The QML must not swap decks or crossfade after
 // AudioMixerViewModel::loadNextSongStems (single-deck preload from #177).
 #include "AudioMixerViewModel.hpp"
@@ -57,20 +57,41 @@ std::string firstStemName(AudioMixerViewModel& vm) {
     return vm.loadedStemCount() > 0 ? vm.stemName(0).toStdString() : std::string("<none>");
 }
 
-void testStoppedPathPlaysSongFromActiveDeck() {
-    std::cout << "[TEST] Running testStoppedPathPlaysSongFromActiveDeck..." << std::endl;
+void testOpeningServiceOrderCuesFirstSong() {
+    std::cout << "[TEST] Running testOpeningServiceOrderCuesFirstSong..." << std::endl;
     AudioMixerViewModel vm;
     Panel panel(vm);
 
     // Opening a service order: main.cpp calls loadNextSongStems for Song A while stopped.
-    check(!vm.isPlaying(), "stopped: precondition");
-    check(vm.loadNextSongStems({MediaStem("a1", "DrumsA", "song_a_drums.wav")}), "stopped: load failed");
-    runEventsWatchingCrossfade(vm, 300, "stopped");
+    // #202: the first song is cued at 0 and waits for PLAY.
+    check(!vm.isPlaying(), "open: precondition");
+    check(vm.loadNextSongStems({MediaStem("a1", "DrumsA", "song_a_drums.wav")}), "open: load failed");
+    runEventsWatchingCrossfade(vm, 300, "open");
 
-    check(vm.loadedStemCount() == 1, "stopped: active deck lost Song A (got " + firstStemName(vm) + ")");
-    check(firstStemName(vm) == "DrumsA", "stopped: expected DrumsA, got " + firstStemName(vm));
-    check(vm.isPlaying(), "stopped: Song A did not start playing");
-    std::cout << "[PASS] testStoppedPathPlaysSongFromActiveDeck passed." << std::endl;
+    check(vm.loadedStemCount() == 1, "open: active deck lost Song A (got " + firstStemName(vm) + ")");
+    check(firstStemName(vm) == "DrumsA", "open: expected DrumsA, got " + firstStemName(vm));
+    check(!vm.isPlaying(), "open: Song A started playing instead of being cued");
+    check(vm.positionSeconds() == 0.0, "open: Song A is not cued at position 0");
+    std::cout << "[PASS] testOpeningServiceOrderCuesFirstSong passed." << std::endl;
+}
+
+void testAdvancingWhileStoppedCuesNextSong() {
+    std::cout << "[TEST] Running testAdvancingWhileStoppedCuesNextSong..." << std::endl;
+    AudioMixerViewModel vm;
+    Panel panel(vm);
+
+    check(vm.loadNextSongStems({MediaStem("a1", "DrumsA", "song_a_drums.wav")}), "advance: load A failed");
+    runEventsWatchingCrossfade(vm, 100, "advance");
+    check(!vm.isPlaying(), "advance: precondition");
+
+    // Advancing the setlist while stopped cues Song B; it does not start it.
+    check(vm.loadNextSongStems({MediaStem("b1", "DrumsB", "song_b_drums.wav")}), "advance: load B failed");
+    runEventsWatchingCrossfade(vm, 300, "advance");
+
+    check(firstStemName(vm) == "DrumsB", "advance: expected DrumsB, got " + firstStemName(vm));
+    check(!vm.isPlaying(), "advance: Song B started playing instead of being cued");
+    check(vm.positionSeconds() == 0.0, "advance: Song B is not cued at position 0");
+    std::cout << "[PASS] testAdvancingWhileStoppedCuesNextSong passed." << std::endl;
 }
 
 void testPlayingPathKeepsSongBOnActiveDeck() {
@@ -99,7 +120,8 @@ int main(int argc, char** argv) {
     qputenv("QT_QPA_PLATFORM", "offscreen");
     QGuiApplication app(argc, argv);
     try {
-        testStoppedPathPlaysSongFromActiveDeck();
+        testOpeningServiceOrderCuesFirstSong();
+        testAdvancingWhileStoppedCuesNextSong();
         testPlayingPathKeepsSongBOnActiveDeck();
         std::cout << "\nALL STEM MIXER PANEL QML TESTS PASSED" << std::endl;
         return EXIT_SUCCESS;

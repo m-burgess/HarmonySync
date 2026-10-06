@@ -206,6 +206,9 @@ void AudioMixerViewModel::setActiveBackgroundVideo(const std::string& path) {
 
 bool AudioMixerViewModel::loadNextSongStems(const std::vector<Core::MediaStem>& stems) {
     // Preload on the active deck, then switch. Do not fill the next deck.
+    // Play-or-cue rule (#202): the switch keeps the current play state. If a song is
+    // playing, the next song plays from 0; if stopped (opening a service order or
+    // advancing the setlist), the next song is cued at 0 and waits for play().
     if (!m_impl->m_activeDeck->preloadStems(stems)) {
         return false;
     }
