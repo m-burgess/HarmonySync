@@ -18,7 +18,8 @@ target_include_directories(harmonysync_media PUBLIC
     ${CMAKE_SOURCE_DIR}/src/core/models
 )
 
-target_link_libraries(harmonysync_media PUBLIC harmonysync_core)
+find_package(Threads REQUIRED)
+target_link_libraries(harmonysync_media PUBLIC harmonysync_core Threads::Threads)
 
 if(Qt6_FOUND)
     target_link_libraries(harmonysync_media PRIVATE Qt6::Core Qt6::Multimedia)

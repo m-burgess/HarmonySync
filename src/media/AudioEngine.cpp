@@ -7,6 +7,8 @@
 #include <atomic>
 #include <cmath>
 #include <cctype>
+#include <functional>
+#include <thread>
 
 #ifdef HARMONYSYNC_HAS_QT
 #include <QIODevice>
@@ -161,15 +163,20 @@ bool isDurationGuideStemName(std::string name) {
 
 #ifdef HARMONYSYNC_HAS_QT
 /// Decode/map stems into a set on the calling (control) thread. Never called on the switch path.
+/// Also runs on the async preload worker (#216); touches nothing shared with the engine.
 AudioMixerDevice::StemBufferSet mapStemBufferSet(const std::vector<Core::MediaStem>& stems,
                                                  std::vector<Core::MediaStem>& outStems,
-                                                 const char* failureLabel) {
+                                                 const char* failureLabel,
+                                                 const std::atomic<bool>* cancelled = nullptr) {
     AudioMixerDevice::StemBufferSet set;
     double maxDuration = 0.0;
     double fallbackDuration = 0.0;
     FFmpegAudioDecoder decoder;
 
     for (const auto& stem : stems) {
+        if (cancelled != nullptr && cancelled->load(std::memory_order_relaxed)) {
+            break; // a newer preload or load replaced this one; stop decoding early
+        }
         if (isReferenceStemName(stem.name())) {
             continue;
         }
@@ -200,6 +207,48 @@ AudioMixerDevice::StemBufferSet mapStemBufferSet(const std::vector<Core::MediaSt
     return set;
 }
 #endif
+
+/// One decoded song, ready to become the preloaded song.
+struct DecodedSong {
+    std::vector<Core::MediaStem> stems;
+#ifdef HARMONYSYNC_HAS_QT
+    AudioMixerDevice::StemBufferSet set;
+#endif
+};
+
+DecodedSong decodeSong(const std::vector<Core::MediaStem>& stems,
+                       const std::atomic<bool>* cancelled = nullptr) {
+    DecodedSong song;
+#ifdef HARMONYSYNC_HAS_QT
+    song.set = mapStemBufferSet(stems, song.stems, "Failed to map preloaded stem", cancelled);
+#else
+    for (const auto& stem : stems) {
+        if (cancelled != nullptr && cancelled->load(std::memory_order_relaxed)) {
+            break;
+        }
+        if (isReferenceStemName(stem.name())) {
+            continue;
+        }
+        song.stems.push_back(stem);
+    }
+#endif
+    return song;
+}
+
+/// State shared between the control thread and one async preload worker (#216).
+/// The worker writes `result`, then sets `done` (release); the control thread reads
+/// `result` only after seeing `done` (acquire).
+struct PreloadJob {
+    AudioEngine::PreloadTicket ticket = 0;
+    DecodedSong result;
+    std::atomic<bool> done{false};
+    std::atomic<bool> cancelled{false};
+};
+
+struct PreloadWorker {
+    std::shared_ptr<PreloadJob> job;
+    std::thread thread;
+};
 
 } // namespace
 
@@ -237,7 +286,65 @@ struct AudioEngine::Impl {
 #endif
     }
 
+    // ---- Async preload (#216). Control thread only, except inside the worker lambda. ----
+    std::shared_ptr<PreloadJob> pendingJob; // latest preloadStemsAsync(), not yet adopted
+    std::vector<PreloadWorker> workers;     // every worker not yet joined
+    AudioEngine::PreloadTicket nextTicket = 1;
+    std::function<void()> decodeHookForTesting;
+
+    /// Drop the pending async preload; its worker finishes on its own and is joined later.
+    void cancelPendingPreload() {
+        if (pendingJob) {
+            pendingJob->cancelled.store(true, std::memory_order_relaxed);
+            pendingJob.reset();
+        }
+    }
+
+    /// Join workers that have finished. Never waits on a running decode.
+    void joinFinishedWorkers() {
+        std::erase_if(workers, [](PreloadWorker& worker) {
+            if (!worker.job->done.load(std::memory_order_acquire)) {
+                return false;
+            }
+            if (worker.thread.joinable()) {
+                worker.thread.join(); // done is the worker's last write before the callback
+            }
+            return true;
+        });
+    }
+
+    /// If the latest async preload has finished, make it the preloaded song.
+    /// Returns false while it is still decoding.
+    bool adoptFinishedPreload() {
+        if (!pendingJob) {
+            return true;
+        }
+        if (!pendingJob->done.load(std::memory_order_acquire)) {
+            return false;
+        }
+        preloadedStems = std::move(pendingJob->result.stems);
+#ifdef HARMONYSYNC_HAS_QT
+        preloadedSet = std::move(pendingJob->result.set);
+#endif
+        pendingJob.reset();
+        joinFinishedWorkers();
+        return true;
+    }
+
     Impl() = default;
+
+    ~Impl() {
+        // Runs for destruction and for move-assignment over this engine. A running worker
+        // only touches its own job, so cancelling then joining is enough.
+        for (auto& worker : workers) {
+            worker.job->cancelled.store(true, std::memory_order_relaxed);
+        }
+        for (auto& worker : workers) {
+            if (worker.thread.joinable()) {
+                worker.thread.join();
+            }
+        }
+    }
 };
 
 AudioEngine::AudioEngine()
@@ -277,6 +384,8 @@ AudioEngine& AudioEngine::operator=(AudioEngine&&) noexcept = default;
 
 bool AudioEngine::loadStems(const std::vector<Core::MediaStem>& stems) {
     stop();
+    m_impl->cancelPendingPreload();
+    m_impl->joinFinishedWorkers();
     m_impl->stems.clear();
     m_impl->preloadedStems.clear();
     m_impl->position.store(0.0, std::memory_order_relaxed);
@@ -319,23 +428,23 @@ bool AudioEngine::preloadStems(const std::vector<Core::MediaStem>& stems) {
     // Do not stop or clear the currently playing set (#177).
     // All decoding/file mapping for the next song happens here, never on the switch path.
     m_impl->reclaimRetiredSongs();
-    m_impl->preloadedStems.clear();
+    m_impl->cancelPendingPreload();
+    m_impl->joinFinishedWorkers();
 
+    DecodedSong song = decodeSong(stems);
+    m_impl->preloadedStems = std::move(song.stems);
 #ifdef HARMONYSYNC_HAS_QT
-    m_impl->preloadedSet = mapStemBufferSet(stems, m_impl->preloadedStems, "Failed to map preloaded stem");
-#else
-    for (const auto& stem : stems) {
-        if (isReferenceStemName(stem.name())) {
-            continue;
-        }
-        m_impl->preloadedStems.push_back(stem);
-    }
+    m_impl->preloadedSet = std::move(song.set);
 #endif
 
     return !m_impl->preloadedStems.empty();
 }
 
 bool AudioEngine::switchToPreloaded() {
+    // #216: an async preload still decoding means "not ready": return at once, keep A playing.
+    if (!m_impl->adoptFinishedPreload()) {
+        return false;
+    }
     if (m_impl->preloadedStems.empty()) {
         return false;
     }
@@ -378,22 +487,57 @@ bool AudioEngine::switchToPreloaded() {
 }
 
 bool AudioEngine::hasPreloadedStems() const noexcept {
+    const auto& job = m_impl->pendingJob;
+    if (job) {
+        // A finished but not yet adopted async preload counts; one still decoding does not.
+        return job->done.load(std::memory_order_acquire) && !job->result.stems.empty();
+    }
     return !m_impl->preloadedStems.empty();
 }
 
 AudioEngine::PreloadTicket AudioEngine::preloadStemsAsync(std::vector<Core::MediaStem> stems,
                                                           PreloadReadyCallback onReady) {
-    (void)stems;
-    (void)onReady;
-    return 0; // #216: not implemented yet
+    m_impl->reclaimRetiredSongs();
+    m_impl->joinFinishedWorkers();
+    m_impl->cancelPendingPreload();
+    // The new request replaces any earlier preloaded song, finished or not.
+    m_impl->preloadedStems.clear();
+#ifdef HARMONYSYNC_HAS_QT
+    m_impl->preloadedSet = {};
+#endif
+
+    auto job = std::make_shared<PreloadJob>();
+    job->ticket = m_impl->nextTicket++;
+
+    // The worker owns copies of everything it uses; it never touches Impl.
+    std::thread thread([job, stems = std::move(stems), onReady = std::move(onReady),
+                        hook = m_impl->decodeHookForTesting]() {
+        if (hook) {
+            hook();
+        }
+        if (!job->cancelled.load(std::memory_order_relaxed)) {
+            job->result = decodeSong(stems, &job->cancelled);
+        }
+        const bool hasStems = !job->result.stems.empty()
+                              && !job->cancelled.load(std::memory_order_relaxed);
+        job->done.store(true, std::memory_order_release);
+        if (onReady) {
+            onReady(job->ticket, hasStems);
+        }
+    });
+
+    m_impl->pendingJob = job;
+    m_impl->workers.push_back(PreloadWorker{job, std::move(thread)});
+    return job->ticket;
 }
 
 bool AudioEngine::isPreloadPending() const noexcept {
-    return false; // #216: not implemented yet
+    const auto& job = m_impl->pendingJob;
+    return job && !job->done.load(std::memory_order_acquire);
 }
 
 void AudioEngine::setPreloadDecodeHookForTesting(std::function<void()> hook) {
-    (void)hook;
+    m_impl->decodeHookForTesting = std::move(hook);
 }
 
 void AudioEngine::play() {
