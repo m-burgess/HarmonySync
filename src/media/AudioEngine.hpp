@@ -5,6 +5,8 @@
 #include <vector>
 #include <string>
 #include <atomic>
+#include <cstdint>
+#include <functional>
 #include <memory>
 
 namespace HarmonySync::Media {
@@ -42,6 +44,29 @@ public:
      */
     bool switchToPreloaded();
     [[nodiscard]] bool hasPreloadedStems() const noexcept;
+
+    /// Identifies one call to preloadStemsAsync(). Never 0.
+    using PreloadTicket = std::uint64_t;
+    /**
+     * @brief Called once per preloadStemsAsync() call, on the decode worker thread (#216).
+     * hasStems is false if the song had nothing playable or a newer preload/load replaced it.
+     * A newer preload can start just after hasStems=true is reported, so callers should
+     * act only on the most recent ticket. Marshal to your own thread before touching UI.
+     */
+    using PreloadReadyCallback = std::function<void(PreloadTicket ticket, bool hasStems)>;
+    /**
+     * @brief Decode the next song on a worker thread and return at once (#216).
+     * Playback of the current song is untouched. A newer preloadStemsAsync(), preloadStems()
+     * or loadStems() cancels this one and its result is discarded.
+     * While the decode is running, switchToPreloaded() returns false without blocking and
+     * the current song keeps playing.
+     */
+    PreloadTicket preloadStemsAsync(std::vector<Core::MediaStem> stems,
+                                    PreloadReadyCallback onReady = {});
+    /// True while the most recent preloadStemsAsync() is still decoding.
+    [[nodiscard]] bool isPreloadPending() const noexcept;
+    /// Test seam: runs on the decode worker before decoding starts. Not for production use.
+    void setPreloadDecodeHookForTesting(std::function<void()> hook);
     void play();
     void pause();
     void stop();

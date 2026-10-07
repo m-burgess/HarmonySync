@@ -381,6 +381,21 @@ bool AudioEngine::hasPreloadedStems() const noexcept {
     return !m_impl->preloadedStems.empty();
 }
 
+AudioEngine::PreloadTicket AudioEngine::preloadStemsAsync(std::vector<Core::MediaStem> stems,
+                                                          PreloadReadyCallback onReady) {
+    (void)stems;
+    (void)onReady;
+    return 0; // #216: not implemented yet
+}
+
+bool AudioEngine::isPreloadPending() const noexcept {
+    return false; // #216: not implemented yet
+}
+
+void AudioEngine::setPreloadDecodeHookForTesting(std::function<void()> hook) {
+    (void)hook;
+}
+
 void AudioEngine::play() {
     m_impl->reclaimRetiredSongs();
     if (m_impl->stems.empty()) {

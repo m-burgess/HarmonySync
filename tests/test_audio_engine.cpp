@@ -5,9 +5,13 @@
 #include <cassert>
 #include <cstdlib>
 #include <chrono>
+#include <condition_variable>
 #include <memory>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <utility>
+#include <vector>
 
 using namespace HarmonySync::Core;
 using namespace HarmonySync::Media;
@@ -252,6 +256,228 @@ void testRealtimeHandoffLatestPublishWinsAndRetiresStack() {
     std::cout << "[PASS] testRealtimeHandoffLatestPublishWinsAndRetiresStack passed." << std::endl;
 }
 
+namespace {
+
+using namespace std::chrono_literals;
+
+/// Holds the async decode worker until the test releases it, so "still decoding" is deterministic.
+struct DecodeGate {
+    std::mutex mutex;
+    std::condition_variable cv;
+    bool open = false;
+    int entered = 0;
+
+    void wait() {
+        std::unique_lock<std::mutex> lock(mutex);
+        ++entered;
+        cv.notify_all();
+        cv.wait(lock, [this] { return open; });
+    }
+    void release() {
+        {
+            std::lock_guard<std::mutex> lock(mutex);
+            open = true;
+        }
+        cv.notify_all();
+    }
+    bool waitEntered(int count) {
+        std::unique_lock<std::mutex> lock(mutex);
+        return cv.wait_for(lock, 2s, [&] { return entered >= count; });
+    }
+};
+
+/// Records preload-ready callbacks, which arrive on the decode worker thread.
+struct ReadyLog {
+    std::mutex mutex;
+    std::condition_variable cv;
+    std::vector<std::pair<AudioEngine::PreloadTicket, bool>> calls;
+
+    AudioEngine::PreloadReadyCallback callback(const std::shared_ptr<ReadyLog>& self) {
+        return [self](AudioEngine::PreloadTicket ticket, bool hasStems) {
+            {
+                std::lock_guard<std::mutex> lock(self->mutex);
+                self->calls.emplace_back(ticket, hasStems);
+            }
+            self->cv.notify_all();
+        };
+    }
+    /// Waits for the callback of `ticket`; returns its hasStems, or nullopt-ish via found=false.
+    bool waitFor(AudioEngine::PreloadTicket ticket, bool& hasStems) {
+        std::unique_lock<std::mutex> lock(mutex);
+        bool found = cv.wait_for(lock, 2s, [&] {
+            for (const auto& call : calls) {
+                if (call.first == ticket) return true;
+            }
+            return false;
+        });
+        if (found) {
+            for (const auto& call : calls) {
+                if (call.first == ticket) hasStems = call.second;
+            }
+        }
+        return found;
+    }
+    int countFor(AudioEngine::PreloadTicket ticket) {
+        std::lock_guard<std::mutex> lock(mutex);
+        int n = 0;
+        for (const auto& call : calls) {
+            if (call.first == ticket) ++n;
+        }
+        return n;
+    }
+};
+
+} // namespace
+
+void testAsyncPreloadDoesNotBlockAndSwitchWaitsUntilReady() {
+    std::cout << "[TEST] Running testAsyncPreloadDoesNotBlockAndSwitchWaitsUntilReady..." << std::endl;
+    AudioEngine engine;
+    assert(engine.loadStems({MediaStem("a1", "Drums", "a_drums.wav"), MediaStem("a2", "Bass", "a_bass.wav")}));
+    engine.play();
+
+    auto gate = std::make_shared<DecodeGate>();
+    auto ready = std::make_shared<ReadyLog>();
+    engine.setPreloadDecodeHookForTesting([gate] { gate->wait(); });
+
+    // Song B is still "decoding" for as long as the gate is shut; the call must not wait for it.
+    const auto t0 = std::chrono::steady_clock::now();
+    const auto ticket = engine.preloadStemsAsync({MediaStem("b1", "Keys", "b_keys.wav")}, ready->callback(ready));
+    const auto callMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - t0).count();
+    assert(ticket != 0);
+    assert(callMs < 50);
+    assert(gate->waitEntered(1));
+
+    assert(engine.isPreloadPending());
+    assert(!engine.hasPreloadedStems());
+    // Not ready: no swap, no blocking, A keeps playing.
+    assert(!engine.switchToPreloaded());
+    assert(engine.loadedStems().size() == 2);
+    assert(engine.loadedStems().front().id() == "a1");
+    assert(engine.isPlaying());
+
+    gate->release();
+    bool hasStems = false;
+    assert(ready->waitFor(ticket, hasStems));
+    assert(hasStems);
+    assert(!engine.isPreloadPending());
+    assert(engine.hasPreloadedStems());
+
+    assert(engine.switchToPreloaded());
+    assert(engine.loadedStems().size() == 1);
+    assert(engine.loadedStems().front().id() == "b1");
+    assert(engine.isPlaying());
+    assert(engine.positionSeconds() == 0.0);
+    assert(!engine.hasPreloadedStems());
+    assert(ready->countFor(ticket) == 1);
+
+    std::cout << "[PASS] testAsyncPreloadDoesNotBlockAndSwitchWaitsUntilReady passed." << std::endl;
+}
+
+void testNewerAsyncPreloadReplacesOlder() {
+    std::cout << "[TEST] Running testNewerAsyncPreloadReplacesOlder..." << std::endl;
+    AudioEngine engine;
+    assert(engine.loadStems({MediaStem("a1", "Drums", "a_drums.wav")}));
+    engine.play();
+
+    auto gate = std::make_shared<DecodeGate>();
+    auto ready = std::make_shared<ReadyLog>();
+    engine.setPreloadDecodeHookForTesting([gate] { gate->wait(); });
+
+    const auto ticketB = engine.preloadStemsAsync({MediaStem("b1", "Keys", "b_keys.wav")}, ready->callback(ready));
+    assert(gate->waitEntered(1));
+    // The user picks a different next song while B is still decoding.
+    const auto ticketC = engine.preloadStemsAsync({MediaStem("c1", "Piano", "c_piano.wav")}, ready->callback(ready));
+    assert(ticketC != 0 && ticketC != ticketB);
+    assert(engine.isPreloadPending());
+
+    gate->release();
+    bool bHasStems = true;
+    bool cHasStems = false;
+    assert(ready->waitFor(ticketB, bHasStems));
+    assert(!bHasStems); // B was replaced before it finished
+    assert(ready->waitFor(ticketC, cHasStems));
+    assert(cHasStems);
+
+    assert(engine.switchToPreloaded());
+    assert(engine.loadedStems().size() == 1);
+    assert(engine.loadedStems().front().id() == "c1");
+
+    std::cout << "[PASS] testNewerAsyncPreloadReplacesOlder passed." << std::endl;
+}
+
+void testSyncPreloadAndLoadCancelPendingAsync() {
+    std::cout << "[TEST] Running testSyncPreloadAndLoadCancelPendingAsync..." << std::endl;
+    {
+        AudioEngine engine;
+        assert(engine.loadStems({MediaStem("a1", "Drums", "a_drums.wav")}));
+        auto gate = std::make_shared<DecodeGate>();
+        auto ready = std::make_shared<ReadyLog>();
+        engine.setPreloadDecodeHookForTesting([gate] { gate->wait(); });
+
+        const auto ticketB = engine.preloadStemsAsync({MediaStem("b1", "Keys", "b_keys.wav")}, ready->callback(ready));
+        assert(gate->waitEntered(1));
+        assert(engine.preloadStems({MediaStem("c1", "Piano", "c_piano.wav")}));
+        assert(!engine.isPreloadPending());
+
+        gate->release();
+        bool bHasStems = true;
+        assert(ready->waitFor(ticketB, bHasStems));
+        assert(!bHasStems);
+        // A late B must not overwrite the C that was preloaded after it.
+        assert(engine.hasPreloadedStems());
+        assert(engine.switchToPreloaded());
+        assert(engine.loadedStems().front().id() == "c1");
+    }
+    {
+        AudioEngine engine;
+        assert(engine.loadStems({MediaStem("a1", "Drums", "a_drums.wav")}));
+        auto gate = std::make_shared<DecodeGate>();
+        auto ready = std::make_shared<ReadyLog>();
+        engine.setPreloadDecodeHookForTesting([gate] { gate->wait(); });
+
+        const auto ticketB = engine.preloadStemsAsync({MediaStem("b1", "Keys", "b_keys.wav")}, ready->callback(ready));
+        assert(gate->waitEntered(1));
+        // Opening a different service order replaces everything, including the pending preload.
+        assert(engine.loadStems({MediaStem("d1", "Bass", "d_bass.wav")}));
+        assert(!engine.isPreloadPending());
+
+        gate->release();
+        bool bHasStems = true;
+        assert(ready->waitFor(ticketB, bHasStems));
+        assert(!bHasStems);
+        assert(!engine.hasPreloadedStems());
+        assert(!engine.switchToPreloaded());
+        assert(engine.loadedStems().front().id() == "d1");
+    }
+    std::cout << "[PASS] testSyncPreloadAndLoadCancelPendingAsync passed." << std::endl;
+}
+
+void testEngineDestroyedWhilePreloadDecoding() {
+    std::cout << "[TEST] Running testEngineDestroyedWhilePreloadDecoding..." << std::endl;
+    auto gate = std::make_shared<DecodeGate>();
+    auto ready = std::make_shared<ReadyLog>();
+    AudioEngine::PreloadTicket ticket = 0;
+    std::thread releaser;
+    {
+        AudioEngine engine;
+        assert(engine.loadStems({MediaStem("a1", "Drums", "a_drums.wav")}));
+        engine.setPreloadDecodeHookForTesting([gate] { gate->wait(); });
+        ticket = engine.preloadStemsAsync({MediaStem("b1", "Keys", "b_keys.wav")}, ready->callback(ready));
+        assert(gate->waitEntered(1));
+        releaser = std::thread([gate] {
+            std::this_thread::sleep_for(20ms);
+            gate->release();
+        });
+        // Leaving scope must wait for the worker, not crash or leak a running thread.
+    }
+    releaser.join();
+    bool hasStems = true;
+    assert(ready->waitFor(ticket, hasStems));
+    assert(!hasStems);
+    std::cout << "[PASS] testEngineDestroyedWhilePreloadDecoding passed." << std::endl;
+}
+
 int main() {
     try {
         testAudioEngineStates();
@@ -260,6 +486,10 @@ int main() {
         testSwitchToPreloadedStartsNextSongAtZero();
         testRealtimeHandoffKeepsSongAliveUntilAudioThreadLetsGo();
         testRealtimeHandoffLatestPublishWinsAndRetiresStack();
+        testAsyncPreloadDoesNotBlockAndSwitchWaitsUntilReady();
+        testNewerAsyncPreloadReplacesOlder();
+        testSyncPreloadAndLoadCancelPendingAsync();
+        testEngineDestroyedWhilePreloadDecoding();
         std::cout << "\nALL AUDIO ENGINE UNIT TESTS PASSED (100% Success)" << std::endl;
         return EXIT_SUCCESS;
     } catch (const std::exception& ex) {
