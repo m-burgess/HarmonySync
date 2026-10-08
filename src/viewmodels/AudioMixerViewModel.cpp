@@ -225,6 +225,10 @@ bool AudioMixerViewModel::loadNextSongStems(const std::vector<Core::MediaStem>& 
     return result;
 }
 
+void AudioMixerViewModel::setPreloadDecodeHookForTesting(std::function<void()> hook) {
+    m_impl->m_activeDeck->setPreloadDecodeHookForTesting(std::move(hook));
+}
+
 void AudioMixerViewModel::setCrossfadePosition(float position) noexcept {
     float clamped = std::clamp(position, 0.0f, 1.0f);
     if (m_impl->m_crossfadePos == clamped) return;

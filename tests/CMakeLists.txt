@@ -142,4 +142,9 @@ if(Qt6_FOUND)
     target_link_libraries(test_qml_stem_mixer_panel PRIVATE harmonysync_viewmodels harmonysync_media harmonysync_core Qt6::Core Qt6::Gui Qt6::Quick Qt6::QuickControls2)
     target_compile_definitions(test_qml_stem_mixer_panel PRIVATE HS_QML_DIR="${CMAKE_SOURCE_DIR}/src/qml")
     add_test(NAME test_qml_stem_mixer_panel COMMAND test_qml_stem_mixer_panel)
+
+    # #187/#220: setlist selection to song audio, through SongSwitchCoordinator.
+    add_executable(test_song_switch_coordinator test_song_switch_coordinator.cpp)
+    target_link_libraries(test_song_switch_coordinator PRIVATE harmonysync_viewmodels harmonysync_media harmonysync_core Qt6::Core)
+    add_test(NAME test_song_switch_coordinator COMMAND test_song_switch_coordinator)
 endif()

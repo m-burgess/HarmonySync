@@ -55,12 +55,13 @@ jobs:
             test_models \
             test_audio_dsp \
             test_qml_stem_mixer_panel \
+            test_song_switch_coordinator \
             -j "$(nproc)"
 
       - name: Run smoke CTest suite
         shell: bash
         run: |
           ctest --test-dir build \
-            -R '^(test_audio_engine|test_models|test_audio_dsp|test_qml_stem_mixer_panel)$' \
+            -R '^(test_audio_engine|test_models|test_audio_dsp|test_qml_stem_mixer_panel|test_song_switch_coordinator)$' \
             --output-on-failure \
             --no-tests=error

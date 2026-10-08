@@ -3,6 +3,7 @@
 
 #include "AudioEngine.hpp"
 #include "StemMixer.hpp"
+#include <functional>
 #include <memory>
 
 #if defined(HARMONYSYNC_HAS_QT) || __has_include(<QObject>)
@@ -59,6 +60,9 @@ public:
     /// Switches to the next song on the active deck and keeps the play state (#202):
     /// playing continues from 0 on the new song; stopped cues it at 0 without playing.
     bool loadNextSongStems(const std::vector<Core::MediaStem>& stems);
+
+    /// Test seam: runs on the engine's decode worker before an async preload decodes.
+    void setPreloadDecodeHookForTesting(std::function<void()> hook);
     
 #ifdef HARMONYSYNC_QT_AVAILABLE
     [[nodiscard]] QString activeBackgroundVideo() const;

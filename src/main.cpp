@@ -1,5 +1,6 @@
 #include "AudioMixerViewModel.hpp"
 #include "SetlistViewModel.hpp"
+#include "SongSwitchCoordinator.hpp"
 #include "SettingsViewModel.hpp"
 #include "SlideDisplayViewModel.hpp"
 #include "JsonSyntaxHighlighter.hpp"
@@ -83,19 +84,9 @@ int main(int argc, char *argv[]) {
       },
       Qt::QueuedConnection);
 
-  // Bind Setlist selection to AudioMixer preloading and immediate video switch
-  QObject::connect(
-      &setlistViewModel,
-      &HarmonySync::ViewModels::SetlistViewModel::currentSongIndexChanged, &app,
-      [&setlistViewModel, &audioMixerViewModel](int index) {
-        if (index >= 0) {
-          auto stems = setlistViewModel.stemsAt(index);
-          QString videoPath = setlistViewModel.backgroundVideoPathAt(index);
-          audioMixerViewModel.setActiveBackgroundVideo(videoPath);
-          audioMixerViewModel.loadNextBackgroundVideo(videoPath);
-          audioMixerViewModel.loadNextSongStems(stems);
-        }
-      });
+  // Setlist selection drives song audio (#187, #220). Kept out of main.cpp so it is tested.
+  HarmonySync::ViewModels::SongSwitchCoordinator songSwitchCoordinator(setlistViewModel,
+                                                                       audioMixerViewModel);
 
   // Create and start Remote API Server
   auto remoteApiServer = std::make_shared<HarmonySync::Core::RemoteApiServer>(8080);
