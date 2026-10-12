@@ -128,6 +128,8 @@ signals:
     void titleChanged(const QString& newTitle);
     void itemCountChanged(int count);
     void currentSongIndexChanged(int index);
+    /// A new service order replaced the setlist. Emitted before its first song is selected (#220).
+    void serviceOrderOpened();
     void activeSongMapChanged(bool hasMap);
     void loadingStateChanged(bool loading);
     void currentLyricsContentChanged();

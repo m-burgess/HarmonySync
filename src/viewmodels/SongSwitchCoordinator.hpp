@@ -22,6 +22,7 @@ public:
 
 private:
     void onCurrentSongIndexChanged(int index);
+    void preloadSongAfterCurrent();
 
     SetlistViewModel& m_setlist;
     AudioMixerViewModel& m_mixer;

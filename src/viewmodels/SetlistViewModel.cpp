@@ -239,6 +239,7 @@ bool SetlistViewModel::openServiceOrderRootFolder(const std::string& pathStr) {
         m_impl->currentSongIndex = -1;
 #ifdef HARMONYSYNC_QT_AVAILABLE
         emit itemCountChanged(itemCount());
+        emit serviceOrderOpened();
 #endif
         setCurrentSongIndex(0);
         return true;

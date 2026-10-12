@@ -3,6 +3,7 @@
 
 #include "AudioEngine.hpp"
 #include "StemMixer.hpp"
+#include <cstdint>
 #include <functional>
 #include <memory>
 
@@ -61,6 +62,17 @@ public:
     /// playing continues from 0 on the new song; stopped cues it at 0 without playing.
     bool loadNextSongStems(const std::vector<Core::MediaStem>& stems);
 
+    /**
+     * @brief Make this song current (#187). Never decodes on the calling thread.
+     * If the song is already preloaded, switches now. Otherwise its decode runs on the
+     * engine's worker and the switch happens when it is ready; the current song keeps
+     * playing until then. Only the most recent request switches. The switch keeps the
+     * play state (#202). Emits songSwitched() after each switch.
+     */
+    bool showSong(const std::vector<Core::MediaStem>& stems);
+    /// Decode the song after the current one on the engine's worker, ready for showSong() (#187).
+    void preloadNextSong(const std::vector<Core::MediaStem>& stems);
+
     /// Test seam: runs on the engine's decode worker before an async preload decodes.
     void setPreloadDecodeHookForTesting(std::function<void()> hook);
     
@@ -117,11 +129,17 @@ signals:
     void stemCountChanged(int count);
     void crossfadePositionChanged(float position);
     void nextSongLoaded();
+    /// A song requested through showSong() is now current (#187).
+    void songSwitched();
     void stemStateChanged(int index);
     void activeBackgroundVideoChanged(const QString& path);
 #endif
 
 private:
+    bool switchToPreloadedSong();
+    void startPreload(const std::vector<Core::MediaStem>& stems, bool switchWhenReady);
+    void onPreloadReady(std::uint64_t ticket, bool hasStems);
+
     struct Impl;
     std::unique_ptr<Impl> m_impl;
 };
