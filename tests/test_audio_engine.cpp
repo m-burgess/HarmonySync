@@ -2,10 +2,14 @@
 #include "RealtimeHandoff.hpp"
 #include "StemMixer.hpp"
 #include <iostream>
+#include <algorithm>
 #include <cassert>
 #include <cstdlib>
 #include <chrono>
 #include <condition_variable>
+#include <cstdint>
+#include <filesystem>
+#include <fstream>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -339,15 +343,15 @@ void testAsyncPreloadDoesNotBlockAndSwitchWaitsUntilReady() {
     auto ready = std::make_shared<ReadyLog>();
     engine.setPreloadDecodeHookForTesting([gate] { gate->wait(); });
 
-    // Song B is still "decoding" for as long as the gate is shut; the call must not wait for it.
-    const auto t0 = std::chrono::steady_clock::now();
+    // Song B is still "decoding" for as long as the gate is shut. The call returning while the
+    // gate is shut is the proof it does not wait for the decode; no wall-clock limit (#185:
+    // a 50ms limit flaked at 39-41ms under ThreadSanitizer).
     const auto ticket = engine.preloadStemsAsync({MediaStem("b1", "Keys", "b_keys.wav")}, ready->callback(ready));
-    const auto callMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now() - t0).count();
     assert(ticket != 0);
-    assert(callMs < 50);
     assert(gate->waitEntered(1));
 
+    // The decode is held, so it cannot have finished or reported yet.
+    assert(ready->countFor(ticket) == 0);
     assert(engine.isPreloadPending());
     assert(!engine.hasPreloadedStems());
     // Not ready: no swap, no blocking, A keeps playing.
@@ -478,6 +482,253 @@ void testEngineDestroyedWhilePreloadDecoding() {
     std::cout << "[PASS] testEngineDestroyedWhilePreloadDecoding passed." << std::endl;
 }
 
+namespace {
+
+/// Writes small real 16-bit stereo WAVs so preloaded songs hold real memory-mapped buffers.
+class TempWavDir {
+public:
+    TempWavDir() {
+        m_dir = std::filesystem::temp_directory_path()
+              / ("harmonysync_test_185_" + std::to_string(reinterpret_cast<std::uintptr_t>(this)));
+        std::filesystem::create_directories(m_dir);
+    }
+    ~TempWavDir() {
+        std::error_code ec;
+        std::filesystem::remove_all(m_dir, ec);
+    }
+    TempWavDir(const TempWavDir&) = delete;
+    TempWavDir& operator=(const TempWavDir&) = delete;
+
+    /// Writes `name` (10s of a quiet ramp, long enough to keep playing through a test run on a
+    /// machine with a real audio device) once and returns its path.
+    std::string wav(const std::string& name) {
+        const std::filesystem::path path = m_dir / name;
+        if (std::filesystem::exists(path)) {
+            return path.string();
+        }
+        const std::uint16_t channels = 2;
+        const std::uint32_t sampleRate = 44100;
+        const std::uint16_t bitsPerSample = 16;
+        const std::uint32_t frames = 10 * 44100;
+        const std::uint32_t dataSize = frames * channels * (bitsPerSample / 8);
+        const std::uint32_t byteRate = sampleRate * channels * (bitsPerSample / 8);
+        const std::uint16_t blockAlign = channels * (bitsPerSample / 8);
+        const std::uint32_t riffSize = 36 + dataSize;
+        const std::uint32_t fmtSize = 16;
+        const std::uint16_t pcm = 1;
+
+        std::ofstream out(path, std::ios::binary);
+        auto put = [&out](const auto& value) { out.write(reinterpret_cast<const char*>(&value), sizeof(value)); };
+        out.write("RIFF", 4); put(riffSize); out.write("WAVE", 4);
+        out.write("fmt ", 4); put(fmtSize); put(pcm); put(channels); put(sampleRate);
+        put(byteRate); put(blockAlign); put(bitsPerSample);
+        out.write("data", 4); put(dataSize);
+        std::vector<std::int16_t> samples(frames * channels);
+        for (std::size_t i = 0; i < samples.size(); ++i) {
+            samples[i] = static_cast<std::int16_t>((i % 64) * 8);
+        }
+        out.write(reinterpret_cast<const char*>(samples.data()),
+                  static_cast<std::streamsize>(samples.size() * sizeof(std::int16_t)));
+        return path.string();
+    }
+
+private:
+    std::filesystem::path m_dir;
+};
+
+} // namespace
+
+// #185: clearing the next song frees it and leaves the current song playing.
+void testClearPreloadedDropsNextSongAndKeepsCurrentPlaying() {
+    std::cout << "[TEST] Running testClearPreloadedDropsNextSongAndKeepsCurrentPlaying..." << std::endl;
+    TempWavDir wavs;
+    AudioEngine engine;
+    assert(engine.loadStems({MediaStem("a1", "Drums", wavs.wav("a_drums.wav"))}));
+    engine.play();
+    assert(engine.liveSongSetCountForTesting() == 1);
+
+    // Nothing preloaded yet: clearing is a no-op.
+    engine.clearPreloaded();
+    assert(engine.liveSongSetCountForTesting() == 1);
+    assert(engine.isPlaying());
+
+    // A synchronously preloaded song is freed.
+    assert(engine.preloadStems({MediaStem("b1", "Keys", wavs.wav("b_keys.wav"))}));
+    assert(engine.liveSongSetCountForTesting() == 2);
+    engine.clearPreloaded();
+    assert(!engine.hasPreloadedStems());
+    assert(engine.liveSongSetCountForTesting() == 1);
+    assert(!engine.switchToPreloaded());
+    assert(engine.loadedStems().size() == 1);
+    assert(engine.loadedStems().front().id() == "a1");
+    assert(engine.isPlaying());
+
+    // A finished but not yet adopted async preload is freed too.
+    auto ready = std::make_shared<ReadyLog>();
+    const auto ticket = engine.preloadStemsAsync({MediaStem("c1", "Piano", wavs.wav("c_piano.wav"))},
+                                                 ready->callback(ready));
+    bool hasStems = false;
+    assert(ready->waitFor(ticket, hasStems));
+    assert(hasStems);
+    assert(engine.hasPreloadedStems());
+    assert(engine.liveSongSetCountForTesting() == 2);
+    engine.clearPreloaded();
+    assert(!engine.hasPreloadedStems());
+    assert(!engine.isPreloadPending());
+    assert(engine.liveSongSetCountForTesting() == 1);
+    assert(!engine.switchToPreloaded());
+    assert(engine.loadedStems().front().id() == "a1");
+    assert(engine.isPlaying());
+
+    std::cout << "[PASS] testClearPreloadedDropsNextSongAndKeepsCurrentPlaying passed." << std::endl;
+}
+
+// #185: clearing while the next song is still decoding cancels it; its result is never adopted.
+void testClearPreloadedCancelsPendingDecode() {
+    std::cout << "[TEST] Running testClearPreloadedCancelsPendingDecode..." << std::endl;
+    TempWavDir wavs;
+    AudioEngine engine;
+    assert(engine.loadStems({MediaStem("a1", "Drums", wavs.wav("a_drums.wav"))}));
+    engine.play();
+
+    auto gate = std::make_shared<DecodeGate>();
+    auto ready = std::make_shared<ReadyLog>();
+    engine.setPreloadDecodeHookForTesting([gate] { gate->wait(); });
+
+    const auto ticket = engine.preloadStemsAsync({MediaStem("b1", "Keys", wavs.wav("b_keys.wav"))},
+                                                 ready->callback(ready));
+    assert(gate->waitEntered(1));
+    assert(engine.isPreloadPending());
+
+    engine.clearPreloaded(); // must not wait for the held decode
+    assert(!engine.isPreloadPending());
+    assert(!engine.hasPreloadedStems());
+    assert(!engine.switchToPreloaded());
+    assert(engine.isPlaying());
+    assert(engine.loadedStems().front().id() == "a1");
+
+    gate->release();
+    bool hasStems = true;
+    assert(ready->waitFor(ticket, hasStems));
+    assert(!hasStems);
+    assert(ready->countFor(ticket) == 1);
+
+    // The late result is not adopted, and nothing of B is left behind.
+    assert(!engine.hasPreloadedStems());
+    assert(!engine.switchToPreloaded());
+    assert(engine.loadedStems().size() == 1);
+    assert(engine.loadedStems().front().id() == "a1");
+    assert(engine.isPlaying());
+    engine.clearPreloaded(); // joins the finished worker
+    assert(engine.liveSongSetCountForTesting() == 1);
+
+    std::cout << "[PASS] testClearPreloadedCancelsPendingDecode passed." << std::endl;
+}
+
+// #185: unloading the current song stops it and frees it; the preloaded song survives.
+void testUnloadCurrentWhilePlaying() {
+    std::cout << "[TEST] Running testUnloadCurrentWhilePlaying..." << std::endl;
+    TempWavDir wavs;
+    AudioEngine engine;
+
+    engine.unloadCurrent(); // nothing loaded: no-op
+    assert(engine.liveSongSetCountForTesting() == 0);
+
+    assert(engine.loadStems({MediaStem("a1", "Drums", wavs.wav("a_drums.wav"))}));
+    engine.play();
+    assert(engine.isPlaying());
+    assert(engine.preloadStems({MediaStem("b1", "Keys", wavs.wav("b_keys.wav"))}));
+    assert(engine.liveSongSetCountForTesting() == 2);
+
+    engine.unloadCurrent();
+    assert(engine.playbackState() == PlaybackState::Stopped);
+    assert(!engine.isPlaying());
+    assert(engine.loadedStems().empty());
+    assert(engine.positionSeconds() == 0.0);
+    assert(engine.durationSeconds() == 0.0);
+    assert(engine.liveSongSetCountForTesting() == 1); // only the preloaded B is left
+
+    engine.play(); // nothing to play
+    assert(!engine.isPlaying());
+
+    assert(engine.hasPreloadedStems());
+    assert(engine.switchToPreloaded());
+    assert(engine.loadedStems().size() == 1);
+    assert(engine.loadedStems().front().id() == "b1");
+    assert(engine.liveSongSetCountForTesting() == 1);
+    engine.play();
+    assert(engine.isPlaying());
+
+    engine.unloadCurrent();
+    assert(!engine.isPlaying());
+    assert(engine.loadedStems().empty());
+    assert(engine.liveSongSetCountForTesting() == 0);
+    assert(!engine.switchToPreloaded());
+
+    std::cout << "[PASS] testUnloadCurrentWhilePlaying passed." << std::endl;
+}
+
+// #185: over 50 song switches the engine never holds more than one current and one next song.
+void testMemoryStaysBoundedOverFiftySwitches() {
+    std::cout << "[TEST] Running testMemoryStaysBoundedOverFiftySwitches..." << std::endl;
+    TempWavDir wavs;
+    const std::vector<std::string> files = {wavs.wav("s0.wav"), wavs.wav("s1.wav"), wavs.wav("s2.wav")};
+    auto songStems = [&files](int i) {
+        const std::string id = "song" + std::to_string(i);
+        return std::vector<MediaStem>{MediaStem(id + "-drums", "Drums", files[static_cast<std::size_t>(i % 3)]),
+                                      MediaStem(id + "-bass", "Bass", files[static_cast<std::size_t>((i + 1) % 3)])};
+    };
+
+    AudioEngine engine;
+    assert(engine.loadStems(songStems(0)));
+    engine.play();
+    assert(engine.liveSongSetCountForTesting() == 1);
+
+    auto ready = std::make_shared<ReadyLog>();
+    std::size_t maxAfterSwitch = 0;
+    for (int i = 1; i <= 50; ++i) {
+        const auto ticket = engine.preloadStemsAsync(songStems(i), ready->callback(ready));
+        bool hasStems = false;
+        assert(ready->waitFor(ticket, hasStems));
+        assert(hasStems);
+        // Current + preloaded. With a live audio sink, the song the audio thread was playing
+        // before the last switch may not be retired and freed yet, so allow one more here.
+        assert(engine.liveSongSetCountForTesting() <= 3);
+
+        assert(engine.switchToPreloaded());
+        assert(engine.isPlaying());
+        assert(engine.loadedStems().front().id() == "song" + std::to_string(i) + "-drums");
+        // switchToPreloaded() frees what the audio thread let go of before handing B over,
+        // so only the outgoing and the incoming song can be left.
+        const std::size_t live = engine.liveSongSetCountForTesting();
+        assert(live <= 2);
+        maxAfterSwitch = std::max(maxAfterSwitch, live);
+    }
+
+    // One more next song, then clear it: only the current song is left.
+    const auto ticket = engine.preloadStemsAsync(songStems(51), ready->callback(ready));
+    bool hasStems = false;
+    assert(ready->waitFor(ticket, hasStems));
+    assert(hasStems);
+    engine.clearPreloaded();
+    // With a live audio sink the last handoff may still be in flight; clearPreloaded() also
+    // frees whatever the audio thread has let go of, so retry briefly.
+    const auto deadline = std::chrono::steady_clock::now() + 2s;
+    while (engine.liveSongSetCountForTesting() != 1 && std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(5ms);
+        engine.clearPreloaded();
+    }
+    assert(engine.liveSongSetCountForTesting() == 1);
+    assert(engine.isPlaying());
+
+    engine.unloadCurrent();
+    assert(engine.liveSongSetCountForTesting() == 0);
+    assert(!engine.isPlaying());
+
+    std::cout << "[PASS] testMemoryStaysBoundedOverFiftySwitches passed (max live sets after a switch: "
+              << maxAfterSwitch << ")." << std::endl;
+}
+
 int main() {
     try {
         testAudioEngineStates();
@@ -490,6 +741,10 @@ int main() {
         testNewerAsyncPreloadReplacesOlder();
         testSyncPreloadAndLoadCancelPendingAsync();
         testEngineDestroyedWhilePreloadDecoding();
+        testClearPreloadedDropsNextSongAndKeepsCurrentPlaying();
+        testClearPreloadedCancelsPendingDecode();
+        testUnloadCurrentWhilePlaying();
+        testMemoryStaysBoundedOverFiftySwitches();
         std::cout << "\nALL AUDIO ENGINE UNIT TESTS PASSED (100% Success)" << std::endl;
         return EXIT_SUCCESS;
     } catch (const std::exception& ex) {

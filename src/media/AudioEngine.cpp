@@ -540,6 +540,18 @@ void AudioEngine::setPreloadDecodeHookForTesting(std::function<void()> hook) {
     m_impl->decodeHookForTesting = std::move(hook);
 }
 
+void AudioEngine::clearPreloaded() {
+    // TODO(#185): fail-first stub.
+}
+
+void AudioEngine::unloadCurrent() {
+    // TODO(#185): fail-first stub.
+}
+
+std::size_t AudioEngine::liveSongSetCountForTesting() const noexcept {
+    return 0; // TODO(#185): fail-first stub.
+}
+
 void AudioEngine::play() {
     m_impl->reclaimRetiredSongs();
     if (m_impl->stems.empty()) {
