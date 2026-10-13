@@ -124,37 +124,32 @@ Rectangle {
 
                 Repeater {
                     id: stemRepeater
-                    model: audioMixerViewModel ? audioMixerViewModel.loadedStemCount : 0
+                    // #206: one row per loaded stem; resets on every song switch, so
+                    // delegates always show the current song's names and mute states.
+                    model: audioMixerViewModel ? audioMixerViewModel.stemModel : null
                     
                     delegate: Rectangle {
                         id: stemDelegate
+                        required property int index
+                        required property string name
+                        required property bool muted
+
                         width: nameText.implicitWidth + 32
                         height: 36
                         anchors.verticalCenter: parent.verticalCenter
                         radius: 18
-                        color: isMuted ? Theme.danger : Theme.backgroundDark
-                        border.color: isMuted ? Theme.danger : Theme.borderDark
+                        color: muted ? Theme.danger : Theme.backgroundDark
+                        border.color: muted ? Theme.danger : Theme.borderDark
                         border.width: 1
-
-                        property bool isMuted: audioMixerViewModel ? audioMixerViewModel.stemIsMuted(index) : false
-
-                        Connections {
-                            target: audioMixerViewModel
-                            function onStemStateChanged(idx) {
-                                if (idx === index) {
-                                    isMuted = audioMixerViewModel.stemIsMuted(index)
-                                }
-                            }
-                        }
 
                         Text {
                             id: nameText
                             anchors.centerIn: parent
-                            text: audioMixerViewModel ? root.formatTrackName(audioMixerViewModel.stemName(index)) : "CH " + (index+1)
+                            text: stemDelegate.name ? root.formatTrackName(stemDelegate.name) : "CH " + (stemDelegate.index + 1)
                             font.family: Theme.fontFamily
                             font.pixelSize: 11
                             font.bold: true
-                            color: isMuted ? "#ffffff" : Theme.textPrimary
+                            color: stemDelegate.muted ? "#ffffff" : Theme.textPrimary
                         }
 
                         MouseArea {
@@ -163,7 +158,7 @@ Rectangle {
                             hoverEnabled: true
                             onEntered: stemDelegate.opacity = 0.8
                             onExited: stemDelegate.opacity = 1.0
-                            onClicked: { if (audioMixerViewModel) audioMixerViewModel.toggleStemMute(index) }
+                            onClicked: { if (audioMixerViewModel) audioMixerViewModel.toggleStemMute(stemDelegate.index) }
                         }
                         
                         Behavior on color { ColorAnimation { duration: Theme.animDuration } }

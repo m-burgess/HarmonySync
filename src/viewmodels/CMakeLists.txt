@@ -1,6 +1,7 @@
 add_library(harmonysync_viewmodels STATIC
     SetlistViewModel.cpp
     AudioMixerViewModel.cpp
+    StemListModel.cpp
     SongSwitchCoordinator.cpp
     SlideDisplayViewModel.cpp
     ConfidenceMonitorViewModel.cpp

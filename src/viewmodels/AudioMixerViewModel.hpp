@@ -9,6 +9,7 @@
 
 #if defined(HARMONYSYNC_HAS_QT) || __has_include(<QObject>)
 #include <QObject>
+#include <QAbstractItemModel>
 #define HARMONYSYNC_QT_AVAILABLE 1
 #endif
 
@@ -31,6 +32,8 @@ class AudioMixerViewModel
     Q_PROPERTY(double positionSeconds READ positionSeconds NOTIFY positionChanged)
     Q_PROPERTY(double durationSeconds READ durationSeconds NOTIFY durationChanged)
     Q_PROPERTY(int loadedStemCount READ loadedStemCount NOTIFY stemCountChanged)
+    /// #206: the loaded stems as a list model (roles name, muted, soloed, volume).
+    Q_PROPERTY(QAbstractItemModel* stemModel READ stemModel CONSTANT)
     Q_PROPERTY(float crossfadePosition READ crossfadePosition WRITE setCrossfadePosition NOTIFY crossfadePositionChanged)
     Q_PROPERTY(QString activeBackgroundVideo READ activeBackgroundVideo NOTIFY activeBackgroundVideoChanged)
 #endif
@@ -77,6 +80,8 @@ public:
     void setPreloadDecodeHookForTesting(std::function<void()> hook);
     
 #ifdef HARMONYSYNC_QT_AVAILABLE
+    /// Owned by this view model; lives as long as it does.
+    [[nodiscard]] QAbstractItemModel* stemModel() const noexcept;
     [[nodiscard]] QString activeBackgroundVideo() const;
     Q_INVOKABLE void loadNextBackgroundVideo(const QString& path);
     Q_INVOKABLE void setActiveBackgroundVideo(const QString& path);

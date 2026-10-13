@@ -11,6 +11,7 @@
 #ifdef HARMONYSYNC_QT_AVAILABLE
 #include <QMetaObject>
 #include <QTimer>
+#include "StemListModel.hpp"
 #endif
 
 namespace HarmonySync::ViewModels {
@@ -43,6 +44,7 @@ struct AudioMixerViewModel::Impl {
     std::unique_ptr<QTimer> autosaveTimer;
     std::unique_ptr<QTimer> transposeDebounceTimer;
     std::unique_ptr<QTimer> positionTimer;
+    std::unique_ptr<StemListModel> stemModel;
 #endif
 
     Impl(std::shared_ptr<Media::AudioEngine> engine)
@@ -73,6 +75,7 @@ AudioMixerViewModel::AudioMixerViewModel(std::shared_ptr<Media::AudioEngine> aud
 {
     m_impl->callbackGuard->target = this;
 #ifdef HARMONYSYNC_QT_AVAILABLE
+    m_impl->stemModel = std::make_unique<StemListModel>(*this);
     QObject::connect(m_impl->autosaveTimer.get(), &QTimer::timeout, this, [this]() {
         auto stems = m_impl->m_activeDeck->loadedStems();
         if (!stems.empty()) {
@@ -199,8 +202,12 @@ bool AudioMixerViewModel::loadSongStems(const std::vector<Core::MediaStem>& stem
     m_impl->preloadKey.clear();
     m_impl->preloadReady = false;
     m_impl->switchWhenReady = false;
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    m_impl->stemModel->beginResetStems();
+#endif
     bool result = m_impl->m_activeDeck->loadStems(stems);
 #ifdef HARMONYSYNC_QT_AVAILABLE
+    m_impl->stemModel->endResetStems();
     emit stemCountChanged(loadedStemCount());
     emit durationChanged(durationSeconds());
     emit positionChanged(positionSeconds());
@@ -210,6 +217,10 @@ bool AudioMixerViewModel::loadSongStems(const std::vector<Core::MediaStem>& stem
 }
 
 #ifdef HARMONYSYNC_QT_AVAILABLE
+QAbstractItemModel* AudioMixerViewModel::stemModel() const noexcept {
+    return m_impl->stemModel.get();
+}
+
 QString AudioMixerViewModel::activeBackgroundVideo() const {
     return QString::fromStdString(m_impl->activeBackgroundVideo);
 }
@@ -254,8 +265,12 @@ bool AudioMixerViewModel::loadNextSongStems(const std::vector<Core::MediaStem>& 
     if (!m_impl->m_activeDeck->preloadStems(stems)) {
         return false;
     }
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    m_impl->stemModel->beginResetStems();
+#endif
     bool result = m_impl->m_activeDeck->switchToPreloaded();
 #ifdef HARMONYSYNC_QT_AVAILABLE
+    m_impl->stemModel->endResetStems();
     if (result) {
         emit nextSongLoaded();
         emit stemCountChanged(loadedStemCount());
@@ -334,11 +349,15 @@ void AudioMixerViewModel::onPreloadReady(std::uint64_t ticket, bool hasStems) {
 
 bool AudioMixerViewModel::switchToPreloadedSong() {
     // Play-or-cue rule (#202): the switch keeps the current play state.
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    m_impl->stemModel->beginResetStems();
+#endif
     bool result = m_impl->m_activeDeck->switchToPreloaded();
     m_impl->preloadKey.clear();
     m_impl->preloadReady = false;
     m_impl->switchWhenReady = false;
 #ifdef HARMONYSYNC_QT_AVAILABLE
+    m_impl->stemModel->endResetStems();
     if (result) {
         emit nextSongLoaded();
         emit stemCountChanged(loadedStemCount());
@@ -385,7 +404,13 @@ void AudioMixerViewModel::finalizeCrossfade() {
     m_impl->m_activeDeck->stop();
     
     // Swap decks
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    m_impl->stemModel->beginResetStems();
+#endif
     std::swap(m_impl->m_activeDeck, m_impl->m_nextDeck);
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    m_impl->stemModel->endResetStems();
+#endif
     
     // Swap background video
     m_impl->activeBackgroundVideo = m_impl->nextBackgroundVideo;
@@ -447,7 +472,8 @@ void AudioMixerViewModel::setStemVolume(int stemIndex, float volume) {
     m_impl->m_activeDeck->setStemVolume(stemIndex, volume);
 #ifdef HARMONYSYNC_QT_AVAILABLE
     m_impl->autosaveTimer->start();
-    emit stemStateChanged(stemIndex);
+    m_impl->stemModel->stemChanged(stemIndex);
+        emit stemStateChanged(stemIndex);
 #endif
 }
 
@@ -458,6 +484,7 @@ void AudioMixerViewModel::toggleStemMute(int stemIndex) {
         m_impl->m_activeDeck->setStemMuted(stemIndex, !currentMute);
 #ifdef HARMONYSYNC_QT_AVAILABLE
         m_impl->autosaveTimer->start();
+        m_impl->stemModel->stemChanged(stemIndex);
         emit stemStateChanged(stemIndex);
 #endif
     }
@@ -470,6 +497,7 @@ void AudioMixerViewModel::toggleStemSolo(int stemIndex) {
         m_impl->m_activeDeck->setStemSolo(stemIndex, !currentSolo);
 #ifdef HARMONYSYNC_QT_AVAILABLE
         m_impl->autosaveTimer->start();
+        m_impl->stemModel->stemChanged(stemIndex);
         emit stemStateChanged(stemIndex);
 #endif
     }
