@@ -3,9 +3,11 @@ name: PR Smoke Build and Tests
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
 
 concurrency:
-  group: pr-smoke-${{ github.head_ref }}
+  group: pr-smoke-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 # C++/Qt smoke for this repo: no root package.json / pnpm workspace.
