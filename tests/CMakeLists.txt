@@ -147,4 +147,10 @@ if(Qt6_FOUND)
     add_executable(test_song_switch_coordinator test_song_switch_coordinator.cpp)
     target_link_libraries(test_song_switch_coordinator PRIVATE harmonysync_viewmodels harmonysync_media harmonysync_core Qt6::Core)
     add_test(NAME test_song_switch_coordinator COMMAND test_song_switch_coordinator)
+
+    # #206: AudioMixerViewModel::stemModel list model (rows, roles, dataChanged).
+    find_package(Qt6 REQUIRED COMPONENTS Test)
+    add_executable(test_stem_list_model test_stem_list_model.cpp)
+    target_link_libraries(test_stem_list_model PRIVATE harmonysync_viewmodels harmonysync_media harmonysync_core Qt6::Core Qt6::Test)
+    add_test(NAME test_stem_list_model COMMAND test_stem_list_model)
 endif()

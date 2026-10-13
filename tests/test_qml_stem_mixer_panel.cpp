@@ -10,6 +10,11 @@
 #include <QQmlEngine>
 #include <QElapsedTimer>
 #include <QUrl>
+#include <QAbstractItemModel>
+#include <QColor>
+#include <QQuickItem>
+#include <QVariant>
+#include <vector>
 
 #include <cstdlib>
 #include <iostream>
@@ -114,6 +119,141 @@ void testPlayingPathKeepsSongBOnActiveDeck() {
     std::cout << "[PASS] testPlayingPathKeepsSongBOnActiveDeck passed." << std::endl;
 }
 
+// ---- #206: delegates must follow the loaded song, not just the stem count ----
+
+const QColor kDanger("#ef4444");
+
+MediaStem makeStem(const std::string& id, const std::string& name, bool muted,
+                   bool solo = false, float volume = 1.0f) {
+    MediaStem s(id, name, id + ".wav");
+    s.setMuted(muted);
+    s.setSolo(solo);
+    s.setVolume(volume);
+    return s;
+}
+
+QObject* findRepeater(QObject* root) {
+    for (QObject* o : root->findChildren<QObject*>()) {
+        if (QString(o->metaObject()->className()).startsWith("QQuickRepeater")) return o;
+    }
+    return nullptr;
+}
+
+QQuickItem* delegateAt(QObject* repeater, int i) {
+    QQuickItem* item = nullptr;
+    QMetaObject::invokeMethod(repeater, "itemAt", Q_RETURN_ARG(QQuickItem*, item), Q_ARG(int, i));
+    return item;
+}
+
+std::string delegateText(QQuickItem* d) {
+    for (QQuickItem* c : d->childItems()) {
+        QVariant t = c->property("text");
+        if (t.isValid()) return t.toString().toStdString();
+    }
+    return "<no text>";
+}
+
+bool delegateShowsMuted(QQuickItem* d) {
+    // border.color has no colour animation, so it is safe to read right away.
+    QObject* border = d->property("border").value<QObject*>();
+    return border && border->property("color").value<QColor>() == kDanger;
+}
+
+void checkPanelShows(Panel& panel, const std::vector<std::pair<std::string, bool>>& want,
+                     const std::string& path) {
+    QCoreApplication::processEvents();
+    QObject* rep = findRepeater(panel.root.get());
+    check(rep != nullptr, path + ": no Repeater in StemMixerPanel");
+    check(rep->property("count").toInt() == static_cast<int>(want.size()), path + ": wrong delegate count");
+    for (int i = 0; i < static_cast<int>(want.size()); ++i) {
+        QQuickItem* d = delegateAt(rep, i);
+        check(d != nullptr, path + ": missing delegate " + std::to_string(i));
+        check(delegateText(d) == want[i].first,
+              path + ": delegate " + std::to_string(i) + " shows " + delegateText(d) + ", expected " + want[i].first);
+        check(delegateShowsMuted(d) == want[i].second,
+              path + ": delegate " + std::to_string(i) + " (" + want[i].first + ") has stale mute colour");
+    }
+}
+
+QAbstractItemModel* stemModelOf(AudioMixerViewModel& vm) {
+    return vm.property("stemModel").value<QAbstractItemModel*>();
+}
+
+QVariant roleValue(QAbstractItemModel* m, int row, const QByteArray& role) {
+    const auto names = m->roleNames();
+    for (auto it = names.begin(); it != names.end(); ++it) {
+        if (it.value() == role) return m->data(m->index(row, 0), it.key());
+    }
+    return {};
+}
+
+void testSameCountSwitchShowsSongBNamesAndMutes() {
+    std::cout << "[TEST] Running testSameCountSwitchShowsSongBNamesAndMutes..." << std::endl;
+    AudioMixerViewModel vm;
+    Panel panel(vm);
+
+    check(vm.loadNextSongStems({makeStem("a1", "DrumsA", true), makeStem("a2", "BassA", false)}), "sameCount: load A");
+    checkPanelShows(panel, {{"DRUMSA", true}, {"BASSA", false}}, "sameCount A");
+
+    // Song B: same stem count, different names, opposite mute states.
+    check(vm.loadNextSongStems({makeStem("b1", "KeysB", false), makeStem("b2", "VoxB", true)}), "sameCount: load B");
+    checkPanelShows(panel, {{"KEYSB", false}, {"VOXB", true}}, "sameCount B");
+    std::cout << "[PASS] testSameCountSwitchShowsSongBNamesAndMutes passed." << std::endl;
+}
+
+void testSameCountShowSongThroughPreloadPath() {
+    std::cout << "[TEST] Running testSameCountShowSongThroughPreloadPath..." << std::endl;
+    AudioMixerViewModel vm;
+    Panel panel(vm);
+    check(vm.loadSongStems({makeStem("a1", "DrumsA", false), makeStem("a2", "BassA", true)}), "preload: load A");
+    checkPanelShows(panel, {{"DRUMSA", false}, {"BASSA", true}}, "preload A");
+
+    vm.showSong({makeStem("b1", "KeysB", true), makeStem("b2", "VoxB", false)});
+    QElapsedTimer t; t.start();
+    while (vm.stemName(0) != "KeysB" && t.elapsed() < 3000) QCoreApplication::processEvents(QEventLoop::AllEvents, 20);
+    check(vm.stemName(0) == "KeysB", "preload: showSong never switched");
+    checkPanelShows(panel, {{"KEYSB", true}, {"VOXB", false}}, "preload B");
+    std::cout << "[PASS] testSameCountShowSongThroughPreloadPath passed." << std::endl;
+}
+
+void testMuteToggleUpdatesDelegate() {
+    std::cout << "[TEST] Running testMuteToggleUpdatesDelegate..." << std::endl;
+    AudioMixerViewModel vm;
+    Panel panel(vm);
+    check(vm.loadNextSongStems({makeStem("a1", "DrumsA", false), makeStem("a2", "BassA", false)}), "toggle: load A");
+    vm.toggleStemMute(1);
+    checkPanelShows(panel, {{"DRUMSA", false}, {"BASSA", true}}, "toggle");
+    std::cout << "[PASS] testMuteToggleUpdatesDelegate passed." << std::endl;
+}
+
+void testSoloAndVolumeFollowSongAndSurviveMute() {
+    std::cout << "[TEST] Running testSoloAndVolumeFollowSongAndSurviveMute..." << std::endl;
+    AudioMixerViewModel vm;
+    Panel panel(vm);
+    QAbstractItemModel* m = stemModelOf(vm);
+    check(m != nullptr, "soloVol: AudioMixerViewModel has no stemModel");
+
+    // Song A: stem 0 soloed at 0.3. QA mutes stem 1, then switches.
+    check(vm.loadNextSongStems({makeStem("a1", "DrumsA", false, true, 0.3f), makeStem("a2", "BassA", false)}), "soloVol: load A");
+    vm.toggleStemMute(1);
+    check(roleValue(m, 1, "muted").toBool(), "soloVol: mute on A not in model");
+
+    // Song B: same count; stem 1 has its own preset (solo, 0.6).
+    check(vm.loadNextSongStems({makeStem("b1", "KeysB", false), makeStem("b2", "VoxB", false, true, 0.6f)}), "soloVol: load B");
+    checkPanelShows(panel, {{"KEYSB", false}, {"VOXB", false}}, "soloVol B");
+    check(!roleValue(m, 0, "soloed").toBool(), "soloVol: Song A's solo leaked onto KeysB");
+    check(qFuzzyCompare(roleValue(m, 0, "volume").toFloat(), 1.0f), "soloVol: Song A's volume leaked onto KeysB");
+    check(roleValue(m, 1, "soloed").toBool(), "soloVol: VoxB lost its solo preset");
+    check(qFuzzyCompare(roleValue(m, 1, "volume").toFloat(), 0.6f), "soloVol: VoxB lost its volume preset");
+
+    // Muting must not reset solo or volume.
+    vm.toggleStemMute(1);
+    checkPanelShows(panel, {{"KEYSB", false}, {"VOXB", true}}, "soloVol B muted");
+    check(roleValue(m, 1, "soloed").toBool(), "soloVol: mute reset VoxB's solo");
+    check(qFuzzyCompare(roleValue(m, 1, "volume").toFloat(), 0.6f), "soloVol: mute reset VoxB's volume");
+    std::cout << "[PASS] testSoloAndVolumeFollowSongAndSurviveMute passed." << std::endl;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -123,6 +263,10 @@ int main(int argc, char** argv) {
         testOpeningServiceOrderCuesFirstSong();
         testAdvancingWhileStoppedCuesNextSong();
         testPlayingPathKeepsSongBOnActiveDeck();
+        testSameCountSwitchShowsSongBNamesAndMutes();
+        testSameCountShowSongThroughPreloadPath();
+        testMuteToggleUpdatesDelegate();
+        testSoloAndVolumeFollowSongAndSurviveMute();
         std::cout << "\nALL STEM MIXER PANEL QML TESTS PASSED" << std::endl;
         return EXIT_SUCCESS;
     } catch (const std::exception& ex) {
