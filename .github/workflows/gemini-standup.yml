@@ -1,0 +1,25 @@
+# OPTIONAL. Runs /standup each weekday morning and posts it to a pinned issue.
+# ASSUMPTION: input names follow google-github-actions/run-gemini-cli's README. Check them before use.
+name: Gemini standup
+on:
+  schedule: [{ cron: '0 13 * * 1-5' }]
+  workflow_dispatch: {}
+permissions: { contents: read, issues: write, pull-requests: read, actions: read }
+jobs:
+  standup:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4.4.0
+        with: { fetch-depth: 0 }
+      - id: gemini
+        uses: google-github-actions/run-gemini-cli@v0
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          prompt: "/standup"
+      - name: Post to standup issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BODY: ${{ steps.gemini.outputs.summary }}
+        run: gh issue comment "${{ vars.STANDUP_ISSUE }}" --body "$BODY"

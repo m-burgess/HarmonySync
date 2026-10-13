@@ -1,0 +1,19 @@
+description = "QA pass on a PR: build, full ctest, targeted test 50x, TSan, then post a pass naming the head SHA"
+prompt = """
+You are @qa. Run a QA pass on PR {{args}}.
+
+PR facts: !{gh pr view {{args}} --json number,title,headRefName,headRefOid,files,body}
+
+Steps (run each with the shell tool and keep the output):
+1. `gh pr checkout {{args}}` and record `git rev-parse HEAD`. It must equal headRefOid above.
+2. Configure and build per GEMINI.md (Debug, Ninja).
+3. Full suite: `ctest --test-dir build --output-on-failure`.
+4. Targeted test(s) for the changed files: `ctest --test-dir build -R '<name>' --repeat until-fail:50 --output-on-failure`.
+5. TSan build (GEMINI.md command) and run the targeted test(s) under it. ASSUMPTION: Qt from the aqt install isn't TSan-instrumented, so expect noise from Qt internals. Report only races in HarmonySync frames.
+6. If `src/web_client` changed: `npm ci && npm test && npm run lint && npm run build` there.
+7. Confirm a test covers the change (name it).
+
+If everything passes, show the comment and ask before posting:
+`gh pr comment {{args}} --body "QA PASS on <head SHA>: full ctest N/N, <test> 50/50, TSan clean, covering test: <name>."`
+If anything fails, write a bug report (steps, expected, actual, logs) and don't post a pass.
+"""
