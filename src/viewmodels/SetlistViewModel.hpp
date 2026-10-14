@@ -133,6 +133,8 @@ signals:
     /// The setlist was cleared (#185). Emitted after itemCountChanged(0).
     void setlistCleared();
     /// The song at index was removed (#185). Emitted after the setlist is updated.
+    /// Emitted first by removeSongAt, before itemCountChanged / currentSongIndexChanged / songRemoved.
+    void songRemovalStarted(int index);
     void songRemoved(int index);
     void activeSongMapChanged(bool hasMap);
     void loadingStateChanged(bool loading);

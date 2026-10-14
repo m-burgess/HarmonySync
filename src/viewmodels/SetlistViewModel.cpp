@@ -311,6 +311,9 @@ bool SetlistViewModel::addSongFolder(const std::string& pathStr) {
 
 void SetlistViewModel::removeSongAt(int index) {
     if (index >= 0 && index < itemCount()) {
+#ifdef HARMONYSYNC_QT_AVAILABLE
+        emit songRemovalStarted(index);
+#endif
         m_impl->serviceOrder.removeSongAt(static_cast<size_t>(index));
 #ifdef HARMONYSYNC_QT_AVAILABLE
         emit itemCountChanged(itemCount());

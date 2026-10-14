@@ -20,13 +20,10 @@ SongSwitchCoordinator::SongSwitchCoordinator(SetlistViewModel& setlist,
     // (the switch keeps the play state). Emitted before the first song is selected.
     // #185: drop the old order's next song first, so it is never held alongside the new one.
     connect(&m_setlist, &SetlistViewModel::serviceOrderOpened, this, &SongSwitchCoordinator::resetShownSong);
-    // removeSongAt emits itemCountChanged, then (for an earlier row) the shifted index,
-    // then songRemoved: a drop in count marks a removal until songRemoved arrives.
-    m_lastItemCount = m_setlist.itemCount();
-    connect(&m_setlist, &SetlistViewModel::itemCountChanged, this, [this](int count) {
-        m_removalInFlight = count < m_lastItemCount;
-        m_lastItemCount = count;
-    });
+    // Only removeSongAt arms the removal skip (songRemovalStarted, then itemCountChanged,
+    // the shifted index, songRemoved). A count drop from anywhere else (an order open,
+    // a late delivery) never does; opens and clears reset it in resetShownSong.
+    connect(&m_setlist, &SetlistViewModel::songRemovalStarted, this, [this](int) { m_removalInFlight = true; });
     connect(&m_setlist, &SetlistViewModel::serviceOrderOpened, &m_mixer, &AudioMixerViewModel::clearPreloadedSong);
     connect(&m_setlist, &SetlistViewModel::serviceOrderOpened, &m_mixer, &AudioMixerViewModel::stop);
     connect(&m_setlist, &SetlistViewModel::setlistCleared, this, &SongSwitchCoordinator::onSetlistCleared);
