@@ -172,14 +172,19 @@ void testSaveMixStateReportsFailureAndKeepsOldFile() {
     if (!reported) fail("saveMixState returns void, so callers cannot tell a failed save");
 
     // Existing mix.json in a folder that is now read-only: the save cannot complete.
-    stems[0].setMuted(true);
-    const std::string before = readAll(dir / "mix.json");
-    fs::permissions(dir, fs::perms::owner_read | fs::perms::owner_exec, fs::perm_options::replace);
-    const bool savedReadOnly = saveReported(reported, dir.string(), stems);
-    const std::string after = readAll(dir / "mix.json");
-    fs::permissions(dir, fs::perms::owner_all, fs::perm_options::replace);
-    if (savedReadOnly) fail("a save into a read-only folder must return false");
-    if (after != before) fail("the existing mix.json was changed by a save that could not complete");
+    // Root ignores directory permissions, so this case only means something as a normal user.
+    if (::geteuid() == 0) {
+        std::cout << "[SKIP] read-only folder case: running as root, permissions are not enforced" << std::endl;
+    } else {
+        stems[0].setMuted(true);
+        const std::string before = readAll(dir / "mix.json");
+        fs::permissions(dir, fs::perms::owner_read | fs::perms::owner_exec, fs::perm_options::replace);
+        const bool savedReadOnly = saveReported(reported, dir.string(), stems);
+        const std::string after = readAll(dir / "mix.json");
+        fs::permissions(dir, fs::perms::owner_all, fs::perm_options::replace);
+        if (savedReadOnly) fail("a save into a read-only folder must return false");
+        if (after != before) fail("the existing mix.json was changed by a save that could not complete");
+    }
 
     // Folder that does not exist (unwritable target).
     if (saveReported(reported, (dir / "missing" / "deeper").string(), stems))
