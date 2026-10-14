@@ -455,6 +455,32 @@ void testPendingAdvanceSurvivesRemovingNextSong() {
     std::cout << "[PASS] testPendingAdvanceSurvivesRemovingNextSong passed." << std::endl;
 }
 
+void testRepriseOfSameSongStillSwitches() {
+    std::cout << "[TEST] Running testRepriseOfSameSongStillSwitches..." << std::endl;
+    DecodeProbe probe;
+    SetlistViewModel setlist;
+    AudioMixerViewModel mixer;
+    SongSwitchCoordinator coordinator(setlist, mixer);
+    mixer.setPreloadDecodeHookForTesting(probe.hook());
+
+    const fs::path root = makeRealServiceOrder("reprise", {"Alpha", "Bravo"});
+    openAndSettle(setlist, mixer, root);
+    // A reprise: the same song folder appears again later in the setlist.
+    check(setlist.addSongFolder(QString::fromStdString((root / "01_Song_Alpha").string())), "reprise: add failed");
+    check(setlist.itemCount() == 3, "reprise: setlist has " + std::to_string(setlist.itemCount()) + " rows, want 3");
+    runEvents(50);
+    int switches = 0;
+    QObject::connect(&mixer, &AudioMixerViewModel::songSwitched, [&] { ++switches; });
+    const std::size_t decodesBefore = probe.count();
+
+    setlist.setCurrentSongIndex(2); // the reprise of Alpha, while Alpha (row 0) is shown
+    check(waitFor([&] { return switches > 0; }, 3000),
+          "reprise: selecting the second copy did not switch (decodes " +
+          std::to_string(probe.count() - decodesBefore) + ")");
+    check(currentStem(mixer) == stemOfSong(setlist, 2), "reprise: audio is " + currentStem(mixer));
+    std::cout << "[PASS] testRepriseOfSameSongStillSwitches passed." << std::endl;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -469,6 +495,7 @@ int main(int argc, char** argv) {
         {"testClearSetlistFreesCurrentAndNextSong", testClearSetlistFreesCurrentAndNextSong},
         {"testRemovingPreloadedSongPreloadsNewNext", testRemovingPreloadedSongPreloadsNewNext},
         {"testRemovingEarlierSongKeepsSameSongSelected", testRemovingEarlierSongKeepsSameSongSelected},
+        {"testRepriseOfSameSongStillSwitches", testRepriseOfSameSongStillSwitches},
         {"testPendingAdvanceSurvivesRemovingNextSong", testPendingAdvanceSurvivesRemovingNextSong},
         {"testOpeningOrderDropsOldPreloadFirst", testOpeningOrderDropsOldPreloadFirst},
         {"testClearAndReopenFiftyTimesHoldsAtMostTwoSongs", testClearAndReopenFiftyTimesHoldsAtMostTwoSongs},
