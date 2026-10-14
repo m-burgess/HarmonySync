@@ -11,6 +11,7 @@
 #if defined(HARMONYSYNC_HAS_QT) || __has_include(<QObject>)
 #include <QObject>
 #include <QString>
+#include <QAbstractListModel>
 #define HARMONYSYNC_QT_AVAILABLE 1
 #endif
 
@@ -40,6 +41,8 @@ class SetlistViewModel
     Q_PROPERTY(bool isGeneratingTimestamps READ isGeneratingTimestamps NOTIFY isGeneratingTimestampsChanged)
     Q_PROPERTY(QString aiSyncProgressMessage READ aiSyncProgressMessage NOTIFY aiSyncProgressMessageChanged)
     Q_PROPERTY(QString currentSongMapJson READ currentSongMapJson NOTIFY currentSongMapJsonChanged)
+    /// #219: the setlist rows for QML list views (roles name, hasSongMap, isCurrent).
+    Q_PROPERTY(QAbstractListModel* setlistModel READ setlistModel CONSTANT)
 #endif
 
 public:
@@ -85,6 +88,7 @@ public:
     [[nodiscard]] std::vector<Core::MediaStem> stemsAt(int index) const;
 
 #ifdef HARMONYSYNC_QT_AVAILABLE
+    [[nodiscard]] QAbstractListModel* setlistModel() const;
     Q_INVOKABLE bool openServiceOrderRootFolder(const QString& rootFolderPath);
     Q_INVOKABLE bool addSongFolder(const QString& folderPath);
     Q_INVOKABLE QString itemNameAt(int index) const;

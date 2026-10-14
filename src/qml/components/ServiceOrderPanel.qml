@@ -131,7 +131,8 @@ Rectangle {
             clip: true
             spacing: 6
             visible: setlistViewModel && setlistViewModel.itemCount > 0
-            model: setlistViewModel ? setlistViewModel.itemCount : 0
+            // #219: a real list model, so rows rebuild when an order with the same count opens.
+            model: setlistViewModel ? setlistViewModel.setlistModel : null
 
             delegate: Rectangle {
                 id: itemRect
@@ -139,9 +140,10 @@ Rectangle {
                 height: 44
                 radius: 4
 
-                property bool isSelected: setlistViewModel && setlistViewModel.currentSongIndex === index
-                property bool hasSongMap: setlistViewModel ? setlistViewModel.itemHasSongMapAt(index) : false
-                property string itemName: setlistViewModel ? setlistViewModel.itemNameAt(index) : ""
+                // Row data comes from the model's roles; selection rules stay in the view model.
+                property bool isSelected: model.isCurrent
+                property bool hasSongMap: model.hasSongMap
+                property string itemName: model.name
 
                 color: isSelected ? Theme.accentActive : (mouseArea.containsMouse ? Theme.borderDark : Theme.backgroundDark)
                 border.color: isSelected ? Theme.accentPrimary : (mouseArea.containsMouse ? Theme.borderDark : Theme.backgroundDark)

@@ -1,6 +1,7 @@
 #include "SetlistViewModel.hpp"
 #include "ServiceOrderFolderScanner.hpp"
 #include "AILyricSyncService.hpp"
+#include "SetlistListModel.hpp"
 #include <utility>
 #include <algorithm>
 #include <iostream>
@@ -26,6 +27,9 @@ struct SetlistViewModel::Impl {
     bool autoLyricsEnabled{false};
     bool isGeneratingTimestamps{false};
     std::string aiSyncProgressMessage;
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    std::unique_ptr<SetlistListModel> listModel; // #219
+#endif
 
     int activeLyricIndex{-1};
     std::string activeLyricText;
@@ -158,11 +162,19 @@ struct SetlistViewModel::Impl {
 
 SetlistViewModel::SetlistViewModel(std::shared_ptr<Core::FolderService> folderService,
                                    AITimestampGenerator aiTimestampGenerator)
-    : m_impl(std::make_unique<Impl>(std::move(folderService), std::move(aiTimestampGenerator))) {}
+    : m_impl(std::make_unique<Impl>(std::move(folderService), std::move(aiTimestampGenerator))) {
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    m_impl->listModel = std::make_unique<SetlistListModel>(*this);
+#endif
+}
 
 SetlistViewModel::~SetlistViewModel() = default;
 
 #ifdef HARMONYSYNC_QT_AVAILABLE
+QAbstractListModel* SetlistViewModel::setlistModel() const {
+    return m_impl->listModel.get();
+}
+
 QString SetlistViewModel::title() const {
     return QString::fromStdString(m_impl->titleStr);
 }
@@ -198,7 +210,13 @@ int SetlistViewModel::currentSongIndex() const noexcept {
 
 void SetlistViewModel::setCurrentSongIndex(int index) {
     if (index >= -1 && index < itemCount() && m_impl->currentSongIndex != index) {
+        const int previous = m_impl->currentSongIndex;
         m_impl->currentSongIndex = index;
+#ifdef HARMONYSYNC_QT_AVAILABLE
+        m_impl->listModel->currentRowChanged(previous, index);
+#else
+        (void)previous;
+#endif
         m_impl->activeLyricIndex = -1;
         m_impl->updateLyricBlocks();
         m_impl->calculateActiveLyrics();
@@ -242,6 +260,9 @@ bool SetlistViewModel::openServiceOrderRootFolder(const std::string& pathStr) {
 #endif
     Core::ServiceOrder newOrder = m_impl->scanner.scanServiceOrderDirectory(pathStr);
     if (!newOrder.songs().empty()) {
+#ifdef HARMONYSYNC_QT_AVAILABLE
+        m_impl->listModel->beginReplaceAll();
+#endif
         m_impl->serviceOrder = std::move(newOrder);
         setTitle(
 #ifdef HARMONYSYNC_QT_AVAILABLE
@@ -252,6 +273,7 @@ bool SetlistViewModel::openServiceOrderRootFolder(const std::string& pathStr) {
         );
         m_impl->currentSongIndex = -1;
 #ifdef HARMONYSYNC_QT_AVAILABLE
+        m_impl->listModel->endReplaceAll();
         emit itemCountChanged(itemCount());
         emit serviceOrderOpened();
 #endif
@@ -314,8 +336,12 @@ bool SetlistViewModel::addSongFolder(const std::string& pathStr) {
     }
     Core::SongMap song = m_impl->folderService->loadSongFromFolder(pathStr);
     if (!song.title().empty()) {
+#ifdef HARMONYSYNC_QT_AVAILABLE
+        m_impl->listModel->beginInsertAt(itemCount());
+#endif
         m_impl->serviceOrder.addSong(song);
 #ifdef HARMONYSYNC_QT_AVAILABLE
+        m_impl->listModel->endInsert();
         emit itemCountChanged(itemCount());
 #endif
         if (m_impl->currentSongIndex == -1) {
@@ -330,9 +356,11 @@ void SetlistViewModel::removeSongAt(int index) {
     if (index >= 0 && index < itemCount()) {
 #ifdef HARMONYSYNC_QT_AVAILABLE
         emit songRemovalStarted(index);
+        m_impl->listModel->beginRemoveAt(index);
 #endif
         m_impl->serviceOrder.removeSongAt(static_cast<size_t>(index));
 #ifdef HARMONYSYNC_QT_AVAILABLE
+        m_impl->listModel->endRemove();
         emit itemCountChanged(itemCount());
 #endif
         if (index < m_impl->currentSongIndex) {
@@ -351,9 +379,13 @@ void SetlistViewModel::removeSongAt(int index) {
 }
 
 void SetlistViewModel::clearSetlist() {
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    m_impl->listModel->beginReplaceAll();
+#endif
     m_impl->serviceOrder.clearAll();
     m_impl->currentSongIndex = -1;
 #ifdef HARMONYSYNC_QT_AVAILABLE
+    m_impl->listModel->endReplaceAll();
     emit itemCountChanged(0);
     emit currentSongIndexChanged(-1);
     emit activeSongMapChanged(false);

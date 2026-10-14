@@ -4,6 +4,7 @@ add_library(
     SetlistViewModel.cpp
     AudioMixerViewModel.cpp
     SongSwitchCoordinator.cpp
+    SetlistListModel.cpp
     SlideDisplayViewModel.cpp
     ConfidenceMonitorViewModel.cpp
     MidiMappingViewModel.cpp
