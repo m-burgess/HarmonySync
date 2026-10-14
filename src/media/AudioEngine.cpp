@@ -12,6 +12,12 @@
 #include <utility>
 #include <vector>
 
+#ifdef HARMONYSYNC_HAS_QT
+#include <QMetaObject>
+#include <QObject>
+#include <QThread>
+#endif
+
 namespace HarmonySync::Media {
 
 /// Counts one live song buffer set against its engine (#185). Move-only; a moved-from or
@@ -74,18 +80,26 @@ public:
     std::atomic<std::uint64_t> m_callbackCount{0}; // test seam (#177)
     std::atomic<std::thread::id> m_callbackThread{}; // test seam (#177)
 
+    /// Audio thread only: take a published song, if any, and start it at 0.
+    /// Shared by read() and the stem-control updates queued to the audio thread.
+    bool takePending() noexcept {
+        if (!m_sets.acquirePending()) {
+            return false;
+        }
+        const StemBufferSet* active = m_sets.current();
+        m_duration.store(active != nullptr ? active->duration : 0.0, std::memory_order_relaxed);
+        m_position->store(0.0, std::memory_order_relaxed);
+        return true;
+    }
+
     std::size_t read(char* data, std::size_t maxBytes) override {
         m_callbackThread.store(std::this_thread::get_id(), std::memory_order_relaxed);
         m_callbackCount.fetch_add(1, std::memory_order_relaxed);
         // Take a staged song before touching any buffers. Every position write in this
         // callback comes after the handoff, so a late write of the old song's position
         // cannot undo the reset to 0.
-        const bool switchedSong = m_sets.acquirePending();
+        const bool switchedSong = takePending();
         const StemBufferSet* active = m_sets.current();
-        if (switchedSong) {
-            m_duration.store(active != nullptr ? active->duration : 0.0, std::memory_order_relaxed);
-            m_position->store(0.0, std::memory_order_relaxed);
-        }
 
         if (m_state->load(std::memory_order_acquire) != PlaybackState::Playing || active == nullptr) {
             std::fill_n(data, maxBytes, static_cast<char>(0));
@@ -286,16 +300,141 @@ struct AudioEngine::Impl {
     /// Live song buffer sets of this engine (#185). Shared with workers and every set's lease.
     std::shared_ptr<std::atomic<std::size_t>> liveSets = std::make_shared<std::atomic<std::size_t>>(0);
 
+#ifdef HARMONYSYNC_HAS_QT
+    // ---- Audio thread (#177) ----
+    // Qt pulls audio from the event loop of the thread that owns the sink. The sink lives
+    // on its own thread so a stalled GUI thread cannot starve it. Only the audio thread touches
+    // audioSink and services the PCM source; the control thread queues work to it.
+    std::unique_ptr<QThread> audioThread;
+    std::unique_ptr<QObject> audioContext; // lives on audioThread; target for queued work
+    bool sinkMayRun = false;  // control thread: a start was queued with no stopSinkAndWait() since
+#endif
+    bool hasSink = false; // set once at construction
     AudioMixerDevice mixerDevice;
     // Next song, fully mapped by preloadStems() so switchToPreloaded() only hands it off.
     AudioMixerDevice::StemBufferSet preloadedSet;
     // Declared after the mixer it pulls from, so it is destroyed first.
     std::unique_ptr<IAudioSink> audioSink;
 
-    /// True while the sink may call read() on the audio thread.
-    bool audioCallbackMayRun() const { return audioSink && audioSink->isRunning(); }
+#ifdef HARMONYSYNC_HAS_QT
+    template <typename F>
+    void onAudioThread(F&& work) {
+        if (!audioThread) {
+            work();
+            return;
+        }
+        QMetaObject::invokeMethod(audioContext.get(), std::forward<F>(work), Qt::QueuedConnection);
+    }
+    /// Control thread only; the audio thread never waits on the control thread, so no deadlock.
+    template <typename F>
+    void onAudioThreadAndWait(F&& work) {
+        if (!audioThread) {
+            work();
+            return;
+        }
+        QMetaObject::invokeMethod(audioContext.get(), std::forward<F>(work), Qt::BlockingQueuedConnection);
+    }
+#endif
 
-    /// Mixer-side buffers the control thread may tweak (latest published set).
+#ifdef HARMONYSYNC_HAS_QT
+    void startAudioThread() {
+        audioThread = std::make_unique<QThread>();
+        audioThread->setObjectName(QStringLiteral("HarmonySyncAudio"));
+        audioThread->start(QThread::TimeCriticalPriority);
+        audioContext = std::make_unique<QObject>();
+        audioContext->moveToThread(audioThread.get());
+
+        onAudioThreadAndWait([this] {
+            audioSink = createQtAudioSink();
+            hasSink = audioSink != nullptr; // published to the caller by the blocking return
+        });
+    }
+
+    /// Stop the sink and wait. Afterwards no read() runs and every update queued earlier
+    /// has run, so the control thread may replace or free every set until the next start.
+    void stopSinkAndWait() {
+#ifdef HARMONYSYNC_HAS_QT
+        if (audioThread) {
+            onAudioThreadAndWait([this] {
+                if (audioSink) audioSink->stop();
+            });
+        } else
+#endif
+        if (audioSink) audioSink->stop();
+        sinkMayRun = false;
+    }
+
+    /// Stop and destroy the sink on its own thread, then end and join the thread.
+    void shutdownAudioThread() {
+        if (!audioThread) {
+            return;
+        }
+        onAudioThreadAndWait([this] {
+            if (audioSink) {
+                audioSink->stop();
+                audioSink.reset();
+            }
+        });
+        audioThread->quit();
+        audioThread->wait();
+        audioContext.reset();
+        audioThread.reset();
+        hasSink = false;
+        sinkMayRun = false;
+    }
+
+    /// Queue a change to one stem of the song the audio thread is playing.
+    template <typename Apply>
+    void updateStemOnAudioThread(int stemIndex, Apply apply) {
+        if (audioThread) {
+            onAudioThread([device = &mixerDevice, stemIndex, apply] {
+                device->takePending(); // apply the change to the newly switched song
+                AudioMixerDevice::StemBufferSet* set = device->m_sets.current();
+                if (set != nullptr && stemIndex < static_cast<int>(set->buffers.size())) {
+                    apply(set->buffers[static_cast<std::size_t>(stemIndex)].stem);
+                }
+            });
+            return;
+        }
+        AudioMixerDevice::StemBufferSet* set = mixerDevice.m_sets.latest();
+        if (set != nullptr && stemIndex < static_cast<int>(set->buffers.size())) {
+            apply(set->buffers[static_cast<std::size_t>(stemIndex)].stem);
+        }
+    }
+#endif
+
+    /// True while the sink may call read() on the audio thread.
+    bool audioCallbackMayRun() const {
+#ifdef HARMONYSYNC_HAS_QT
+        if (audioThread) return sinkMayRun;
+#endif
+        return audioSink && audioSink->isRunning();
+    }
+
+    void startSink() {
+#ifdef HARMONYSYNC_HAS_QT
+        if (audioThread) {
+            if (!hasSink) return;
+            sinkMayRun = true;
+            onAudioThread([this] {
+                if (audioSink && !audioSink->isActive()) audioSink->start(mixerDevice);
+            });
+            return;
+        }
+#endif
+        if (audioSink && !audioSink->isActive()) audioSink->start(mixerDevice);
+    }
+
+    void takePendingWhenIdle() {
+#ifdef HARMONYSYNC_HAS_QT
+        if (audioThread) {
+            onAudioThreadAndWait([this] { mixerDevice.takePending(); });
+            return;
+        }
+#endif
+        mixerDevice.takePending();
+    }
+
     std::vector<AudioMixerDevice::StemBuffer>* controlBuffers() {
         AudioMixerDevice::StemBufferSet* set = mixerDevice.m_sets.latest();
         return set != nullptr ? &set->buffers : nullptr;
@@ -356,6 +495,12 @@ struct AudioEngine::Impl {
     Impl& operator=(const Impl&) = delete;
 
     ~Impl() {
+#ifdef HARMONYSYNC_HAS_QT
+        // Runs for destruction and move-assignment: stop the sink on its thread, then join it.
+        // The sets are freed afterwards on this thread when mixerDevice is destroyed.
+        shutdownAudioThread();
+#endif
+        if (audioSink) audioSink->stop();
         // Runs for destruction and for move-assignment over this engine. A running worker
         // only touches its own job, so cancelling then joining is enough.
         for (auto& worker : workers) {
@@ -370,7 +515,17 @@ struct AudioEngine::Impl {
 };
 
 AudioEngine::AudioEngine()
-    : AudioEngine(createQtAudioSink()) {}
+    : m_impl(std::make_unique<Impl>()) {
+    m_impl->mixerDevice.m_position = &m_impl->position;
+    m_impl->mixerDevice.m_state = &m_impl->state;
+    m_impl->mixerDevice.m_masterVolume = &m_impl->masterVolume;
+#ifdef HARMONYSYNC_HAS_QT
+    m_impl->startAudioThread();
+#else
+    m_impl->audioSink = createQtAudioSink();
+    m_impl->hasSink = m_impl->audioSink != nullptr;
+#endif
+}
 
 AudioEngine::AudioEngine(std::unique_ptr<IAudioSink> sink)
     : m_impl(std::make_unique<Impl>()) {
@@ -378,13 +533,10 @@ AudioEngine::AudioEngine(std::unique_ptr<IAudioSink> sink)
     m_impl->mixerDevice.m_state = &m_impl->state;
     m_impl->mixerDevice.m_masterVolume = &m_impl->masterVolume;
     m_impl->audioSink = std::move(sink);
+    m_impl->hasSink = m_impl->audioSink != nullptr;
 }
 
-AudioEngine::~AudioEngine() {
-    if (m_impl && m_impl->audioSink) {
-        m_impl->audioSink->stop();
-    }
-}
+AudioEngine::~AudioEngine() = default; // Impl stops the sink on its thread and joins it
 
 AudioEngine::AudioEngine(AudioEngine&&) noexcept = default;
 AudioEngine& AudioEngine::operator=(AudioEngine&&) noexcept = default;
@@ -396,12 +548,9 @@ bool AudioEngine::loadStems(const std::vector<Core::MediaStem>& stems) {
     m_impl->stems.clear();
     m_impl->preloadedStems.clear();
     m_impl->position.store(0.0, std::memory_order_relaxed);
+    m_impl->stopSinkAndWait();
 
-    if (m_impl->audioSink) {
-        m_impl->audioSink->stop();
-    }
-
-    // Sink is stopped, so no read() is in flight: safe to replace every set here.
+    // Sink is stopped and the audio thread has drained earlier work: safe to replace every set.
     m_impl->mixerDevice.m_sets.clear();
     m_impl->preloadedSet = {};
 
@@ -415,8 +564,8 @@ bool AudioEngine::loadStems(const std::vector<Core::MediaStem>& stems) {
     m_impl->mixerDevice.m_duration.store(maxDuration, std::memory_order_relaxed);
     m_impl->duration.store(maxDuration, std::memory_order_relaxed);
 
-    if (m_impl->audioSink && bufferCount > 0) {
-        m_impl->audioSink->start(m_impl->mixerDevice);
+    if (bufferCount > 0) {
+        m_impl->startSink();
     }
 
     return !m_impl->stems.empty();
@@ -464,14 +613,13 @@ bool AudioEngine::switchToPreloaded() {
     m_impl->duration.store(nextDuration, std::memory_order_relaxed);
 
     if (!m_impl->audioCallbackMayRun()) {
-        // No audio callback can be running, so do the handoff here and free A now.
-        device.m_sets.acquirePending();
-        device.m_duration.store(nextDuration, std::memory_order_relaxed);
+        // No callback can be running, so take the handoff now and free A here.
+        m_impl->takePendingWhenIdle();
         device.m_sets.reclaimRetired();
     }
 
-    if (m_impl->audioSink && nextHasAudio && !m_impl->audioSink->isActive()) {
-        m_impl->audioSink->start(device);
+    if (nextHasAudio) {
+        m_impl->startSink(); // no-op on the audio thread if already active
     }
 
     return !m_impl->stems.empty();
@@ -561,9 +709,7 @@ void AudioEngine::unloadCurrent() {
     stop();
     m_impl->stems.clear();
     m_impl->duration.store(0.0, std::memory_order_relaxed);
-    if (m_impl->audioSink) {
-        m_impl->audioSink->stop();
-    }
+    m_impl->stopSinkAndWait();
     // Sink is stopped, so no read() is in flight (same rule as loadStems()): the current,
     // handed-off and retired sets can be freed here. The preloaded set is not in m_sets.
     m_impl->mixerDevice.m_sets.clear();
@@ -576,7 +722,7 @@ std::size_t AudioEngine::liveSongSetCountForTesting() const noexcept {
 
 bool AudioEngine::hasAudioOutputForTesting() const noexcept {
 #ifdef HARMONYSYNC_HAS_QT
-    return m_impl->audioSink != nullptr;
+    return m_impl->hasSink;
 #else
     return false;
 #endif
@@ -605,13 +751,8 @@ void AudioEngine::play() {
         return;
     }
     m_impl->state.store(PlaybackState::Playing, std::memory_order_release);
-    if (m_impl->audioSink) {
-        if (!m_impl->audioSink->isActive()) {
-            std::cout << "[AudioEngine] Starting audio sink.\n";
-            m_impl->audioSink->start(m_impl->mixerDevice);
-        } else {
-            std::cout << "[AudioEngine] Audio sink already active.\n";
-        }
+    if (m_impl->hasSink) {
+        m_impl->startSink();
     } else {
         std::cout << "[AudioEngine] No audio sink available!\n";
     }
@@ -648,30 +789,45 @@ void AudioEngine::setPitchShiftSemitones(int semitones) noexcept {
 void AudioEngine::setStemVolume(int stemIndex, float volume) noexcept {
     if (isIndexOf(stemIndex, m_impl->stems.size())) {
         m_impl->stems[static_cast<std::size_t>(stemIndex)].setVolume(volume);
+#ifdef HARMONYSYNC_HAS_QT
+        // The audio thread reads these fields, so change them there.
+        m_impl->updateStemOnAudioThread(stemIndex, [volume](Core::MediaStem& stem) { stem.setVolume(volume); });
+#else
         auto* buffers = m_impl->controlBuffers();
         if (buffers != nullptr && isIndexOf(stemIndex, buffers->size())) {
             (*buffers)[static_cast<std::size_t>(stemIndex)].stem.setVolume(volume);
         }
+#endif
     }
 }
 
 void AudioEngine::setStemMuted(int stemIndex, bool muted) noexcept {
     if (isIndexOf(stemIndex, m_impl->stems.size())) {
         m_impl->stems[static_cast<std::size_t>(stemIndex)].setMuted(muted);
+#ifdef HARMONYSYNC_HAS_QT
+        // The audio thread reads these fields, so change them there.
+        m_impl->updateStemOnAudioThread(stemIndex, [muted](Core::MediaStem& stem) { stem.setMuted(muted); });
+#else
         auto* buffers = m_impl->controlBuffers();
         if (buffers != nullptr && isIndexOf(stemIndex, buffers->size())) {
             (*buffers)[static_cast<std::size_t>(stemIndex)].stem.setMuted(muted);
         }
+#endif
     }
 }
 
 void AudioEngine::setStemSolo(int stemIndex, bool solo) noexcept {
     if (isIndexOf(stemIndex, m_impl->stems.size())) {
         m_impl->stems[static_cast<std::size_t>(stemIndex)].setSolo(solo);
+#ifdef HARMONYSYNC_HAS_QT
+        // The audio thread reads these fields, so change them there.
+        m_impl->updateStemOnAudioThread(stemIndex, [solo](Core::MediaStem& stem) { stem.setSolo(solo); });
+#else
         auto* buffers = m_impl->controlBuffers();
         if (buffers != nullptr && isIndexOf(stemIndex, buffers->size())) {
             (*buffers)[static_cast<std::size_t>(stemIndex)].stem.setSolo(solo);
         }
+#endif
     }
 }
 
