@@ -61,6 +61,17 @@ target_link_libraries(
 )
 add_test(NAME test_ffmpeg_transposer COMMAND test_ffmpeg_transposer)
 
+# Audio keeps flowing while the main thread is blocked (#177). Skips (exit 0) with no audio device.
+add_executable(test_audio_thread test_audio_thread.cpp)
+target_link_libraries(
+    test_audio_thread
+    PRIVATE harmonysync_media harmonysync_core
+)
+if(Qt6_FOUND)
+    target_link_libraries(test_audio_thread PRIVATE Qt6::Core)
+endif()
+add_test(NAME test_audio_thread COMMAND test_audio_thread)
+
 # Test ViewModels
 add_executable(test_viewmodels test_viewmodels.cpp)
 target_link_libraries(

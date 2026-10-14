@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <thread>
 
 namespace HarmonySync::Media {
 
@@ -90,6 +91,12 @@ public:
      * decode result not yet adopted. Not for production use.
      */
     [[nodiscard]] std::size_t liveSongSetCountForTesting() const noexcept;
+    /// Test seam (#177): true if an audio output device was opened. Not for production use.
+    [[nodiscard]] bool hasAudioOutputForTesting() const noexcept;
+    /// Test seam (#177): how many times the sink has pulled audio (readData() calls).
+    [[nodiscard]] std::uint64_t audioCallbackCountForTesting() const noexcept;
+    /// Test seam (#177): the thread the most recent readData() ran on (default id if none yet).
+    [[nodiscard]] std::thread::id audioCallbackThreadForTesting() const noexcept;
     void play();
     void pause();
     void stop();

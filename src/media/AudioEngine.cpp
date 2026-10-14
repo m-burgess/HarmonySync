@@ -71,8 +71,12 @@ public:
     std::atomic<PlaybackState>* m_state = nullptr;
     std::atomic<float>* m_masterVolume = nullptr;
     std::atomic<double> m_duration{0.0}; // duration of the set read() is using
+    std::atomic<std::uint64_t> m_callbackCount{0}; // test seam (#177)
+    std::atomic<std::thread::id> m_callbackThread{}; // test seam (#177)
 
     std::size_t read(char* data, std::size_t maxBytes) override {
+        m_callbackThread.store(std::this_thread::get_id(), std::memory_order_relaxed);
+        m_callbackCount.fetch_add(1, std::memory_order_relaxed);
         // Take a staged song before touching any buffers. Every position write in this
         // callback comes after the handoff, so a late write of the old song's position
         // cannot undo the reset to 0.
@@ -568,6 +572,30 @@ void AudioEngine::unloadCurrent() {
 
 std::size_t AudioEngine::liveSongSetCountForTesting() const noexcept {
     return m_impl->liveSets->load(std::memory_order_relaxed);
+}
+
+bool AudioEngine::hasAudioOutputForTesting() const noexcept {
+#ifdef HARMONYSYNC_HAS_QT
+    return m_impl->audioSink != nullptr;
+#else
+    return false;
+#endif
+}
+
+std::uint64_t AudioEngine::audioCallbackCountForTesting() const noexcept {
+#ifdef HARMONYSYNC_HAS_QT
+    return m_impl->mixerDevice.m_callbackCount.load(std::memory_order_relaxed);
+#else
+    return 0;
+#endif
+}
+
+std::thread::id AudioEngine::audioCallbackThreadForTesting() const noexcept {
+#ifdef HARMONYSYNC_HAS_QT
+    return m_impl->mixerDevice.m_callbackThread.load(std::memory_order_relaxed);
+#else
+    return {};
+#endif
 }
 
 void AudioEngine::play() {
