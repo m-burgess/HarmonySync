@@ -364,6 +364,13 @@ void AudioMixerViewModel::clearPreloadedSong() {
     m_impl->switchWhenReady = false;
 }
 
+void AudioMixerViewModel::clearPreloadedSongKeepingPendingAdvance() {
+    if (m_impl->switchWhenReady && !m_impl->preloadKey.empty()) {
+        return;
+    }
+    clearPreloadedSong();
+}
+
 void AudioMixerViewModel::unloadCurrentSong() {
     m_impl->m_activeDeck->unloadCurrent();
 #ifdef HARMONYSYNC_QT_AVAILABLE

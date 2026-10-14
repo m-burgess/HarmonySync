@@ -4,6 +4,9 @@
 #include "AudioMixerViewModel.hpp"
 #include "SetlistViewModel.hpp"
 
+#include <string>
+#include <vector>
+
 #ifdef HARMONYSYNC_QT_AVAILABLE
 
 namespace HarmonySync::ViewModels {
@@ -28,6 +31,8 @@ private:
 
     SetlistViewModel& m_setlist;
     AudioMixerViewModel& m_mixer;
+    /// File paths of the song last shown, so an index shift does not reload it.
+    std::vector<std::string> m_shownSong;
 };
 
 } // namespace HarmonySync::ViewModels

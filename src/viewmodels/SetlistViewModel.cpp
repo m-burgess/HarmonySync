@@ -315,7 +315,13 @@ void SetlistViewModel::removeSongAt(int index) {
 #ifdef HARMONYSYNC_QT_AVAILABLE
         emit itemCountChanged(itemCount());
 #endif
-        if (m_impl->currentSongIndex >= itemCount()) {
+        if (index < m_impl->currentSongIndex) {
+            // An earlier song went: the same song stays selected, one place up.
+            --m_impl->currentSongIndex;
+#ifdef HARMONYSYNC_QT_AVAILABLE
+            emit currentSongIndexChanged(m_impl->currentSongIndex);
+#endif
+        } else if (m_impl->currentSongIndex >= itemCount()) {
             setCurrentSongIndex(itemCount() - 1);
         }
 #ifdef HARMONYSYNC_QT_AVAILABLE

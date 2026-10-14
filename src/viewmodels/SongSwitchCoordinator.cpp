@@ -4,6 +4,14 @@
 
 namespace HarmonySync::ViewModels {
 
+namespace {
+std::vector<std::string> stemPaths(const std::vector<Core::MediaStem>& stems) {
+    std::vector<std::string> paths;
+    for (const auto& stem : stems) paths.push_back(stem.filePath());
+    return paths;
+}
+} // namespace
+
 SongSwitchCoordinator::SongSwitchCoordinator(SetlistViewModel& setlist,
                                              AudioMixerViewModel& mixer, QObject* parent)
     : QObject(parent), m_setlist(setlist), m_mixer(mixer)
@@ -11,6 +19,7 @@ SongSwitchCoordinator::SongSwitchCoordinator(SetlistViewModel& setlist,
     // #220: a new service order always starts stopped, so its first song is cued at 0
     // (the switch keeps the play state). Emitted before the first song is selected.
     // #185: drop the old order's next song first, so it is never held alongside the new one.
+    connect(&m_setlist, &SetlistViewModel::serviceOrderOpened, this, [this] { m_shownSong.clear(); });
     connect(&m_setlist, &SetlistViewModel::serviceOrderOpened, &m_mixer, &AudioMixerViewModel::clearPreloadedSong);
     connect(&m_setlist, &SetlistViewModel::serviceOrderOpened, &m_mixer, &AudioMixerViewModel::stop);
     connect(&m_setlist, &SetlistViewModel::setlistCleared, this, &SongSwitchCoordinator::onSetlistCleared);
@@ -26,6 +35,12 @@ void SongSwitchCoordinator::onCurrentSongIndexChanged(int index) {
     if (index < 0) {
         return;
     }
+    // Removing an earlier song shifts the index of the same song; nothing to switch.
+    const auto key = stemPaths(m_setlist.stemsAt(index));
+    if (!key.empty() && key == m_shownSong) {
+        return;
+    }
+    m_shownSong = key;
     const QString videoPath = m_setlist.backgroundVideoPathAt(index);
     m_mixer.setActiveBackgroundVideo(videoPath);
     m_mixer.loadNextBackgroundVideo(videoPath);
@@ -42,6 +57,7 @@ void SongSwitchCoordinator::preloadSongAfterCurrent() {
 
 void SongSwitchCoordinator::onSetlistCleared() {
     // #185: nothing is left to play; free the next song, then the current one.
+    m_shownSong.clear();
     m_mixer.clearPreloadedSong();
     m_mixer.unloadCurrentSong();
 }
@@ -57,7 +73,8 @@ void SongSwitchCoordinator::onSongRemoved(int /*index*/) {
         return; // the next song is still the preloaded one
     }
     // #185: the preloaded song was removed (or moved): drop it and get the new next one ready.
-    m_mixer.clearPreloadedSong();
+    // A pending advance is the user's choice and survives a removal.
+    m_mixer.clearPreloadedSongKeepingPendingAdvance();
     preloadSongAfterCurrent();
 }
 
