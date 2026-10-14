@@ -8,7 +8,7 @@ on:
 
 concurrency:
   group: pr-smoke-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # C++/Qt smoke for this repo: no root package.json / pnpm workspace.
 # Qt is required because AILyricSyncService.hpp hard-defines HARMONYSYNC_QT_AVAILABLE.
