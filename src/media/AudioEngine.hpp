@@ -97,6 +97,25 @@ public:
     [[nodiscard]] std::uint64_t audioCallbackCountForTesting() const noexcept;
     /// Test seam (#177): the thread the most recent readData() ran on (default id if none yet).
     [[nodiscard]] std::thread::id audioCallbackThreadForTesting() const noexcept;
+    /**
+     * @brief Identity of one song (#177): the file paths of its stems, in order, exactly as
+     * passed to loadStems()/preloadStems()/preloadStemsAsync(). Same idea as the viewmodel's
+     * preload key, so Qt can compare a reported key with songKey() of its own stem list.
+     */
+    [[nodiscard]] static std::vector<std::string> songKey(const std::vector<Core::MediaStem>& stems);
+    /**
+     * @brief Called when a queued setStemVolume()/setStemMuted()/setStemSolo() reached the audio
+     * thread after its song stopped being current (e.g. a switch landed first), so it was
+     * dropped instead of being applied to the next song (#177). @p songKey is the song the change
+     * was made for. Runs on the audio thread: copy what you need and marshal to your own thread
+     * (the control-side stems of that song already hold the change, so re-sync/save from there).
+     */
+    using StaleStemChangeCallback = std::function<void(const std::vector<std::string>& songKey, int stemIndex)>;
+    void setStaleStemChangeCallback(StaleStemChangeCallback callback);
+    /// Test seam (#177): the stems the audio thread is mixing now, read on the audio thread.
+    [[nodiscard]] std::vector<Core::MediaStem> audioThreadStemsForTesting() const;
+    /// Test seam (#177): queue @p work on the audio thread (inline without one). Not for production.
+    void runOnAudioThreadForTesting(std::function<void()> work);
     void play();
     void pause();
     void stop();

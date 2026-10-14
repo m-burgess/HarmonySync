@@ -4,16 +4,20 @@
 //   pactl load-module module-null-sink sink_name=qa_sink && pactl set-default-sink qa_sink).
 // With no audio device it prints SKIP and exits 0, so CI without sound stays green.
 #include "AudioEngine.hpp"
+#include "FolderService.hpp"
 #ifdef HARMONYSYNC_HAS_QT
 #include <QCoreApplication>
 #endif
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <future>
+#include <mutex>
 #include <iostream>
 #include <string>
 #include <thread>
@@ -45,6 +49,103 @@ std::string writeWav(const std::filesystem::path& path, std::uint32_t seconds) {
     return path.string();
 }
 
+
+/// Compares the fields readData() mixes with.
+bool sameMix(const MediaStem& a, const MediaStem& b) {
+    return a.filePath() == b.filePath() && a.isMuted() == b.isMuted() && a.isSolo() == b.isSolo()
+           && std::abs(a.volume() - b.volume()) < 1e-6f;
+}
+
+bool check(bool ok, const char* what) {
+    if (!ok) {
+        std::cerr << "FAIL: " << what << std::endl;
+    }
+    return ok;
+}
+
+/// #177 stale setter: a mute queued for song A must not land on song B when the switch to B
+/// reaches the audio thread first. Needs the audio thread (an application object), not a device.
+bool testQueuedMuteForOutgoingSongIsNotAppliedToNextSong(const std::filesystem::path& root) {
+    std::cout << "[TEST] Running testQueuedMuteForOutgoingSongIsNotAppliedToNextSong..." << std::endl;
+    const auto dirA = root / "songA";
+    const auto dirB = root / "songB";
+    std::filesystem::create_directories(dirA);
+    std::filesystem::create_directories(dirB);
+    const std::vector<MediaStem> songA = {MediaStem("a1", "Drums", writeWav(dirA / "drums.wav", 20)),
+                                          MediaStem("a2", "Keys", writeWav(dirA / "keys.wav", 20))};
+    std::vector<MediaStem> songB = {MediaStem("b1", "Drums", writeWav(dirB / "drums.wav", 20)),
+                                    MediaStem("b2", "Keys", writeWav(dirB / "keys.wav", 20))};
+    {
+        // B's saved mix: drums open, keys at 0.4.
+        std::vector<MediaStem> saved = songB;
+        saved[1].setVolume(0.4f);
+        FolderService::saveMixState(dirB.string(), saved);
+    }
+    FolderService::applyMixState(dirB.string(), songB);
+
+    AudioEngine engine;
+    std::mutex droppedMutex;
+    std::vector<std::pair<std::vector<std::string>, int>> dropped;
+    engine.setStaleStemChangeCallback([&](const std::vector<std::string>& key, int stemIndex) {
+        std::lock_guard lock(droppedMutex);
+        dropped.emplace_back(key, stemIndex);
+    });
+
+    bool ok = true;
+    ok &= check(engine.loadStems(songA), "song A loads");
+    engine.play();
+    ok &= check(engine.preloadStems(songB), "song B preloads");
+
+    // Hold the audio thread so the mute is still queued when the switch is published.
+    std::promise<void> release;
+    std::shared_future<void> released = release.get_future().share();
+    engine.runOnAudioThreadForTesting([released] { released.wait(); });
+
+    engine.setStemMuted(0, true); // musician mutes A's drums just before the switch
+    const std::vector<MediaStem> aControl = engine.loadedStems();
+    ok &= check(aControl.size() == 2 && aControl[0].isMuted(), "A's control-side drums hold the mute");
+
+    std::thread releaser([&release] {
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        release.set_value();
+    });
+    ok &= check(engine.switchToPreloaded(), "switch to B");
+    releaser.join();
+
+    const std::vector<MediaStem> playing = engine.audioThreadStemsForTesting();
+    const std::vector<MediaStem>& bControl = engine.loadedStems();
+    ok &= check(playing.size() == 2 && bControl.size() == 2, "B has two stems on both sides");
+    if (playing.size() == 2 && bControl.size() == 2) {
+        ok &= check(!playing[0].isMuted(), "B's drums play unmuted, as in B's mix.json (A's mute leaked onto B)");
+        ok &= check(std::abs(playing[1].volume() - 0.4f) < 1e-6f, "B's keys play at B's mix.json volume 0.4");
+        ok &= check(sameMix(playing[0], bControl[0]) && sameMix(playing[1], bControl[1]),
+                    "B's control-side stems match what the audio thread plays");
+    }
+    {
+        std::lock_guard lock(droppedMutex);
+        ok &= check(dropped.size() == 1 && dropped[0].first == AudioEngine::songKey(songA)
+                        && dropped[0].second == 0,
+                    "the dropped mute is reported once, with A's songKey and stem 0");
+    }
+
+    // Saving is the viewmodel's job (it saves A's control stems before the switch, #230);
+    // here we check those stems carry the mute into A's mix.json and B's file is untouched.
+    FolderService::saveMixState(dirA.string(), aControl);
+    std::vector<MediaStem> reloadA = songA;
+    FolderService::applyMixState(dirA.string(), reloadA);
+    std::vector<MediaStem> reloadB = songB;
+    reloadB[0].setMuted(true); // would be overwritten back to false if B's file is intact
+    FolderService::applyMixState(dirB.string(), reloadB);
+    ok &= check(reloadA[0].isMuted(), "A's mix.json has the drums muted");
+    ok &= check(!reloadB[0].isMuted(), "B's mix.json still has the drums open");
+
+    engine.stop();
+    if (ok) {
+        std::cout << "[PASS] testQueuedMuteForOutgoingSongIsNotAppliedToNextSong passed." << std::endl;
+    }
+    return ok;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -61,12 +162,15 @@ int main(int argc, char** argv) {
     const auto dir = std::filesystem::temp_directory_path() / "harmonysync_test_audio_thread";
     std::filesystem::create_directories(dir);
     int result = EXIT_SUCCESS;
+    if (!testQueuedMuteForOutgoingSongIsNotAppliedToNextSong(dir)) {
+        result = EXIT_FAILURE;
+    }
     {
         AudioEngine engine;
         if (!engine.hasAudioOutputForTesting()) {
             std::cout << "SKIP test_audio_thread: no audio output device available." << std::endl;
             std::filesystem::remove_all(dir);
-            return EXIT_SUCCESS;
+            return result;
         }
 
         std::cout << "[TEST] Running testAudioKeepsFlowingWhileMainThreadIsBlocked..." << std::endl;

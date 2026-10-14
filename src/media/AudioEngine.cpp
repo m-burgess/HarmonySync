@@ -453,6 +453,7 @@ struct AudioEngine::Impl {
     AudioEngine::PreloadTicket nextTicket = 1;
     std::function<void()> decodeHookForTesting;
     std::function<void()> finishHookForTesting;
+    AudioEngine::StaleStemChangeCallback staleStemChangeCallback;
 
     /// Drop the pending async preload; its worker finishes on its own and is joined later.
     void cancelPendingPreload() {
@@ -745,6 +746,45 @@ std::thread::id AudioEngine::audioCallbackThreadForTesting() const noexcept {
     return m_impl->mixerDevice.m_callbackThread.load(std::memory_order_relaxed);
 #else
     return {};
+#endif
+}
+
+std::vector<std::string> AudioEngine::songKey(const std::vector<Core::MediaStem>& stems) {
+    std::vector<std::string> key;
+    key.reserve(stems.size());
+    for (const auto& stem : stems) {
+        key.push_back(stem.filePath());
+    }
+    return key;
+}
+
+void AudioEngine::setStaleStemChangeCallback(StaleStemChangeCallback callback) {
+    m_impl->staleStemChangeCallback = std::move(callback);
+}
+
+std::vector<Core::MediaStem> AudioEngine::audioThreadStemsForTesting() const {
+    std::vector<Core::MediaStem> out;
+#ifdef HARMONYSYNC_HAS_QT
+    m_impl->onAudioThreadAndWait([this, &out] {
+        m_impl->mixerDevice.takePending();
+        const AudioMixerDevice::StemBufferSet* set = m_impl->mixerDevice.m_sets.current();
+        if (set != nullptr) {
+            for (const auto& buf : set->buffers) {
+                out.push_back(buf.stem);
+            }
+        }
+    });
+#else
+    out = m_impl->stems;
+#endif
+    return out;
+}
+
+void AudioEngine::runOnAudioThreadForTesting(std::function<void()> work) {
+#ifdef HARMONYSYNC_HAS_QT
+    m_impl->onAudioThread(std::move(work));
+#else
+    work();
 #endif
 }
 
