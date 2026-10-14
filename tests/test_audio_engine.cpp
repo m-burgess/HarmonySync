@@ -260,6 +260,35 @@ void testRealtimeHandoffLatestPublishWinsAndRetiresStack() {
     std::cout << "[PASS] testRealtimeHandoffLatestPublishWinsAndRetiresStack passed." << std::endl;
 }
 
+// #185 (QA line-721 failure): an unacknowledged handoff keeps the outgoing song as current, and
+// nothing is retired; once the audio thread takes it, a control-thread reclaim frees the old song
+// without another publish. Device-free: this thread plays the audio thread's part.
+void testRetiredSongFreedAfterAcknowledgeWithoutAnotherSwitch() {
+    std::cout << "[TEST] Running testRetiredSongFreedAfterAcknowledgeWithoutAnotherSwitch..." << std::endl;
+    auto aFreed = std::make_shared<int>(0);
+    auto bFreed = std::make_shared<int>(0);
+    {
+        RealtimeHandoff<TrackedSongSet> handoff;
+        handoff.resetCurrent(TrackedSongSet("A", aFreed));
+        handoff.publish(TrackedSongSet("B", bFreed));
+
+        // The sink has not pulled yet: A is still current, B pending, nothing to reclaim.
+        assert(handoff.hasPending());
+        assert(handoff.reclaimRetired() == 0);
+        assert(*aFreed == 0);
+
+        assert(handoff.acquirePending()); // the audio callback runs once
+        assert(handoff.current()->song == "B");
+        assert(*aFreed == 0);              // retired, never freed on the audio thread
+
+        assert(handoff.reclaimRetired() == 1); // next control-thread call, no new publish
+        assert(*aFreed == 1);
+        assert(*bFreed == 0);
+    }
+    assert(*bFreed == 1);
+    std::cout << "[PASS] testRetiredSongFreedAfterAcknowledgeWithoutAnotherSwitch passed." << std::endl;
+}
+
 namespace {
 
 using namespace std::chrono_literals;
@@ -737,6 +766,7 @@ int main() {
         testSwitchToPreloadedStartsNextSongAtZero();
         testRealtimeHandoffKeepsSongAliveUntilAudioThreadLetsGo();
         testRealtimeHandoffLatestPublishWinsAndRetiresStack();
+        testRetiredSongFreedAfterAcknowledgeWithoutAnotherSwitch();
         testAsyncPreloadDoesNotBlockAndSwitchWaitsUntilReady();
         testNewerAsyncPreloadReplacesOlder();
         testSyncPreloadAndLoadCancelPendingAsync();
