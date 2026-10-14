@@ -2,6 +2,10 @@
 #include "ServiceOrderFolderScanner.hpp"
 #include "AILyricSyncService.hpp"
 #include "SetlistListModel.hpp"
+#include "SerialWorker.hpp"
+#include <atomic>
+#include <cstdint>
+#include <mutex>
 #include <utility>
 #include <algorithm>
 #include <iostream>
@@ -31,6 +35,22 @@ struct SetlistViewModel::Impl {
     std::unique_ptr<SetlistListModel> listModel; // #219
 #endif
     std::function<void(const std::string&)> scanHook;
+
+    // #177: folder scans run on scanWorker. Results come back through scanGuard (our own
+    // mutex, as in PR 227); the destructor clears target before the worker is joined.
+    struct ScanResult {
+        std::uint64_t ticket;
+        Core::ServiceOrder order;
+    };
+    struct ScanGuard {
+        std::mutex mutex;
+        SetlistViewModel* target{nullptr};
+        std::vector<ScanResult> results;
+        std::atomic<std::uint64_t> latestTicket{0};
+    };
+    std::shared_ptr<ScanGuard> scanGuard = std::make_shared<ScanGuard>();
+    std::uint64_t scanTicket{0};
+    SerialWorker scanWorker{SerialWorker::OnStop::DropQueued};
 
     int activeLyricIndex{-1};
     std::string activeLyricText;
@@ -164,12 +184,20 @@ struct SetlistViewModel::Impl {
 SetlistViewModel::SetlistViewModel(std::shared_ptr<Core::FolderService> folderService,
                                    AITimestampGenerator aiTimestampGenerator)
     : m_impl(std::make_unique<Impl>(std::move(folderService), std::move(aiTimestampGenerator))) {
+    m_impl->scanGuard->target = this;
 #ifdef HARMONYSYNC_QT_AVAILABLE
     m_impl->listModel = std::make_unique<SetlistListModel>(*this);
 #endif
 }
 
-SetlistViewModel::~SetlistViewModel() = default;
+SetlistViewModel::~SetlistViewModel() {
+    {
+        std::lock_guard lock(m_impl->scanGuard->mutex);
+        m_impl->scanGuard->target = nullptr;
+    }
+    // Queued scans are dropped; a scan already running finishes, then the thread joins.
+    m_impl->scanWorker.stop();
+}
 
 #ifdef HARMONYSYNC_QT_AVAILABLE
 QAbstractListModel* SetlistViewModel::setlistModel() const {
@@ -295,12 +323,50 @@ void SetlistViewModel::setServiceOrderScanHookForTesting(std::function<void(cons
 }
 
 #ifdef HARMONYSYNC_QT_AVAILABLE
-// STUB (fail-first commit): still scans on the calling thread.
 void SetlistViewModel::openServiceOrderRootFolderAsync(const QString& rootFolderPath) {
-    emit serviceOrderOpenFinished(openServiceOrderRootFolder(rootFolderPath));
+    const std::uint64_t ticket = ++m_impl->scanTicket;
+    auto guard = m_impl->scanGuard;
+    guard->latestTicket.store(ticket);
+    if (!m_impl->isLoading) {
+        m_impl->isLoading = true;
+        emit loadingStateChanged(true);
+    }
+    // The task gets copies only: the path, the hook, and the (stateless) FolderService,
+    // with its own scanner. It never touches this view model.
+    m_impl->scanWorker.post([guard, ticket, path = rootFolderPath.toStdString(),
+                             hook = m_impl->scanHook, folderService = m_impl->folderService]() {
+        if (guard->latestTicket.load() != ticket) {
+            return; // superseded before it started
+        }
+        if (hook) hook(path);
+        Core::ServiceOrder order;
+        if (guard->latestTicket.load() == ticket) {
+            order = Core::ServiceOrderFolderScanner(folderService).scanServiceOrderDirectory(path);
+        }
+        std::lock_guard lock(guard->mutex);
+        if (SetlistViewModel* target = guard->target) {
+            guard->results.push_back({ticket, std::move(order)});
+            QMetaObject::invokeMethod(target, "drainScanResults", Qt::QueuedConnection);
+        }
+    });
 }
 
-void SetlistViewModel::drainScanResults() {}
+void SetlistViewModel::drainScanResults() {
+    std::vector<Impl::ScanResult> results;
+    {
+        std::lock_guard lock(m_impl->scanGuard->mutex);
+        results.swap(m_impl->scanGuard->results);
+    }
+    for (auto& result : results) {
+        if (result.ticket != m_impl->scanTicket) {
+            continue; // a newer open replaced this one
+        }
+        m_impl->isLoading = false;
+        emit loadingStateChanged(false);
+        const bool opened = applyScannedOrder(std::move(result.order));
+        emit serviceOrderOpenFinished(opened);
+    }
+}
 #endif
 
 #ifdef HARMONYSYNC_QT_AVAILABLE

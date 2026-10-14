@@ -5,6 +5,9 @@
 #include <cmath>
 #include "FolderService.hpp"
 #include "FFmpegTransposer.hpp"
+#include "SerialWorker.hpp"
+
+#include <deque>
 
 #include <mutex>
 #include <type_traits>
@@ -62,11 +65,28 @@ struct AudioMixerViewModel::Impl {
         return saveMixStateWithResult(folder, stems);
     };
 
+    // #177: mix autosaves run on saveWorker, one at a time. Pending jobs are coalesced per
+    // song folder: a newer request for a folder that is already waiting replaces its stems.
+    // Results come back through saveGuard (our own mutex, as in PR 227).
+    struct SaveJob {
+        std::string folder;
+        std::vector<Core::MediaStem> stems;
+    };
+    struct SaveGuard {
+        std::mutex mutex;
+        AudioMixerViewModel* target{nullptr};
+        std::deque<SaveJob> pending;
+        std::vector<bool> results;
+    };
+    std::shared_ptr<SaveGuard> saveGuard = std::make_shared<SaveGuard>();
+
 #ifdef HARMONYSYNC_QT_AVAILABLE
     std::unique_ptr<QTimer> autosaveTimer;
     std::unique_ptr<QTimer> transposeDebounceTimer;
     std::unique_ptr<QTimer> positionTimer;
 #endif
+    // Declared last: destroyed (and joined) before the members above.
+    SerialWorker saveWorker{SerialWorker::OnStop::RunQueued};
 
     Impl(std::shared_ptr<Media::AudioEngine> engine, std::shared_ptr<Media::AudioEngine> nextEngine)
         : m_activeDeck(std::move(engine)) {
@@ -97,6 +117,7 @@ AudioMixerViewModel::AudioMixerViewModel(std::shared_ptr<Media::AudioEngine> aud
                                          std::shared_ptr<Media::AudioEngine> nextAudioEngine)
     : m_impl(std::make_unique<Impl>(std::move(audioEngine), std::move(nextAudioEngine))) {
     m_impl->callbackGuard->target = this;
+    m_impl->saveGuard->target = this;
 #ifdef HARMONYSYNC_QT_AVAILABLE
     QObject::connect(m_impl->autosaveTimer.get(), &QTimer::timeout, this, [this]() { requestMixSave(); });
 
@@ -153,6 +174,13 @@ AudioMixerViewModel::AudioMixerViewModel(std::shared_ptr<Media::AudioEngine> aud
 }
 
 AudioMixerViewModel::~AudioMixerViewModel() {
+    // Do not lose a debounced change on shutdown: queue it, then let queued saves finish.
+    flushPendingMixSave();
+    {
+        std::lock_guard lock(m_impl->saveGuard->mutex);
+        m_impl->saveGuard->target = nullptr;
+    }
+    m_impl->saveWorker.stop();
     // Stop worker callbacks from posting here before the engines (and their workers) go away.
     std::lock_guard lock(m_impl->callbackGuard->mutex);
     m_impl->callbackGuard->target = nullptr;
@@ -224,6 +252,7 @@ float AudioMixerViewModel::crossfadePosition() const noexcept {
 }
 
 bool AudioMixerViewModel::loadSongStems(const std::vector<Core::MediaStem>& stems) {
+    flushPendingMixSave(); // #205: the outgoing song's mix is saved before it is replaced
     // loadStems cancels any pending preload in the engine; forget ours too.
     m_impl->preloadKey.clear();
     m_impl->preloadReady = false;
@@ -283,6 +312,7 @@ bool AudioMixerViewModel::loadNextSongStems(const std::vector<Core::MediaStem>& 
     if (!m_impl->m_activeDeck->preloadStems(stems)) {
         return false;
     }
+    flushPendingMixSave(); // #205
     bool result = m_impl->m_activeDeck->switchToPreloaded();
 #ifdef HARMONYSYNC_QT_AVAILABLE
     if (result) {
@@ -374,6 +404,7 @@ void AudioMixerViewModel::onPreloadReady(std::uint64_t ticket, bool hasStems) {
 }
 
 bool AudioMixerViewModel::switchToPreloadedSong() {
+    flushPendingMixSave(); // #205
     // Play-or-cue rule (#202): the switch keeps the current play state.
     bool result = m_impl->m_activeDeck->switchToPreloaded();
     m_impl->preloadKey.clear();
@@ -439,23 +470,62 @@ void AudioMixerViewModel::setMixStateSaverForTesting(MixStateSaver saver) {
     m_impl->mixSaver = std::move(saver);
 }
 
-// STUB (fail-first commit): still writes on the UI thread.
 void AudioMixerViewModel::requestMixSave() {
-    auto stems = m_impl->m_activeDeck->loadedStems();
+    auto stems = m_impl->m_activeDeck->loadedStems(); // a copy: the worker never sees live state
     if (stems.empty()) return;
     std::string folderPath = std::filesystem::path(stems[0].filePath()).parent_path().string();
-    bool ok = m_impl->mixSaver(folderPath, stems);
+    auto guard = m_impl->saveGuard;
+    {
+        std::lock_guard lock(guard->mutex);
+        for (auto& job : guard->pending) {
+            if (job.folder == folderPath) {
+                job.stems = std::move(stems); // coalesce: the waiting save writes the newest mix
+                return;
+            }
+        }
+        guard->pending.push_back({std::move(folderPath), std::move(stems)});
+    }
+    m_impl->saveWorker.post([guard, saver = m_impl->mixSaver]() {
+        Impl::SaveJob job;
+        {
+            std::lock_guard lock(guard->mutex);
+            if (guard->pending.empty()) return;
+            job = std::move(guard->pending.front());
+            guard->pending.pop_front();
+        }
+        const bool ok = saver(job.folder, std::move(job.stems));
+        std::lock_guard lock(guard->mutex);
 #ifdef HARMONYSYNC_QT_AVAILABLE
-    emit mixSaveFinished(ok);
+        if (AudioMixerViewModel* target = guard->target) {
+            guard->results.push_back(ok);
+            QMetaObject::invokeMethod(target, "drainMixSaveResults", Qt::QueuedConnection);
+        }
 #else
-    (void)ok;
+        (void)ok;
+#endif
+    });
+}
+
+void AudioMixerViewModel::flushPendingMixSave() {
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    if (m_impl->autosaveTimer && m_impl->autosaveTimer->isActive()) {
+        m_impl->autosaveTimer->stop();
+        requestMixSave(); // queued behind any save already writing; never on the UI thread
+    }
 #endif
 }
 
-void AudioMixerViewModel::flushPendingMixSave() {}
-
 #ifdef HARMONYSYNC_QT_AVAILABLE
-void AudioMixerViewModel::drainMixSaveResults() {}
+void AudioMixerViewModel::drainMixSaveResults() {
+    std::vector<bool> results;
+    {
+        std::lock_guard lock(m_impl->saveGuard->mutex);
+        results.swap(m_impl->saveGuard->results);
+    }
+    for (bool ok : results) {
+        emit mixSaveFinished(ok);
+    }
+}
 #endif
 
 void AudioMixerViewModel::setCrossfadePosition(float position) noexcept {
