@@ -1,6 +1,9 @@
 #include "AudioEngine.hpp"
 #include "RealtimeHandoff.hpp"
 #include "StemMixer.hpp"
+#ifdef HARMONYSYNC_HAS_QT
+#include <QCoreApplication>
+#endif
 #include <iostream>
 #include <algorithm>
 #include <cassert>
@@ -513,6 +516,17 @@ void testEngineDestroyedWhilePreloadDecoding() {
 
 namespace {
 
+/// Lets a real audio sink pull. Qt's PulseAudio sink calls readData() from the event loop of
+/// the thread that owns it (here the test's main thread), so without this the sink never takes
+/// a handed-off song and the outgoing song is never retired (#185, QA line-721 failure).
+void pumpAudioEvents() {
+#ifdef HARMONYSYNC_HAS_QT
+    if (QCoreApplication::instance() != nullptr) {
+        QCoreApplication::processEvents();
+    }
+#endif
+}
+
 /// Writes small real 16-bit stereo WAVs so preloaded songs hold real memory-mapped buffers.
 class TempWavDir {
 public:
@@ -740,10 +754,11 @@ void testMemoryStaysBoundedOverFiftySwitches() {
     assert(ready->waitFor(ticket, hasStems));
     assert(hasStems);
     engine.clearPreloaded();
-    // With a live audio sink the last handoff may still be in flight; clearPreloaded() also
-    // frees whatever the audio thread has let go of, so retry briefly.
+    // With a live audio sink the outgoing song stays current until the sink pulls once and
+    // takes the handoff; clearPreloaded() then frees the retired song. Let the sink run.
     const auto deadline = std::chrono::steady_clock::now() + 2s;
     while (engine.liveSongSetCountForTesting() != 1 && std::chrono::steady_clock::now() < deadline) {
+        pumpAudioEvents();
         std::this_thread::sleep_for(5ms);
         engine.clearPreloaded();
     }
@@ -758,7 +773,14 @@ void testMemoryStaysBoundedOverFiftySwitches() {
               << maxAfterSwitch << ")." << std::endl;
 }
 
-int main() {
+int main(int argc, char** argv) {
+#ifdef HARMONYSYNC_HAS_QT
+    // Qt Multimedia needs an application object; the PulseAudio sink pulls from its event loop.
+    QCoreApplication app(argc, argv);
+#else
+    (void)argc;
+    (void)argv;
+#endif
     try {
         testAudioEngineStates();
         testStemMixerCalculation();
