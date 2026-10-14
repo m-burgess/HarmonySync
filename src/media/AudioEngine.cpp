@@ -69,6 +69,9 @@ public:
         SongSetLease lease; // first, so it is released after the buffers are unmapped
         std::vector<StemBuffer> buffers;
         double duration = 0.0;
+        /// AudioEngine::songKey() of the stems this set was built from; stem changes queued
+        /// for another song are dropped against it (#177).
+        std::vector<std::string> key;
     };
 
     /// Song handoff (#177): the control thread publishes a fully mapped set; read() takes
@@ -218,6 +221,7 @@ AudioMixerDevice::StemBufferSet mapStemBufferSet(const std::vector<Core::MediaSt
                                                  const std::atomic<bool>* cancelled = nullptr) {
     AudioMixerDevice::StemBufferSet set;
     set.lease = SongSetLease(liveSets);
+    set.key = AudioEngine::songKey(stems);
     double maxDuration = 0.0;
     double fallbackDuration = 0.0;
     FFmpegAudioDecoder decoder;
@@ -293,6 +297,8 @@ struct PreloadWorker {
 struct AudioEngine::Impl {
     std::vector<Core::MediaStem> stems;
     std::vector<Core::MediaStem> preloadedStems;
+    /// songKey() of `stems` (control thread). Tags every queued stem change (#177).
+    std::vector<std::string> stemsKey;
     std::atomic<PlaybackState> state{PlaybackState::Stopped};
     std::atomic<double> position{0.0};
     std::atomic<double> duration{0.0};
@@ -387,23 +393,25 @@ struct AudioEngine::Impl {
         sinkMayRun = false;
     }
 
-    /// Queue a change to one stem of the song the audio thread is playing.
+    /// Queue a change to one stem of the control thread's current song. The change is tagged
+    /// with that song's key; if another song is current by the time it reaches the audio thread
+    /// (a switch landed first), it is dropped and reported, never applied to the wrong song.
     template <typename Apply>
     void updateStemOnAudioThread(int stemIndex, Apply apply) {
-        if (audioThread) {
-            onAudioThread([device = &mixerDevice, stemIndex, apply] {
-                device->takePending(); // apply the change to the newly switched song
-                AudioMixerDevice::StemBufferSet* set = device->m_sets.current();
-                if (set != nullptr && stemIndex < static_cast<int>(set->buffers.size())) {
-                    apply(set->buffers[static_cast<std::size_t>(stemIndex)].stem);
+        onAudioThread([device = &mixerDevice, stemIndex, apply, key = stemsKey,
+                       onStale = staleStemChangeCallback] {
+            device->takePending(); // see the song that is current now, not the outgoing one
+            AudioMixerDevice::StemBufferSet* set = device->m_sets.current();
+            if (set == nullptr || set->key != key) {
+                if (onStale) {
+                    onStale(key, stemIndex);
                 }
-            });
-            return;
-        }
-        AudioMixerDevice::StemBufferSet* set = mixerDevice.m_sets.latest();
-        if (set != nullptr && stemIndex < static_cast<int>(set->buffers.size())) {
-            apply(set->buffers[static_cast<std::size_t>(stemIndex)].stem);
-        }
+                return;
+            }
+            if (stemIndex < static_cast<int>(set->buffers.size())) {
+                apply(set->buffers[static_cast<std::size_t>(stemIndex)].stem);
+            }
+        });
     }
 #endif
 
@@ -552,6 +560,7 @@ bool AudioEngine::loadStems(const std::vector<Core::MediaStem>& stems) {
     m_impl->joinFinishedWorkers();
     m_impl->stems.clear();
     m_impl->preloadedStems.clear();
+    m_impl->stemsKey = songKey(stems);
     m_impl->position.store(0.0, std::memory_order_relaxed);
     m_impl->stopSinkAndWait();
 
@@ -609,6 +618,7 @@ bool AudioEngine::switchToPreloaded() {
     AudioMixerDevice& device = m_impl->mixerDevice;
     device.m_sets.reclaimRetired();
 
+    m_impl->stemsKey = m_impl->preloadedSet.key;
     const double nextDuration = m_impl->preloadedSet.duration;
     const bool nextHasAudio = !m_impl->preloadedSet.buffers.empty();
     // No decoding or mapping here: hand the already-mapped set to the audio thread.
@@ -713,6 +723,7 @@ void AudioEngine::clearPreloaded() {
 void AudioEngine::unloadCurrent() {
     stop();
     m_impl->stems.clear();
+    m_impl->stemsKey.clear();
     m_impl->duration.store(0.0, std::memory_order_relaxed);
     m_impl->stopSinkAndWait();
     // Sink is stopped, so no read() is in flight (same rule as loadStems()): the current,
