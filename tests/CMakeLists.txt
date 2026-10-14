@@ -145,6 +145,6 @@ if(Qt6_FOUND)
 
     # #187/#220: setlist selection to song audio, through SongSwitchCoordinator.
     add_executable(test_song_switch_coordinator test_song_switch_coordinator.cpp)
-    target_link_libraries(test_song_switch_coordinator PRIVATE harmonysync_viewmodels harmonysync_media harmonysync_core Qt6::Core)
+    target_link_libraries(test_song_switch_coordinator PRIVATE harmonysync_viewmodels harmonysync_media harmonysync_core Qt6::Core Qt6::Test)
     add_test(NAME test_song_switch_coordinator COMMAND test_song_switch_coordinator)
 endif()

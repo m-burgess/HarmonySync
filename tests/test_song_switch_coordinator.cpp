@@ -12,6 +12,7 @@
 
 #include <QCoreApplication>
 #include <QElapsedTimer>
+#include <QSignalSpy>
 #include <QTimer>
 
 #include <algorithm>
@@ -481,6 +482,115 @@ void testRepriseOfSameSongStillSwitches() {
     std::cout << "[PASS] testRepriseOfSameSongStillSwitches passed." << std::endl;
 }
 
+// QA (232): a short order opened after a long one. If a count drop lands after
+// serviceOrderOpened (not from removeSongAt), it must not arm the "shifted by removal"
+// skip, so picking the reprise row just above the current one still switches.
+// The real open emits itemCountChanged before serviceOrderOpened, so the late
+// delivery is simulated by re-emitting the stale long count and then the drop.
+void testShortOrderAfterLongOrderRepriseAboveStillSwitches() {
+    std::cout << "[TEST] Running testShortOrderAfterLongOrderRepriseAboveStillSwitches..." << std::endl;
+    DecodeProbe probe;
+    SetlistViewModel setlist;
+    AudioMixerViewModel mixer;
+    SongSwitchCoordinator coordinator(setlist, mixer);
+    mixer.setPreloadDecodeHookForTesting(probe.hook());
+
+    openAndSettle(setlist, mixer, makeRealServiceOrder("long", {"Alpha", "Bravo", "Charlie", "Delta", "Echo"}));
+    setlist.setCurrentSongIndex(4);
+    check(waitFor([&] { return currentStem(mixer) == stemOfSong(setlist, 4); }, 3000), "long: Echo never current");
+    runEvents(50);
+
+    // Late count delivery right after the short order's serviceOrderOpened.
+    bool injectOnOpen = true;
+    auto openHook = QObject::connect(&setlist, &SetlistViewModel::serviceOrderOpened, [&] {
+        if (!injectOnOpen) return;
+        injectOnOpen = false;
+        emit setlist.itemCountChanged(5);
+        emit setlist.itemCountChanged(setlist.itemCount());
+    });
+    const fs::path shortRoot = makeRealServiceOrder("short", {"Bravo", "Alpha"});
+    openAndSettle(setlist, mixer, shortRoot);
+    QObject::disconnect(openHook);
+    check(!injectOnOpen, "short: serviceOrderOpened hook never ran");
+    // Rows: Bravo, Alpha, Alpha (the reprise is the same folder in the adjacent row).
+    check(setlist.addSongFolder(QString::fromStdString((shortRoot / "02_Song_Alpha").string())), "short: add reprise failed");
+    check(setlist.itemCount() == 3, "short: " + std::to_string(setlist.itemCount()) + " rows, want 3");
+    setlist.setCurrentSongIndex(2);
+    check(waitFor([&] { return currentStem(mixer) == stemOfSong(setlist, 2); }, 3000), "short: reprise row never current");
+    runEvents(50);
+
+    // A stale drop (5 -> 3) arrives now, with no removal in progress.
+    emit setlist.itemCountChanged(5);
+    emit setlist.itemCountChanged(3);
+
+    int switches = 0;
+    QObject::connect(&mixer, &AudioMixerViewModel::songSwitched, [&] { ++switches; });
+    const std::size_t decodesBefore = probe.count();
+    setlist.setCurrentSongIndex(1); // the first Alpha, just above the shown reprise
+    check(waitFor([&] { return switches > 0; }, 3000),
+          "short after long: picking the reprise row above did not switch (decodes " +
+          std::to_string(probe.count() - decodesBefore) + ") - removal flag armed without removeSongAt");
+    check(currentStem(mixer) == stemOfSong(setlist, 1), "short after long: audio is " + currentStem(mixer));
+
+    // The flag must not survive an order open: arm it by a stale drop, reopen, then
+    // the first in-order move must still switch.
+    emit setlist.itemCountChanged(5);
+    emit setlist.itemCountChanged(3);
+    openAndSettle(setlist, mixer, shortRoot);
+    check(setlist.addSongFolder(QString::fromStdString((shortRoot / "02_Song_Alpha").string())), "reopen: add reprise failed");
+    setlist.setCurrentSongIndex(2);
+    check(waitFor([&] { return currentStem(mixer) == stemOfSong(setlist, 2); }, 3000), "reopen: reprise row never current");
+    runEvents(50);
+    switches = 0;
+    setlist.setCurrentSongIndex(1);
+    check(waitFor([&] { return switches > 0; }, 3000), "reopen: removal flag survived the open; pick above was skipped");
+    std::cout << "[PASS] testShortOrderAfterLongOrderRepriseAboveStillSwitches passed." << std::endl;
+}
+
+// QA (232): the coordinator's skip depends on removeSongAt emitting itemCountChanged,
+// then currentSongIndexChanged, then songRemoved. Pin that order, and the skip.
+void testRemoveSongAtSignalOrderAndSkip() {
+    std::cout << "[TEST] Running testRemoveSongAtSignalOrderAndSkip..." << std::endl;
+    DecodeProbe probe;
+    SetlistViewModel setlist;
+    AudioMixerViewModel mixer;
+    SongSwitchCoordinator coordinator(setlist, mixer);
+    mixer.setPreloadDecodeHookForTesting(probe.hook());
+
+    openAndSettle(setlist, mixer, makeRealServiceOrder("signal_order", {"Alpha", "Bravo", "Charlie", "Delta"}));
+    setlist.setCurrentSongIndex(2);
+    const std::string songC = stemOfSong(setlist, 2);
+    check(waitFor([&] { return currentStem(mixer) == songC && mixer.isPreloadedSong(setlist.stemsAt(3)); }, 3000),
+          "signal order: setup never reached Charlie current, Delta preloaded");
+    runEvents(50);
+
+    std::vector<std::string> sequence;
+    QSignalSpy countSpy(&setlist, &SetlistViewModel::itemCountChanged);
+    QSignalSpy indexSpy(&setlist, &SetlistViewModel::currentSongIndexChanged);
+    QSignalSpy removedSpy(&setlist, &SetlistViewModel::songRemoved);
+    QObject::connect(&setlist, &SetlistViewModel::itemCountChanged, [&](int) { sequence.push_back("itemCountChanged"); });
+    QObject::connect(&setlist, &SetlistViewModel::currentSongIndexChanged, [&](int) { sequence.push_back("currentSongIndexChanged"); });
+    QObject::connect(&setlist, &SetlistViewModel::songRemoved, [&](int) { sequence.push_back("songRemoved"); });
+    int switches = 0;
+    QObject::connect(&mixer, &AudioMixerViewModel::songSwitched, [&] { ++switches; });
+    const std::size_t decodesAtRemove = probe.count();
+
+    setlist.removeSongAt(0);
+    runEvents(100);
+    std::string got;
+    for (const auto& s : sequence) got += s + " ";
+    check(sequence == std::vector<std::string>{"itemCountChanged", "currentSongIndexChanged", "songRemoved"},
+          "signal order: got [" + got + "]");
+    check(countSpy.count() == 1 && countSpy.at(0).at(0).toInt() == 3, "signal order: itemCountChanged(3) not emitted once");
+    check(indexSpy.count() == 1 && indexSpy.at(0).at(0).toInt() == 1, "signal order: currentSongIndexChanged(1) not emitted once");
+    check(removedSpy.count() == 1 && removedSpy.at(0).at(0).toInt() == 0, "signal order: songRemoved(0) not emitted once");
+    // The skip: same song, one row up, no switch and no new decode.
+    check(switches == 0, "signal order: removal switched the song " + std::to_string(switches) + " time(s)");
+    check(currentStem(mixer) == songC, "signal order: audio is " + currentStem(mixer) + ", want Charlie");
+    check(probe.count() == decodesAtRemove, "signal order: removal decoded again");
+    std::cout << "[PASS] testRemoveSongAtSignalOrderAndSkip passed." << std::endl;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -496,6 +606,8 @@ int main(int argc, char** argv) {
         {"testRemovingPreloadedSongPreloadsNewNext", testRemovingPreloadedSongPreloadsNewNext},
         {"testRemovingEarlierSongKeepsSameSongSelected", testRemovingEarlierSongKeepsSameSongSelected},
         {"testRepriseOfSameSongStillSwitches", testRepriseOfSameSongStillSwitches},
+        {"testShortOrderAfterLongOrderRepriseAboveStillSwitches", testShortOrderAfterLongOrderRepriseAboveStillSwitches},
+        {"testRemoveSongAtSignalOrderAndSkip", testRemoveSongAtSignalOrderAndSkip},
         {"testPendingAdvanceSurvivesRemovingNextSong", testPendingAdvanceSurvivesRemovingNextSong},
         {"testOpeningOrderDropsOldPreloadFirst", testOpeningOrderDropsOldPreloadFirst},
         {"testClearAndReopenFiftyTimesHoldsAtMostTwoSongs", testClearAndReopenFiftyTimesHoldsAtMostTwoSongs},
