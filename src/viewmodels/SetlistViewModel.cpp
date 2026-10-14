@@ -30,6 +30,7 @@ struct SetlistViewModel::Impl {
 #ifdef HARMONYSYNC_QT_AVAILABLE
     std::unique_ptr<SetlistListModel> listModel; // #219
 #endif
+    std::function<void(const std::string&)> scanHook;
 
     int activeLyricIndex{-1};
     std::string activeLyricText;
@@ -258,7 +259,13 @@ bool SetlistViewModel::openServiceOrderRootFolder(const QString& rootFolderPath)
 #else
 bool SetlistViewModel::openServiceOrderRootFolder(const std::string& pathStr) {
 #endif
-    Core::ServiceOrder newOrder = m_impl->scanner.scanServiceOrderDirectory(pathStr);
+    if (m_impl->scanHook) {
+        m_impl->scanHook(pathStr);
+    }
+    return applyScannedOrder(m_impl->scanner.scanServiceOrderDirectory(pathStr));
+}
+
+bool SetlistViewModel::applyScannedOrder(Core::ServiceOrder newOrder) {
     if (!newOrder.songs().empty()) {
 #ifdef HARMONYSYNC_QT_AVAILABLE
         m_impl->listModel->beginReplaceAll();
@@ -282,6 +289,19 @@ bool SetlistViewModel::openServiceOrderRootFolder(const std::string& pathStr) {
     }
     return false;
 }
+
+void SetlistViewModel::setServiceOrderScanHookForTesting(std::function<void(const std::string&)> hook) {
+    m_impl->scanHook = std::move(hook);
+}
+
+#ifdef HARMONYSYNC_QT_AVAILABLE
+// STUB (fail-first commit): still scans on the calling thread.
+void SetlistViewModel::openServiceOrderRootFolderAsync(const QString& rootFolderPath) {
+    emit serviceOrderOpenFinished(openServiceOrderRootFolder(rootFolderPath));
+}
+
+void SetlistViewModel::drainScanResults() {}
+#endif
 
 #ifdef HARMONYSYNC_QT_AVAILABLE
 QString SetlistViewModel::itemNameAt(int index) const {

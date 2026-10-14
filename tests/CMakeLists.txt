@@ -325,4 +325,16 @@ if(Qt6_FOUND)
         PRIVATE HS_QML_DIR="${CMAKE_SOURCE_DIR}/src/qml"
     )
     add_test(NAME test_qml_setlist_model COMMAND test_qml_setlist_model)
+
+    # #177: service-order scan and mix autosave never block the UI thread.
+    add_executable(test_off_gui_thread test_off_gui_thread.cpp)
+    target_link_libraries(
+        test_off_gui_thread
+        PRIVATE
+            harmonysync_viewmodels
+            harmonysync_media
+            harmonysync_core
+            Qt6::Core
+    )
+    add_test(NAME test_off_gui_thread COMMAND test_off_gui_thread)
 endif()

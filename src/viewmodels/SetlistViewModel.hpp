@@ -3,6 +3,7 @@
 
 #include "ServiceOrder.hpp"
 #include "FolderService.hpp"
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -87,9 +88,22 @@ public:
     // C++ strictly typed methods
     [[nodiscard]] std::vector<Core::MediaStem> stemsAt(int index) const;
 
+    /// Test seam (#177): runs on the scanning thread just before each folder scan.
+    void setServiceOrderScanHookForTesting(std::function<void(const std::string&)> hook);
+
 #ifdef HARMONYSYNC_QT_AVAILABLE
     [[nodiscard]] QAbstractListModel* setlistModel() const;
     Q_INVOKABLE bool openServiceOrderRootFolder(const QString& rootFolderPath);
+    /**
+     * @brief Open a service order without blocking the UI thread (#177).
+     * The folder scan runs on a worker owned by this view model. When it finishes, the
+     * result is applied on the UI thread exactly like openServiceOrderRootFolder (#220:
+     * serviceOrderOpened, then song 0 is cued). The current setlist stays usable while
+     * it scans. A newer request supersedes an older one; the older result is dropped.
+     * isLoading is true while a scan is in flight; serviceOrderOpenFinished(bool) reports
+     * whether the folder held a service order.
+     */
+    Q_INVOKABLE void openServiceOrderRootFolderAsync(const QString& rootFolderPath);
     Q_INVOKABLE bool addSongFolder(const QString& folderPath);
     Q_INVOKABLE QString itemNameAt(int index) const;
     Q_INVOKABLE bool itemHasSongMapAt(int index) const;
@@ -151,6 +165,8 @@ signals:
     /// Emitted first by removeSongAt, before itemCountChanged / currentSongIndexChanged / songRemoved.
     void songRemovalStarted(int index);
     void songRemoved(int index);
+    /// An openServiceOrderRootFolderAsync request finished (only the newest reports, #177).
+    void serviceOrderOpenFinished(bool opened);
     void activeSongMapChanged(bool hasMap);
     void loadingStateChanged(bool loading);
     void currentLyricsContentChanged();
@@ -165,6 +181,11 @@ signals:
 #endif
 
 private:
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    Q_INVOKABLE void drainScanResults();
+#endif
+    bool applyScannedOrder(Core::ServiceOrder newOrder);
+
     struct Impl;
     std::unique_ptr<Impl> m_impl;
 };

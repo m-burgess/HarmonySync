@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <string>
 #include <vector>
 
 #if defined(HARMONYSYNC_HAS_QT) || __has_include(<QObject>)
@@ -96,7 +97,19 @@ public:
     [[nodiscard]] bool isPreloadReadyForTesting() const noexcept;
     /// Test seam (#185): song buffer sets held by this view model's engines.
     [[nodiscard]] std::size_t liveSongSetCountForTesting() const noexcept;
-
+    /**
+     * @brief Mix-state autosave (#177, #204/#205).
+     * The debounced autosave writes on a worker owned by this view model, never on the UI
+     * thread. The worker gets a copy of the stems and the song folder. Saves run one at a
+     * time; while one is writing, newer requests coalesce into a single pending save.
+     * mixSaveFinished(ok) is emitted on the UI thread after each write.
+     */
+    using MixStateSaver = std::function<bool(const std::string& folderPath, std::vector<Core::MediaStem> stems)>;
+    /// Test seam: replaces Core::FolderService::saveMixState. Called on the save worker.
+    void setMixStateSaverForTesting(MixStateSaver saver);
+    /// #205: before switching songs, queue any debounced (not yet started) save for the
+    /// current song now. It runs after any save already writing; never on the UI thread.
+    void flushPendingMixSave();
 #ifdef HARMONYSYNC_QT_AVAILABLE
     [[nodiscard]] QString activeBackgroundVideo() const;
     Q_INVOKABLE void loadNextBackgroundVideo(const QString& path);
@@ -154,13 +167,19 @@ signals:
     void songSwitched();
     void stemStateChanged(int index);
     void activeBackgroundVideoChanged(const QString& path);
+    /// A mix-state autosave finished; ok is false when the write failed (#204/#205).
+    void mixSaveFinished(bool ok);
 #endif
 
 private slots:
     // UI thread: applies decodes the engine's worker finished (queued by name, no captures).
     void drainPreloadResults();
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    Q_INVOKABLE void drainMixSaveResults();
+#endif
 
-private: // NOLINT(readability-redundant-access-specifiers): end the Qt slots section before regular private members.
+private:
+    void requestMixSave();
     bool switchToPreloadedSong();
     void startPreload(const std::vector<Core::MediaStem>& stems, bool switchWhenReady);
     void onPreloadReady(std::uint64_t ticket, bool hasStems);

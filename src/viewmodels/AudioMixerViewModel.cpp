@@ -7,6 +7,7 @@
 #include "FFmpegTransposer.hpp"
 
 #include <mutex>
+#include <type_traits>
 
 #ifdef HARMONYSYNC_QT_AVAILABLE
 #include <QMetaObject>
@@ -14,6 +15,22 @@
 #endif
 
 namespace HarmonySync::ViewModels {
+
+namespace {
+// saveMixState returns void today; C++ Lead is changing it to bool (false on failure).
+// Compile against either: void counts as success, bool is passed through.
+// (A template so the untaken branch is discarded.)
+template <typename Service = Core::FolderService>
+bool saveMixStateWithResult(const std::string& folderPath, const std::vector<Core::MediaStem>& stems) {
+    using Result = decltype(Service::saveMixState(folderPath, stems));
+    if constexpr (std::is_void_v<Result>) {
+        Service::saveMixState(folderPath, stems);
+        return true;
+    } else {
+        return static_cast<bool>(Service::saveMixState(folderPath, stems));
+    }
+}
+} // namespace
 
 struct AudioMixerViewModel::Impl {
     std::shared_ptr<Media::AudioEngine> m_activeDeck;
@@ -40,6 +57,10 @@ struct AudioMixerViewModel::Impl {
         std::vector<std::pair<std::uint64_t, bool>> readyResults;
     };
     std::shared_ptr<CallbackGuard> callbackGuard = std::make_shared<CallbackGuard>();
+
+    MixStateSaver mixSaver = [](const std::string& folder, std::vector<Core::MediaStem> stems) {
+        return saveMixStateWithResult(folder, stems);
+    };
 
 #ifdef HARMONYSYNC_QT_AVAILABLE
     std::unique_ptr<QTimer> autosaveTimer;
@@ -77,13 +98,7 @@ AudioMixerViewModel::AudioMixerViewModel(std::shared_ptr<Media::AudioEngine> aud
     : m_impl(std::make_unique<Impl>(std::move(audioEngine), std::move(nextAudioEngine))) {
     m_impl->callbackGuard->target = this;
 #ifdef HARMONYSYNC_QT_AVAILABLE
-    QObject::connect(m_impl->autosaveTimer.get(), &QTimer::timeout, this, [this]() {
-        auto stems = m_impl->m_activeDeck->loadedStems();
-        if (!stems.empty()) {
-            std::string folderPath = std::filesystem::path(stems[0].filePath()).parent_path().string();
-            Core::FolderService::saveMixState(folderPath, stems);
-        }
-    });
+    QObject::connect(m_impl->autosaveTimer.get(), &QTimer::timeout, this, [this]() { requestMixSave(); });
 
     QObject::connect(m_impl->positionTimer.get(), &QTimer::timeout, this, [this]() {
         if (m_impl->m_activeDeck->isPlaying()) {
@@ -419,6 +434,29 @@ bool AudioMixerViewModel::isPreloadReadyForTesting() const noexcept {
 std::size_t AudioMixerViewModel::liveSongSetCountForTesting() const noexcept {
     return m_impl->m_activeDeck->liveSongSetCountForTesting() + m_impl->m_nextDeck->liveSongSetCountForTesting();
 }
+
+void AudioMixerViewModel::setMixStateSaverForTesting(MixStateSaver saver) {
+    m_impl->mixSaver = std::move(saver);
+}
+
+// STUB (fail-first commit): still writes on the UI thread.
+void AudioMixerViewModel::requestMixSave() {
+    auto stems = m_impl->m_activeDeck->loadedStems();
+    if (stems.empty()) return;
+    std::string folderPath = std::filesystem::path(stems[0].filePath()).parent_path().string();
+    bool ok = m_impl->mixSaver(folderPath, stems);
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    emit mixSaveFinished(ok);
+#else
+    (void)ok;
+#endif
+}
+
+void AudioMixerViewModel::flushPendingMixSave() {}
+
+#ifdef HARMONYSYNC_QT_AVAILABLE
+void AudioMixerViewModel::drainMixSaveResults() {}
+#endif
 
 void AudioMixerViewModel::setCrossfadePosition(float position) noexcept {
     float clamped = std::clamp(position, 0.0f, 1.0f);
