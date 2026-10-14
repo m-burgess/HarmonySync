@@ -23,6 +23,8 @@ public:
 private:
     void onCurrentSongIndexChanged(int index);
     void preloadSongAfterCurrent();
+    void onSetlistCleared();
+    void onSongRemoved(int index);
 
     SetlistViewModel& m_setlist;
     AudioMixerViewModel& m_mixer;

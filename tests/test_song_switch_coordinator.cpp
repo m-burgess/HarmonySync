@@ -313,15 +313,19 @@ void testRemovingPreloadedSongPreloadsNewNext() {
     openAndSettle(setlist, mixer, makeRealServiceOrder("remove", {"Alpha", "Bravo", "Charlie"}));
     const auto bravo = setlist.stemsAt(1);
     const std::string songC = stemOfSong(setlist, 2);
+    const std::size_t decodesAtRemove = probe.count();
     setlist.removeSongAt(1); // Bravo was the preloaded next song
     check(!mixer.isPreloadedSong(bravo), "remove: the removed song is still the preloaded one");
-    check(waitFor([&] { return mixer.isPreloadedSong(setlist.stemsAt(1)) && mixer.liveSongSetCountForTesting() == 2; }, 3000),
+    check(waitFor([&] { return mixer.isPreloadedSong(setlist.stemsAt(1)) && probe.count() == decodesAtRemove + 1
+                               && mixer.liveSongSetCountForTesting() == 2; }, 3000),
           "remove: the new next song (Charlie) was not preloaded (live sets "
           + std::to_string(mixer.liveSongSetCountForTesting()) + ")");
+    runEvents(50);
     const std::size_t decodesBefore = probe.count();
     setlist.setCurrentSongIndex(1);
     check(waitFor([&] { return currentStem(mixer) == songC; }, 3000), "remove: advancing never switched to Charlie (got " + currentStem(mixer) + ")");
     runEvents(50);
+    std::cout << "  decodes before/after advance: " << decodesBefore << "/" << probe.count() << std::endl;
     check(probe.count() == decodesBefore,
           "remove: advancing to Charlie decoded it again instead of using the preload");
     check(probe.noneOn(std::this_thread::get_id()), "a decode ran on the UI thread");

@@ -318,6 +318,9 @@ void SetlistViewModel::removeSongAt(int index) {
         if (m_impl->currentSongIndex >= itemCount()) {
             setCurrentSongIndex(itemCount() - 1);
         }
+#ifdef HARMONYSYNC_QT_AVAILABLE
+        emit songRemoved(index);
+#endif
     }
 }
 
@@ -328,6 +331,7 @@ void SetlistViewModel::clearSetlist() {
     emit itemCountChanged(0);
     emit currentSongIndexChanged(-1);
     emit activeSongMapChanged(false);
+    emit setlistCleared();
 #endif
 }
 
