@@ -7,6 +7,7 @@
 #ifdef HARMONYSYNC_HAS_QT
 #include <QCoreApplication>
 #endif
+#include <algorithm>
 #include <cassert>
 #include <chrono>
 #include <cstdint>
@@ -69,7 +70,7 @@ int main(int argc, char** argv) {
         }
 
         std::cout << "[TEST] Running testAudioKeepsFlowingWhileMainThreadIsBlocked..." << std::endl;
-        assert(engine.loadStems({MediaStem("c1", "Click", writeWav(dir / "click.wav", 10))}));
+        assert(engine.loadStems({MediaStem("c1", "Click", writeWav(dir / "click.wav", 30))}));
         engine.play();
         assert(engine.isPlaying());
 
@@ -86,12 +87,18 @@ int main(int argc, char** argv) {
 
         // Now block the main thread for 2s without processing events, as a slow folder scan
         // or autosave on the GUI thread would.
+        // HARMONYSYNC_TEST_BLOCK_MS lengthens the block for a manual recording check
+        // (e.g. 9000 to match QA's slow folder scan); the default 2s is what CI runs.
+        std::chrono::milliseconds blockFor = 2s;
+        if (const char* env = std::getenv("HARMONYSYNC_TEST_BLOCK_MS")) {
+            blockFor = std::chrono::milliseconds(std::max(2000L, std::atol(env)));
+        }
         const std::uint64_t before = engine.audioCallbackCountForTesting();
-        std::this_thread::sleep_for(2s);
+        std::this_thread::sleep_for(blockFor);
         const std::uint64_t after = engine.audioCallbackCountForTesting();
         const std::thread::id callbackThread = engine.audioCallbackThreadForTesting();
 
-        std::cout << "  readData() calls during the 2s block: " << (after - before)
+        std::cout << "  readData() calls during the " << blockFor.count() << "ms block: " << (after - before)
                   << " (total " << after << "), on main thread: "
                   << (callbackThread == std::this_thread::get_id() ? "yes" : "no") << std::endl;
 
