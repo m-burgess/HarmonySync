@@ -107,8 +107,13 @@ public:
      * @brief Called when a queued setStemVolume()/setStemMuted()/setStemSolo() reached the audio
      * thread after its song stopped being current (e.g. a switch landed first), so it was
      * dropped instead of being applied to the next song (#177). @p songKey is the song the change
-     * was made for. Runs on the audio thread: copy what you need and marshal to your own thread
-     * (the control-side stems of that song already hold the change, so re-sync/save from there).
+     * was made for, passed by const reference to the engine's own copy (no copy is made).
+     *
+     * Runs on the audio thread. It must not allocate, block, lock a mutex the UI thread can
+     * hold, or touch UI objects. In Qt, only post a queued signal (e.g. emit a signal connected
+     * with Qt::QueuedConnection, or QMetaObject::invokeMethod(..., Qt::QueuedConnection)) and do
+     * the copy/re-sync/save on the UI thread; the control-side stems of that song already hold
+     * the change.
      */
     using StaleStemChangeCallback = std::function<void(const std::vector<std::string>& songKey, int stemIndex)>;
     void setStaleStemChangeCallback(StaleStemChangeCallback callback);
