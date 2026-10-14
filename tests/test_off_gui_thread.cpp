@@ -20,6 +20,9 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cmath>
+#include <condition_variable>
+#include <cstdint>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -269,6 +272,103 @@ void testPreSwitchFlushWaitsForPendingSave() {
     check(std::abs(log.saves[1].volume0 - 0.4f) < 1e-4, "flush lost the pending change");
 }
 
+// ---------- (c) showSong: mix edits while the next song's preload is decoding ----------
+
+// A valid 16-bit PCM WAV (44.1kHz stereo, 0.5s) so the engine can really decode and switch.
+void writeWav(const fs::path& path) {
+    const std::uint32_t rate = 44100, frames = rate / 2;
+    const std::uint16_t channels = 2, bits = 16;
+    const std::uint32_t dataBytes = frames * channels * bits / 8;
+    std::ofstream f(path, std::ios::binary);
+    auto u32 = [&](std::uint32_t v) { f.write(reinterpret_cast<const char*>(&v), 4); };
+    auto u16 = [&](std::uint16_t v) { f.write(reinterpret_cast<const char*>(&v), 2); };
+    f << "RIFF"; u32(36 + dataBytes); f << "WAVEfmt "; u32(16); u16(1); u16(channels); u32(rate);
+    u32(rate * channels * bits / 8); u16(channels * bits / 8); u16(bits); f << "data"; u32(dataBytes);
+    for (std::uint32_t i = 0; i < frames; ++i) {
+        auto v = static_cast<std::int16_t>(3000 * std::sin(2 * 3.14159265 * 440 * i / rate));
+        u16(static_cast<std::uint16_t>(v)); u16(static_cast<std::uint16_t>(v));
+    }
+}
+
+std::vector<MediaStem> realSong(const std::string& folder) {
+    fs::path dir = fs::temp_directory_path() / folder;
+    fs::remove_all(dir);
+    fs::create_directories(dir);
+    writeWav(dir / "drums.wav");
+    writeWav(dir / "bass.wav");
+    return {MediaStem("1", "Drums", (dir / "drums.wav").string()),
+            MediaStem("2", "Bass", (dir / "bass.wav").string())};
+}
+
+// Holds the engine's preload decode until release().
+struct DecodeGate {
+    std::mutex mutex;
+    std::condition_variable cv;
+    bool open{false};
+    std::atomic<bool> entered{false};
+    std::function<void()> hook() {
+        return [this] {
+            entered = true;
+            std::unique_lock lock(mutex);
+            cv.wait(lock, [this] { return open; });
+        };
+    }
+    void release() { { std::lock_guard lock(mutex); open = true; } cv.notify_all(); }
+};
+
+struct MuteSave { std::string folder; bool mute0; };
+
+// waitForDebounce: true = the 500ms autosave fires while B is still decoding;
+// false = the mute is still debounced when the switch happens (flush-at-switch path).
+void runShowSongMuteCase(bool waitForDebounce) {
+    const std::string tag = waitForDebounce ? "dbnc" : "late";
+    auto songA = realSong("hs177_show_A_" + tag);
+    auto songB = realSong("hs177_show_B_" + tag);
+    const fs::path folderA = fs::path(songA[0].filePath()).parent_path();
+    const fs::path folderB = fs::path(songB[0].filePath()).parent_path();
+
+    std::mutex m;
+    std::vector<MuteSave> saves;
+    DecodeGate gate;
+    int switched = 0;
+    {
+        AudioMixerViewModel vm;
+        vm.setMixStateSaverForTesting([&](const std::string& folder, std::vector<MediaStem> stems) {
+            std::lock_guard lock(m);
+            saves.push_back({folder, !stems.empty() && stems[0].isMuted()});
+            return true;
+        });
+        QObject::connect(&vm, &AudioMixerViewModel::songSwitched, [&] { ++switched; });
+        check(vm.loadSongStems(songA), "load A failed");
+        check(vm.loadedStemCount() == 2, "A not loaded");
+        vm.setPreloadDecodeHookForTesting(gate.hook());
+
+        check(vm.showSong(songB), "showSong(B) failed");
+        check(waitFor([&] { return gate.entered.load(); }, 3000), "B's decode never started");
+        vm.toggleStemMute(0);                 // edit while B is decoding: belongs to A
+        check(vm.stemIsMuted(0), "mute did not apply to the current song (A)");
+        if (waitForDebounce) runEvents(800);  // autosave fires before the switch
+        else runEvents(50);                   // still debounced at switch time
+
+        gate.release();
+        check(waitFor([&] { return switched == 1; }, 5000), "switch to B never happened");
+        runEvents(900);                       // any stray debounce would save now
+        check(!vm.stemIsMuted(0), "B's control-side stem picked up A's mute");
+        check(!vm.stemIsMuted(1), "B's stem 1 muted");
+        vm.setPreloadDecodeHookForTesting(nullptr);
+    }
+    std::lock_guard lock(m);
+    bool aSavedMuted = false;
+    for (const auto& s : saves) {
+        if (fs::path(s.folder) == folderA && s.mute0) aSavedMuted = true;
+        check(!(fs::path(s.folder) == folderB && s.mute0), "A's mute was saved into B's folder");
+    }
+    check(aSavedMuted, "A's mute was never saved to A's folder (" + std::to_string(saves.size()) + " saves)");
+}
+
+void testShowSongMuteDuringDecodeSavedToA() { runShowSongMuteCase(true); }
+void testShowSongMuteJustBeforeSwitchFlushedToA() { runShowSongMuteCase(false); }
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -279,6 +379,8 @@ int main(int argc, char** argv) {
         {"second_open_supersedes_first", testSecondOpenSupersedesFirst},
         {"slow_autosave_does_not_block", testSlowAutosaveDoesNotBlock},
         {"pre_switch_flush_waits_for_pending_save", testPreSwitchFlushWaitsForPendingSave},
+        {"show_song_mute_during_decode_saved_to_A", testShowSongMuteDuringDecodeSavedToA},
+        {"show_song_mute_just_before_switch_flushed_to_A", testShowSongMuteJustBeforeSwitchFlushedToA},
     };
     int failed = 0;
     for (const auto& c : cases) {
