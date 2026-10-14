@@ -363,6 +363,7 @@ void SetlistViewModel::removeSongAt(int index) {
         m_impl->listModel->endRemove();
         emit itemCountChanged(itemCount());
 #endif
+        const int currentBefore = m_impl->currentSongIndex;
         if (index < m_impl->currentSongIndex) {
             // An earlier song went: the same song stays selected, one place up.
             --m_impl->currentSongIndex;
@@ -373,6 +374,10 @@ void SetlistViewModel::removeSongAt(int index) {
             setCurrentSongIndex(itemCount() - 1);
         }
 #ifdef HARMONYSYNC_QT_AVAILABLE
+        // Rows below the removed one moved up, so refresh the current-row role.
+        if (index <= currentBefore) {
+            m_impl->listModel->currentRowChanged(currentBefore - 1, m_impl->currentSongIndex);
+        }
         emit songRemoved(index);
 #endif
     }
