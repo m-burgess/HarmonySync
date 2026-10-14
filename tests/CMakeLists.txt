@@ -307,4 +307,22 @@ if(Qt6_FOUND)
         NAME test_song_switch_coordinator
         COMMAND test_song_switch_coordinator
     )
+    # #219/#206: the setlist rows follow the service order through ServiceOrderPanel.qml.
+    add_executable(test_qml_setlist_model test_qml_setlist_model.cpp)
+    target_link_libraries(
+        test_qml_setlist_model
+        PRIVATE
+            harmonysync_viewmodels
+            harmonysync_core
+            Qt6::Core
+            Qt6::Gui
+            Qt6::Quick
+            Qt6::QuickControls2
+            Qt6::Test
+    )
+    target_compile_definitions(
+        test_qml_setlist_model
+        PRIVATE HS_QML_DIR="${CMAKE_SOURCE_DIR}/src/qml"
+    )
+    add_test(NAME test_qml_setlist_model COMMAND test_qml_setlist_model)
 endif()
