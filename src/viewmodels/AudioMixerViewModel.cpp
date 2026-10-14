@@ -6,7 +6,10 @@
 #include "FolderService.hpp"
 #include "FFmpegTransposer.hpp"
 
+#include <mutex>
+
 #ifdef HARMONYSYNC_QT_AVAILABLE
+#include <QMetaObject>
 #include <QTimer>
 #endif
 
@@ -21,6 +24,20 @@ struct AudioMixerViewModel::Impl {
     std::string nextBackgroundVideo;
     bool isTransposing{false};
     Media::FFmpegTransposer transposer;
+
+    // #187: the song being (or already) preloaded, keyed by its stem file paths.
+    std::vector<std::string> preloadKey;
+    Media::AudioEngine::PreloadTicket preloadTicket{0};
+    bool preloadReady{false};
+    bool switchWhenReady{false};
+
+    // The engine's onReady runs on its worker. It may only post to this view model while
+    // the view model is alive; the destructor clears target under the lock first.
+    struct CallbackGuard {
+        std::mutex mutex;
+        AudioMixerViewModel* target{nullptr};
+    };
+    std::shared_ptr<CallbackGuard> callbackGuard = std::make_shared<CallbackGuard>();
 
 #ifdef HARMONYSYNC_QT_AVAILABLE
     std::unique_ptr<QTimer> autosaveTimer;
@@ -54,6 +71,7 @@ struct AudioMixerViewModel::Impl {
 AudioMixerViewModel::AudioMixerViewModel(std::shared_ptr<Media::AudioEngine> audioEngine)
     : m_impl(std::make_unique<Impl>(std::move(audioEngine)))
 {
+    m_impl->callbackGuard->target = this;
 #ifdef HARMONYSYNC_QT_AVAILABLE
     QObject::connect(m_impl->autosaveTimer.get(), &QTimer::timeout, this, [this]() {
         auto stems = m_impl->m_activeDeck->loadedStems();
@@ -106,7 +124,22 @@ AudioMixerViewModel::AudioMixerViewModel(std::shared_ptr<Media::AudioEngine> aud
 #endif
 }
 
-AudioMixerViewModel::~AudioMixerViewModel() = default;
+AudioMixerViewModel::~AudioMixerViewModel() {
+    // Stop worker callbacks from posting here before the engines (and their workers) go away.
+    std::lock_guard lock(m_impl->callbackGuard->mutex);
+    m_impl->callbackGuard->target = nullptr;
+}
+
+namespace {
+std::vector<std::string> songKey(const std::vector<Core::MediaStem>& stems) {
+    std::vector<std::string> key;
+    key.reserve(stems.size());
+    for (const auto& stem : stems) {
+        key.push_back(stem.filePath());
+    }
+    return key;
+}
+} // namespace
 
 float AudioMixerViewModel::masterVolume() const noexcept {
     return m_impl->m_activeDeck->masterVolume();
@@ -162,6 +195,10 @@ float AudioMixerViewModel::crossfadePosition() const noexcept {
 }
 
 bool AudioMixerViewModel::loadSongStems(const std::vector<Core::MediaStem>& stems) {
+    // loadStems cancels any pending preload in the engine; forget ours too.
+    m_impl->preloadKey.clear();
+    m_impl->preloadReady = false;
+    m_impl->switchWhenReady = false;
     bool result = m_impl->m_activeDeck->loadStems(stems);
 #ifdef HARMONYSYNC_QT_AVAILABLE
     emit stemCountChanged(loadedStemCount());
@@ -205,6 +242,11 @@ void AudioMixerViewModel::setActiveBackgroundVideo(const std::string& path) {
 #endif
 
 bool AudioMixerViewModel::loadNextSongStems(const std::vector<Core::MediaStem>& stems) {
+    // Synchronous preload and switch in one call; decodes on the calling thread.
+    // The app uses showSong()/preloadNextSong() instead (#187).
+    m_impl->preloadKey.clear();
+    m_impl->preloadReady = false;
+    m_impl->switchWhenReady = false;
     // Preload on the active deck, then switch. Do not fill the next deck.
     // Play-or-cue rule (#202): the switch keeps the current play state. If a song is
     // playing, the next song plays from 0; if stopped (opening a service order or
@@ -223,6 +265,94 @@ bool AudioMixerViewModel::loadNextSongStems(const std::vector<Core::MediaStem>& 
     }
 #endif
     return result;
+}
+
+bool AudioMixerViewModel::showSong(const std::vector<Core::MediaStem>& stems) {
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    if (!m_impl->preloadKey.empty() && songKey(stems) == m_impl->preloadKey) {
+        if (m_impl->preloadReady) {
+            return switchToPreloadedSong();
+        }
+        // Still decoding: switch as soon as it is ready. The current song keeps playing.
+        m_impl->switchWhenReady = true;
+        return true;
+    }
+    startPreload(stems, /*switchWhenReady=*/true);
+    return true;
+#else
+    // Without Qt there is no UI thread to protect: preload and switch in one call.
+    return loadNextSongStems(stems);
+#endif
+}
+
+void AudioMixerViewModel::preloadNextSong(const std::vector<Core::MediaStem>& stems) {
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    if (stems.empty() || songKey(stems) == m_impl->preloadKey) {
+        return;
+    }
+    startPreload(stems, /*switchWhenReady=*/false);
+#else
+    (void)stems;
+#endif
+}
+
+void AudioMixerViewModel::startPreload(const std::vector<Core::MediaStem>& stems, bool switchWhenReady) {
+    m_impl->preloadKey = songKey(stems);
+    m_impl->preloadReady = false;
+    m_impl->switchWhenReady = switchWhenReady;
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    // A newer preload cancels the pending one in the engine, and its ticket is ignored here.
+    m_impl->preloadTicket = m_impl->m_activeDeck->preloadStemsAsync(
+        stems, [guard = m_impl->callbackGuard](Media::AudioEngine::PreloadTicket ticket, bool hasStems) {
+            // Worker thread: post to the UI thread, never touch the view model here.
+            std::lock_guard lock(guard->mutex);
+            if (AudioMixerViewModel* target = guard->target) {
+                QMetaObject::invokeMethod(
+                    target, [target, ticket, hasStems]() { target->onPreloadReady(ticket, hasStems); },
+                    Qt::QueuedConnection);
+            }
+        });
+#endif
+}
+
+void AudioMixerViewModel::onPreloadReady(std::uint64_t ticket, bool hasStems) {
+    if (ticket != m_impl->preloadTicket) {
+        return; // a newer request replaced this one
+    }
+    m_impl->preloadReady = true;
+    if (!hasStems) {
+        // Nothing playable (or cancelled): keep the current song, retry on the next request.
+        m_impl->preloadKey.clear();
+        m_impl->switchWhenReady = false;
+        return;
+    }
+    if (m_impl->switchWhenReady) {
+        m_impl->switchWhenReady = false;
+        switchToPreloadedSong();
+    }
+}
+
+bool AudioMixerViewModel::switchToPreloadedSong() {
+    // Play-or-cue rule (#202): the switch keeps the current play state.
+    bool result = m_impl->m_activeDeck->switchToPreloaded();
+    m_impl->preloadKey.clear();
+    m_impl->preloadReady = false;
+    m_impl->switchWhenReady = false;
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    if (result) {
+        emit nextSongLoaded();
+        emit stemCountChanged(loadedStemCount());
+        emit durationChanged(durationSeconds());
+        emit positionChanged(positionSeconds());
+        emit playStateChanged(isPlaying());
+        emit songSwitched();
+    }
+#endif
+    return result;
+}
+
+void AudioMixerViewModel::setPreloadDecodeHookForTesting(std::function<void()> hook) {
+    m_impl->m_activeDeck->setPreloadDecodeHookForTesting(std::move(hook));
 }
 
 void AudioMixerViewModel::setCrossfadePosition(float position) noexcept {
