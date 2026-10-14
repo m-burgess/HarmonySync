@@ -18,6 +18,36 @@
 
 namespace HarmonySync::Media {
 
+/// Counts one live song buffer set against its engine (#185). Move-only; a moved-from or
+/// default lease counts nothing. Never released on the audio thread: retired sets are freed
+/// on the control thread.
+class SongSetLease {
+public:
+    SongSetLease() = default;
+    explicit SongSetLease(std::shared_ptr<std::atomic<std::size_t>> counter) noexcept
+        : m_counter(std::move(counter)) {
+        if (m_counter) m_counter->fetch_add(1, std::memory_order_relaxed);
+    }
+    SongSetLease(SongSetLease&& other) noexcept : m_counter(std::move(other.m_counter)) {}
+    SongSetLease& operator=(SongSetLease&& other) noexcept {
+        if (this != &other) {
+            release();
+            m_counter = std::move(other.m_counter);
+        }
+        return *this;
+    }
+    ~SongSetLease() { release(); }
+
+private:
+    void release() noexcept {
+        if (m_counter) {
+            m_counter->fetch_sub(1, std::memory_order_relaxed);
+            m_counter.reset();
+        }
+    }
+    std::shared_ptr<std::atomic<std::size_t>> m_counter;
+};
+
 class AudioMixerDevice : public QIODevice {
 public:
     struct StemBuffer {
@@ -27,6 +57,7 @@ public:
 
     /// One song's mapped stems. Built and freed on the control thread only.
     struct StemBufferSet {
+        SongSetLease lease; // first, so it is released after the buffers are unmapped
         std::vector<StemBuffer> buffers;
         double duration = 0.0;
     };
@@ -167,8 +198,10 @@ bool isDurationGuideStemName(std::string name) {
 AudioMixerDevice::StemBufferSet mapStemBufferSet(const std::vector<Core::MediaStem>& stems,
                                                  std::vector<Core::MediaStem>& outStems,
                                                  const char* failureLabel,
+                                                 const std::shared_ptr<std::atomic<std::size_t>>& liveSets,
                                                  const std::atomic<bool>* cancelled = nullptr) {
     AudioMixerDevice::StemBufferSet set;
+    set.lease = SongSetLease(liveSets);
     double maxDuration = 0.0;
     double fallbackDuration = 0.0;
     FFmpegAudioDecoder decoder;
@@ -217,10 +250,11 @@ struct DecodedSong {
 };
 
 DecodedSong decodeSong(const std::vector<Core::MediaStem>& stems,
+                       [[maybe_unused]] const std::shared_ptr<std::atomic<std::size_t>>& liveSets,
                        const std::atomic<bool>* cancelled = nullptr) {
     DecodedSong song;
 #ifdef HARMONYSYNC_HAS_QT
-    song.set = mapStemBufferSet(stems, song.stems, "Failed to map preloaded stem", cancelled);
+    song.set = mapStemBufferSet(stems, song.stems, "Failed to map preloaded stem", liveSets, cancelled);
 #else
     for (const auto& stem : stems) {
         if (cancelled != nullptr && cancelled->load(std::memory_order_relaxed)) {
@@ -260,6 +294,8 @@ struct AudioEngine::Impl {
     std::atomic<double> duration{0.0};
     std::atomic<float> masterVolume{1.0f};
     std::atomic<int> pitchSemitones{0};
+    /// Live song buffer sets of this engine (#185). Shared with workers and every set's lease.
+    std::shared_ptr<std::atomic<std::size_t>> liveSets = std::make_shared<std::atomic<std::size_t>>(0);
 
 #ifdef HARMONYSYNC_HAS_QT
     std::unique_ptr<QAudioSink> audioSink;
@@ -399,7 +435,7 @@ bool AudioEngine::loadStems(const std::vector<Core::MediaStem>& stems) {
     m_impl->mixerDevice.m_sets.clear();
     m_impl->preloadedSet = {};
 
-    AudioMixerDevice::StemBufferSet set = mapStemBufferSet(stems, m_impl->stems, "Failed to map stem");
+    AudioMixerDevice::StemBufferSet set = mapStemBufferSet(stems, m_impl->stems, "Failed to map stem", m_impl->liveSets);
     const double maxDuration = set.duration;
     const std::size_t bufferCount = set.buffers.size();
     m_impl->mixerDevice.m_sets.resetCurrent(std::move(set));
@@ -431,7 +467,7 @@ bool AudioEngine::preloadStems(const std::vector<Core::MediaStem>& stems) {
     m_impl->cancelPendingPreload();
     m_impl->joinFinishedWorkers();
 
-    DecodedSong song = decodeSong(stems);
+    DecodedSong song = decodeSong(stems, m_impl->liveSets);
     m_impl->preloadedStems = std::move(song.stems);
 #ifdef HARMONYSYNC_HAS_QT
     m_impl->preloadedSet = std::move(song.set);
@@ -511,15 +547,20 @@ AudioEngine::PreloadTicket AudioEngine::preloadStemsAsync(std::vector<Core::Medi
 
     // The worker owns copies of everything it uses; it never touches Impl.
     std::thread thread([job, stems = std::move(stems), onReady = std::move(onReady),
-                        hook = m_impl->decodeHookForTesting]() {
+                        hook = m_impl->decodeHookForTesting, liveSets = m_impl->liveSets]() {
         if (hook) {
             hook();
         }
         if (!job->cancelled.load(std::memory_order_relaxed)) {
-            job->result = decodeSong(stems, &job->cancelled);
+            job->result = decodeSong(stems, liveSets, &job->cancelled);
         }
         const bool hasStems = !job->result.stems.empty()
                               && !job->cancelled.load(std::memory_order_relaxed);
+        if (!hasStems) {
+            // Replaced or cleared (#185): free its buffers now rather than at the next join.
+            // The control thread never reads a cancelled job's result.
+            job->result = {};
+        }
         job->done.store(true, std::memory_order_release);
         if (onReady) {
             onReady(job->ticket, hasStems);
@@ -538,6 +579,47 @@ bool AudioEngine::isPreloadPending() const noexcept {
 
 void AudioEngine::setPreloadDecodeHookForTesting(std::function<void()> hook) {
     m_impl->decodeHookForTesting = std::move(hook);
+}
+
+void AudioEngine::clearPreloaded() {
+    // Only the preloaded song and the decode job are touched; the audio thread never sees
+    // either, so this is safe while the current song plays. Never waits on a running decode.
+    m_impl->reclaimRetiredSongs();
+    m_impl->cancelPendingPreload();
+    m_impl->joinFinishedWorkers();
+    m_impl->preloadedStems.clear();
+#ifdef HARMONYSYNC_HAS_QT
+    m_impl->preloadedSet = {};
+#endif
+}
+
+void AudioEngine::unloadCurrent() {
+    stop();
+    m_impl->stems.clear();
+    m_impl->duration.store(0.0, std::memory_order_relaxed);
+#ifdef HARMONYSYNC_HAS_QT
+    if (m_impl->audioSink) {
+        m_impl->audioSink->stop();
+    }
+    // Sink is stopped, so no readData() is in flight (same rule as loadStems()): the current,
+    // handed-off and retired sets can be freed here. The preloaded set is not in m_sets.
+    m_impl->mixerDevice.m_sets.clear();
+    m_impl->mixerDevice.m_duration.store(0.0, std::memory_order_relaxed);
+#endif
+}
+
+std::size_t AudioEngine::liveSongSetCountForTesting() const noexcept {
+#ifdef HARMONYSYNC_HAS_QT
+    return m_impl->liveSets->load(std::memory_order_relaxed);
+#else
+    // No mapped buffers without Qt: count the stem lists the engine still holds.
+    std::size_t count = (m_impl->stems.empty() ? 0 : 1) + (m_impl->preloadedStems.empty() ? 0 : 1);
+    const auto& job = m_impl->pendingJob;
+    if (job && job->done.load(std::memory_order_acquire) && !job->result.stems.empty()) {
+        ++count;
+    }
+    return count;
+#endif
 }
 
 void AudioEngine::play() {
