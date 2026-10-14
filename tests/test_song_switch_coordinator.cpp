@@ -392,6 +392,69 @@ void testClearAndReopenFiftyTimesHoldsAtMostTwoSongs() {
     std::cout << "[PASS] testClearAndReopenFiftyTimesHoldsAtMostTwoSongs passed." << std::endl;
 }
 
+void testRemovingEarlierSongKeepsSameSongSelected() {
+    std::cout << "[TEST] Running testRemovingEarlierSongKeepsSameSongSelected..." << std::endl;
+    DecodeProbe probe;
+    SetlistViewModel setlist;
+    AudioMixerViewModel mixer;
+    SongSwitchCoordinator coordinator(setlist, mixer);
+    mixer.setPreloadDecodeHookForTesting(probe.hook());
+
+    openAndSettle(setlist, mixer, makeRealServiceOrder("remove_earlier", {"Alpha", "Bravo", "Charlie", "Delta"}));
+    setlist.setCurrentSongIndex(2);
+    const std::string songC = stemOfSong(setlist, 2);
+    check(waitFor([&] { return currentStem(mixer) == songC && mixer.isPreloadedSong(setlist.stemsAt(3)); }, 3000),
+          "remove earlier: setup never reached Charlie current, Delta preloaded");
+    runEvents(50);
+    std::vector<int> indexSignals;
+    QObject::connect(&setlist, &SetlistViewModel::currentSongIndexChanged, [&](int i) { indexSignals.push_back(i); });
+    const std::size_t decodesAtRemove = probe.count();
+
+    setlist.removeSongAt(0); // Alpha, before the current song
+    runEvents(100);
+    check(setlist.currentSongIndex() == 1,
+          "remove earlier: index is " + std::to_string(setlist.currentSongIndex()) + ", want 1 (shifted down)");
+    check(stemOfSong(setlist, setlist.currentSongIndex()) == songC,
+          "remove earlier: selection moved to " + stemOfSong(setlist, setlist.currentSongIndex()) + ", want Charlie");
+    check(indexSignals.size() == 1 && indexSignals.front() == 1, "remove earlier: currentSongIndexChanged(1) not emitted once");
+    check(currentStem(mixer) == songC, "remove earlier: audio is " + currentStem(mixer) + ", want Charlie");
+    check(waitFor([&] { return mixer.isPreloadedSong(setlist.stemsAt(setlist.currentSongIndex() + 1)); }, 3000),
+          "remove earlier: the new next song (Delta) is not preloaded");
+    check(probe.count() == decodesAtRemove, "remove earlier: the current or next song was decoded again");
+    check(mixer.liveSongSetCountForTesting() == 2,
+          "remove earlier: holds " + std::to_string(mixer.liveSongSetCountForTesting()) + " song sets, want 2");
+    std::cout << "[PASS] testRemovingEarlierSongKeepsSameSongSelected passed." << std::endl;
+}
+
+void testPendingAdvanceSurvivesRemovingNextSong() {
+    std::cout << "[TEST] Running testPendingAdvanceSurvivesRemovingNextSong..." << std::endl;
+    DecodeProbe probe;
+    SetlistViewModel setlist;
+    AudioMixerViewModel mixer;
+    SongSwitchCoordinator coordinator(setlist, mixer);
+    mixer.setPreloadDecodeHookForTesting(probe.hook());
+
+    openAndSettle(setlist, mixer, makeRealServiceOrder("pending_advance", {"Alpha", "Bravo", "Charlie", "Delta", "Echo"}));
+    runEvents(50);
+    const std::string songA = stemOfSong(setlist, 0);
+    const std::string songC = stemOfSong(setlist, 2);
+    probe.setGate(false); // hold Charlie's decode so the advance stays pending
+    struct ReopenGate { DecodeProbe& p; ~ReopenGate() { p.setGate(true); } } reopen{probe}; // never leave a worker blocked
+    setlist.setCurrentSongIndex(2);
+    check(waitFor([&] { return probe.count() > 0 && mixer.isPreloadedSong(setlist.stemsAt(2)); }, 3000),
+          "pending: Charlie's decode never started");
+    setlist.removeSongAt(3); // Delta, the song after the pending one
+    setlist.removeSongAt(0); // Alpha, before it
+    runEvents(50);
+    check(currentStem(mixer) == songA, "pending: switched before the decode finished");
+    check(stemOfSong(setlist, setlist.currentSongIndex()) == songC,
+          "pending: selection moved to " + stemOfSong(setlist, setlist.currentSongIndex()) + ", want Charlie");
+    probe.setGate(true);
+    check(waitFor([&] { return currentStem(mixer) == songC; }, 3000),
+          "pending: the advance to Charlie was dropped (audio is " + currentStem(mixer) + ")");
+    std::cout << "[PASS] testPendingAdvanceSurvivesRemovingNextSong passed." << std::endl;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -405,6 +468,8 @@ int main(int argc, char** argv) {
         {"testJumpToUnloadedSongWaitsForNewestDecode", testJumpToUnloadedSongWaitsForNewestDecode},
         {"testClearSetlistFreesCurrentAndNextSong", testClearSetlistFreesCurrentAndNextSong},
         {"testRemovingPreloadedSongPreloadsNewNext", testRemovingPreloadedSongPreloadsNewNext},
+        {"testRemovingEarlierSongKeepsSameSongSelected", testRemovingEarlierSongKeepsSameSongSelected},
+        {"testPendingAdvanceSurvivesRemovingNextSong", testPendingAdvanceSurvivesRemovingNextSong},
         {"testOpeningOrderDropsOldPreloadFirst", testOpeningOrderDropsOldPreloadFirst},
         {"testClearAndReopenFiftyTimesHoldsAtMostTwoSongs", testClearAndReopenFiftyTimesHoldsAtMostTwoSongs},
     };
