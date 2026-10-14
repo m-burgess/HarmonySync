@@ -146,6 +146,41 @@ bool testQueuedMuteForOutgoingSongIsNotAppliedToNextSong(const std::filesystem::
     return ok;
 }
 
+/// #177 rapid setters: 1000 volume and mute changes on one stem while the sink pulls.
+/// The audio thread must end on the last values and keep pulling throughout.
+bool testRapidStemSettersDuringPlayback(AudioEngine& engine) {
+    std::cout << "[TEST] Running testRapidStemSettersDuringPlayback..." << std::endl;
+    const auto start = std::chrono::steady_clock::now();
+    const std::uint64_t before = engine.audioCallbackCountForTesting();
+    float lastVolume = 0.0f;
+    bool lastMuted = false;
+    for (int i = 0; i < 1000; ++i) {
+        lastVolume = static_cast<float>(i % 97) / 100.0f;
+        lastMuted = (i % 3) == 0;
+        engine.setStemVolume(0, lastVolume);
+        engine.setStemMuted(0, lastMuted);
+    }
+    const auto queuedIn = std::chrono::steady_clock::now() - start;
+    std::this_thread::sleep_for(std::chrono::milliseconds(600));
+    const std::uint64_t pulls = engine.audioCallbackCountForTesting() - before;
+    const std::vector<MediaStem> playing = engine.audioThreadStemsForTesting();
+    std::cout << "  2000 changes queued in "
+              << std::chrono::duration_cast<std::chrono::microseconds>(queuedIn).count()
+              << "us; readData() calls in the next 600ms: " << pulls << std::endl;
+    bool ok = check(!playing.empty(), "the audio thread has a song");
+    ok &= check(engine.isPlaying(), "still playing");
+    if (!playing.empty()) {
+        ok &= check(std::abs(playing[0].volume() - lastVolume) < 1e-6f, "audio thread ends on the last volume");
+        ok &= check(playing[0].isMuted() == lastMuted, "audio thread ends on the last mute");
+        ok &= check(sameMix(playing[0], engine.loadedStems()[0]), "control and audio stems agree");
+    }
+    ok &= check(pulls >= 4, "the sink kept pulling while the changes were applied");
+    if (ok) {
+        std::cout << "[PASS] testRapidStemSettersDuringPlayback passed." << std::endl;
+    }
+    return ok;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -217,6 +252,9 @@ int main(int argc, char** argv) {
         } else {
             assert(engine.isPlaying());
             std::cout << "[PASS] testAudioKeepsFlowingWhileMainThreadIsBlocked passed." << std::endl;
+        }
+        if (!testRapidStemSettersDuringPlayback(engine)) {
+            result = EXIT_FAILURE;
         }
         engine.stop();
     }
