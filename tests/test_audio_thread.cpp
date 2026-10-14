@@ -261,6 +261,41 @@ bool testQueuedMuteForFirstCopyIsNotAppliedToReprise(const std::filesystem::path
                         && dropped[0].second == 0,
                     "the dropped mute is reported once, with X's songKey and stem 0");
     }
+
+    // A -> B -> back to A: the key comes back, but a mute queued for the first A must still
+    // be dropped, never applied to the second A.
+    const auto dirY = root / "songY";
+    std::filesystem::create_directories(dirY);
+    const std::vector<MediaStem> songY = {MediaStem("y1", "Drums", writeWav(dirY / "drums.wav", 20))};
+    {
+        std::lock_guard lock(droppedMutex);
+        dropped.clear();
+    }
+    ok &= check(engine.loadStems(songX), "A loads again");
+    engine.play();
+    ok &= check(engine.preloadStems(songY), "B preloads");
+    std::promise<void> release2;
+    std::shared_future<void> released2 = release2.get_future().share();
+    engine.runOnAudioThreadForTesting([released2] { released2.wait(); });
+    engine.setStemMuted(0, true); // queued for the first A
+    std::thread releaser2([&release2] {
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        release2.set_value();
+    });
+    ok &= check(engine.switchToPreloaded(), "switch A -> B");
+    releaser2.join();
+    ok &= check(engine.preloadStems(songX), "A preloads again");
+    ok &= check(engine.switchToPreloaded(), "switch B -> A");
+    const std::vector<MediaStem> backToA = engine.audioThreadStemsForTesting();
+    ok &= check(backToA.size() == 2 && !backToA[0].isMuted(), "the second A plays unmuted");
+    ok &= check(!engine.loadedStems().empty() && !engine.loadedStems()[0].isMuted(),
+                "the second A's control-side drums are unmuted");
+    {
+        std::lock_guard lock(droppedMutex);
+        ok &= check(dropped.size() == 1 && dropped[0].first == AudioEngine::songKey(songX)
+                        && dropped[0].second == 0,
+                    "A -> B -> A: the first A's mute is dropped and reported once with A's songKey");
+    }
     engine.stop();
     if (ok) {
         std::cout << "[PASS] testQueuedMuteForFirstCopyIsNotAppliedToReprise passed." << std::endl;
