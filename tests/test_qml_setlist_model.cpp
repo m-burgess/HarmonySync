@@ -196,6 +196,40 @@ void testModelRolesResetAndRowChanges() {
     check(model->rowCount() == 0, "clearSetlist left rows");
 }
 
+// Each visible delegate's highlight must match SetlistViewModel's current index.
+void checkHighlightFollowsIndex(Panel& panel, SetlistViewModel& vm, const std::string& what) {
+    runEvents(50);
+    auto* content = panel.list->property("contentItem").value<QQuickItem*>();
+    int seen = 0;
+    for (QQuickItem* d : content->childItems()) {
+        if (!d->property("itemName").isValid() || !d->isVisible()) continue;
+        QQmlContext* ctx = QQmlEngine::contextForObject(d);
+        const int index = ctx ? ctx->contextProperty("index").toInt() : -1;
+        const bool selected = d->property("isSelected").toBool();
+        check(selected == (index == vm.currentSongIndex()),
+              what + ": row " + std::to_string(index) + (selected ? " is" : " is not") +
+              " highlighted, current index is " + std::to_string(vm.currentSongIndex()));
+        ++seen;
+    }
+    check(seen == vm.itemCount(), what + ": saw " + std::to_string(seen) + " delegates");
+}
+
+void testQmlHighlightFollowsIndexAfterRemovals() {
+    SetlistViewModel vm;
+    Panel panel(vm);
+    check(open(vm, makeOrder("hl", {{"HL_A", true}, {"HL_B", true}, {"HL_C", true}, {"HL_D", true}, {"HL_E", true}})),
+          "open hl failed");
+    vm.setCurrentSongIndex(2);
+    checkHighlightFollowsIndex(panel, vm, "before removals");
+    vm.removeSongAt(0); // an earlier row
+    checkHighlightFollowsIndex(panel, vm, "after removing an earlier row");
+    vm.removeSongAt(vm.currentSongIndex()); // the current row (behaviour unchanged; highlight must agree)
+    checkHighlightFollowsIndex(panel, vm, "after removing the current row");
+    vm.setCurrentSongIndex(vm.itemCount() - 1);
+    vm.removeSongAt(vm.itemCount() - 1); // the current last row: index decrements
+    checkHighlightFollowsIndex(panel, vm, "after removing the current last row");
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -206,6 +240,7 @@ int main(int argc, char** argv) {
         {"qml_same_count_order_shows_new_songs", testQmlSameCountOrderShowsNewSongs},
         {"qml_two_four_song_orders", testQmlTwoFourSongOrders},
         {"model_roles_reset_and_row_changes", testModelRolesResetAndRowChanges},
+        {"qml_highlight_follows_index_after_removals", testQmlHighlightFollowsIndexAfterRemovals},
     };
     int failed = 0;
     for (const auto& c : cases) {
