@@ -13,6 +13,7 @@
 #include <vector>
 
 #ifdef HARMONYSYNC_HAS_QT
+#include <QCoreApplication>
 #include <QMetaObject>
 #include <QObject>
 #include <QThread>
@@ -317,9 +318,11 @@ struct AudioEngine::Impl {
     std::unique_ptr<IAudioSink> audioSink;
 
 #ifdef HARMONYSYNC_HAS_QT
+    // Without an application object, queued work has no event loop to run on. In that case
+    // these helpers execute inline and the engine uses the direct sink path.
     template <typename F>
     void onAudioThread(F&& work) {
-        if (!audioThread) {
+        if (!audioContext) {
             work();
             return;
         }
@@ -328,7 +331,7 @@ struct AudioEngine::Impl {
     /// Control thread only; the audio thread never waits on the control thread, so no deadlock.
     template <typename F>
     void onAudioThreadAndWait(F&& work) {
-        if (!audioThread) {
+        if (!audioContext) {
             work();
             return;
         }
@@ -338,11 +341,13 @@ struct AudioEngine::Impl {
 
 #ifdef HARMONYSYNC_HAS_QT
     void startAudioThread() {
-        audioThread = std::make_unique<QThread>();
-        audioThread->setObjectName(QStringLiteral("HarmonySyncAudio"));
-        audioThread->start(QThread::TimeCriticalPriority);
-        audioContext = std::make_unique<QObject>();
-        audioContext->moveToThread(audioThread.get());
+        if (QCoreApplication::instance() != nullptr) {
+            audioThread = std::make_unique<QThread>();
+            audioThread->setObjectName(QStringLiteral("HarmonySyncAudio"));
+            audioThread->start(QThread::TimeCriticalPriority);
+            audioContext = std::make_unique<QObject>();
+            audioContext->moveToThread(audioThread.get());
+        }
 
         onAudioThreadAndWait([this] {
             audioSink = createQtAudioSink();
@@ -366,17 +371,16 @@ struct AudioEngine::Impl {
 
     /// Stop and destroy the sink on its own thread, then end and join the thread.
     void shutdownAudioThread() {
-        if (!audioThread) {
-            return;
-        }
         onAudioThreadAndWait([this] {
             if (audioSink) {
                 audioSink->stop();
                 audioSink.reset();
             }
         });
-        audioThread->quit();
-        audioThread->wait();
+        if (audioThread) {
+            audioThread->quit();
+            audioThread->wait();
+        }
         audioContext.reset();
         audioThread.reset();
         hasSink = false;
