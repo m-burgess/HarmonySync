@@ -219,6 +219,55 @@ bool testOutgoingSongFreedBeforeNextPreloadLands(AudioEngine& engine, const std:
     return ok;
 }
 
+/// #177 reprise: a setlist can repeat a song, so the next song has the same songKey as the
+/// current one. A mute queued for the first copy must not land on the reprise.
+bool testQueuedMuteForFirstCopyIsNotAppliedToReprise(const std::filesystem::path& root) {
+    std::cout << "[TEST] Running testQueuedMuteForFirstCopyIsNotAppliedToReprise..." << std::endl;
+    const auto dirX = root / "songX";
+    std::filesystem::create_directories(dirX);
+    const std::vector<MediaStem> songX = {MediaStem("x1", "Drums", writeWav(dirX / "drums.wav", 20)),
+                                          MediaStem("x2", "Keys", writeWav(dirX / "keys.wav", 20))};
+    AudioEngine engine;
+    std::mutex droppedMutex;
+    std::vector<std::pair<std::vector<std::string>, int>> dropped;
+    engine.setStaleStemChangeCallback([&](const std::vector<std::string>& key, int stemIndex) {
+        std::lock_guard lock(droppedMutex);
+        dropped.emplace_back(key, stemIndex);
+    });
+
+    bool ok = check(engine.loadStems(songX), "X loads");
+    engine.play();
+    ok &= check(engine.preloadStems(songX), "the reprise of X preloads");
+
+    std::promise<void> release;
+    std::shared_future<void> released = release.get_future().share();
+    engine.runOnAudioThreadForTesting([released] { released.wait(); });
+    engine.setStemMuted(0, true); // mute on the first copy, still queued
+    std::thread releaser([&release] {
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        release.set_value();
+    });
+    ok &= check(engine.switchToPreloaded(), "switch to the reprise");
+    releaser.join();
+
+    const std::vector<MediaStem> playing = engine.audioThreadStemsForTesting();
+    ok &= check(playing.size() == 2 && !playing[0].isMuted(),
+                "the reprise plays unmuted (the first copy's mute leaked onto it)");
+    ok &= check(!engine.loadedStems().empty() && !engine.loadedStems()[0].isMuted(),
+                "the reprise's control-side drums are unmuted");
+    {
+        std::lock_guard lock(droppedMutex);
+        ok &= check(dropped.size() == 1 && dropped[0].first == AudioEngine::songKey(songX)
+                        && dropped[0].second == 0,
+                    "the dropped mute is reported once, with X's songKey and stem 0");
+    }
+    engine.stop();
+    if (ok) {
+        std::cout << "[PASS] testQueuedMuteForFirstCopyIsNotAppliedToReprise passed." << std::endl;
+    }
+    return ok;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -236,6 +285,9 @@ int main(int argc, char** argv) {
     std::filesystem::create_directories(dir);
     int result = EXIT_SUCCESS;
     if (!testQueuedMuteForOutgoingSongIsNotAppliedToNextSong(dir)) {
+        result = EXIT_FAILURE;
+    }
+    if (!testQueuedMuteForFirstCopyIsNotAppliedToReprise(dir)) {
         result = EXIT_FAILURE;
     }
     {
