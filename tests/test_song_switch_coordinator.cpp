@@ -12,6 +12,11 @@
 
 #include <QCoreApplication>
 #include <QElapsedTimer>
+#include <QTimer>
+
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
 
 #include <condition_variable>
 #include <cstdlib>
@@ -216,6 +221,173 @@ void testOpeningOrderWhileStoppedCuesFirstSong() {
     std::cout << "[PASS] testOpeningOrderWhileStoppedCuesFirstSong passed." << std::endl;
 }
 
+// ---------- #185: clearing, removing and reopening free song buffers ----------
+
+// A valid 16-bit PCM WAV (44.1kHz stereo, 0.25s) so the engine really maps and holds buffers.
+void writeWav(const fs::path& path) {
+    const std::uint32_t rate = 44100, frames = rate / 4;
+    const std::uint16_t channels = 2, bits = 16;
+    const std::uint32_t dataBytes = frames * channels * bits / 8;
+    std::ofstream f(path, std::ios::binary);
+    auto u32 = [&](std::uint32_t v) { f.write(reinterpret_cast<const char*>(&v), 4); };
+    auto u16 = [&](std::uint16_t v) { f.write(reinterpret_cast<const char*>(&v), 2); };
+    f << "RIFF"; u32(36 + dataBytes); f << "WAVEfmt "; u32(16); u16(1); u16(channels); u32(rate);
+    u32(rate * channels * bits / 8); u16(channels * bits / 8); u16(bits); f << "data"; u32(dataBytes);
+    for (std::uint32_t i = 0; i < frames; ++i) {
+        auto v = static_cast<std::int16_t>(2000 * std::sin(2 * 3.14159265 * 330 * i / rate));
+        u16(static_cast<std::uint16_t>(v)); u16(static_cast<std::uint16_t>(v));
+    }
+}
+
+fs::path makeRealServiceOrder(const std::string& tag, const std::vector<std::string>& songs) {
+    fs::path root = fs::temp_directory_path() / ("hs_song_switch_real_" + tag);
+    fs::remove_all(root);
+    for (std::size_t i = 0; i < songs.size(); ++i) {
+        fs::path song = root / ("0" + std::to_string(i + 1) + "_Song_" + songs[i]);
+        fs::create_directories(song);
+        writeWav(song / (songs[i] + "_Drums.wav"));
+    }
+    return root;
+}
+
+// Samples the mixer's live song-set count on the UI thread every millisecond.
+struct LiveSetSampler {
+    explicit LiveSetSampler(AudioMixerViewModel& mixer) : m_mixer(mixer) {
+        m_timer.setInterval(1);
+        QObject::connect(&m_timer, &QTimer::timeout, [this] { sample(); });
+        m_timer.start();
+    }
+    std::size_t sample() {
+        std::size_t n = m_mixer.liveSongSetCountForTesting();
+        m_max = std::max(m_max, n);
+        return n;
+    }
+    std::size_t max() const { return m_max; }
+private:
+    AudioMixerViewModel& m_mixer;
+    QTimer m_timer;
+    std::size_t m_max{0};
+};
+
+// Opens an order and waits until song 0 is current and song 1 is preloaded (2 sets held).
+void openAndSettle(SetlistViewModel& setlist, AudioMixerViewModel& mixer, const fs::path& root) {
+    check(openOrder(setlist, root), "open failed: " + root.string());
+    check(waitFor([&] { return currentStem(mixer) == stemOfSong(setlist, 0); }, 3000),
+          "first song never became current (got " + currentStem(mixer) + ")");
+    check(waitFor([&] { return mixer.isPreloadedSong(setlist.stemsAt(1)) && mixer.liveSongSetCountForTesting() == 2; }, 3000),
+          "second song never preloaded (live sets " + std::to_string(mixer.liveSongSetCountForTesting()) + ")");
+}
+
+void testClearSetlistFreesCurrentAndNextSong() {
+    std::cout << "[TEST] Running testClearSetlistFreesCurrentAndNextSong..." << std::endl;
+    DecodeProbe probe; // declared before the mixer: it must outlive the engine's decode workers
+    SetlistViewModel setlist;
+    AudioMixerViewModel mixer;
+    SongSwitchCoordinator coordinator(setlist, mixer);
+    mixer.setPreloadDecodeHookForTesting(probe.hook());
+    int lastStemCount = -1;
+    QObject::connect(&mixer, &AudioMixerViewModel::stemCountChanged, [&](int n) { lastStemCount = n; });
+
+    openAndSettle(setlist, mixer, makeRealServiceOrder("clear", {"Alpha", "Bravo", "Charlie"}));
+    const auto next = setlist.stemsAt(1);
+    mixer.play();
+    setlist.clearSetlist();
+    runEvents(50);
+    check(mixer.loadedStemCount() == 0, "clear: mixer still shows " + std::to_string(mixer.loadedStemCount()) + " stems");
+    check(lastStemCount == 0, "clear: stemCountChanged(0) not emitted");
+    check(!mixer.isPlaying(), "clear: still playing");
+    check(!mixer.isPreloadedSong(next), "clear: next song still marked preloaded");
+    check(mixer.liveSongSetCountForTesting() == 0,
+          "clear: engine still holds " + std::to_string(mixer.liveSongSetCountForTesting()) + " song sets");
+    std::cout << "[PASS] testClearSetlistFreesCurrentAndNextSong passed." << std::endl;
+}
+
+void testRemovingPreloadedSongPreloadsNewNext() {
+    std::cout << "[TEST] Running testRemovingPreloadedSongPreloadsNewNext..." << std::endl;
+    DecodeProbe probe;
+    SetlistViewModel setlist;
+    AudioMixerViewModel mixer;
+    SongSwitchCoordinator coordinator(setlist, mixer);
+    mixer.setPreloadDecodeHookForTesting(probe.hook());
+
+    openAndSettle(setlist, mixer, makeRealServiceOrder("remove", {"Alpha", "Bravo", "Charlie"}));
+    const auto bravo = setlist.stemsAt(1);
+    const std::string songC = stemOfSong(setlist, 2);
+    setlist.removeSongAt(1); // Bravo was the preloaded next song
+    check(!mixer.isPreloadedSong(bravo), "remove: the removed song is still the preloaded one");
+    check(waitFor([&] { return mixer.isPreloadedSong(setlist.stemsAt(1)) && mixer.liveSongSetCountForTesting() == 2; }, 3000),
+          "remove: the new next song (Charlie) was not preloaded (live sets "
+          + std::to_string(mixer.liveSongSetCountForTesting()) + ")");
+    const std::size_t decodesBefore = probe.count();
+    setlist.setCurrentSongIndex(1);
+    check(waitFor([&] { return currentStem(mixer) == songC; }, 3000), "remove: advancing never switched to Charlie (got " + currentStem(mixer) + ")");
+    runEvents(50);
+    check(probe.count() == decodesBefore,
+          "remove: advancing to Charlie decoded it again instead of using the preload");
+    check(probe.noneOn(std::this_thread::get_id()), "a decode ran on the UI thread");
+    std::cout << "[PASS] testRemovingPreloadedSongPreloadsNewNext passed." << std::endl;
+}
+
+void testOpeningOrderDropsOldPreloadFirst() {
+    std::cout << "[TEST] Running testOpeningOrderDropsOldPreloadFirst..." << std::endl;
+    DecodeProbe probe;
+    SetlistViewModel setlist;
+    AudioMixerViewModel mixer;
+    SongSwitchCoordinator coordinator(setlist, mixer);
+    mixer.setPreloadDecodeHookForTesting(probe.hook());
+
+    openAndSettle(setlist, mixer, makeRealServiceOrder("reopen1", {"Alpha", "Bravo"}));
+    const auto oldNext = setlist.stemsAt(1);
+    mixer.play();
+    // Connected after the coordinator, so this runs after its serviceOrderOpened handling
+    // and before the new order's first song is selected.
+    bool oldNextStillPreloaded = true;
+    std::size_t liveAtOpen = 99;
+    bool playingAtOpen = true;
+    QObject::connect(&setlist, &SetlistViewModel::serviceOrderOpened, [&] {
+        oldNextStillPreloaded = mixer.isPreloadedSong(oldNext);
+        liveAtOpen = mixer.liveSongSetCountForTesting();
+        playingAtOpen = mixer.isPlaying();
+    });
+    check(openOrder(setlist, makeRealServiceOrder("reopen2", {"Echo", "Foxtrot"})), "open second failed");
+    check(!oldNextStillPreloaded, "open: the old order's next song was still preloaded when the new order opened");
+    check(liveAtOpen <= 1, "open: " + std::to_string(liveAtOpen) + " song sets held when the new order opened");
+    check(!playingAtOpen, "#220: still playing when the new order opened");
+    check(waitFor([&] { return currentStem(mixer) == stemOfSong(setlist, 0); }, 3000), "new first song never current");
+    runEvents(50);
+    check(!mixer.isPlaying() && mixer.positionSeconds() == 0.0, "#220: new first song not cued stopped at 0");
+    std::cout << "[PASS] testOpeningOrderDropsOldPreloadFirst passed." << std::endl;
+}
+
+void testClearAndReopenFiftyTimesHoldsAtMostTwoSongs() {
+    std::cout << "[TEST] Running testClearAndReopenFiftyTimesHoldsAtMostTwoSongs..." << std::endl;
+    DecodeProbe probe;
+    SetlistViewModel setlist;
+    AudioMixerViewModel mixer;
+    SongSwitchCoordinator coordinator(setlist, mixer);
+    mixer.setPreloadDecodeHookForTesting(probe.hook());
+    LiveSetSampler sampler(mixer);
+    const fs::path orders[2] = {makeRealServiceOrder("cycle_a", {"Alpha", "Bravo", "Charlie"}),
+                                makeRealServiceOrder("cycle_b", {"Delta", "Echo", "Foxtrot"})};
+
+    for (int i = 0; i < 50; ++i) {
+        const std::string at = " (cycle " + std::to_string(i) + ")";
+        openAndSettle(setlist, mixer, orders[i % 2]);
+        mixer.play();
+        setlist.setCurrentSongIndex(1);
+        check(waitFor([&] { return currentStem(mixer) == stemOfSong(setlist, 1); }, 3000), "advance did not switch" + at);
+        check(waitFor([&] { return mixer.isPreloadedSong(setlist.stemsAt(2)); }, 3000), "song 3 never preloaded" + at);
+        setlist.clearSetlist();
+        runEvents(20);
+        check(sampler.sample() == 0,
+              "clear left " + std::to_string(mixer.liveSongSetCountForTesting()) + " song sets" + at);
+        check(mixer.loadedStemCount() == 0, "clear left stems in the mixer" + at);
+    }
+    std::cout << "  max live song sets over 50 cycles: " << sampler.max() << std::endl;
+    check(sampler.max() <= 2, "held " + std::to_string(sampler.max()) + " song sets at once (want <= 2)");
+    std::cout << "[PASS] testClearAndReopenFiftyTimesHoldsAtMostTwoSongs passed." << std::endl;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -227,6 +399,10 @@ int main(int argc, char** argv) {
         {"testOpeningOrderWhilePlayingCuesFirstSong", testOpeningOrderWhilePlayingCuesFirstSong},
         {"testNextSongDecodesOffTheUiThreadBeforeAdvance", testNextSongDecodesOffTheUiThreadBeforeAdvance},
         {"testJumpToUnloadedSongWaitsForNewestDecode", testJumpToUnloadedSongWaitsForNewestDecode},
+        {"testClearSetlistFreesCurrentAndNextSong", testClearSetlistFreesCurrentAndNextSong},
+        {"testRemovingPreloadedSongPreloadsNewNext", testRemovingPreloadedSongPreloadsNewNext},
+        {"testOpeningOrderDropsOldPreloadFirst", testOpeningOrderDropsOldPreloadFirst},
+        {"testClearAndReopenFiftyTimesHoldsAtMostTwoSongs", testClearAndReopenFiftyTimesHoldsAtMostTwoSongs},
     };
     try {
         for (const auto& [name, run] : tests) {

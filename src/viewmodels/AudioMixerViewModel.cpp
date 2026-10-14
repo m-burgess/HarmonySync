@@ -355,6 +355,19 @@ void AudioMixerViewModel::setPreloadDecodeHookForTesting(std::function<void()> h
     m_impl->m_activeDeck->setPreloadDecodeHookForTesting(std::move(hook));
 }
 
+// STUB (fail-first commit).
+void AudioMixerViewModel::clearPreloadedSong() {}
+void AudioMixerViewModel::unloadCurrentSong() {}
+
+bool AudioMixerViewModel::isPreloadedSong(const std::vector<Core::MediaStem>& stems) const {
+    return !stems.empty() && !m_impl->preloadKey.empty() && songKey(stems) == m_impl->preloadKey;
+}
+
+std::size_t AudioMixerViewModel::liveSongSetCountForTesting() const noexcept {
+    return m_impl->m_activeDeck->liveSongSetCountForTesting()
+         + m_impl->m_nextDeck->liveSongSetCountForTesting();
+}
+
 void AudioMixerViewModel::setCrossfadePosition(float position) noexcept {
     float clamped = std::clamp(position, 0.0f, 1.0f);
     if (m_impl->m_crossfadePos == clamped) return;
