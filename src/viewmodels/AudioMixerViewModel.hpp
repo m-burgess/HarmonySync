@@ -135,6 +135,10 @@ signals:
     void activeBackgroundVideoChanged(const QString& path);
 #endif
 
+private slots:
+    // UI thread: applies decodes the engine's worker finished (queued by name, no captures).
+    void drainPreloadResults();
+
 private:
     bool switchToPreloadedSong();
     void startPreload(const std::vector<Core::MediaStem>& stems, bool switchWhenReady);
