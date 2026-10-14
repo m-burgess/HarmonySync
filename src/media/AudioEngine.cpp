@@ -627,11 +627,10 @@ bool AudioEngine::switchToPreloaded() {
     m_impl->preloadedSet = {};
     m_impl->duration.store(nextDuration, std::memory_order_relaxed);
 
-    if (!m_impl->audioCallbackMayRun()) {
-        // No callback can be running, so take the handoff now and free A here.
-        m_impl->takePendingWhenIdle();
-        device.m_sets.reclaimRetired();
-    }
+    // Take the handoff on the audio thread and wait, then free the outgoing set here.
+    // This is safe while the sink runs because its callback and queued work share one thread.
+    m_impl->takePendingWhenIdle();
+    device.m_sets.reclaimRetired();
 
     if (nextHasAudio) {
         m_impl->startSink(); // no-op on the audio thread if already active
