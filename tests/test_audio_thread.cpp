@@ -181,6 +181,44 @@ bool testRapidStemSettersDuringPlayback(AudioEngine& engine) {
     return ok;
 }
 
+/// #185/#232: after a switch while the sink runs, the outgoing song must be freed once the
+/// audio thread has let go of it, not left on the retired list until some later call
+/// happens to reclaim it. Otherwise A, B and the next preload C are alive at once.
+bool testOutgoingSongFreedBeforeNextPreloadLands(AudioEngine& engine, const std::filesystem::path& root) {
+    std::cout << "[TEST] Running testOutgoingSongFreedBeforeNextPreloadLands..." << std::endl;
+    const auto wav = [&root](const char* name) { return writeWav(root / name, 5); };
+    bool ok = check(engine.loadStems({MediaStem("a", "Click", wav("retire_a.wav"))}), "A loads");
+    engine.play();
+    ok &= check(engine.preloadStems({MediaStem("b", "Click", wav("retire_b.wav"))}), "B preloads");
+
+    // Hold the audio thread so it takes B's handoff only after C's preload has started
+    // (the earliest point a control-side call could have reclaimed A).
+    std::promise<void> release;
+    std::shared_future<void> released = release.get_future().share();
+    engine.runOnAudioThreadForTesting([released] { released.wait(); });
+    std::thread releaser([&release] {
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        release.set_value();
+    });
+    ok &= check(engine.switchToPreloaded(), "switch to B");
+
+    std::promise<void> ready;
+    std::future<void> landed = ready.get_future();
+    engine.preloadStemsAsync({MediaStem("c", "Click", wav("retire_c.wav"))},
+                             [&ready](AudioEngine::PreloadTicket, bool) { ready.set_value(); });
+    releaser.join();
+    ok &= check(landed.wait_for(std::chrono::seconds(5)) == std::future_status::ready, "C's decode lands");
+    (void)engine.audioThreadStemsForTesting(); // the audio thread is on B by now
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    const std::size_t live = engine.liveSongSetCountForTesting();
+    std::cout << "  live song sets once C has landed: " << live << std::endl;
+    ok &= check(live <= 2, "A was still alive when C landed (want B and C only)");
+    if (ok) {
+        std::cout << "[PASS] testOutgoingSongFreedBeforeNextPreloadLands passed." << std::endl;
+    }
+    return ok;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -254,6 +292,9 @@ int main(int argc, char** argv) {
             std::cout << "[PASS] testAudioKeepsFlowingWhileMainThreadIsBlocked passed." << std::endl;
         }
         if (!testRapidStemSettersDuringPlayback(engine)) {
+            result = EXIT_FAILURE;
+        }
+        if (!testOutgoingSongFreedBeforeNextPreloadLands(engine, dir)) {
             result = EXIT_FAILURE;
         }
         engine.stop();
