@@ -72,6 +72,9 @@ public:
         /// AudioEngine::songKey() of the stems this set was built from; stem changes queued
         /// for another song are dropped against it (#177).
         std::vector<std::string> key;
+        /// Which load/switch made this set current (#177). A reprise has the same key as the
+        /// song before it, so queued stem changes are matched on this, not on the key.
+        std::uint64_t generation = 0;
     };
 
     /// Song handoff (#177): the control thread publishes a fully mapped set; read() takes
@@ -299,6 +302,9 @@ struct AudioEngine::Impl {
     std::vector<Core::MediaStem> preloadedStems;
     /// songKey() of `stems` (control thread). Tags every queued stem change (#177).
     std::vector<std::string> stemsKey;
+    /// Bumped by every loadStems() and switchToPreloaded() (control thread). Tags every queued
+    /// stem change; the audio thread drops a change whose generation is not the current set's.
+    std::uint64_t generation = 0;
     std::atomic<PlaybackState> state{PlaybackState::Stopped};
     std::atomic<double> position{0.0};
     std::atomic<double> duration{0.0};
@@ -394,15 +400,15 @@ struct AudioEngine::Impl {
     }
 
     /// Queue a change to one stem of the control thread's current song. The change is tagged
-    /// with that song's key; if another song is current by the time it reaches the audio thread
+    /// with the current load generation; if another load or switch is current by the time it reaches the audio thread
     /// (a switch landed first), it is dropped and reported, never applied to the wrong song.
     template <typename Apply>
     void updateStemOnAudioThread(int stemIndex, Apply apply) {
-        onAudioThread([device = &mixerDevice, stemIndex, apply, key = stemsKey,
+        onAudioThread([device = &mixerDevice, stemIndex, apply, key = stemsKey, gen = generation,
                        onStale = staleStemChangeCallback] {
             device->takePending(); // see the song that is current now, not the outgoing one
             AudioMixerDevice::StemBufferSet* set = device->m_sets.current();
-            if (set == nullptr || set->key != key) {
+            if (set == nullptr || set->generation != gen) {
                 if (onStale) {
                     onStale(key, stemIndex);
                 }
@@ -570,6 +576,7 @@ bool AudioEngine::loadStems(const std::vector<Core::MediaStem>& stems) {
 
     AudioMixerDevice::StemBufferSet set =
         mapStemBufferSet(stems, m_impl->stems, "Failed to map stem", m_impl->liveSets);
+    set.generation = ++m_impl->generation;
     const double maxDuration = set.duration;
     const std::size_t bufferCount = set.buffers.size();
     m_impl->mixerDevice.m_sets.resetCurrent(std::move(set));
@@ -619,6 +626,7 @@ bool AudioEngine::switchToPreloaded() {
     device.m_sets.reclaimRetired();
 
     m_impl->stemsKey = m_impl->preloadedSet.key;
+    m_impl->preloadedSet.generation = ++m_impl->generation;
     const double nextDuration = m_impl->preloadedSet.duration;
     const bool nextHasAudio = !m_impl->preloadedSet.buffers.empty();
     // No decoding or mapping here: hand the already-mapped set to the audio thread.
