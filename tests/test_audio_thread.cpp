@@ -73,9 +73,19 @@ int main(int argc, char** argv) {
         engine.play();
         assert(engine.isPlaying());
 
-        // Let the sink settle, then block the main thread for 2s without processing events,
-        // as a slow folder scan or autosave on the GUI thread would.
-        std::this_thread::sleep_for(300ms);
+        // Wait for steady pulling first: a PulseAudio stream can take ~2s to start asking for
+        // data. Events are processed here so a sink owned by the main thread gets a fair start.
+        const auto settleDeadline = std::chrono::steady_clock::now() + 6s;
+        while (engine.audioCallbackCountForTesting() < 8
+               && std::chrono::steady_clock::now() < settleDeadline) {
+            QCoreApplication::processEvents();
+            std::this_thread::sleep_for(5ms);
+        }
+        std::cout << "  readData() calls before the block: " << engine.audioCallbackCountForTesting()
+                  << std::endl;
+
+        // Now block the main thread for 2s without processing events, as a slow folder scan
+        // or autosave on the GUI thread would.
         const std::uint64_t before = engine.audioCallbackCountForTesting();
         std::this_thread::sleep_for(2s);
         const std::uint64_t after = engine.audioCallbackCountForTesting();
@@ -85,7 +95,7 @@ int main(int argc, char** argv) {
                   << " (total " << after << "), on main thread: "
                   << (callbackThread == std::this_thread::get_id() ? "yes" : "no") << std::endl;
 
-        // A ~100ms sink buffer needs well over 10 pulls in 2s to avoid dropouts.
+        // Steady state is ~12 pulls/s of ~93ms each; 2s of audio needs well over 10.
         if (after - before < 10) {
             std::cerr << "FAIL: the sink stopped pulling audio while the main thread was blocked."
                       << std::endl;
