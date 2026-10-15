@@ -16,23 +16,19 @@ struct SlideItem::Impl {
     Impl(std::string id_, std::string title_, SlideType type_)
         : id(std::move(id_))
         , title(std::move(title_))
-        , type(type_)
-    {}
+        , type(type_) {}
 };
 
 SlideItem::SlideItem()
-    : m_impl(std::make_unique<Impl>())
-{}
+    : m_impl(std::make_unique<Impl>()) {}
 
 SlideItem::SlideItem(std::string slideId, std::string title, SlideType type)
-    : m_impl(std::make_unique<Impl>(std::move(slideId), std::move(title), type))
-{}
+    : m_impl(std::make_unique<Impl>(std::move(slideId), std::move(title), type)) {}
 
 SlideItem::~SlideItem() = default;
 
 SlideItem::SlideItem(const SlideItem& other)
-    : m_impl(std::make_unique<Impl>(*other.m_impl))
-{}
+    : m_impl(std::make_unique<Impl>(*other.m_impl)) {}
 
 SlideItem& SlideItem::operator=(const SlideItem& other) {
     if (this != &other) {

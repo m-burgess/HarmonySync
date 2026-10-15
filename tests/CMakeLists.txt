@@ -3,6 +3,11 @@ add_executable(test_models test_models.cpp)
 target_link_libraries(test_models PRIVATE harmonysync_core)
 add_test(NAME test_models COMMAND test_models)
 
+# Test Core Models (value-type behavior, copy/move, bounds)
+add_executable(test_core_models test_core_models.cpp)
+target_link_libraries(test_core_models PRIVATE harmonysync_core)
+add_test(NAME test_core_models COMMAND test_core_models)
+
 # Test Config Service
 add_executable(test_config_service test_config_service.cpp)
 target_link_libraries(test_config_service PRIVATE harmonysync_core)

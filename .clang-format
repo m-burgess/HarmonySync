@@ -10,7 +10,8 @@ NamespaceIndentation: None
 AllowShortFunctionsOnASingleLine: Inline
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false
-BreakConstructorInitializers: BeforeColon
+BreakConstructorInitializers: BeforeComma
+PackConstructorInitializers: Never
 ConstructorInitializerIndentWidth: 4
 SortIncludes: Never
 ...

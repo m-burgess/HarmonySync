@@ -1,7 +1,7 @@
 {
   "_comment": "Per-component line-coverage floors. 'paths' are repo-relative prefixes. A floor may only go up; each component PR sets its floor to 85.",
   "components": [
-    { "name": "core-models", "floor": 10, "paths": ["src/core/models/"] },
+    { "name": "core-models", "floor": 85, "paths": ["src/core/models/"] },
     {
       "name": "core-services-data",
       "floor": 10,

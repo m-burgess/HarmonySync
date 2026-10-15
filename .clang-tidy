@@ -5,6 +5,7 @@ Checks: >
   -bugprone-easily-swappable-parameters,
   clang-analyzer-*,
   performance-*,
+  -performance-enum-size,
   modernize-*,
   -modernize-use-trailing-return-type,
   cppcoreguidelines-slicing,
