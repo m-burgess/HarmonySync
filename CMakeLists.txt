@@ -58,6 +58,8 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/viewmodels
 )
 
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Coverage.cmake)
+
 # Enable CTest
 enable_testing()
 

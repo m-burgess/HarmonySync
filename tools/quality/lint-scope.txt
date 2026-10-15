@@ -1,0 +1,2 @@
+# Repo-relative path prefixes enforced by CI (clang-tidy with warnings as errors, clang-format check).
+# Each component PR appends its paths here. Everything else is report-only.

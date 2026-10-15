@@ -1,0 +1,104 @@
+name: Quality (coverage and lint)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+
+concurrency:
+  group: quality-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  coverage:
+    name: C++ coverage floors
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.4.0
+
+      - name: Install build tools
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential cmake ninja-build pipx
+          pipx install gcovr
+
+      - name: Install Qt 6.8.2
+        uses: jurplel/install-qt-action@v4.4.1
+        with:
+          version: '6.8.2'
+          target: desktop
+          cache: true
+          install-deps: 'true'
+          modules: 'qtmultimedia qtwebsockets'
+
+      - name: Build, run full ctest, check component floors
+        shell: bash
+        env:
+          CMAKE_ARGS: -DCMAKE_PREFIX_PATH=${{ env.QT_ROOT_DIR }}
+          # Headless runner: QML tests need an offscreen platform.
+          QT_QPA_PLATFORM: offscreen
+        run: tools/quality/run_coverage.sh "$GITHUB_WORKSPACE/build-coverage"
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            build-coverage/coverage.html
+            build-coverage/coverage*.html
+            build-coverage/coverage.xml
+            build-coverage/coverage-summary.json
+          if-no-files-found: ignore
+
+  lint:
+    name: C++ lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.4.0
+
+      - name: Install tools
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential cmake ninja-build clang-tidy clang-format
+
+      - name: Install Qt 6.8.2
+        uses: jurplel/install-qt-action@v4.4.1
+        with:
+          version: '6.8.2'
+          target: desktop
+          cache: true
+          install-deps: 'true'
+          modules: 'qtmultimedia qtwebsockets'
+
+      - name: Configure (compile_commands.json)
+        shell: bash
+        run: |
+          cmake -S . -B build-lint -G Ninja -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_PREFIX_PATH="${QT_ROOT_DIR}"
+          # Generate moc/autogen headers so clang-tidy can parse sources.
+          cmake --build build-lint --target harmonysync_core harmonysync_media harmonysync_viewmodels -j "$(nproc)"
+
+      - name: Enforce lint on scoped paths
+        shell: bash
+        run: tools/quality/run_lint.sh enforce build-lint
+
+      - name: Report lint on all sources (non-blocking)
+        shell: bash
+        continue-on-error: true
+        run: tools/quality/run_lint.sh report build-lint
+
+      - name: Upload lint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-report
+          path: build-lint/lint-report.txt
+          if-no-files-found: ignore

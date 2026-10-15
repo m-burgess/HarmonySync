@@ -1,0 +1,22 @@
+# Applied as warnings everywhere; only paths in tools/quality/lint-scope.txt are enforced in CI.
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  clang-analyzer-*,
+  performance-*,
+  modernize-*,
+  -modernize-use-trailing-return-type,
+  cppcoreguidelines-slicing,
+  cppcoreguidelines-special-member-functions,
+  cppcoreguidelines-virtual-class-destructor,
+  misc-redundant-expression,
+  misc-unused-parameters,
+  readability-braces-around-statements,
+  readability-container-size-empty,
+  readability-else-after-return,
+  readability-misleading-indentation,
+  readability-redundant-*
+# Excludes vendored qrcodegen (lowercase 'q'); all first-party services start uppercase.
+HeaderFilterRegex: 'src/(core/models/|core/services/[^q]|media/|viewmodels/)'
+FormatStyle: file
