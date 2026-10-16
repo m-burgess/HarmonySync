@@ -42,6 +42,9 @@ public:
 
         QObject::connect(process, &QProcess::errorOccurred, process,
                          [process, callbacks](QProcess::ProcessError error) {
+                             if (error != QProcess::FailedToStart) {
+                                 return;
+                             }
                              if (callbacks.onStartFailed) {
                                  callbacks.onStartFailed(static_cast<int>(error));
                              }

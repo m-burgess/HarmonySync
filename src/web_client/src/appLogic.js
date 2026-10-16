@@ -114,7 +114,7 @@ export const buildSongStructure = (
     });
 };
 
-export { getCapoFret };
+export { getCapoFret, suggestCapoKey };
 
 export const createSongMapConnection = ({
   WebSocketClass,

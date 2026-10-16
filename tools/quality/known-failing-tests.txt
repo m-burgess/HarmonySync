@@ -1,6 +1,4 @@
-# ctest names that fail on main with assert() enabled (the smoke job builds Release, where asserts are stripped).
+# ctest names that fail on main and are temporarily excluded from the blocking coverage run.
 # They still run for coverage, but do not fail the job. Remove each line when its test is fixed.
 #   test_viewmodels         throws "Playback sync failed" in the AI lyric sync step
-#   test_mobile_viewmodels  asserts vm.isConnected() after connect
 test_viewmodels
-test_mobile_viewmodels

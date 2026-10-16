@@ -4,6 +4,7 @@ import {
   createSongMapConnection,
   getCapoFret,
   KEYS,
+  suggestCapoKey,
 } from "./appLogic";
 import "./index.css";
 
