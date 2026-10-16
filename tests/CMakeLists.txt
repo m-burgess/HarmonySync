@@ -74,6 +74,11 @@ target_link_libraries(test_network_services PRIVATE harmonysync_core)
 add_test(NAME test_network_services COMMAND test_network_services)
 
 # Test Automation
+add_executable(test_media_io test_media_io.cpp)
+target_link_libraries(test_media_io PRIVATE harmonysync_media)
+add_test(NAME test_media_io COMMAND test_media_io)
+
+# Existing automation integration tests
 add_executable(test_automation test_automation.cpp)
 target_link_libraries(test_automation PRIVATE harmonysync_media harmonysync_core)
 add_test(NAME test_automation COMMAND test_automation)

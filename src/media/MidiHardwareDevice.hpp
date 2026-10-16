@@ -1,5 +1,6 @@
 #ifndef HARMONYSYNC_MIDI_HARDWARE_DEVICE_HPP
 #define HARMONYSYNC_MIDI_HARDWARE_DEVICE_HPP
+#include "MidiPort.hpp"
 
 #include <string>
 #include <vector>
@@ -20,7 +21,7 @@ enum class MidiMessageType {
 
 struct MidiMessage {
     MidiMessageType type{MidiMessageType::Unknown};
-    uint8_t channel{1}; // 1-16
+    uint8_t channel{1};       // 1-16
     uint8_t controlNumber{0}; // Note number or CC number
     uint8_t velocityValue{0}; // Velocity or CC value (0-127)
 };
@@ -33,6 +34,7 @@ using MidiCallback = std::function<void(const MidiMessage&)>;
 class MidiHardwareDevice {
 public:
     MidiHardwareDevice();
+    explicit MidiHardwareDevice(std::unique_ptr<IMidiPort> port);
     ~MidiHardwareDevice();
 
     MidiHardwareDevice(const MidiHardwareDevice&) = delete;

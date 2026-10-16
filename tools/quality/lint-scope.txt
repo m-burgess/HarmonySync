@@ -35,3 +35,13 @@ src/media/AudioPitchShifter
 src/media/FFmpegAudioDecoder
 src/media/FFmpegTransposer
 src/media/RealtimeHandoff
+src/media/DmxController
+src/media/DmxOutput
+src/media/MidiHardwareDevice
+src/media/MidiPort
+src/media/EventTriggerEngine
+src/media/NdiVideoOutputService
+src/media/NdiSender
+src/media/VideoBackgroundPlayer
+src/media/VideoPlayerBackend
+src/media/OfflineMediaBackends

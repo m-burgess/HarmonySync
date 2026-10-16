@@ -26,6 +26,8 @@ ctest --test-dir "$build_dir" --output-on-failure --no-tests=error -E "$known_re
 # Known-failing tests still contribute coverage when they exit normally, but must not fail the job.
 ctest --test-dir "$build_dir" --output-on-failure -R "$known_regex" || echo "WARNING: known-failing tests failed (see tools/quality/known-failing-tests.txt)"
 
+# Qt adapters below only forward device/process/socket calls; no application logic is excluded.
+# PR 6 adds no exclusions: OfflineMediaBackends preserves placeholder behavior and remains measured.
 gcovr --root "$root" "$build_dir" \
     --filter 'src/' \
     --exclude 'src/main\.cpp' \

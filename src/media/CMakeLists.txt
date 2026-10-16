@@ -7,6 +7,7 @@ add_library(harmonysync_media STATIC
     AudioPitchShifter.cpp
     FFmpegTransposer.cpp
     DmxController.cpp
+    OfflineMediaBackends.cpp
     EventTriggerEngine.cpp
     MidiHardwareDevice.cpp
     VideoBackgroundPlayer.cpp

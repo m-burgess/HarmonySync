@@ -7,8 +7,7 @@ struct EventTriggerEngine::Impl {
 };
 
 EventTriggerEngine::EventTriggerEngine()
-    : m_impl(std::make_unique<Impl>())
-{}
+    : m_impl(std::make_unique<Impl>()) {}
 
 EventTriggerEngine::~EventTriggerEngine() = default;
 EventTriggerEngine::EventTriggerEngine(EventTriggerEngine&&) noexcept = default;

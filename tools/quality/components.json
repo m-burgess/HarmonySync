@@ -52,8 +52,13 @@
     },
     {
       "name": "media-io",
-      "floor": 10,
+      "floor": 85,
       "paths": [
+        "src/media/DmxOutput",
+        "src/media/MidiPort",
+        "src/media/NdiSender",
+        "src/media/VideoPlayerBackend",
+        "src/media/OfflineMediaBackends",
         "src/media/DmxController",
         "src/media/MidiHardwareDevice",
         "src/media/EventTriggerEngine",
