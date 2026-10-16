@@ -1,7 +1,6 @@
 #include "WebSocketTransport.hpp"
 
 #include <QHostAddress>
-#include <QPointer>
 #include <QString>
 #include <QUrl>
 #include <QWebSocket>
@@ -14,6 +13,8 @@ namespace {
 
 // Qt signal lambdas capture this state rather than the adapter, so they stay valid if the adapter is destroyed first.
 struct SocketHandlers {
+    // Cleared on QObject::destroyed; a raw pointer avoids QPointer, which trips a clang-tidy 18 false positive.
+    QWebSocket* socket = nullptr;
     std::function<void(const std::string&)> text;
     std::function<void()> disconnected;
     std::function<void()> connected;
@@ -38,8 +39,10 @@ void wireCommonSignals(QWebSocket* socket, const std::shared_ptr<SocketHandlers>
 class QtWebSocketConnection final : public IWebSocketConnection {
 public:
     explicit QtWebSocketConnection(QWebSocket* socket)
-        : m_socket(socket)
-        , m_handlers(std::make_shared<SocketHandlers>()) {
+        : m_handlers(std::make_shared<SocketHandlers>()) {
+        m_handlers->socket = socket;
+        QObject::connect(socket, &QObject::destroyed, socket,
+                         [handlers = m_handlers]() { handlers->socket = nullptr; });
         wireCommonSignals(socket, m_handlers);
     }
 
@@ -49,20 +52,20 @@ public:
     ~QtWebSocketConnection() override {
         m_handlers->text = nullptr;
         m_handlers->disconnected = nullptr;
-        if (m_socket) {
-            m_socket->deleteLater();
+        if (m_handlers->socket != nullptr) {
+            m_handlers->socket->deleteLater();
         }
     }
 
     void sendText(const std::string& text) override {
-        if (m_socket) {
-            m_socket->sendTextMessage(QString::fromStdString(text));
+        if (m_handlers->socket != nullptr) {
+            m_handlers->socket->sendTextMessage(QString::fromStdString(text));
         }
     }
 
     void close() override {
-        if (m_socket) {
-            m_socket->close();
+        if (m_handlers->socket != nullptr) {
+            m_handlers->socket->close();
         }
     }
 
@@ -73,7 +76,6 @@ public:
     void setDisconnectHandler(std::function<void()> handler) override { m_handlers->disconnected = std::move(handler); }
 
 private:
-    QPointer<QWebSocket> m_socket;
     std::shared_ptr<SocketHandlers> m_handlers;
 };
 
