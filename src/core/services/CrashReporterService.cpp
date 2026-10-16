@@ -10,17 +10,14 @@ struct CrashReporterService::Impl {
     mutable std::mutex mutex;
 
     explicit Impl(std::string dir)
-        : dumpDir(std::move(dir))
-    {}
+        : dumpDir(std::move(dir)) {}
 };
 
 CrashReporterService::CrashReporterService()
-    : m_impl(std::make_unique<Impl>("/tmp/harmonysync_dumps"))
-{}
+    : m_impl(std::make_unique<Impl>("/tmp/harmonysync_dumps")) {}
 
 CrashReporterService::CrashReporterService(const std::string& dumpDirectory)
-    : m_impl(std::make_unique<Impl>(dumpDirectory))
-{}
+    : m_impl(std::make_unique<Impl>(dumpDirectory)) {}
 
 CrashReporterService::~CrashReporterService() = default;
 

@@ -9,3 +9,17 @@ src/core/services/FolderService
 src/core/services/ServiceOrderFolderScanner
 src/core/services/LocalizationService
 src/core/services/ChordTransposer
+src/core/services/WebSocketTransport
+src/core/services/ProcessRunner
+src/core/services/QtWebSocketTransport
+src/core/services/QtProcessRunner
+src/core/services/RemoteApiServer
+src/core/services/MobileApiClient
+src/core/services/CloudSyncEngine
+src/core/services/CloudNetworkService
+src/core/services/AutoUpdateService
+src/core/services/CrashReporterService
+src/core/services/OnlineLyricsFetcher
+src/core/services/QrCodeImageProvider
+src/core/services/AILyricSyncService
+src/core/services/DisplayManager

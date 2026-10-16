@@ -1,10 +1,6 @@
 # ctest names that fail on main with assert() enabled (the smoke job builds Release, where asserts are stripped).
 # They still run for coverage, but do not fail the job. Remove each line when its test is fixed.
 #   test_viewmodels         throws "Playback sync failed" in the AI lyric sync step
-#   test_mobile_api_client  asserts on connection state; QWebSocket connect gets a nullptr
 #   test_mobile_viewmodels  asserts vm.isConnected() after connect
-#   test_ai_lyric_sync      Python script exits 1 on CI (missing model/dependencies)
 test_viewmodels
-test_mobile_api_client
 test_mobile_viewmodels
-test_ai_lyric_sync

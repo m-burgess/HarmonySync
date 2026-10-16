@@ -29,4 +29,8 @@ Checks: >
   readability-redundant-*
 # Excludes vendored qrcodegen (lowercase 'q'); all first-party services start uppercase.
 HeaderFilterRegex: 'src/(core/models/|core/services/[^q]|media/|viewmodels/)'
+CheckOptions:
+  # Non-copyable interfaces and services don't need explicit move members.
+  cppcoreguidelines-special-member-functions.AllowMissingMoveFunctionsWhenCopyIsDeleted: true
+  cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor: true
 FormatStyle: file

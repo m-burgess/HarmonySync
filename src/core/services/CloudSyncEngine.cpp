@@ -11,17 +11,14 @@ struct CloudSyncEngine::Impl {
     mutable std::mutex mutex;
 
     explicit Impl(std::string url)
-        : endpoint(std::move(url))
-    {}
+        : endpoint(std::move(url)) {}
 };
 
 CloudSyncEngine::CloudSyncEngine()
-    : m_impl(std::make_unique<Impl>("https://api.harmonysync.org/v2/sync"))
-{}
+    : m_impl(std::make_unique<Impl>("https://api.harmonysync.org/v2/sync")) {}
 
 CloudSyncEngine::CloudSyncEngine(const std::string& endpointUrl)
-    : m_impl(std::make_unique<Impl>(endpointUrl))
-{}
+    : m_impl(std::make_unique<Impl>(endpointUrl)) {}
 
 CloudSyncEngine::~CloudSyncEngine() = default;
 

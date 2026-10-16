@@ -31,6 +31,7 @@ gcovr --root "$root" "$build_dir" \
     --exclude 'src/main\.cpp' \
     --exclude 'src/mobile/main_mobile\.cpp' \
     --exclude '.*/qrcodegen\..*' \
+    --exclude '.*/Qt(WebSocketTransport|ProcessRunner)\..*' \
     --exclude-unreachable-branches --exclude-throw-branches \
     --json-summary "$build_dir/coverage-summary.json" --json-summary-pretty \
     --xml "$build_dir/coverage.xml" \

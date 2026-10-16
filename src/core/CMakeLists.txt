@@ -20,6 +20,8 @@ add_library(harmonysync_core STATIC
     services/SettingsStorageService.cpp
     services/MobileApiClient.cpp
     services/AILyricSyncService.cpp
+    services/QtProcessRunner.cpp
+    services/QtWebSocketTransport.cpp
     services/ChordTransposer.cpp
     services/qrcodegen.cpp
     services/QrCodeImageProvider.cpp

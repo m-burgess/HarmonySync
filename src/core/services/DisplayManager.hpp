@@ -1,18 +1,26 @@
 #ifndef HARMONYSYNC_DISPLAY_MANAGER_HPP
 #define HARMONYSYNC_DISPLAY_MANAGER_HPP
 
+#include <functional>
 #include <string>
 #include <vector>
 #include <memory>
 
 namespace HarmonySync::Core {
 
-enum class DisplayRole {
-    ControlPanel,
-    AudienceScreen,
-    ConfidenceMonitor,
-    StageScreen
+enum class DisplayRole { ControlPanel, AudienceScreen, ConfidenceMonitor, StageScreen };
+
+/** A physical screen as reported by the windowing system. */
+struct ScreenInfo {
+    std::string name;
+    int width{0};
+    int height{0};
+    int x{0};
+    int y{0};
+    bool isPrimary{false};
 };
+
+using ScreenSource = std::function<std::vector<ScreenInfo>()>;
 
 struct DisplayInfo {
     int id{0};
@@ -30,7 +38,8 @@ struct DisplayInfo {
  */
 class DisplayManager {
 public:
-    DisplayManager();
+    /** @param screenSource Screen enumeration used by detectSystemDisplays(); defaults to QGuiApplication's screens. */
+    explicit DisplayManager(ScreenSource screenSource = nullptr);
     ~DisplayManager();
 
     DisplayManager(const DisplayManager&) = delete;

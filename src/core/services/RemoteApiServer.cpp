@@ -1,15 +1,11 @@
 #include "RemoteApiServer.hpp"
-#include <mutex>
-#include <random>
-#include <iostream>
-
-#ifdef HARMONYSYNC_QT_AVAILABLE
-#include <QtWebSockets/QWebSocketServer>
-#include <QtWebSockets/QWebSocket>
+#include <QByteArray>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QCoreApplication>
-#endif
+#include <QString>
+#include <algorithm>
+#include <iostream>
+#include <mutex>
 
 namespace HarmonySync::Core {
 
@@ -21,66 +17,65 @@ struct RemoteApiServer::Impl {
     std::string lastSongMapJson;
     ApiCommandCallback commandCb;
     mutable std::mutex mutex;
+    std::vector<std::shared_ptr<IWebSocketConnection>> clients;
+    std::unique_ptr<IWebSocketServer> transport;
 
-#ifdef HARMONYSYNC_QT_AVAILABLE
-    QWebSocketServer* webSocketServer{nullptr};
-    std::vector<QWebSocket*> clients;
-#endif
-
-    explicit Impl(uint16_t p)
+    Impl(uint16_t p, std::unique_ptr<IWebSocketServer> t)
         : serverPort(p)
-    {}
+        , transport(std::move(t)) {}
+
+    void onConnection(const std::shared_ptr<IWebSocketConnection>& connection) {
+        // Weak, so the handlers stored in the connection don't keep it alive through the client list.
+        const std::weak_ptr<IWebSocketConnection> weak = connection;
+        connection->setTextHandler([this](const std::string& message) { onMessage(message); });
+        connection->setDisconnectHandler([this, weak]() { onDisconnect(weak.lock()); });
+
+        std::lock_guard<std::mutex> lock(mutex);
+        clients.push_back(connection);
+        std::cout << "[RemoteApiServer] Client connected." << '\n';
+
+        if (!lastSongMapJson.empty()) {
+            connection->sendText(buildEventMessage("SONG_MAP_UPDATED", lastSongMapJson));
+        }
+    }
+
+    void onDisconnect(const std::shared_ptr<IWebSocketConnection>& connection) {
+        std::lock_guard<std::mutex> lock(mutex);
+        std::erase(clients, connection);
+    }
+
+    void onMessage(const std::string& message) {
+        std::cout << "[RemoteApiServer] Received message: " << message << '\n';
+        ApiCommandCallback cb;
+        {
+            std::lock_guard<std::mutex> lock(mutex);
+            cb = commandCb;
+        }
+        if (!cb) {
+            return;
+        }
+        const QJsonDocument doc = QJsonDocument::fromJson(QByteArray::fromStdString(message));
+        if (!doc.isObject()) {
+            return;
+        }
+        const QJsonObject obj = doc.object();
+        cb(obj["action"].toString().toStdString(), obj["payload"].toString().toStdString());
+    }
+
+    static std::string buildEventMessage(const std::string& eventName, const std::string& payload) {
+        QJsonObject obj;
+        obj["event"] = QString::fromStdString(eventName);
+        obj["payload"] = QString::fromStdString(payload);
+        const QByteArray json = QJsonDocument(obj).toJson(QJsonDocument::Compact);
+        return std::string(json.constData(), static_cast<std::size_t>(json.size()));
+    }
 };
 
-RemoteApiServer::RemoteApiServer(uint16_t port)
-    : m_impl(std::make_unique<Impl>(port))
-{
-#ifdef HARMONYSYNC_QT_AVAILABLE
-    m_impl->webSocketServer = new QWebSocketServer(QStringLiteral("HarmonySync Remote API"),
-                                                   QWebSocketServer::NonSecureMode, this);
-    connect(m_impl->webSocketServer, &QWebSocketServer::newConnection,
-            this, [this]() {
-        QWebSocket *pSocket = m_impl->webSocketServer->nextPendingConnection();
-        connect(pSocket, &QWebSocket::textMessageReceived, this, [this, pSocket](const QString &message) {
-            std::cout << "[RemoteApiServer] Received message: " << message.toStdString() << std::endl;
-            ApiCommandCallback cb;
-            {
-                std::lock_guard<std::mutex> lock(m_impl->mutex);
-                cb = m_impl->commandCb;
-            }
-            if (cb) {
-                // Simplistic JSON parsing for demo
-                QJsonDocument doc = QJsonDocument::fromJson(message.toUtf8());
-                if (!doc.isNull() && doc.isObject()) {
-                    QJsonObject obj = doc.object();
-                    QString action = obj["action"].toString();
-                    QString payload = obj["payload"].toString();
-                    cb(action.toStdString(), payload.toStdString());
-                }
-            }
-        });
-        connect(pSocket, &QWebSocket::disconnected, this, [this, pSocket]() {
-            std::lock_guard<std::mutex> lock(m_impl->mutex);
-            auto it = std::find(m_impl->clients.begin(), m_impl->clients.end(), pSocket);
-            if (it != m_impl->clients.end()) {
-                m_impl->clients.erase(it);
-            }
-            pSocket->deleteLater();
-        });
-
-        std::lock_guard<std::mutex> lock(m_impl->mutex);
-        m_impl->clients.push_back(pSocket);
-        std::cout << "[RemoteApiServer] Client connected." << std::endl;
-        
-        if (!m_impl->lastSongMapJson.empty()) {
-            QJsonObject eventObj;
-            eventObj["event"] = QStringLiteral("SONG_MAP_UPDATED");
-            eventObj["payload"] = QString::fromStdString(m_impl->lastSongMapJson);
-            QJsonDocument eventDoc(eventObj);
-            pSocket->sendTextMessage(eventDoc.toJson(QJsonDocument::Compact));
-        }
-    });
-#endif
+RemoteApiServer::RemoteApiServer(uint16_t port, std::unique_ptr<IWebSocketServer> transport)
+    : m_impl(std::make_unique<Impl>(port, transport ? std::move(transport) : createQtWebSocketServer())) {
+    Impl* impl = m_impl.get();
+    impl->transport->setConnectionHandler(
+        [impl](const std::shared_ptr<IWebSocketConnection>& connection) { impl->onConnection(connection); });
 }
 
 RemoteApiServer::~RemoteApiServer() {
@@ -89,36 +84,31 @@ RemoteApiServer::~RemoteApiServer() {
 
 bool RemoteApiServer::startServer() {
     std::lock_guard<std::mutex> lock(m_impl->mutex);
-    if (m_impl->running) return true;
-
-#ifdef HARMONYSYNC_QT_AVAILABLE
-    if (m_impl->webSocketServer->listen(QHostAddress::Any, m_impl->serverPort)) {
-        m_impl->running = true;
-        std::cout << "[RemoteApiServer] Started on port " << m_impl->serverPort << std::endl;
+    if (m_impl->running) {
         return true;
-    } else {
-        std::cerr << "[RemoteApiServer] Failed to start on port " << m_impl->serverPort << std::endl;
+    }
+
+    if (!m_impl->transport->listen(m_impl->serverPort)) {
+        std::cerr << "[RemoteApiServer] Failed to start on port " << m_impl->serverPort << '\n';
         return false;
     }
-#else
     m_impl->running = true;
+    std::cout << "[RemoteApiServer] Started on port " << m_impl->serverPort << '\n';
     return true;
-#endif
 }
 
 void RemoteApiServer::stopServer() {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
-#ifdef HARMONYSYNC_QT_AVAILABLE
-    if (m_impl->webSocketServer) {
-        m_impl->webSocketServer->close();
+    std::vector<std::shared_ptr<IWebSocketConnection>> clients;
+    {
+        std::lock_guard<std::mutex> lock(m_impl->mutex);
+        clients.swap(m_impl->clients);
+        m_impl->running = false;
     }
-    for (auto* client : m_impl->clients) {
+    // Closing outside the lock: a transport may report disconnects synchronously.
+    m_impl->transport->close();
+    for (const auto& client : clients) {
         client->close();
-        client->deleteLater();
     }
-    m_impl->clients.clear();
-#endif
-    m_impl->running = false;
 }
 
 bool RemoteApiServer::isRunning() const noexcept {
@@ -144,26 +134,15 @@ bool RemoteApiServer::verifyPairingToken(const std::string& token) const {
 }
 
 void RemoteApiServer::broadcastEvent(const std::string& eventName, const std::string& jsonPayload) {
-#ifdef HARMONYSYNC_QT_AVAILABLE
-    QJsonObject obj;
-    obj["event"] = QString::fromStdString(eventName);
-    obj["payload"] = QString::fromStdString(jsonPayload);
-    QJsonDocument doc(obj);
-    QString msg = QString::fromUtf8(doc.toJson(QJsonDocument::Compact));
+    const std::string message = Impl::buildEventMessage(eventName, jsonPayload);
 
     std::lock_guard<std::mutex> lock(m_impl->mutex);
-    
     if (eventName == "SONG_MAP_UPDATED") {
         m_impl->lastSongMapJson = jsonPayload;
     }
-
-    for (auto* client : m_impl->clients) {
-        client->sendTextMessage(msg);
+    for (const auto& client : m_impl->clients) {
+        client->sendText(message);
     }
-#else
-    (void)eventName;
-    (void)jsonPayload;
-#endif
 }
 
 void RemoteApiServer::setCommandCallback(ApiCommandCallback callback) {

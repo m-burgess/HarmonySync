@@ -6,6 +6,8 @@ Goal: every component reaches at least 85% line coverage and is lint-clean. Each
 
 - Coverage floors are per component, not global.
 - QML is out of scope for now: no `qmllint`/`qmlformat`, no QML coverage. Logic moved out of QML into viewmodels still counts toward their coverage.
+- Scripts are out of scope: Python (`scripts/`), shell (`*.sh`) and `docs/scriptwriter-*` JS get no lint or coverage work. PR 4 was dropped; PR numbers are not reused.
+- Tests cover app logic only, in both the C++ backend and the `web_client` frontend. Do not test Qt, React, FFmpeg or other third-party behavior, rendering, styling, or markup. Thin adapters and bootstrap code with no app logic are excluded from coverage with a one-line justification.
 - Dependency injection is in scope. Add small interfaces with constructor injection (real implementation in production, fake in tests) in the same PR that needs each seam.
 - `web_client` moves from `node --test` to Vitest.
 - Coverage counts lines. Branch coverage is reported but not gated.
@@ -21,9 +23,7 @@ Goal: every component reaches at least 85% line coverage and is lint-clean. Each
 | `src/viewmodels` (incl. `mobile/`) | C++ | ~2.9k lines | ctest, no lint |
 | `src/qml`, `src/mobile/qml` | QML | ~2.2k lines | 3 QML tests (out of scope) |
 | `src/web_client` | JS/JSX (Vite/React) | small | `oxlint`, `node --test`, 1 test file |
-| `scripts/ai_lyric_sync.py` | Python | 200 lines | tested only indirectly via C++ |
-| `*.sh`, `CMakeLists.txt`, `cmake/` | Bash/CMake | small | none |
-| `docs/scriptwriter-*/*.js` | JS (examples, templates) | 17 files | none |
+| `CMakeLists.txt`, `cmake/` | CMake | small | none |
 | `.github/workflows` | YAML | 3 workflows | CI runs only 5 smoke tests, no coverage |
 
 ## Tooling
@@ -32,13 +32,10 @@ Goal: every component reaches at least 85% line coverage and is lint-clean. Each
 |---|---|---|
 | C++ | `clang-tidy`, `clang-format` (`compile_commands.json` already exported) | `gcov` + `gcovr --fail-under-line`, via `-DHARMONYSYNC_COVERAGE=ON` |
 | JS/JSX (`web_client`) | `oxlint`, Prettier | Vitest + `@vitest/coverage-v8` with thresholds, Testing Library for React |
-| JS (docs examples) | `oxlint`, `node --check` | excluded |
-| Python | `ruff check`, `ruff format` | `pytest-cov --cov-fail-under` |
-| Shell | `shellcheck`, `shfmt` | excluded |
 | CMake | `gersemi`, `cmake-lint` | excluded |
 | GitHub Actions YAML | `actionlint` | excluded |
 
-Coverage exclusions: `qrcodegen.*`, `tests/`, `main.cpp`, `main_mobile.cpp`, moc and autogen output.
+Coverage exclusions: `qrcodegen.*`, `tests/`, `main.cpp`, `main_mobile.cpp`, moc and autogen output, and the thin Qt adapters `QtWebSocketTransport.*` and `QtProcessRunner.*` (no logic; they only forward to QWebSocket/QProcess).
 
 Lint scope grows per PR via a `lint-scope` file listing enforced paths. CI runs `clang-tidy` with `WarningsAsErrors` on those paths and in report-only mode elsewhere, so later PRs can't regress cleaned components.
 
@@ -49,19 +46,18 @@ Lint scope grows per PR via a `lint-scope` file listing enforced paths. CI runs 
 | 0 | [x] (pending CI baseline check) | Infrastructure | `HARMONYSYNC_COVERAGE` CMake option (`cmake/Coverage.cmake`), `tools/quality/` (`run_coverage.sh`, `check_coverage.py`, `components.json`, `run_lint.sh`, `lint-scope.txt`), `.clang-tidy`, `.clang-format`, `.editorconfig`, `quality.yml` workflow (full `ctest` with coverage floors, lint enforce and report). Stale-file cleanup (`ErrorLog.txt`, `CMakeLists.txt.orig`, `test_cmake.patch`, `dev_output.txt`) was deferred to a separate PR. The existing 5-test smoke workflow is kept for fast feedback. | 10% per component (unverified, see notes) |
 | 1 | [x] (pending CI) | `core/models` (AppSettings, MediaStem, ServiceOrder, SlideItem, SongMap) | Lint; models are Qt-free value types, so tests cover accessors, clamping, bounds, copy/move. Added `tests/test_check.hpp` (`HS_CHECK`, works under NDEBUG) for new tests. Measured 100% locally | 85% |
 | 2 | [x] (pending CI) | `core/services` data and persistence (Config, SettingsStorage, LocalDatabase, SongLibraryIndex, FolderService, ServiceOrderFolderScanner, Localization, ChordTransposer) | Lint; tests run against real temp dirs (`tests/test_temp_dir.hpp`) instead of filesystem/clock seams, which weren't needed. Measured 98% locally with Qt Core only | 85% |
-| 3 | [ ] | `core/services` network and system (RemoteApiServer, MobileApiClient, CloudSync/Network, AutoUpdate, CrashReporter, OnlineLyricsFetcher, QrCodeImageProvider, AILyricSync, DisplayManager) | Lint; network (HTTP/WebSocket) and process-launcher seams | 85% |
-| 4 | [ ] | Python `scripts/` | `ruff`, pytest suite with mocked audio/model calls, CI job. Independent of the C++ track | 85% |
+| 3 | [x] (pending CI) | `core/services` network and system (RemoteApiServer, MobileApiClient, CloudSync/Network, AutoUpdate, CrashReporter, OnlineLyricsFetcher, QrCodeImageProvider, AILyricSync, DisplayManager) | Lint; seams: `IWebSocketServer`/`IWebSocketClient` (`WebSocketTransport.hpp`), `IProcessRunner` (`ProcessRunner.hpp`), `IHttpClient` (in `CloudNetworkService.hpp`), `ScreenSource` (DisplayManager). `RemoteApiServer` and `MobileApiClient` no longer derive from `QObject`. Qt adapters live in `QtWebSocketTransport.cpp` and `QtProcessRunner.cpp` (excluded from coverage: thin QWebSocket/QProcess wrappers that need a real socket or process). `test_mobile_api_client` and `test_ai_lyric_sync` rewritten against fakes and removed from the known-failing list. Measured 98% locally with the Qt adapters stubbed | 85% |
 | 5 | [ ] | `media` audio (AudioEngine, StemMixer, Compressor, EQ, PitchShifter, FFmpegDecoder/Transposer, RealtimeHandoff) | Lint; FFmpeg and audio-device seams; synthetic-buffer tests | 85% |
 | 6 | [ ] | `media` I/O (Dmx, MidiHardwareDevice, EventTriggerEngine, NdiVideoOutput, VideoBackgroundPlayer) | Lint; NDI, DMX and MIDI device seams | 85% |
 | 7 | [ ] | `viewmodels` session, settings, setlist (SetlistViewModel, SettingsViewModel, UserSession, SongSwitchCoordinator) | Lint; tests | 85% |
 | 8 | [ ] | `viewmodels` audio (AudioMixer, AudioFx) | Lint; tests | 85% |
 | 9 | [ ] | `viewmodels` display (SlideDisplay, PresentationWindow, LowerThird, ConfidenceMonitor, JsonSyntaxHighlighter) | Lint; tests | 85% |
 | 10 | [ ] | `viewmodels` MIDI and mobile (MidiMapping, `mobile/Musician*`) | Lint; tests | 85% |
-| 11 | [ ] | `web_client` | Vitest + Testing Library, test `transposer`, `App.jsx`, `main.jsx`; Prettier; update `web-client.yml`. Independent of the C++ track | 85% |
-| 12 | [ ] | Shell, CMake, workflows, doc scripts | `shellcheck`, `shfmt`, `gersemi`, `actionlint`, `oxlint` on `docs/scriptwriter-*`; merge redundant run scripts (`run_both.sh`, `run_host_and_web.sh`, `dev.sh`, `dev-rebuild.sh`) | n/a |
+| 11 | [ ] | `web_client` | Vitest; test app logic only (`transposer`, and the state, data-handling and event logic in `App.jsx`, using Testing Library only where logic is reachable through a component); no markup, styling or snapshot tests; `main.jsx` is bootstrap and excluded from coverage; Prettier; update `web-client.yml`. Independent of the C++ track | 85% |
+| 12 | [ ] | CMake, workflows | `gersemi`, `cmake-lint`, `actionlint` | n/a |
 | 13 | [ ] | Final ratchet | All component floors at 85%, lint failures block merges, `-Werror` by default | 85% |
 
-PRs 4 and 11 can run in parallel with PRs 1-10.
+PR 11 can run in parallel with PRs 1-10.
 
 ## Notes from PR 0
 
@@ -72,9 +68,17 @@ PRs 4 and 11 can run in parallel with PRs 1-10.
 - Four existing tests fail with `assert()` active and are listed in `tools/quality/known-failing-tests.txt`. They still run for coverage but do not fail the job; each is fixed in the PR for its component.
 - Run locally with `tools/quality/run_coverage.sh` (needs cmake, ninja, gcovr and Qt6 including WebSockets).
 
+## Notes from PR 3
+
+- `AuthenticationFailed` is never set: `RemoteApiServer` has no auth handshake, so the client only sends an `auth` message. The old test asserted behavior that never existed.
+- `CloudNetworkService`, `CloudSyncEngine`, `AutoUpdateService` and `CrashReporterService` are stubs that return canned results. They are covered as-is; real implementations need their own PR.
+- `.clang-tidy` now allows missing move members when copy is deleted (interfaces and non-copyable services).
+- `MobileApiClient` callbacks now run outside its mutex, so a callback can call `currentState()`.
+
 ## Rules for every PR
 
 - List the paths added to `lint-scope`.
 - CI fails if a component's coverage floor drops or a scoped path has lint errors.
-- Prefer adding a small seam over excluding hard-to-test code from coverage.
+- Prefer adding a small seam over excluding hard-to-test app logic from coverage.
+- Every test asserts app behavior; remove tests that only exercise framework or library code.
 - Update the status checkbox in the table above when the PR merges.

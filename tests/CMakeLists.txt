@@ -43,6 +43,11 @@ add_executable(test_display_manager test_display_manager.cpp)
 target_link_libraries(test_display_manager PRIVATE harmonysync_viewmodels harmonysync_core)
 add_test(NAME test_display_manager COMMAND test_display_manager)
 
+# Test display screen enumeration and QR code rendering
+add_executable(test_display_and_qr test_display_and_qr.cpp)
+target_link_libraries(test_display_and_qr PRIVATE harmonysync_core)
+add_test(NAME test_display_and_qr COMMAND test_display_and_qr)
+
 # Test Audio DSP
 add_executable(test_audio_dsp test_audio_dsp.cpp)
 target_link_libraries(test_audio_dsp PRIVATE harmonysync_media harmonysync_core)

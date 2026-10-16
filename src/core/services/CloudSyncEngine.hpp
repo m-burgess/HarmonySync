@@ -7,13 +7,7 @@
 
 namespace HarmonySync::Core {
 
-enum class SyncState {
-    Idle,
-    Syncing,
-    InSync,
-    Conflict,
-    Error
-};
+enum class SyncState { Idle, Syncing, InSync, Conflict, Error };
 
 /**
  * @brief Thread-safe cloud synchronization engine for setlist backups and live team collaboration.

@@ -18,8 +18,10 @@
     },
     {
       "name": "core-services-network",
-      "floor": 10,
+      "floor": 85,
       "paths": [
+        "src/core/services/WebSocketTransport",
+        "src/core/services/ProcessRunner",
         "src/core/services/RemoteApiServer",
         "src/core/services/MobileApiClient",
         "src/core/services/CloudSyncEngine",
