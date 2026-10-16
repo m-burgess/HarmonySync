@@ -1,3 +1,11 @@
 # Repo-relative path prefixes enforced by CI (clang-tidy with warnings as errors, clang-format check).
 # Each component PR appends its paths here. Everything else is report-only.
 src/core/models/
+src/core/services/ConfigService
+src/core/services/SettingsStorageService
+src/core/services/LocalDatabaseService
+src/core/services/SongLibraryIndexService
+src/core/services/FolderService
+src/core/services/ServiceOrderFolderScanner
+src/core/services/LocalizationService
+src/core/services/ChordTransposer

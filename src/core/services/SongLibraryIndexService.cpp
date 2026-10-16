@@ -16,8 +16,7 @@ struct SongLibraryIndexService::Impl {
 };
 
 SongLibraryIndexService::SongLibraryIndexService()
-    : m_impl(std::make_unique<Impl>())
-{}
+    : m_impl(std::make_unique<Impl>()) {}
 
 SongLibraryIndexService::~SongLibraryIndexService() = default;
 
@@ -31,9 +30,8 @@ void SongLibraryIndexService::buildIndex(const std::vector<SongMap>& songs) {
 
 void SongLibraryIndexService::addOrUpdateSong(const SongMap& song) {
     std::lock_guard<std::mutex> lock(m_impl->mutex);
-    auto it = std::find_if(m_impl->indexedSongs.begin(), m_impl->indexedSongs.end(), [&](const SongMap& s) {
-        return s.id() == song.id();
-    });
+    auto it = std::find_if(m_impl->indexedSongs.begin(), m_impl->indexedSongs.end(),
+                           [&](const SongMap& s) { return s.id() == song.id(); });
     if (it != m_impl->indexedSongs.end()) {
         *it = song;
     } else {
@@ -43,12 +41,9 @@ void SongLibraryIndexService::addOrUpdateSong(const SongMap& song) {
 
 void SongLibraryIndexService::removeSong(const std::string& songId) {
     std::lock_guard<std::mutex> lock(m_impl->mutex);
-    m_impl->indexedSongs.erase(
-        std::remove_if(m_impl->indexedSongs.begin(), m_impl->indexedSongs.end(), [&](const SongMap& s) {
-            return s.id() == songId;
-        }),
-        m_impl->indexedSongs.end()
-    );
+    m_impl->indexedSongs.erase(std::remove_if(m_impl->indexedSongs.begin(), m_impl->indexedSongs.end(),
+                                              [&](const SongMap& s) { return s.id() == songId; }),
+                               m_impl->indexedSongs.end());
 }
 
 std::vector<SearchResult> SongLibraryIndexService::search(const std::string& query, size_t maxResults) const {
@@ -56,7 +51,9 @@ std::vector<SearchResult> SongLibraryIndexService::search(const std::string& que
     std::string lowerQuery = toLower(query);
     std::vector<SearchResult> results;
 
-    if (lowerQuery.empty()) return results;
+    if (lowerQuery.empty()) {
+        return results;
+    }
 
     for (const auto& song : m_impl->indexedSongs) {
         std::string lowerTitle = toLower(song.title());
@@ -76,9 +73,8 @@ std::vector<SearchResult> SongLibraryIndexService::search(const std::string& que
         }
     }
 
-    std::sort(results.begin(), results.end(), [](const SearchResult& a, const SearchResult& b) {
-        return a.matchScore > b.matchScore;
-    });
+    std::sort(results.begin(), results.end(),
+              [](const SearchResult& a, const SearchResult& b) { return a.matchScore > b.matchScore; });
 
     if (results.size() > maxResults) {
         results.resize(maxResults);

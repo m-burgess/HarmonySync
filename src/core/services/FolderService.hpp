@@ -12,7 +12,8 @@
 namespace HarmonySync::Core {
 
 /**
- * @brief Service responsible for scanning directory trees, detecting song/slide resources, and constructing domain models.
+ * @brief Service responsible for scanning directory trees, detecting song/slide resources, and constructing domain
+ * models.
  */
 class FolderService {
 public:

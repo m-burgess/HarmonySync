@@ -17,12 +17,10 @@ struct ServiceOrderFolderScanner::Impl {
     std::shared_ptr<FolderService> folderService;
 
     Impl()
-        : folderService(std::make_shared<FolderService>())
-    {}
+        : folderService(std::make_shared<FolderService>()) {}
 
     explicit Impl(std::shared_ptr<FolderService> fs)
-        : folderService(std::move(fs))
-    {
+        : folderService(std::move(fs)) {
         if (!folderService) {
             folderService = std::make_shared<FolderService>();
         }
@@ -30,12 +28,10 @@ struct ServiceOrderFolderScanner::Impl {
 };
 
 ServiceOrderFolderScanner::ServiceOrderFolderScanner()
-    : m_impl(std::make_unique<Impl>())
-{}
+    : m_impl(std::make_unique<Impl>()) {}
 
 ServiceOrderFolderScanner::ServiceOrderFolderScanner(std::shared_ptr<FolderService> folderService)
-    : m_impl(std::make_unique<Impl>(std::move(folderService)))
-{}
+    : m_impl(std::make_unique<Impl>(std::move(folderService))) {}
 
 ServiceOrderFolderScanner::~ServiceOrderFolderScanner() = default;
 
@@ -79,9 +75,10 @@ ServiceOrder ServiceOrderFolderScanner::scanServiceOrderDirectory(const std::fil
     }
 
     // Natural alphabetical sort for subfolders (e.g. 01_..., 02_...)
-    std::sort(subfolderPaths.begin(), subfolderPaths.end(), [](const std::filesystem::path& a, const std::filesystem::path& b) {
-        return a.filename().string() < b.filename().string();
-    });
+    std::sort(subfolderPaths.begin(), subfolderPaths.end(),
+              [](const std::filesystem::path& a, const std::filesystem::path& b) {
+                  return a.filename().string() < b.filename().string();
+              });
 
     for (const auto& subPath : subfolderPaths) {
         SongMap item = m_impl->folderService->loadSongFromFolder(subPath);

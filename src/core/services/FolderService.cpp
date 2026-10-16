@@ -6,26 +6,28 @@
 #include <iostream>
 
 namespace {
-    double parseTimestamp(const std::string& ts) {
-        size_t colon = ts.find(':');
-        if (colon == std::string::npos) return std::stod(ts);
-        try {
-            double m = std::stod(ts.substr(0, colon));
-            double s = std::stod(ts.substr(colon + 1));
-            return m * 60.0 + s;
-        } catch (...) {
-            return 0.0;
-        }
+double parseTimestamp(const std::string& ts) {
+    size_t colon = ts.find(':');
+    if (colon == std::string::npos) {
+        return std::stod(ts);
     }
-
-    std::string formatTimestamp(double seconds) {
-        int m = static_cast<int>(seconds) / 60;
-        double s = seconds - (m * 60);
-        char buf[32];
-        snprintf(buf, sizeof(buf), "%02d:%05.2f", m, s);
-        return std::string(buf);
+    try {
+        double m = std::stod(ts.substr(0, colon));
+        double s = std::stod(ts.substr(colon + 1));
+        return m * 60.0 + s;
+    } catch (...) {
+        return 0.0;
     }
 }
+
+std::string formatTimestamp(double seconds) {
+    int m = static_cast<int>(seconds) / 60;
+    double s = seconds - (m * 60);
+    char buf[32];
+    snprintf(buf, sizeof(buf), "%02d:%05.2f", m, s);
+    return std::string(buf);
+}
+} // namespace
 
 #if __has_include(<QJsonDocument>)
 #include <QJsonDocument>
@@ -43,7 +45,8 @@ bool isAudioExtension(const std::string& ext) {
     std::string lowerExt = ext;
     std::transform(lowerExt.begin(), lowerExt.end(), lowerExt.begin(),
                    [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-    return (lowerExt == ".wav" || lowerExt == ".mp3" || lowerExt == ".ogg" || lowerExt == ".flac" || lowerExt == ".m4a");
+    return (lowerExt == ".wav" || lowerExt == ".mp3" || lowerExt == ".ogg" || lowerExt == ".flac" ||
+            lowerExt == ".m4a");
 }
 
 bool isImageExtension(const std::string& ext) {
@@ -66,12 +69,10 @@ struct FolderService::Impl {
     std::shared_ptr<ConfigService> configService;
 
     Impl()
-        : configService(std::make_shared<ConfigService>())
-    {}
+        : configService(std::make_shared<ConfigService>()) {}
 
     explicit Impl(std::shared_ptr<ConfigService> cfgSvc)
-        : configService(std::move(cfgSvc))
-    {
+        : configService(std::move(cfgSvc)) {
         if (!configService) {
             configService = std::make_shared<ConfigService>();
         }
@@ -79,12 +80,10 @@ struct FolderService::Impl {
 };
 
 FolderService::FolderService()
-    : m_impl(std::make_unique<Impl>())
-{}
+    : m_impl(std::make_unique<Impl>()) {}
 
 FolderService::FolderService(std::shared_ptr<ConfigService> configService)
-    : m_impl(std::make_unique<Impl>(std::move(configService)))
-{}
+    : m_impl(std::make_unique<Impl>(std::move(configService))) {}
 
 FolderService::~FolderService() = default;
 
@@ -126,11 +125,11 @@ SongMap FolderService::loadSongFromFolder(const std::filesystem::path& folderPat
             if (doc.isObject()) {
                 QJsonObject obj = doc.object();
                 if (obj.contains("title")) {
-                    song = SongMap(folderName, obj["title"].toString().toStdString(), 
+                    song = SongMap(folderName, obj["title"].toString().toStdString(),
                                    obj.contains("artist") ? obj["artist"].toString().toStdString() : "Unknown Artist");
                     song.setFolderPath(folderPath.string());
                 }
-                
+
                 if (obj.contains("bpm")) {
                     song.setTempoBpm(obj["bpm"].toDouble());
                 }
@@ -141,7 +140,7 @@ SongMap FolderService::loadSongFromFolder(const std::filesystem::path& folderPat
                     std::string key = obj["originalKey"].toString().toStdString();
                     song.setKeys(key, key);
                 }
-                
+
                 if (obj.contains("timing")) {
                     song.setTiming(obj["timing"].toString().toStdString());
                 }
@@ -151,7 +150,7 @@ SongMap FolderService::loadSongFromFolder(const std::filesystem::path& folderPat
                 if (obj.contains("lyricsURL")) {
                     song.setLyricsURL(obj["lyricsURL"].toString().toStdString());
                 }
-                
+
                 if (obj.contains("backgroundVideo")) {
                     std::string bgVideo = obj["backgroundVideo"].toString().toStdString();
                     if (!bgVideo.empty()) {
@@ -182,14 +181,21 @@ SongMap FolderService::loadSongFromFolder(const std::filesystem::path& folderPat
                                     sLine.text = lines[j].toString().toStdString();
                                 } else if (lines[j].isObject()) {
                                     QJsonObject lObj = lines[j].toObject();
-                                    if (lObj.contains("text")) sLine.text = lObj["text"].toString().toStdString();
+                                    if (lObj.contains("text")) {
+                                        sLine.text = lObj["text"].toString().toStdString();
+                                    }
                                     if (lObj.contains("timestamp")) {
-                                        sLine.timestampSeconds = parseTimestamp(lObj["timestamp"].toString().toStdString());
+                                        sLine.timestampSeconds =
+                                            parseTimestamp(lObj["timestamp"].toString().toStdString());
                                     } else if (lObj.contains("timestampSeconds")) {
                                         sLine.timestampSeconds = lObj["timestampSeconds"].toDouble();
                                     }
-                                    if (lObj.contains("nextSlideMidiNote")) sLine.nextSlideMidiNote = lObj["nextSlideMidiNote"].toString().toStdString();
-                                    if (lObj.contains("lightSceneMidiNote")) sLine.lightSceneMidiNote = lObj["lightSceneMidiNote"].toString().toStdString();
+                                    if (lObj.contains("nextSlideMidiNote")) {
+                                        sLine.nextSlideMidiNote = lObj["nextSlideMidiNote"].toString().toStdString();
+                                    }
+                                    if (lObj.contains("lightSceneMidiNote")) {
+                                        sLine.lightSceneMidiNote = lObj["lightSceneMidiNote"].toString().toStdString();
+                                    }
                                 }
                                 section.lines.push_back(sLine);
                                 lyricsContent += sLine.text + "\n";
@@ -215,7 +221,7 @@ SongMap FolderService::loadSongFromFolder(const std::filesystem::path& folderPat
                                 t = tLine["time"].toDouble();
                             }
                             if (tLine.contains("text")) {
-                                timedLines.push_back({ t, tLine["text"].toString().toStdString() });
+                                timedLines.push_back({t, tLine["text"].toString().toStdString()});
                             }
                         }
                     }
@@ -243,21 +249,19 @@ SongMap FolderService::loadSongFromFolder(const std::filesystem::path& folderPat
         if (isAudioExtension(ext)) {
             stemCount++;
             MediaStem stem(std::to_string(stemCount), stemName, entry.path().string());
-            
+
             // Apply Panning Rules
             std::string lowerName = stemName;
             std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
-            
-            if (lowerName.find("click") != std::string::npos) {
-                stem.setPan(-1.0f);
-            } else if (lowerName.find("guide") != std::string::npos) {
+
+            if (lowerName.find("click") != std::string::npos || lowerName.find("guide") != std::string::npos) {
                 stem.setPan(-1.0f);
             } else if (lowerName.find("split") != std::string::npos || lowerName.find("stereo") != std::string::npos) {
                 stem.setPan(0.0f);
             } else {
                 stem.setPan(1.0f);
             }
-            
+
             loadedStems.push_back(std::move(stem));
         } else if (stemName == "lyrics" || ext == ".txt") {
             std::ifstream lyricsFile(entry.path());
@@ -275,16 +279,22 @@ SongMap FolderService::loadSongFromFolder(const std::filesystem::path& folderPat
         auto getPriority = [](const std::string& name) {
             std::string lowerName = name;
             std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
-            if (lowerName.find("click") != std::string::npos) return 0;
-            if (lowerName.find("guide") != std::string::npos) return 1;
+            if (lowerName.find("click") != std::string::npos) {
+                return 0;
+            }
+            if (lowerName.find("guide") != std::string::npos) {
+                return 1;
+            }
             return 2;
         };
 
         std::sort(loadedStems.begin(), loadedStems.end(), [&getPriority](const MediaStem& a, const MediaStem& b) {
             int pA = getPriority(a.name());
             int pB = getPriority(b.name());
-            if (pA != pB) return pA < pB;
-            
+            if (pA != pB) {
+                return pA < pB;
+            }
+
             std::string nameA = a.name();
             std::string nameB = b.name();
             std::transform(nameA.begin(), nameA.end(), nameA.begin(), ::tolower);
@@ -305,7 +315,7 @@ SongMap FolderService::loadSongFromFolder(const std::filesystem::path& folderPat
             finalStem.setPitchShiftSemitones(loadedStems[i].pitchShiftSemitones());
             song.addStem(std::move(finalStem));
         }
-        
+
         song.setHasSongMap(true);
     }
 
@@ -357,7 +367,9 @@ std::vector<SlideItem> FolderService::loadSlidesFromFolder(const std::filesystem
 
 bool FolderService::saveMixState(const std::string& folderPath, const std::vector<MediaStem>& stems) {
 #if __has_include(<QJsonDocument>)
-    if (folderPath.empty() || stems.empty()) return false;
+    if (folderPath.empty() || stems.empty()) {
+        return false;
+    }
 
     QJsonObject stemsObj;
     for (const auto& stem : stems) {
@@ -367,7 +379,7 @@ bool FolderService::saveMixState(const std::string& folderPath, const std::vecto
         stemState["muted"] = stem.isMuted();
         stemState["solo"] = stem.isSolo();
         stemState["pitchShift"] = stem.pitchShiftSemitones();
-        
+
         stemsObj[QString::fromStdString(stem.name())] = stemState;
     }
 
@@ -376,7 +388,6 @@ bool FolderService::saveMixState(const std::string& folderPath, const std::vecto
 
     QJsonDocument doc(rootObj);
     std::filesystem::path mixPath = std::filesystem::path(folderPath) / "mix.json";
-    
     QSaveFile file(QString::fromStdString(mixPath.string()));
     if (!file.open(QIODevice::WriteOnly)) {
         return false;
@@ -397,14 +408,20 @@ bool FolderService::saveMixState(const std::string& folderPath, const std::vecto
 void FolderService::applyMixState(const std::string& folderPath, std::vector<MediaStem>& stems) {
 #if __has_include(<QJsonDocument>)
     std::filesystem::path mixPath = std::filesystem::path(folderPath) / "mix.json";
-    if (!std::filesystem::exists(mixPath)) return;
+    if (!std::filesystem::exists(mixPath)) {
+        return;
+    }
 
     QFile file(QString::fromStdString(mixPath.string()));
-    if (!file.open(QIODevice::ReadOnly)) return;
+    if (!file.open(QIODevice::ReadOnly)) {
+        return;
+    }
 
     QByteArray data = file.readAll();
     QJsonDocument doc = QJsonDocument::fromJson(data);
-    if (!doc.isObject()) return;
+    if (!doc.isObject()) {
+        return;
+    }
 
     QJsonObject rootObj = doc.object();
     QJsonObject stemsObj = rootObj["stems"].toObject();
@@ -413,11 +430,21 @@ void FolderService::applyMixState(const std::string& folderPath, std::vector<Med
         QString stemName = QString::fromStdString(stem.name());
         if (stemsObj.contains(stemName)) {
             QJsonObject state = stemsObj[stemName].toObject();
-            if (state.contains("volume")) stem.setVolume(static_cast<float>(state["volume"].toDouble()));
-            if (state.contains("pan")) stem.setPan(static_cast<float>(state["pan"].toDouble()));
-            if (state.contains("muted")) stem.setMuted(state["muted"].toBool());
-            if (state.contains("solo")) stem.setSolo(state["solo"].toBool());
-            if (state.contains("pitchShift")) stem.setPitchShiftSemitones(state["pitchShift"].toInt());
+            if (state.contains("volume")) {
+                stem.setVolume(static_cast<float>(state["volume"].toDouble()));
+            }
+            if (state.contains("pan")) {
+                stem.setPan(static_cast<float>(state["pan"].toDouble()));
+            }
+            if (state.contains("muted")) {
+                stem.setMuted(state["muted"].toBool());
+            }
+            if (state.contains("solo")) {
+                stem.setSolo(state["solo"].toBool());
+            }
+            if (state.contains("pitchShift")) {
+                stem.setPitchShiftSemitones(state["pitchShift"].toInt());
+            }
         }
     }
 #endif
@@ -436,21 +463,23 @@ bool FolderService::convertLyricsToSongMap(const std::filesystem::path& folderPa
     }
 
     std::ifstream file(lyricsPath);
-    if (!file.is_open()) return false;
+    if (!file.is_open()) {
+        return false;
+    }
 
     QJsonObject rootObj;
     QJsonArray sectionsArray;
-    
+
     QJsonObject currentSection;
     QString currentSectionName = "Intro";
     QJsonArray currentLines;
-    
+
     auto finalizeSection = [&]() {
         if (!currentLines.isEmpty() || currentSectionName != "Intro") {
             currentSection["name"] = currentSectionName;
             currentSection["lines"] = currentLines;
             sectionsArray.append(currentSection);
-            
+
             // Reset
             currentSection = QJsonObject();
             currentLines = QJsonArray();
@@ -460,30 +489,39 @@ bool FolderService::convertLyricsToSongMap(const std::filesystem::path& folderPa
     std::string line;
     while (std::getline(file, line)) {
         // Trim whitespace
-        line.erase(line.begin(), std::find_if(line.begin(), line.end(), [](unsigned char ch) { return !std::isspace(ch); }));
-        line.erase(std::find_if(line.rbegin(), line.rend(), [](unsigned char ch) { return !std::isspace(ch); }).base(), line.end());
+        line.erase(line.begin(),
+                   std::find_if(line.begin(), line.end(), [](unsigned char ch) { return !std::isspace(ch); }));
+        line.erase(std::find_if(line.rbegin(), line.rend(), [](unsigned char ch) { return !std::isspace(ch); }).base(),
+                   line.end());
 
-        if (line.empty()) continue;
+        if (line.empty()) {
+            continue;
+        }
 
-        if (line.find("Title:") == 0) {
+        if (line.starts_with("Title:")) {
             std::string titleStr = line.substr(6);
-            titleStr.erase(titleStr.begin(), std::find_if(titleStr.begin(), titleStr.end(), [](unsigned char ch) { return !std::isspace(ch); }));
+            titleStr.erase(titleStr.begin(), std::find_if(titleStr.begin(), titleStr.end(),
+                                                          [](unsigned char ch) { return !std::isspace(ch); }));
             rootObj["title"] = QString::fromStdString(titleStr);
-        } else if (line.find("BPM:") == 0) {
+        } else if (line.starts_with("BPM:")) {
             std::string bpmStr = line.substr(4);
-            bpmStr.erase(bpmStr.begin(), std::find_if(bpmStr.begin(), bpmStr.end(), [](unsigned char ch) { return !std::isspace(ch); }));
+            bpmStr.erase(bpmStr.begin(), std::find_if(bpmStr.begin(), bpmStr.end(),
+                                                      [](unsigned char ch) { return !std::isspace(ch); }));
             try {
                 rootObj["bpm"] = std::stod(bpmStr);
-            } catch (...) {}
-        } else if (line.find("Original Key:") == 0) {
+            } catch (...) { // NOLINT(bugprone-empty-catch): an unparsable BPM line leaves the tempo unset
+            }
+        } else if (line.starts_with("Original Key:")) {
             std::string keyStr = line.substr(13);
-            keyStr.erase(keyStr.begin(), std::find_if(keyStr.begin(), keyStr.end(), [](unsigned char ch) { return !std::isspace(ch); }));
+            keyStr.erase(keyStr.begin(), std::find_if(keyStr.begin(), keyStr.end(),
+                                                      [](unsigned char ch) { return !std::isspace(ch); }));
             rootObj["originalKey"] = QString::fromStdString(keyStr);
         } else if (line.front() == '[' && line.back() == ']') {
             std::string inner = line.substr(1, line.length() - 2);
-            if (inner.find("Chords:") == 0) {
+            if (inner.starts_with("Chords:")) {
                 std::string chordsStr = inner.substr(7);
-                chordsStr.erase(chordsStr.begin(), std::find_if(chordsStr.begin(), chordsStr.end(), [](unsigned char ch) { return !std::isspace(ch); }));
+                chordsStr.erase(chordsStr.begin(), std::find_if(chordsStr.begin(), chordsStr.end(),
+                                                                [](unsigned char ch) { return !std::isspace(ch); }));
                 currentSection["chords"] = QString::fromStdString(chordsStr);
             } else {
                 finalizeSection();
@@ -508,13 +546,15 @@ bool FolderService::convertLyricsToSongMap(const std::filesystem::path& folderPa
 }
 
 bool FolderService::saveSongMap(const SongMap& songMap) {
-    if (songMap.folderPath().empty()) return false;
-    
+    if (songMap.folderPath().empty()) {
+        return false;
+    }
+
     std::filesystem::path jsonPath = std::filesystem::path(songMap.folderPath()) / "song-map.json";
-    
+
 #if __has_include(<QJsonDocument>)
     QJsonObject rootObj;
-    
+
     if (std::filesystem::exists(jsonPath)) {
         QFile fileIn(QString::fromStdString(jsonPath.string()));
         if (fileIn.open(QIODevice::ReadOnly)) {
@@ -526,32 +566,32 @@ bool FolderService::saveSongMap(const SongMap& songMap) {
             fileIn.close();
         }
     }
-    
+
     rootObj["title"] = QString::fromStdString(songMap.title());
     rootObj["artist"] = QString::fromStdString(songMap.artist());
-    
+
     if (songMap.tempoBpm() > 0) {
         rootObj["bpm"] = songMap.tempoBpm();
     }
-    
+
     rootObj["timing"] = QString::fromStdString(songMap.timing());
     rootObj["length"] = QString::fromStdString(songMap.length());
-    
+
     if (!songMap.originalKey().empty()) {
         rootObj["key"] = QString::fromStdString(songMap.originalKey());
     } else {
         rootObj["key"] = "C";
     }
-    
+
     rootObj["lyricsURL"] = QString::fromStdString(songMap.lyricsURL());
-    
+
     if (!songMap.backgroundVideoPath().empty()) {
         std::filesystem::path bgPath(songMap.backgroundVideoPath());
         rootObj["backgroundVideo"] = QString::fromStdString(bgPath.filename().string());
     } else {
         rootObj["backgroundVideo"] = "";
     }
-    
+
     auto timedLines = songMap.timedLyrics();
     if (!timedLines.empty()) {
         QJsonArray timedArray;
@@ -571,17 +611,27 @@ bool FolderService::saveSongMap(const SongMap& songMap) {
         QJsonArray sectionsArray;
         for (const auto& sec : sections) {
             QJsonObject secObj;
-            if (!sec.name.empty()) secObj["name"] = QString::fromStdString(sec.name);
-            if (!sec.chords.empty()) secObj["chords"] = QString::fromStdString(sec.chords);
-            
+            if (!sec.name.empty()) {
+                secObj["name"] = QString::fromStdString(sec.name);
+            }
+            if (!sec.chords.empty()) {
+                secObj["chords"] = QString::fromStdString(sec.chords);
+            }
+
             if (!sec.lines.empty()) {
                 QJsonArray linesArray;
                 for (const auto& line : sec.lines) {
                     QJsonObject lineObj;
                     lineObj["text"] = QString::fromStdString(line.text);
-                    if (line.timestampSeconds > 0) lineObj["timestamp"] = QString::fromStdString(formatTimestamp(line.timestampSeconds));
-                    if (!line.nextSlideMidiNote.empty()) lineObj["nextSlideMidiNote"] = QString::fromStdString(line.nextSlideMidiNote);
-                    if (!line.lightSceneMidiNote.empty()) lineObj["lightSceneMidiNote"] = QString::fromStdString(line.lightSceneMidiNote);
+                    if (line.timestampSeconds > 0) {
+                        lineObj["timestamp"] = QString::fromStdString(formatTimestamp(line.timestampSeconds));
+                    }
+                    if (!line.nextSlideMidiNote.empty()) {
+                        lineObj["nextSlideMidiNote"] = QString::fromStdString(line.nextSlideMidiNote);
+                    }
+                    if (!line.lightSceneMidiNote.empty()) {
+                        lineObj["lightSceneMidiNote"] = QString::fromStdString(line.lightSceneMidiNote);
+                    }
                     linesArray.append(lineObj);
                 }
                 secObj["lines"] = linesArray;

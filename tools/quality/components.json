@@ -4,7 +4,7 @@
     { "name": "core-models", "floor": 85, "paths": ["src/core/models/"] },
     {
       "name": "core-services-data",
-      "floor": 10,
+      "floor": 85,
       "paths": [
         "src/core/services/ConfigService",
         "src/core/services/SettingsStorageService",

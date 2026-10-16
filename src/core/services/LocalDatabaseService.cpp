@@ -12,17 +12,14 @@ struct LocalDatabaseService::Impl {
     mutable std::mutex mutex;
 
     explicit Impl(std::string path)
-        : dbPath(std::move(path))
-    {}
+        : dbPath(std::move(path)) {}
 };
 
 LocalDatabaseService::LocalDatabaseService()
-    : m_impl(std::make_unique<Impl>(":memory:"))
-{}
+    : m_impl(std::make_unique<Impl>(":memory:")) {}
 
 LocalDatabaseService::LocalDatabaseService(const std::string& dbPath)
-    : m_impl(std::make_unique<Impl>(dbPath))
-{}
+    : m_impl(std::make_unique<Impl>(dbPath)) {}
 
 LocalDatabaseService::~LocalDatabaseService() = default;
 
@@ -42,7 +39,9 @@ bool LocalDatabaseService::isOpen() const noexcept {
 
 bool LocalDatabaseService::saveSongMap(const SongMap& song) {
     std::lock_guard<std::mutex> lock(m_impl->mutex);
-    if (!m_impl->open) return false;
+    if (!m_impl->open) {
+        return false;
+    }
     m_impl->songStorage[song.id()] = song;
     return true;
 }
@@ -68,7 +67,9 @@ std::vector<SongMap> LocalDatabaseService::getAllSongMaps() const {
 
 bool LocalDatabaseService::saveServiceOrder(const ServiceOrder& order) {
     std::lock_guard<std::mutex> lock(m_impl->mutex);
-    if (!m_impl->open) return false;
+    if (!m_impl->open) {
+        return false;
+    }
     m_impl->orderStorage[order.id()] = order;
     return true;
 }

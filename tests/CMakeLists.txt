@@ -8,6 +8,16 @@ add_executable(test_core_models test_core_models.cpp)
 target_link_libraries(test_core_models PRIVATE harmonysync_core)
 add_test(NAME test_core_models COMMAND test_core_models)
 
+# Test core data services (config, settings storage, database, index, localization, chords)
+add_executable(test_core_data_services test_core_data_services.cpp)
+target_link_libraries(test_core_data_services PRIVATE harmonysync_core)
+add_test(NAME test_core_data_services COMMAND test_core_data_services)
+
+# Test folder scanning, song-map JSON, mix state and service order scanning
+add_executable(test_core_folder_services test_core_folder_services.cpp)
+target_link_libraries(test_core_folder_services PRIVATE harmonysync_core)
+add_test(NAME test_core_folder_services COMMAND test_core_folder_services)
+
 # Test Config Service
 add_executable(test_config_service test_config_service.cpp)
 target_link_libraries(test_config_service PRIVATE harmonysync_core)
