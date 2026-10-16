@@ -2,7 +2,10 @@
 """Fail if any component's line coverage is below its floor in tools/quality/components.json.
 
 Usage: check_coverage.py SUMMARY_JSON [--config tools/quality/components.json]
+                         [--base-config BASE_COMPONENTS_JSON] [--allow-floor-decrease]
 SUMMARY_JSON comes from: gcovr --json-summary SUMMARY_JSON ...
+--base-config is the config from the PR's base branch; floors may not drop and components may not
+be removed relative to it unless --allow-floor-decrease is given (documented baseline adjustments).
 """
 
 import argparse
@@ -17,14 +20,38 @@ def load_files(summary_path):
     return {f["filename"]: (f["line_covered"], f["line_total"]) for f in data["files"]}
 
 
+def check_ratchet(components, base_path):
+    """Return error strings for floors lowered or components removed relative to the base config."""
+    with open(base_path, encoding="utf-8") as fh:
+        base = {c["name"]: c["floor"] for c in json.load(fh)["components"]}
+    current = {c["name"]: c["floor"] for c in components}
+    errors = []
+    for name, floor in base.items():
+        if name not in current:
+            errors.append(f"component {name} was removed (base floor {floor}%)")
+        elif current[name] < floor:
+            errors.append(f"floor for {name} dropped from {floor}% to {current[name]}%")
+    return errors
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("summary")
     parser.add_argument("--config", default=os.path.join(os.path.dirname(__file__), "components.json"))
+    parser.add_argument("--base-config")
+    parser.add_argument("--allow-floor-decrease", action="store_true")
     args = parser.parse_args()
 
     with open(args.config, encoding="utf-8") as fh:
         components = json.load(fh)["components"]
+
+    if args.base_config and not args.allow_floor_decrease:
+        ratchet_errors = check_ratchet(components, args.base_config)
+        if ratchet_errors:
+            print("ERROR: coverage floors may not decrease:")
+            for err in ratchet_errors:
+                print(f"  {err}")
+            return 1
     files = load_files(args.summary)
 
     owner = {}

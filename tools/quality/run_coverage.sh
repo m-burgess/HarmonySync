@@ -36,4 +36,9 @@ gcovr --root "$root" "$build_dir" \
     --xml "$build_dir/coverage.xml" \
     --html-details "$build_dir/coverage.html"
 
-python3 tools/quality/check_coverage.py "$build_dir/coverage-summary.json"
+# BASE_COMPONENTS: base-branch components.json (unset on the bootstrap PR or push builds).
+# ALLOW_FLOOR_DECREASE=1 permits an explicit, reviewed baseline adjustment.
+check_args=()
+[[ -n "${BASE_COMPONENTS:-}" && -f "$BASE_COMPONENTS" ]] && check_args+=(--base-config "$BASE_COMPONENTS")
+[[ "${ALLOW_FLOOR_DECREASE:-}" == "1" ]] && check_args+=(--allow-floor-decrease)
+python3 tools/quality/check_coverage.py "$build_dir/coverage-summary.json" "${check_args[@]}"

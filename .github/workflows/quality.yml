@@ -35,9 +35,22 @@ jobs:
           install-deps: 'true'
           modules: 'qtmultimedia qtwebsockets'
 
+      - name: Fetch base-branch coverage floors
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          git fetch --depth=1 origin "$BASE_REF"
+          # Absent on the PR that introduces the file; the check is skipped then.
+          git show FETCH_HEAD:tools/quality/components.json >"$RUNNER_TEMP/base-components.json" || rm -f "$RUNNER_TEMP/base-components.json"
+
       - name: Build, run full ctest, check component floors
         shell: bash
         env:
+          BASE_COMPONENTS: ${{ runner.temp }}/base-components.json
+          # Label a PR coverage-floor-adjust to allow a reviewed baseline correction.
+          ALLOW_FLOOR_DECREASE: ${{ contains(github.event.pull_request.labels.*.name, 'coverage-floor-adjust') && '1' || '0' }}
           CMAKE_ARGS: -DCMAKE_PREFIX_PATH=${{ env.QT_ROOT_DIR }}
           # Headless runner: QML tests need an offscreen platform.
           QT_QPA_PLATFORM: offscreen
