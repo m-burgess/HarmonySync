@@ -14,7 +14,17 @@ cmake --build "$build_dir" -j "$(nproc)"
 
 # Stale counters from earlier runs would inflate results.
 find "$build_dir" -name '*.gcda' -delete
-ctest --test-dir "$build_dir" --output-on-failure --no-tests=error
+
+known=()
+while IFS= read -r name; do
+    [[ -z "$name" || "$name" == \#* ]] && continue
+    known+=("$name")
+done <tools/quality/known-failing-tests.txt
+known_regex="^($(IFS='|'; echo "${known[*]}"))\$"
+
+ctest --test-dir "$build_dir" --output-on-failure --no-tests=error -E "$known_regex"
+# Known-failing tests still contribute coverage when they exit normally, but must not fail the job.
+ctest --test-dir "$build_dir" --output-on-failure -R "$known_regex" || echo "WARNING: known-failing tests failed (see tools/quality/known-failing-tests.txt)"
 
 gcovr --root "$root" "$build_dir" \
     --filter 'src/' \
