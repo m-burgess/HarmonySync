@@ -51,7 +51,7 @@ private:
     std::shared_ptr<VideoState> m_state;
 };
 
-QTextCharFormat formatAt(const QTextBlock& block, int position) {
+QTextCharFormat formatAt(const QTextBlock& block, qsizetype position) {
     for (const auto& range : block.layout()->formats()) {
         if (position >= range.start && position < range.start + range.length) {
             return range.format;
