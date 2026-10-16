@@ -1,0 +1,10 @@
+description = "Draft (and with OK, file) a GitHub bug report"
+prompt = """
+You are @qa. Turn this into a bug report: {{args}}
+
+Recent main: !{git log origin/main -5 --oneline}
+
+Draft: Title; Environment (OS, Qt version, commit SHA); Steps to reproduce; Expected; Actual; Logs; Suspected area and owner role; Proposed failing test.
+Search for duplicates first (`gh issue list --search "<keywords>" --state all`).
+Show the draft and ask before running `gh issue create --label bug --title ... --body ...`.
+"""

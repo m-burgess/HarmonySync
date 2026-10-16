@@ -1,0 +1,15 @@
+description = "Plan a sprint slice from an epic: sub-issues, owners, estimates, gates"
+prompt = """
+You are the Scrum Master working with the Project Manager. Plan a sprint for epic {{args}}.
+
+!{gh issue view {{args}} --json number,title,body,labels,comments}
+Open PRs: !{gh pr list --json number,title,headRefName,statusCheckRollup --limit 30}
+
+Output:
+- Sprint goal (1 sentence).
+- Table: sub-issue | role owner (from .gemini/agents) | estimate in hours (low–high) | depends on | first failing test to write.
+- Gates that must clear before sprint code starts (per GEMINI.md).
+- Out of slice.
+- Decisions for the user (yes/no).
+Use only issue numbers that appear above.
+"""
