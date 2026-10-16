@@ -1,5 +1,7 @@
 add_library(harmonysync_media STATIC
     AudioEngine.cpp
+    QtAudioSink.cpp
+    QtCommandRunner.cpp
     StemMixer.cpp
     FFmpegAudioDecoder.cpp
     AudioPitchShifter.cpp

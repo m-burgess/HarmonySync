@@ -33,6 +33,21 @@ add_executable(test_audio_engine test_audio_engine.cpp)
 target_link_libraries(test_audio_engine PRIVATE harmonysync_media harmonysync_core)
 add_test(NAME test_audio_engine COMMAND test_audio_engine)
 
+# Test mixer output, panning, song handoff and sink control through a fake audio sink
+add_executable(test_audio_mixing test_audio_mixing.cpp)
+target_link_libraries(test_audio_mixing PRIVATE harmonysync_media harmonysync_core)
+add_test(NAME test_audio_mixing COMMAND test_audio_mixing)
+
+# Test compressor, equalizer and stem gain rules
+add_executable(test_audio_effects test_audio_effects.cpp)
+target_link_libraries(test_audio_effects PRIVATE harmonysync_media harmonysync_core)
+add_test(NAME test_audio_effects COMMAND test_audio_effects)
+
+# Test FFmpeg transposer against a fake command runner
+add_executable(test_ffmpeg_transposer test_ffmpeg_transposer.cpp)
+target_link_libraries(test_ffmpeg_transposer PRIVATE harmonysync_media harmonysync_core)
+add_test(NAME test_ffmpeg_transposer COMMAND test_ffmpeg_transposer)
+
 # Test ViewModels
 add_executable(test_viewmodels test_viewmodels.cpp)
 target_link_libraries(test_viewmodels PRIVATE harmonysync_viewmodels harmonysync_media harmonysync_core)

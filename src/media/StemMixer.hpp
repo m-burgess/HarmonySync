@@ -13,7 +13,7 @@ namespace HarmonySync::Media {
 class StemMixer {
 public:
     StemMixer();
-    ~StemMixer();
+    ~StemMixer() = default;
 
     StemMixer(const StemMixer& other);
     StemMixer& operator=(const StemMixer& other);
@@ -21,9 +21,12 @@ public:
     StemMixer& operator=(StemMixer&& other) noexcept;
 
     /**
-     * @brief Calculate the effective linear gain (0.0 to 1.0) for a given stem, factoring in solo precedence, track mute, and master volume.
+     * @brief Calculate the effective linear gain (0.0 to 1.0) for a given stem, factoring in solo precedence, track
+     * mute, and master volume.
      */
-    [[nodiscard]] float calculateEffectiveGain(const Core::MediaStem& stem, const std::vector<Core::MediaStem>& allStems, float masterVolume) const noexcept;
+    [[nodiscard]] float calculateEffectiveGain(const Core::MediaStem& stem,
+                                               const std::vector<Core::MediaStem>& allStems,
+                                               float masterVolume) const noexcept;
 
     /**
      * @brief Helper to check if any track in the current stem list is soloed.

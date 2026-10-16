@@ -2,19 +2,15 @@
 #include "FFmpegAudioDecoder.hpp"
 #include "RealtimeHandoff.hpp"
 #include <algorithm>
-#include <iostream>
-#include <vector>
 #include <atomic>
-#include <cmath>
 #include <cctype>
+#include <cmath>
 #include <functional>
+#include <iostream>
+#include <numbers>
 #include <thread>
-
-#ifdef HARMONYSYNC_HAS_QT
-#include <QIODevice>
-#include <QAudioSink>
-#include <QMediaDevices>
-#include <QAudioDevice>
+#include <utility>
+#include <vector>
 
 namespace HarmonySync::Media {
 
@@ -26,9 +22,14 @@ public:
     SongSetLease() = default;
     explicit SongSetLease(std::shared_ptr<std::atomic<std::size_t>> counter) noexcept
         : m_counter(std::move(counter)) {
-        if (m_counter) m_counter->fetch_add(1, std::memory_order_relaxed);
+        if (m_counter) {
+            m_counter->fetch_add(1, std::memory_order_relaxed);
+        }
     }
-    SongSetLease(SongSetLease&& other) noexcept : m_counter(std::move(other.m_counter)) {}
+    SongSetLease(const SongSetLease&) = delete;
+    SongSetLease& operator=(const SongSetLease&) = delete;
+    SongSetLease(SongSetLease&& other) noexcept
+        : m_counter(std::move(other.m_counter)) {}
     SongSetLease& operator=(SongSetLease&& other) noexcept {
         if (this != &other) {
             release();
@@ -48,7 +49,8 @@ private:
     std::shared_ptr<std::atomic<std::size_t>> m_counter;
 };
 
-class AudioMixerDevice : public QIODevice {
+/// Mixes the current song's stems into PCM for the audio sink. read() runs on the audio thread.
+class AudioMixerDevice final : public IPcmSource {
 public:
     struct StemBuffer {
         Core::MediaStem stem;
@@ -62,19 +64,15 @@ public:
         double duration = 0.0;
     };
 
-    /// Song handoff (#177): the control thread publishes a fully mapped set; readData() takes
+    /// Song handoff (#177): the control thread publishes a fully mapped set; read() takes
     /// it at the top of its next callback. The old set is retired, not freed, on the audio thread.
     RealtimeHandoff<StemBufferSet> m_sets;
-    std::atomic<double>* m_position;
-    std::atomic<PlaybackState>* m_state;
-    std::atomic<float>* m_masterVolume;
-    std::atomic<double> m_duration{0.0}; // duration of the set readData() is using
+    std::atomic<double>* m_position = nullptr;
+    std::atomic<PlaybackState>* m_state = nullptr;
+    std::atomic<float>* m_masterVolume = nullptr;
+    std::atomic<double> m_duration{0.0}; // duration of the set read() is using
 
-    AudioMixerDevice(QObject* parent = nullptr) : QIODevice(parent) {}
-
-    bool isSequential() const override { return true; }
-
-    qint64 readData(char *data, qint64 maxlen) override {
+    std::size_t read(char* data, std::size_t maxBytes) override {
         // Take a staged song before touching any buffers. Every position write in this
         // callback comes after the handoff, so a late write of the old song's position
         // cannot undo the reset to 0.
@@ -86,19 +84,19 @@ public:
         }
 
         if (m_state->load(std::memory_order_acquire) != PlaybackState::Playing || active == nullptr) {
-            std::fill(data, data + maxlen, 0);
-            return maxlen; // Output silence when paused/stopped to keep sink alive
+            std::fill_n(data, maxBytes, static_cast<char>(0));
+            return maxBytes; // Output silence when paused/stopped to keep sink alive
         }
 
         const std::vector<StemBuffer>& buffers = active->buffers;
         const double duration = active->duration;
 
-        int frameSize = 2 * sizeof(int16_t); // Stereo 16-bit
-        int framesToRead = maxlen / frameSize;
-        int16_t* outBuffer = reinterpret_cast<int16_t*>(data);
+        constexpr std::size_t frameSize = 2 * sizeof(int16_t); // Stereo 16-bit
+        const std::size_t framesToRead = maxBytes / frameSize;
+        auto* outBuffer = reinterpret_cast<int16_t*>(data);
 
-        double currentPosSec = switchedSong ? 0.0 : m_position->load(std::memory_order_relaxed);
-        int currentFrame = static_cast<int>(currentPosSec * 44100.0);
+        const double currentPosSec = switchedSong ? 0.0 : m_position->load(std::memory_order_relaxed);
+        const auto currentFrame = static_cast<std::size_t>(currentPosSec * 44100.0);
 
         bool anySolo = false;
         for (const auto& buf : buffers) {
@@ -108,33 +106,38 @@ public:
             }
         }
 
-        float masterVol = m_masterVolume->load(std::memory_order_relaxed);
+        const float masterVol = m_masterVolume->load(std::memory_order_relaxed);
 
-        for (int i = 0; i < framesToRead; ++i) {
-            int frameIdx = currentFrame + i;
+        for (std::size_t i = 0; i < framesToRead; ++i) {
+            const std::size_t frameIdx = currentFrame + i;
             float mixL = 0.0f;
             float mixR = 0.0f;
 
             for (const auto& buf : buffers) {
-                if (buf.stem.isMuted()) continue;
-                if (anySolo && !buf.stem.isSolo()) continue;
+                if (buf.stem.isMuted()) {
+                    continue;
+                }
+                if (anySolo && !buf.stem.isSolo()) {
+                    continue;
+                }
 
-                int sampleIdx = frameIdx * buf.mappedFile.info.channels;
-                if (sampleIdx < static_cast<int>(buf.mappedFile.sampleCount)) {
-                    float sampleL = static_cast<float>(buf.mappedFile.pcmData[sampleIdx]) / 32768.0f;
+                const auto channels = static_cast<std::size_t>(buf.mappedFile.info.channels);
+                const std::size_t sampleIdx = frameIdx * channels;
+                if (sampleIdx < buf.mappedFile.sampleCount) {
+                    const float sampleL = static_cast<float>(buf.mappedFile.pcmData[sampleIdx]) / 32768.0f;
                     float sampleR = sampleL;
-                    if (buf.mappedFile.info.channels >= 2 && sampleIdx + 1 < static_cast<int>(buf.mappedFile.sampleCount)) {
+                    if (channels >= 2 && sampleIdx + 1 < buf.mappedFile.sampleCount) {
                         sampleR = static_cast<float>(buf.mappedFile.pcmData[sampleIdx + 1]) / 32768.0f;
                     }
 
-                    float vol = buf.stem.volume();
-                    float pan = buf.stem.pan();
+                    const float vol = buf.stem.volume();
+                    const float pan = buf.stem.pan();
 
                     // Equal power panning
                     // pan is -1.0 to +1.0
-                    float panAngle = (pan + 1.0f) * 0.25f * M_PI; // 0 to pi/2
-                    float gainL = std::cos(panAngle) * vol;
-                    float gainR = std::sin(panAngle) * vol;
+                    const float panAngle = (pan + 1.0f) * 0.25f * std::numbers::pi_v<float>; // 0 to pi/2
+                    const float gainL = std::cos(panAngle) * vol;
+                    const float gainR = std::sin(panAngle) * vol;
 
                     mixL += sampleL * gainL;
                     mixR += sampleR * gainR;
@@ -154,28 +157,26 @@ public:
             m_state->store(PlaybackState::Stopped, std::memory_order_release);
             newPosSec = 0.0;
         }
-        
+
         m_position->store(newPosSec, std::memory_order_relaxed);
         return framesToRead * frameSize;
     }
 
-    qint64 writeData(const char *data, qint64 len) override {
-        Q_UNUSED(data);
-        Q_UNUSED(len);
-        return 0;
-    }
-    
-    qint64 bytesAvailable() const override {
-        return m_duration.load(std::memory_order_relaxed) > 0.0 ? 44100 * 2 * sizeof(float) : 0; // Feed 1 sec ahead
+    std::size_t bytesAvailable() const override {
+        return m_duration.load(std::memory_order_relaxed) > 0.0 ? std::size_t{44100} * 2 * sizeof(float)
+                                                                : 0; // Feed 1 sec ahead
     }
 };
 
 } // namespace HarmonySync::Media
-#endif
 
 namespace HarmonySync::Media {
 
 namespace {
+
+bool isIndexOf(int index, std::size_t size) {
+    return index >= 0 && std::cmp_less(index, size);
+}
 
 bool isReferenceStemName(std::string name) {
     std::transform(name.begin(), name.end(), name.begin(),
@@ -186,18 +187,14 @@ bool isReferenceStemName(std::string name) {
 bool isDurationGuideStemName(std::string name) {
     std::transform(name.begin(), name.end(), name.begin(),
                    [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-    return name.find("click") != std::string::npos
-        || name.find("guide") != std::string::npos
-        || name.find("split") != std::string::npos
-        || name.find("stereo") != std::string::npos;
+    return name.find("click") != std::string::npos || name.find("guide") != std::string::npos ||
+           name.find("split") != std::string::npos || name.find("stereo") != std::string::npos;
 }
 
-#ifdef HARMONYSYNC_HAS_QT
 /// Decode/map stems into a set on the calling (control) thread. Never called on the switch path.
 /// Also runs on the async preload worker (#216); touches nothing shared with the engine.
 AudioMixerDevice::StemBufferSet mapStemBufferSet(const std::vector<Core::MediaStem>& stems,
-                                                 std::vector<Core::MediaStem>& outStems,
-                                                 const char* failureLabel,
+                                                 std::vector<Core::MediaStem>& outStems, const char* failureLabel,
                                                  const std::shared_ptr<std::atomic<std::size_t>>& liveSets,
                                                  const std::atomic<bool>* cancelled = nullptr) {
     AudioMixerDevice::StemBufferSet set;
@@ -231,41 +228,28 @@ AudioMixerDevice::StemBufferSet mapStemBufferSet(const std::vector<Core::MediaSt
             buf.mappedFile = std::move(mappedFile);
             set.buffers.push_back(std::move(buf));
         } else {
-            std::cerr << "[AudioEngine] " << failureLabel << ": " << stem.filePath() << std::endl;
+            std::cerr << "[AudioEngine] " << failureLabel << ": " << stem.filePath() << '\n';
         }
     }
 
-    if (maxDuration == 0.0) maxDuration = fallbackDuration;
+    if (maxDuration == 0.0) {
+        maxDuration = fallbackDuration;
+    }
     set.duration = maxDuration;
     return set;
 }
-#endif
 
 /// One decoded song, ready to become the preloaded song.
 struct DecodedSong {
     std::vector<Core::MediaStem> stems;
-#ifdef HARMONYSYNC_HAS_QT
     AudioMixerDevice::StemBufferSet set;
-#endif
 };
 
 DecodedSong decodeSong(const std::vector<Core::MediaStem>& stems,
-                       [[maybe_unused]] const std::shared_ptr<std::atomic<std::size_t>>& liveSets,
+                       const std::shared_ptr<std::atomic<std::size_t>>& liveSets,
                        const std::atomic<bool>* cancelled = nullptr) {
     DecodedSong song;
-#ifdef HARMONYSYNC_HAS_QT
     song.set = mapStemBufferSet(stems, song.stems, "Failed to map preloaded stem", liveSets, cancelled);
-#else
-    for (const auto& stem : stems) {
-        if (cancelled != nullptr && cancelled->load(std::memory_order_relaxed)) {
-            break;
-        }
-        if (isReferenceStemName(stem.name())) {
-            continue;
-        }
-        song.stems.push_back(stem);
-    }
-#endif
     return song;
 }
 
@@ -298,30 +282,23 @@ struct AudioEngine::Impl {
     /// Live song buffer sets of this engine (#185). Shared with workers and every set's lease.
     std::shared_ptr<std::atomic<std::size_t>> liveSets = std::make_shared<std::atomic<std::size_t>>(0);
 
-#ifdef HARMONYSYNC_HAS_QT
-    std::unique_ptr<QAudioSink> audioSink;
     AudioMixerDevice mixerDevice;
     // Next song, fully mapped by preloadStems() so switchToPreloaded() only hands it off.
     AudioMixerDevice::StemBufferSet preloadedSet;
+    // Declared after the mixer it pulls from, so it is destroyed first.
+    std::unique_ptr<IAudioSink> audioSink;
 
-    /// True while the sink may call readData() on the audio thread.
-    bool audioCallbackMayRun() const {
-        return audioSink && audioSink->state() != QAudio::StoppedState;
-    }
+    /// True while the sink may call read() on the audio thread.
+    bool audioCallbackMayRun() const { return audioSink && audioSink->isRunning(); }
 
     /// Mixer-side buffers the control thread may tweak (latest published set).
     std::vector<AudioMixerDevice::StemBuffer>* controlBuffers() {
         AudioMixerDevice::StemBufferSet* set = mixerDevice.m_sets.latest();
         return set != nullptr ? &set->buffers : nullptr;
     }
-#endif
 
     /// Free song sets the audio thread has already let go of. Control thread only.
-    void reclaimRetiredSongs() {
-#ifdef HARMONYSYNC_HAS_QT
-        mixerDevice.m_sets.reclaimRetired();
-#endif
-    }
+    void reclaimRetiredSongs() { mixerDevice.m_sets.reclaimRetired(); }
 
     // ---- Async preload (#216). Control thread only, except inside the worker lambda. ----
     std::shared_ptr<PreloadJob> pendingJob; // latest preloadStemsAsync(), not yet adopted
@@ -364,15 +341,15 @@ struct AudioEngine::Impl {
             return false;
         }
         preloadedStems = std::move(pendingJob->result.stems);
-#ifdef HARMONYSYNC_HAS_QT
         preloadedSet = std::move(pendingJob->result.set);
-#endif
         pendingJob.reset();
         joinFinishedWorkers();
         return true;
     }
 
     Impl() = default;
+    Impl(const Impl&) = delete;
+    Impl& operator=(const Impl&) = delete;
 
     ~Impl() {
         // Runs for destruction and for move-assignment over this engine. A running worker
@@ -389,35 +366,20 @@ struct AudioEngine::Impl {
 };
 
 AudioEngine::AudioEngine()
-    : m_impl(std::make_unique<Impl>())
-{
-#ifdef HARMONYSYNC_HAS_QT
+    : AudioEngine(createQtAudioSink()) {}
+
+AudioEngine::AudioEngine(std::unique_ptr<IAudioSink> sink)
+    : m_impl(std::make_unique<Impl>()) {
     m_impl->mixerDevice.m_position = &m_impl->position;
     m_impl->mixerDevice.m_state = &m_impl->state;
     m_impl->mixerDevice.m_masterVolume = &m_impl->masterVolume;
-    m_impl->mixerDevice.open(QIODevice::ReadOnly);
-
-    QAudioFormat format;
-    format.setSampleRate(44100);
-    format.setChannelCount(2);
-    format.setSampleFormat(QAudioFormat::Int16);
-
-    auto defaultDevice = QMediaDevices::defaultAudioOutput();
-    if (defaultDevice.isFormatSupported(format)) {
-        m_impl->audioSink = std::make_unique<QAudioSink>(defaultDevice, format);
-        m_impl->audioSink->setBufferSize(44100 * 2 * sizeof(float) / 10); // ~100ms buffer
-    } else {
-        std::cerr << "Warning: Audio format not supported!" << std::endl;
-    }
-#endif
+    m_impl->audioSink = std::move(sink);
 }
 
 AudioEngine::~AudioEngine() {
-#ifdef HARMONYSYNC_HAS_QT
     if (m_impl && m_impl->audioSink) {
         m_impl->audioSink->stop();
     }
-#endif
 }
 
 AudioEngine::AudioEngine(AudioEngine&&) noexcept = default;
@@ -430,37 +392,28 @@ bool AudioEngine::loadStems(const std::vector<Core::MediaStem>& stems) {
     m_impl->stems.clear();
     m_impl->preloadedStems.clear();
     m_impl->position.store(0.0, std::memory_order_relaxed);
-    
-#ifdef HARMONYSYNC_HAS_QT
+
     if (m_impl->audioSink) {
         m_impl->audioSink->stop();
     }
 
-    // Sink is stopped, so no readData() is in flight: safe to replace every set here.
+    // Sink is stopped, so no read() is in flight: safe to replace every set here.
     m_impl->mixerDevice.m_sets.clear();
     m_impl->preloadedSet = {};
 
-    AudioMixerDevice::StemBufferSet set = mapStemBufferSet(stems, m_impl->stems, "Failed to map stem", m_impl->liveSets);
+    AudioMixerDevice::StemBufferSet set =
+        mapStemBufferSet(stems, m_impl->stems, "Failed to map stem", m_impl->liveSets);
     const double maxDuration = set.duration;
     const std::size_t bufferCount = set.buffers.size();
     m_impl->mixerDevice.m_sets.resetCurrent(std::move(set));
 
-    std::cout << "[AudioEngine] Loaded " << bufferCount << " stems. Max duration: " << maxDuration << "s" << std::endl;
+    std::cout << "[AudioEngine] Loaded " << bufferCount << " stems. Max duration: " << maxDuration << "s\n";
     m_impl->mixerDevice.m_duration.store(maxDuration, std::memory_order_relaxed);
     m_impl->duration.store(maxDuration, std::memory_order_relaxed);
 
     if (m_impl->audioSink && bufferCount > 0) {
-        m_impl->audioSink->start(&m_impl->mixerDevice);
+        m_impl->audioSink->start(m_impl->mixerDevice);
     }
-#else
-    for (const auto& stem : stems) {
-        if (isReferenceStemName(stem.name())) {
-            continue;
-        }
-        m_impl->stems.push_back(stem);
-    }
-    m_impl->duration.store(m_impl->stems.empty() ? 0.0 : 180.0, std::memory_order_relaxed);
-#endif
 
     return !m_impl->stems.empty();
 }
@@ -474,9 +427,7 @@ bool AudioEngine::preloadStems(const std::vector<Core::MediaStem>& stems) {
 
     DecodedSong song = decodeSong(stems, m_impl->liveSets);
     m_impl->preloadedStems = std::move(song.stems);
-#ifdef HARMONYSYNC_HAS_QT
     m_impl->preloadedSet = std::move(song.set);
-#endif
 
     return !m_impl->preloadedStems.empty();
 }
@@ -497,14 +448,13 @@ bool AudioEngine::switchToPreloaded() {
     // position write from song A cannot leave B starting partway in.
     m_impl->position.store(0.0, std::memory_order_relaxed);
 
-#ifdef HARMONYSYNC_HAS_QT
     AudioMixerDevice& device = m_impl->mixerDevice;
     device.m_sets.reclaimRetired();
 
     const double nextDuration = m_impl->preloadedSet.duration;
     const bool nextHasAudio = !m_impl->preloadedSet.buffers.empty();
     // No decoding or mapping here: hand the already-mapped set to the audio thread.
-    // A stays alive until readData() has let go of it.
+    // A stays alive until read() has let go of it.
     device.m_sets.publish(std::move(m_impl->preloadedSet));
     m_impl->preloadedSet = {};
     m_impl->duration.store(nextDuration, std::memory_order_relaxed);
@@ -516,13 +466,9 @@ bool AudioEngine::switchToPreloaded() {
         device.m_sets.reclaimRetired();
     }
 
-    if (m_impl->audioSink && nextHasAudio
-        && m_impl->audioSink->state() != QAudio::ActiveState) {
-        m_impl->audioSink->start(&device);
+    if (m_impl->audioSink && nextHasAudio && !m_impl->audioSink->isActive()) {
+        m_impl->audioSink->start(device);
     }
-#else
-    m_impl->duration.store(m_impl->stems.empty() ? 0.0 : 180.0, std::memory_order_relaxed);
-#endif
 
     return !m_impl->stems.empty();
 }
@@ -543,9 +489,7 @@ AudioEngine::PreloadTicket AudioEngine::preloadStemsAsync(std::vector<Core::Medi
     m_impl->cancelPendingPreload();
     // The new request replaces any earlier preloaded song, finished or not.
     m_impl->preloadedStems.clear();
-#ifdef HARMONYSYNC_HAS_QT
     m_impl->preloadedSet = {};
-#endif
 
     auto job = std::make_shared<PreloadJob>();
     job->ticket = m_impl->nextTicket++;
@@ -560,8 +504,7 @@ AudioEngine::PreloadTicket AudioEngine::preloadStemsAsync(std::vector<Core::Medi
         if (!job->cancelled.load(std::memory_order_relaxed)) {
             job->result = decodeSong(stems, liveSets, &job->cancelled);
         }
-        const bool hasStems = !job->result.stems.empty()
-                              && !job->cancelled.load(std::memory_order_relaxed);
+        const bool hasStems = !job->result.stems.empty() && !job->cancelled.load(std::memory_order_relaxed);
         if (!hasStems) {
             // Replaced or cleared (#185): free its buffers now rather than at the next join.
             // The control thread never reads a cancelled job's result.
@@ -607,60 +550,44 @@ void AudioEngine::clearPreloaded() {
     m_impl->cancelPendingPreload();
     m_impl->joinFinishedWorkers();
     m_impl->preloadedStems.clear();
-#ifdef HARMONYSYNC_HAS_QT
     m_impl->preloadedSet = {};
-#endif
 }
 
 void AudioEngine::unloadCurrent() {
     stop();
     m_impl->stems.clear();
     m_impl->duration.store(0.0, std::memory_order_relaxed);
-#ifdef HARMONYSYNC_HAS_QT
     if (m_impl->audioSink) {
         m_impl->audioSink->stop();
     }
-    // Sink is stopped, so no readData() is in flight (same rule as loadStems()): the current,
+    // Sink is stopped, so no read() is in flight (same rule as loadStems()): the current,
     // handed-off and retired sets can be freed here. The preloaded set is not in m_sets.
     m_impl->mixerDevice.m_sets.clear();
     m_impl->mixerDevice.m_duration.store(0.0, std::memory_order_relaxed);
-#endif
 }
 
 std::size_t AudioEngine::liveSongSetCountForTesting() const noexcept {
-#ifdef HARMONYSYNC_HAS_QT
     return m_impl->liveSets->load(std::memory_order_relaxed);
-#else
-    // No mapped buffers without Qt: count the stem lists the engine still holds.
-    std::size_t count = (m_impl->stems.empty() ? 0 : 1) + (m_impl->preloadedStems.empty() ? 0 : 1);
-    const auto& job = m_impl->pendingJob;
-    if (job && job->done.load(std::memory_order_acquire) && !job->result.stems.empty()) {
-        ++count;
-    }
-    return count;
-#endif
 }
 
 void AudioEngine::play() {
     m_impl->reclaimRetiredSongs();
     if (m_impl->stems.empty()) {
-        std::cout << "[AudioEngine] play() ignored - no stems loaded." << std::endl;
+        std::cout << "[AudioEngine] play() ignored - no stems loaded.\n";
         return;
     }
     m_impl->state.store(PlaybackState::Playing, std::memory_order_release);
-#ifdef HARMONYSYNC_HAS_QT
     if (m_impl->audioSink) {
-        if (m_impl->audioSink->state() != QAudio::ActiveState) {
-            std::cout << "[AudioEngine] Starting audio sink." << std::endl;
-            m_impl->audioSink->start(&m_impl->mixerDevice);
+        if (!m_impl->audioSink->isActive()) {
+            std::cout << "[AudioEngine] Starting audio sink.\n";
+            m_impl->audioSink->start(m_impl->mixerDevice);
         } else {
-            std::cout << "[AudioEngine] Audio sink already active." << std::endl;
+            std::cout << "[AudioEngine] Audio sink already active.\n";
         }
     } else {
-        std::cout << "[AudioEngine] No audio sink available!" << std::endl;
+        std::cout << "[AudioEngine] No audio sink available!\n";
     }
-#endif
-    std::cout << "[AudioEngine] play() executed." << std::endl;
+    std::cout << "[AudioEngine] play() executed.\n";
 }
 
 void AudioEngine::pause() {
@@ -691,38 +618,32 @@ void AudioEngine::setPitchShiftSemitones(int semitones) noexcept {
 }
 
 void AudioEngine::setStemVolume(int stemIndex, float volume) noexcept {
-    if (stemIndex >= 0 && stemIndex < static_cast<int>(m_impl->stems.size())) {
-        m_impl->stems[stemIndex].setVolume(volume);
-#ifdef HARMONYSYNC_HAS_QT
+    if (isIndexOf(stemIndex, m_impl->stems.size())) {
+        m_impl->stems[static_cast<std::size_t>(stemIndex)].setVolume(volume);
         auto* buffers = m_impl->controlBuffers();
-        if (buffers != nullptr && stemIndex < static_cast<int>(buffers->size())) {
-            (*buffers)[stemIndex].stem.setVolume(volume);
+        if (buffers != nullptr && isIndexOf(stemIndex, buffers->size())) {
+            (*buffers)[static_cast<std::size_t>(stemIndex)].stem.setVolume(volume);
         }
-#endif
     }
 }
 
 void AudioEngine::setStemMuted(int stemIndex, bool muted) noexcept {
-    if (stemIndex >= 0 && stemIndex < static_cast<int>(m_impl->stems.size())) {
-        m_impl->stems[stemIndex].setMuted(muted);
-#ifdef HARMONYSYNC_HAS_QT
+    if (isIndexOf(stemIndex, m_impl->stems.size())) {
+        m_impl->stems[static_cast<std::size_t>(stemIndex)].setMuted(muted);
         auto* buffers = m_impl->controlBuffers();
-        if (buffers != nullptr && stemIndex < static_cast<int>(buffers->size())) {
-            (*buffers)[stemIndex].stem.setMuted(muted);
+        if (buffers != nullptr && isIndexOf(stemIndex, buffers->size())) {
+            (*buffers)[static_cast<std::size_t>(stemIndex)].stem.setMuted(muted);
         }
-#endif
     }
 }
 
 void AudioEngine::setStemSolo(int stemIndex, bool solo) noexcept {
-    if (stemIndex >= 0 && stemIndex < static_cast<int>(m_impl->stems.size())) {
-        m_impl->stems[stemIndex].setSolo(solo);
-#ifdef HARMONYSYNC_HAS_QT
+    if (isIndexOf(stemIndex, m_impl->stems.size())) {
+        m_impl->stems[static_cast<std::size_t>(stemIndex)].setSolo(solo);
         auto* buffers = m_impl->controlBuffers();
-        if (buffers != nullptr && stemIndex < static_cast<int>(buffers->size())) {
-            (*buffers)[stemIndex].stem.setSolo(solo);
+        if (buffers != nullptr && isIndexOf(stemIndex, buffers->size())) {
+            (*buffers)[static_cast<std::size_t>(stemIndex)].stem.setSolo(solo);
         }
-#endif
     }
 }
 

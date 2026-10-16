@@ -23,3 +23,15 @@ src/core/services/OnlineLyricsFetcher
 src/core/services/QrCodeImageProvider
 src/core/services/AILyricSyncService
 src/core/services/DisplayManager
+src/media/AudioEngine
+src/media/AudioSink
+src/media/QtAudioSink
+src/media/CommandRunner
+src/media/QtCommandRunner
+src/media/StemMixer
+src/media/AudioDynamicsCompressor
+src/media/MultiBandEqualizer
+src/media/AudioPitchShifter
+src/media/FFmpegAudioDecoder
+src/media/FFmpegTransposer
+src/media/RealtimeHandoff

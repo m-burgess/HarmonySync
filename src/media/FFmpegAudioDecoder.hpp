@@ -20,7 +20,7 @@ struct MappedAudioFile {
     AudioStreamInfo info;
     const int16_t* pcmData{nullptr};
     size_t sampleCount{0};
-    
+
     struct Impl;
     std::shared_ptr<Impl> impl;
 };
@@ -40,7 +40,8 @@ public:
 
     // Decoding Operations
     [[nodiscard]] AudioStreamInfo inspectFile(const std::string& filePath) const;
-    [[nodiscard]] bool decodeToPcmFloat(const std::string& filePath, std::vector<float>& outPcmBuffer, AudioStreamInfo& outInfo) const;
+    [[nodiscard]] bool decodeToPcmFloat(const std::string& filePath, std::vector<float>& outPcmBuffer,
+                                        AudioStreamInfo& outInfo) const;
     [[nodiscard]] MappedAudioFile mapAudioFile(const std::string& filePath) const;
 
 private:

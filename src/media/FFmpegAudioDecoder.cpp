@@ -1,4 +1,5 @@
 #include "FFmpegAudioDecoder.hpp"
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -14,6 +15,9 @@ struct MappedAudioFile::Impl {
 #ifdef HARMONYSYNC_HAS_QT
     std::unique_ptr<QFile> file;
     uchar* mappedData{nullptr};
+    Impl() = default;
+    Impl(const Impl&) = delete;
+    Impl& operator=(const Impl&) = delete;
     ~Impl() {
         if (file && mappedData) {
             file->unmap(mappedData);
@@ -29,8 +33,7 @@ struct FFmpegAudioDecoder::Impl {
 };
 
 FFmpegAudioDecoder::FFmpegAudioDecoder()
-    : m_impl(std::make_unique<Impl>())
-{}
+    : m_impl(std::make_unique<Impl>()) {}
 
 FFmpegAudioDecoder::~FFmpegAudioDecoder() = default;
 FFmpegAudioDecoder::FFmpegAudioDecoder(FFmpegAudioDecoder&&) noexcept = default;
@@ -43,15 +46,21 @@ AudioStreamInfo FFmpegAudioDecoder::inspectFile(const std::string& filePath) con
     }
 
     std::ifstream file(filePath, std::ios::binary);
-    if (!file) return info;
+    if (!file) {
+        return info;
+    }
 
-    char chunkId[4];
+    char chunkId[4] = {};
     file.read(chunkId, 4);
-    if (std::strncmp(chunkId, "RIFF", 4) != 0) return info;
+    if (std::strncmp(chunkId, "RIFF", 4) != 0) {
+        return info;
+    }
 
     file.seekg(4, std::ios::cur); // skip size
     file.read(chunkId, 4);
-    if (std::strncmp(chunkId, "WAVE", 4) != 0) return info;
+    if (std::strncmp(chunkId, "WAVE", 4) != 0) {
+        return info;
+    }
 
     bool fmtFound = false;
     bool dataFound = false;
@@ -74,7 +83,9 @@ AudioStreamInfo FFmpegAudioDecoder::inspectFile(const std::string& filePath) con
                 fmtFound = true;
                 info.codecName = "pcm_s16le";
             }
-            if (chunkSize > 16) file.seekg(chunkSize - 16, std::ios::cur);
+            if (chunkSize > 16) {
+                file.seekg(chunkSize - 16, std::ios::cur);
+            }
         } else if (std::strncmp(chunkId, "data", 4) == 0) {
             dataFound = true;
             dataSize = chunkSize;
@@ -87,7 +98,7 @@ AudioStreamInfo FFmpegAudioDecoder::inspectFile(const std::string& filePath) con
     if (fmtFound && dataFound) {
         info.isValid = true;
         // 16-bit = 2 bytes per sample
-        uint32_t totalSamples = dataSize / 2; 
+        uint32_t totalSamples = dataSize / 2;
         uint32_t channels = info.channels > 0 ? static_cast<uint32_t>(info.channels) : 1u;
         uint32_t totalFrames = totalSamples / channels;
         info.durationSeconds = static_cast<double>(totalFrames) / (info.sampleRate > 0 ? info.sampleRate : 44100);
@@ -95,17 +106,20 @@ AudioStreamInfo FFmpegAudioDecoder::inspectFile(const std::string& filePath) con
     return info;
 }
 
-bool FFmpegAudioDecoder::decodeToPcmFloat(const std::string& filePath, std::vector<float>& outPcmBuffer, AudioStreamInfo& outInfo) const {
+bool FFmpegAudioDecoder::decodeToPcmFloat(const std::string& filePath, std::vector<float>& outPcmBuffer,
+                                          AudioStreamInfo& outInfo) const {
     outInfo = inspectFile(filePath);
     if (!outInfo.isValid) {
         return false;
     }
 
     std::ifstream file(filePath, std::ios::binary);
-    if (!file) return false;
+    if (!file) {
+        return false;
+    }
 
     // Fast-forward to data chunk
-    char chunkId[4];
+    char chunkId[4] = {};
     file.seekg(12, std::ios::beg); // skip RIFF + size + WAVE
 
     uint32_t dataSize = 0;
@@ -115,12 +129,13 @@ bool FFmpegAudioDecoder::decodeToPcmFloat(const std::string& filePath, std::vect
         if (std::strncmp(chunkId, "data", 4) == 0) {
             dataSize = chunkSize;
             break;
-        } else {
-            file.seekg(chunkSize, std::ios::cur);
         }
+        file.seekg(chunkSize, std::ios::cur);
     }
 
-    if (dataSize == 0) return false;
+    if (dataSize == 0) {
+        return false;
+    }
 
     std::vector<int16_t> intBuffer(dataSize / 2);
     file.read(reinterpret_cast<char*>(intBuffer.data()), dataSize);
@@ -164,7 +179,7 @@ MappedAudioFile FFmpegAudioDecoder::mapAudioFile(const std::string& filePath) co
 
     // Fast-forward to data chunk offset
     std::ifstream file(filePath, std::ios::binary);
-    char chunkId[4];
+    char chunkId[4] = {};
     file.seekg(12, std::ios::beg); // skip RIFF + size + WAVE
 
     uint32_t dataSize = 0;
@@ -176,10 +191,14 @@ MappedAudioFile FFmpegAudioDecoder::mapAudioFile(const std::string& filePath) co
             dataSize = chunkSize;
             dataOffset = static_cast<uint32_t>(file.tellg());
             break;
-        } else {
-            file.seekg(chunkSize, std::ios::cur);
         }
+        file.seekg(chunkSize, std::ios::cur);
     }
+
+    // A truncated file claims more audio than it holds. Mapping past the end is not portable and
+    // touching those pages would fault the audio thread, so only map what is on disk.
+    const auto fileSize = static_cast<uint64_t>(result.impl->file->size());
+    dataSize = dataOffset >= fileSize ? 0 : static_cast<uint32_t>(std::min<uint64_t>(dataSize, fileSize - dataOffset));
 
     if (dataSize > 0 && dataOffset > 0) {
         // Map the payload directly from disk to RAM via OS page cache

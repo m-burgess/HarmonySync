@@ -36,9 +36,11 @@
     },
     {
       "name": "media-audio",
-      "floor": 10,
+      "floor": 85,
       "paths": [
         "src/media/AudioEngine",
+        "src/media/AudioSink",
+        "src/media/CommandRunner",
         "src/media/StemMixer",
         "src/media/AudioDynamicsCompressor",
         "src/media/MultiBandEqualizer",

@@ -12,8 +12,7 @@ struct MultiBandEqualizer::Impl {
 };
 
 MultiBandEqualizer::MultiBandEqualizer()
-    : m_impl(std::make_unique<Impl>())
-{}
+    : m_impl(std::make_unique<Impl>()) {}
 
 MultiBandEqualizer::~MultiBandEqualizer() = default;
 
@@ -22,7 +21,7 @@ MultiBandEqualizer& MultiBandEqualizer::operator=(MultiBandEqualizer&&) noexcept
 
 void MultiBandEqualizer::setBandGain(EqBand band, float gainDb) noexcept {
     std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
-    size_t idx = static_cast<size_t>(band);
+    const auto idx = static_cast<size_t>(band);
     if (idx < 5) {
         m_impl->gains[idx] = std::clamp(gainDb, -12.0f, 12.0f);
     }
@@ -30,7 +29,7 @@ void MultiBandEqualizer::setBandGain(EqBand band, float gainDb) noexcept {
 
 float MultiBandEqualizer::bandGain(EqBand band) const noexcept {
     std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
-    size_t idx = static_cast<size_t>(band);
+    const auto idx = static_cast<size_t>(band);
     if (idx < 5) {
         return m_impl->gains[idx];
     }
@@ -48,10 +47,14 @@ bool MultiBandEqualizer::isEnabled() const noexcept {
 }
 
 void MultiBandEqualizer::processBuffer(float* samples, size_t sampleCount) noexcept {
-    if (!samples || sampleCount == 0) return;
+    if (!samples || sampleCount == 0) {
+        return;
+    }
 
     std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
-    if (!m_impl->enabled) return;
+    if (!m_impl->enabled) {
+        return;
+    }
 
     // Apply basic gain adjustment per band frequency band placeholder
     float totalGainFactor = 1.0f;
