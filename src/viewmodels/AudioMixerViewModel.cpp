@@ -444,6 +444,7 @@ void AudioMixerViewModel::clearPreloadedSongKeepingPendingAdvance() {
 }
 
 void AudioMixerViewModel::unloadCurrentSong() {
+    flushPendingMixSave(); // #205: a debounced edit is saved before the song is freed
     m_impl->m_activeDeck->unloadCurrent();
 #ifdef HARMONYSYNC_QT_AVAILABLE
     m_impl->positionTimer->stop();
