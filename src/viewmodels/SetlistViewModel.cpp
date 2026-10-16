@@ -123,7 +123,7 @@ struct SetlistViewModel::Impl {
         nextLyricText.clear();
 
         if (activeLyricIndex >= 0 && static_cast<size_t>(activeLyricIndex) < lyricBlocks.size()) {
-            const size_t activeIndex = static_cast<size_t>(activeLyricIndex);
+            const auto activeIndex = static_cast<size_t>(activeLyricIndex);
             activeLyricText = lyricBlocks[activeIndex];
             // Find next non-header block
             for (size_t i = activeIndex + 1; i < lyricBlocks.size(); ++i) {

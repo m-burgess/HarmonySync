@@ -120,7 +120,7 @@ AudioMixerViewModel::AudioMixerViewModel(std::shared_ptr<Media::AudioEngine> aud
             [this, wasPlaying,
              currentPos](std::vector<Core::MediaStem> newStems) { // NOLINT(performance-unnecessary-value-param): the
                                                                   // queued closure owns the decoded stems.
-                QMetaObject::invokeMethod(
+                QMetaObject::invokeMethod( // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks): Qt owns queued functors.
                     this,
                     [this, newStems, wasPlaying, currentPos]() {
                         m_impl->m_activeDeck->loadStems(newStems);
