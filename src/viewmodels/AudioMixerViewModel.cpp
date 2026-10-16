@@ -36,6 +36,8 @@ struct AudioMixerViewModel::Impl {
     struct CallbackGuard {
         std::mutex mutex;
         AudioMixerViewModel* target{nullptr};
+        // Finished decodes waiting for the UI thread, guarded by mutex.
+        std::vector<std::pair<std::uint64_t, bool>> readyResults;
     };
     std::shared_ptr<CallbackGuard> callbackGuard = std::make_shared<CallbackGuard>();
 
@@ -306,13 +308,25 @@ void AudioMixerViewModel::startPreload(const std::vector<Core::MediaStem>& stems
         stems, [guard = m_impl->callbackGuard](Media::AudioEngine::PreloadTicket ticket, bool hasStems) {
             // Worker thread: post to the UI thread, never touch the view model here.
             std::lock_guard lock(guard->mutex);
+            // The result goes through our own mutex and the post carries no data, so the
+            // handoff is ordered by a lock every tool (including ThreadSanitizer) can see.
             if (AudioMixerViewModel* target = guard->target) {
-                QMetaObject::invokeMethod(
-                    target, [target, ticket, hasStems]() { target->onPreloadReady(ticket, hasStems); },
-                    Qt::QueuedConnection);
+                guard->readyResults.emplace_back(ticket, hasStems);
+                QMetaObject::invokeMethod(target, "drainPreloadResults", Qt::QueuedConnection);
             }
         });
 #endif
+}
+
+void AudioMixerViewModel::drainPreloadResults() {
+    std::vector<std::pair<std::uint64_t, bool>> results;
+    {
+        std::lock_guard lock(m_impl->callbackGuard->mutex);
+        results.swap(m_impl->callbackGuard->readyResults);
+    }
+    for (const auto& [ticket, hasStems] : results) {
+        onPreloadReady(ticket, hasStems);
+    }
 }
 
 void AudioMixerViewModel::onPreloadReady(std::uint64_t ticket, bool hasStems) {
