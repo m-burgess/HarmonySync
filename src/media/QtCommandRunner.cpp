@@ -16,6 +16,7 @@ public:
             qtArguments << QString::fromStdString(argument);
         }
         QProcess process;
+        process.setProcessChannelMode(QProcess::ForwardedChannels);
         process.start(QString::fromStdString(program), qtArguments);
         return process.waitForFinished(-1) && process.exitStatus() == QProcess::NormalExit && process.exitCode() == 0;
     }
