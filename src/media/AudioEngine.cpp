@@ -496,8 +496,8 @@ AudioEngine::PreloadTicket AudioEngine::preloadStemsAsync(std::vector<Core::Medi
 
     // The worker owns copies of everything it uses; it never touches Impl.
     std::thread thread([job, stems = std::move(stems), onReady = std::move(onReady),
-                        hook = m_impl->decodeHookForTesting,
-                        finishHook = m_impl->finishHookForTesting, liveSets = m_impl->liveSets]() {
+                        hook = m_impl->decodeHookForTesting, finishHook = m_impl->finishHookForTesting,
+                        liveSets = m_impl->liveSets]() {
         if (hook) {
             hook();
         }

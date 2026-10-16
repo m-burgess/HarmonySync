@@ -648,7 +648,7 @@ void testClearPreloadedFreesWorkerPastCancelCheck() {
     std::cout << "[TEST] Running testClearPreloadedFreesWorkerPastCancelCheck..." << std::endl;
     const TempDir dir;
     AudioEngine engine;
-    HS_CHECK(engine.loadStems({MediaStem("a1", "Drums", makeWav(dir, "a_drums.wav")})));
+    HS_CHECK(engine.loadStems({MediaStem("a1", "Drums", makeWav(dir, "a_drums.wav"))}));
     engine.play();
     HS_CHECK(engine.liveSongSetCountForTesting() == 1);
 
