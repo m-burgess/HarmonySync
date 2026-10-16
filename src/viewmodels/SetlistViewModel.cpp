@@ -32,13 +32,19 @@ struct SetlistViewModel::Impl {
     std::string nextLyricText;
     std::vector<std::string> lyricBlocks;
 
+    [[nodiscard]] size_t currentSongIndexAsSize() const { return static_cast<size_t>(currentSongIndex); }
+
+    [[nodiscard]] bool hasCurrentSong() const {
+        return currentSongIndex >= 0 && currentSongIndexAsSize() < serviceOrder.songs().size();
+    }
+
     void updateLyricBlocks() {
         lyricBlocks.clear();
-        if (currentSongIndex < 0 || static_cast<size_t>(currentSongIndex) >= serviceOrder.songs().size()) {
+        if (!hasCurrentSong()) {
             return;
         }
 
-        std::string raw = serviceOrder.songs()[currentSongIndex].lyricsContent();
+        std::string raw = serviceOrder.songs()[currentSongIndexAsSize()].lyricsContent();
         std::istringstream stream(raw);
         std::string line;
         std::string currentBlock;
@@ -117,9 +123,10 @@ struct SetlistViewModel::Impl {
         nextLyricText.clear();
 
         if (activeLyricIndex >= 0 && static_cast<size_t>(activeLyricIndex) < lyricBlocks.size()) {
-            activeLyricText = lyricBlocks[activeLyricIndex];
+            const size_t activeIndex = static_cast<size_t>(activeLyricIndex);
+            activeLyricText = lyricBlocks[activeIndex];
             // Find next non-header block
-            for (size_t i = activeLyricIndex + 1; i < lyricBlocks.size(); ++i) {
+            for (size_t i = activeIndex + 1; i < lyricBlocks.size(); ++i) {
                 if (!lyricBlocks[i].empty() && lyricBlocks[i].front() != '[') {
                     nextLyricText = lyricBlocks[i];
                     break;
@@ -420,11 +427,11 @@ bool SetlistViewModel::isGeneratingTimestamps() const noexcept {
 }
 
 void SetlistViewModel::generateAITimestamps(const QString& referenceStemName) {
-    if (m_impl->currentSongIndex < 0 || m_impl->isGeneratingTimestamps) {
+    if (!m_impl->hasCurrentSong() || m_impl->isGeneratingTimestamps) {
         return;
     }
 
-    auto& song = m_impl->serviceOrder.songs()[m_impl->currentSongIndex];
+    auto& song = m_impl->serviceOrder.songs()[m_impl->currentSongIndexAsSize()];
     std::string referenceAudioPath;
     std::string multitrackAudioPath;
 
@@ -478,8 +485,8 @@ void SetlistViewModel::generateAITimestamps(const QString& referenceStemName) {
     }
 
     auto onSuccess = [this](std::vector<Core::TimedLyricLine> lines) {
-        if (m_impl->currentSongIndex >= 0) {
-            Core::SongMap songCopy = m_impl->serviceOrder.songs()[m_impl->currentSongIndex];
+        if (m_impl->hasCurrentSong()) {
+            Core::SongMap songCopy = m_impl->serviceOrder.songs()[m_impl->currentSongIndexAsSize()];
 
             // Map AI output directly into sections
             auto sections = songCopy.sections();
@@ -495,7 +502,7 @@ void SetlistViewModel::generateAITimestamps(const QString& referenceStemName) {
             songCopy.setSections(sections);
             songCopy.setTimedLyrics({}); // Clear out the deprecated timedLyrics array
 
-            m_impl->serviceOrder.updateSongAt(m_impl->currentSongIndex, songCopy);
+            m_impl->serviceOrder.updateSongAt(m_impl->currentSongIndexAsSize(), songCopy);
             if (m_impl->folderService) {
                 Core::FolderService::saveSongMap(songCopy);
             }
@@ -530,11 +537,11 @@ QString SetlistViewModel::aiSyncProgressMessage() const {
 }
 
 QString SetlistViewModel::currentSongMapJson() const {
-    if (m_impl->currentSongIndex < 0 || m_impl->currentSongIndex >= itemCount()) {
+    if (!m_impl->hasCurrentSong()) {
         return QString();
     }
 
-    auto& song = m_impl->serviceOrder.songs()[m_impl->currentSongIndex];
+    auto& song = m_impl->serviceOrder.songs()[m_impl->currentSongIndexAsSize()];
     std::string folderPath = song.folderPath();
     if (folderPath.empty()) {
         return QString();
@@ -563,7 +570,7 @@ QString SetlistViewModel::currentSongMapJson() const {
 }
 
 bool SetlistViewModel::saveSongMapJson(const QString& jsonString) {
-    if (m_impl->currentSongIndex < 0 || m_impl->currentSongIndex >= itemCount()) {
+    if (!m_impl->hasCurrentSong()) {
         return false;
     }
 
@@ -575,7 +582,7 @@ bool SetlistViewModel::saveSongMapJson(const QString& jsonString) {
         return false;
     }
 
-    auto& song = m_impl->serviceOrder.songs()[m_impl->currentSongIndex];
+    auto& song = m_impl->serviceOrder.songs()[m_impl->currentSongIndexAsSize()];
     std::string folderPath = song.folderPath();
     if (folderPath.empty()) {
         return false;
@@ -590,7 +597,7 @@ bool SetlistViewModel::saveSongMapJson(const QString& jsonString) {
         // Reload the song from folder to apply changes
         if (m_impl->folderService) {
             Core::SongMap updatedSong = m_impl->folderService->loadSongFromFolder(folderPath);
-            m_impl->serviceOrder.updateSongAt(m_impl->currentSongIndex, updatedSong);
+            m_impl->serviceOrder.updateSongAt(m_impl->currentSongIndexAsSize(), updatedSong);
 
             // Trigger updates
             emit titleChanged(QString::fromStdString(updatedSong.title()));
@@ -608,11 +615,11 @@ bool SetlistViewModel::saveSongMapJson(const QString& jsonString) {
 }
 
 void SetlistViewModel::syncToPlaybackPosition(double positionSeconds) {
-    if (!m_impl->autoLyricsEnabled || m_impl->currentSongIndex < 0) {
+    if (!m_impl->autoLyricsEnabled || !m_impl->hasCurrentSong()) {
         return;
     }
 
-    auto& song = m_impl->serviceOrder.songs()[m_impl->currentSongIndex];
+    auto& song = m_impl->serviceOrder.songs()[m_impl->currentSongIndexAsSize()];
     auto sections = song.sections();
     if (sections.empty()) {
         return;
@@ -681,10 +688,10 @@ bool SetlistViewModel::isGeneratingTimestamps() const noexcept {
 }
 
 void SetlistViewModel::generateAITimestamps(const std::string& referenceStemName) {
-    if (m_impl->currentSongIndex < 0 || m_impl->isGeneratingTimestamps)
+    if (!m_impl->hasCurrentSong() || m_impl->isGeneratingTimestamps)
         return;
 
-    auto& song = m_impl->serviceOrder.songs()[m_impl->currentSongIndex];
+    auto& song = m_impl->serviceOrder.songs()[m_impl->currentSongIndexAsSize()];
     std::string referenceAudioPath;
     std::string multitrackAudioPath;
 
@@ -716,10 +723,10 @@ void SetlistViewModel::generateAITimestamps(const std::string& referenceStemName
 
     auto onSuccess = [this](std::vector<Core::TimedLyricLine> lines) {
         m_impl->isGeneratingTimestamps = false;
-        if (m_impl->currentSongIndex >= 0) {
-            Core::SongMap songCopy = m_impl->serviceOrder.songs()[m_impl->currentSongIndex];
+        if (m_impl->hasCurrentSong()) {
+            Core::SongMap songCopy = m_impl->serviceOrder.songs()[m_impl->currentSongIndexAsSize()];
             songCopy.setTimedLyrics(lines);
-            m_impl->serviceOrder.updateSongAt(m_impl->currentSongIndex, songCopy);
+            m_impl->serviceOrder.updateSongAt(m_impl->currentSongIndexAsSize(), songCopy);
             if (m_impl->folderService) {
                 Core::FolderService::saveSongMap(songCopy);
             }
@@ -741,10 +748,10 @@ bool SetlistViewModel::saveSongMapJson(const std::string& jsonString) {
 }
 
 void SetlistViewModel::syncToPlaybackPosition(double positionSeconds) {
-    if (!m_impl->autoLyricsEnabled || m_impl->currentSongIndex < 0)
+    if (!m_impl->autoLyricsEnabled || !m_impl->hasCurrentSong())
         return;
 
-    auto& song = m_impl->serviceOrder.songs()[m_impl->currentSongIndex];
+    auto& song = m_impl->serviceOrder.songs()[m_impl->currentSongIndexAsSize()];
     auto timedLyrics = song.timedLyrics();
     if (timedLyrics.empty())
         return;

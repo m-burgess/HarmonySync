@@ -57,7 +57,7 @@ void testLyricsToSongMapConversion() {
 
     FolderService folderSvc;
     // loadSongFromFolder should trigger convertLyricsToSongMap internally
-    folderSvc.loadSongFromFolder(tempDir);
+    static_cast<void>(folderSvc.loadSongFromFolder(tempDir));
 
     std::filesystem::path jsonPath = tempDir / "song-map.json";
     assert(std::filesystem::exists(jsonPath) == true);
