@@ -8,7 +8,8 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "node --test"
+    "test": "vitest run --coverage",
+    "format:check": "prettier --check src/App.jsx src/appLogic.js src/appLogic.test.js src/lib/transposer.test.js vitest.config.js"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
@@ -21,7 +22,10 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
+    "@vitest/coverage-v8": "^5.0.5",
     "oxlint": "^1.75.0",
-    "vite": "^8.2.0"
+    "prettier": "^3.9.10",
+    "vite": "^8.2.0",
+    "vitest": "^5.0.5"
   }
 }

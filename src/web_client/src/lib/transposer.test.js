@@ -1,28 +1,45 @@
-import { test } from 'node:test'
-import assert from 'node:assert/strict'
-import { nashvilleToStandard, getCapoFret, suggestCapoKey } from './transposer.js'
+import { describe, expect, it } from "vitest";
+import {
+  nashvilleToStandard,
+  getCapoFret,
+  suggestCapoKey,
+  toCagedLeadShape,
+} from "./transposer";
 
-test('nashvilleToStandard transposes scale degrees', () => {
-  assert.equal(nashvilleToStandard('1', 'C'), 'C')
-  assert.equal(nashvilleToStandard('6m', 'C'), 'Am')
-  assert.equal(nashvilleToStandard('5', 'D'), 'A')
-  assert.equal(nashvilleToStandard('4maj7', 'G'), 'Cmaj7')
-})
+describe("Nashville chord transposition", () => {
+  it("transposes scale degrees and slash bass degrees", () => {
+    expect(nashvilleToStandard("1", "C")).toBe("C");
+    expect(nashvilleToStandard("6m", "C")).toBe("Am");
+    expect(nashvilleToStandard("5", "D")).toBe("A");
+    expect(nashvilleToStandard("4maj7", "G")).toBe("Cmaj7");
+    expect(nashvilleToStandard("1/3", "C")).toBe("C/E");
+    expect(nashvilleToStandard("4/5", "G")).toBe("C/D");
+    expect(nashvilleToStandard("6m7/5", "D")).toBe("Bm7/A");
+  });
 
-test('nashvilleToStandard transposes slash-chord bass degrees', () => {
-  assert.equal(nashvilleToStandard('1/3', 'C'), 'C/E')
-  assert.equal(nashvilleToStandard('4/5', 'G'), 'C/D')
-  assert.equal(nashvilleToStandard('6m7/5', 'D'), 'Bm7/A')
-})
+  it("preserves invalid input and handles empty values", () => {
+    expect(nashvilleToStandard("N.C.", "C")).toBe("N.C.");
+    expect(nashvilleToStandard("1", "H")).toBe("1");
+    expect(nashvilleToStandard("", "C")).toBe("");
+    expect(nashvilleToStandard("1", "")).toBe("1");
+  });
+});
 
-test('nashvilleToStandard leaves non-Nashville input alone', () => {
-  assert.equal(nashvilleToStandard('N.C.', 'C'), 'N.C.')
-  assert.equal(nashvilleToStandard('1', 'H'), '1')
-})
+describe("capo and CAGED helpers", () => {
+  it("suggests capo keys and fret positions", () => {
+    expect(suggestCapoKey("E")).toBe("C");
+    expect(suggestCapoKey("A")).toBe("G");
+    expect(suggestCapoKey("H")).toBe("C");
+    expect(getCapoFret("E", "C")).toBe(4);
+    expect(getCapoFret("A", "G")).toBe(2);
+    expect(getCapoFret("H", "C")).toBe(0);
+  });
 
-test('capo helpers', () => {
-  assert.equal(suggestCapoKey('E'), 'C')
-  assert.equal(suggestCapoKey('A'), 'G')
-  assert.equal(getCapoFret('E', 'C'), 4)
-  assert.equal(getCapoFret('A', 'G'), 2)
-})
+  it("chooses a lead shape and preserves unrecognized chords", () => {
+    expect(toCagedLeadShape("C")).toBe("C [C-shape fret 0]");
+    expect(toCagedLeadShape("G")).toBe("G [D-shape fret 5]");
+    expect(toCagedLeadShape("D")).toBe("D [A-shape fret 5]");
+    expect(toCagedLeadShape("N.C.")).toBe("N.C.");
+    expect(toCagedLeadShape("")).toBe("");
+  });
+});
