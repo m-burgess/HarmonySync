@@ -188,6 +188,12 @@ add_test(NAME test_ai_lyric_sync COMMAND test_ai_lyric_sync)
 
 # Test StemMixerPanel.qml against AudioMixerViewModel (#188)
 if(Qt6_FOUND)
+    add_executable(test_viewmodels_display test_viewmodels_display.cpp)
+    target_link_libraries(
+        test_viewmodels_display PRIVATE harmonysync_viewmodels harmonysync_media harmonysync_core Qt6::Core Qt6::Gui Qt6::Quick
+    )
+    add_test(NAME test_viewmodels_display COMMAND test_viewmodels_display)
+
     add_executable(test_qml_stem_mixer_panel test_qml_stem_mixer_panel.cpp)
     target_link_libraries(test_qml_stem_mixer_panel PRIVATE harmonysync_viewmodels harmonysync_media harmonysync_core Qt6::Core Qt6::Gui Qt6::Quick Qt6::QuickControls2)
     target_compile_definitions(test_qml_stem_mixer_panel PRIVATE HS_QML_DIR="${CMAKE_SOURCE_DIR}/src/qml")

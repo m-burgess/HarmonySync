@@ -11,6 +11,7 @@ add_library(harmonysync_viewmodels STATIC
     UserSessionViewModel.cpp
     SettingsViewModel.cpp
     JsonSyntaxHighlighter.cpp
+    QmlJsonHighlighterAdapter.cpp
     mobile/MusicianSessionViewModel.cpp
     mobile/MusicianConfidenceViewModel.cpp
 )

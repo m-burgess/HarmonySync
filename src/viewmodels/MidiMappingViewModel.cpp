@@ -10,8 +10,7 @@ struct MidiMappingViewModel::Impl {
     bool isLearning{false};
 
     explicit Impl(std::shared_ptr<Media::MidiHardwareDevice> dev)
-        : device(std::move(dev))
-    {
+        : device(std::move(dev)) {
         if (!device) {
             device = std::make_shared<Media::MidiHardwareDevice>();
         }
@@ -19,8 +18,7 @@ struct MidiMappingViewModel::Impl {
 };
 
 MidiMappingViewModel::MidiMappingViewModel(std::shared_ptr<Media::MidiHardwareDevice> device)
-    : m_impl(std::make_unique<Impl>(std::move(device)))
-{
+    : m_impl(std::make_unique<Impl>(std::move(device))) {
     m_impl->device->setMidiCallback([this](const Media::MidiMessage& msg) {
         if (m_impl->isLearning && !m_impl->activeLearnTarget.empty()) {
             bindControl(
@@ -29,10 +27,7 @@ MidiMappingViewModel::MidiMappingViewModel(std::shared_ptr<Media::MidiHardwareDe
 #else
                 m_impl->activeLearnTarget,
 #endif
-                msg.controlNumber,
-                msg.channel,
-                msg.type == Media::MidiMessageType::ControlChange
-            );
+                msg.controlNumber, msg.channel, msg.type == Media::MidiMessageType::ControlChange);
             cancelMidiLearn();
         }
     });
@@ -81,7 +76,9 @@ std::vector<std::string> MidiMappingViewModel::availablePorts() const {
 #ifdef HARMONYSYNC_QT_AVAILABLE
 bool MidiMappingViewModel::connectPort(const QString& portName) {
     bool ok = m_impl->device->connectPort(portName.toStdString());
-    if (ok) emit connectionStateChanged();
+    if (ok) {
+        emit connectionStateChanged();
+    }
     return ok;
 }
 
@@ -171,7 +168,9 @@ std::string MidiMappingViewModel::saveProfileJsonStd() const {
     std::string json = "{\n  \"profile\": \"Korg nanoKONTROL2\",\n  \"bindings\": [\n";
     bool first = true;
     for (const auto& [key, binding] : m_impl->bindings) {
-        if (!first) json += ",\n";
+        if (!first) {
+            json += ",\n";
+        }
         first = false;
         json += "    {\"action\": \"" + binding.targetAction +
                 "\", \"control\": " + std::to_string(binding.controlNumber) +

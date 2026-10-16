@@ -34,7 +34,11 @@ class SlideDisplayViewModel
 
 public:
     explicit SlideDisplayViewModel(std::shared_ptr<Core::FolderService> folderService = nullptr);
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    ~SlideDisplayViewModel() override;
+#else
     ~SlideDisplayViewModel();
+#endif
 
     SlideDisplayViewModel(const SlideDisplayViewModel&) = delete;
     SlideDisplayViewModel& operator=(const SlideDisplayViewModel&) = delete;

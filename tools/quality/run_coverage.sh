@@ -26,14 +26,16 @@ ctest --test-dir "$build_dir" --output-on-failure --no-tests=error -E "$known_re
 # Known-failing tests still contribute coverage when they exit normally, but must not fail the job.
 ctest --test-dir "$build_dir" --output-on-failure -R "$known_regex" || echo "WARNING: known-failing tests failed (see tools/quality/known-failing-tests.txt)"
 
-# Qt adapters below only forward device/process/socket calls; no application logic is excluded.
-# PR 6 adds no exclusions: OfflineMediaBackends preserves placeholder behavior and remains measured.
+# Qt adapters below only forward device/process/socket/document calls; no application logic is excluded.
+# QmlJsonHighlighterAdapter only attaches the tested highlighter to QQuickTextDocument.
+# OfflineMediaBackends preserves placeholder behavior and remains measured.
 gcovr --root "$root" "$build_dir" \
     --filter 'src/' \
     --exclude 'src/main\.cpp' \
     --exclude 'src/mobile/main_mobile\.cpp' \
     --exclude '.*/qrcodegen\..*' \
     --exclude '.*/Qt(WebSocketTransport|ProcessRunner|AudioSink|CommandRunner)\..*' \
+    --exclude 'src/viewmodels/QmlJsonHighlighterAdapter\.cpp' \
     --exclude-unreachable-branches --exclude-throw-branches \
     --json-summary "$build_dir/coverage-summary.json" --json-summary-pretty \
     --xml "$build_dir/coverage.xml" \

@@ -53,3 +53,12 @@ src/viewmodels/AudioMixerViewModel.hpp
 src/viewmodels/AudioMixerViewModel.cpp
 src/viewmodels/AudioFxViewModel.hpp
 src/viewmodels/AudioFxViewModel.cpp
+src/viewmodels/SlideDisplayViewModel
+src/viewmodels/PresentationWindowViewModel
+src/viewmodels/LowerThirdOverlayViewModel
+src/viewmodels/ConfidenceMonitorViewModel
+src/viewmodels/JsonSyntaxHighlighter
+src/viewmodels/QmlJsonHighlighterAdapter.cpp
+src/viewmodels/MidiMappingViewModel
+src/viewmodels/mobile/MusicianSessionViewModel
+src/viewmodels/mobile/MusicianConfidenceViewModel

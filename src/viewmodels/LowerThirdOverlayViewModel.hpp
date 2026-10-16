@@ -29,7 +29,11 @@ class LowerThirdOverlayViewModel
 
 public:
     LowerThirdOverlayViewModel();
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    ~LowerThirdOverlayViewModel() override;
+#else
     ~LowerThirdOverlayViewModel();
+#endif
 
     LowerThirdOverlayViewModel(const LowerThirdOverlayViewModel&) = delete;
     LowerThirdOverlayViewModel& operator=(const LowerThirdOverlayViewModel&) = delete;

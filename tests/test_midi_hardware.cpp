@@ -1,7 +1,7 @@
 #include "MidiHardwareDevice.hpp"
 #include "MidiMappingViewModel.hpp"
+#include "test_check.hpp"
 #include <iostream>
-#include <cassert>
 #include <cstdlib>
 
 using namespace HarmonySync::Media;
@@ -12,14 +12,14 @@ void testMidiHardwareDevice() {
 
     MidiHardwareDevice device;
     auto ports = device.availablePorts();
-    assert(!ports.empty());
-    assert(ports[0] == "Korg nanoKONTROL2 MIDI 1");
+    HS_CHECK(!ports.empty());
+    HS_CHECK(ports[0] == "Korg nanoKONTROL2 MIDI 1");
 
-    assert(!device.isConnected());
+    HS_CHECK(!device.isConnected());
     bool connected = device.connectPort("Korg nanoKONTROL2 MIDI 1");
-    assert(connected == true);
-    assert(device.isConnected() == true);
-    assert(device.connectedPortName() == "Korg nanoKONTROL2 MIDI 1");
+    HS_CHECK(connected);
+    HS_CHECK(device.isConnected());
+    HS_CHECK(device.connectedPortName() == "Korg nanoKONTROL2 MIDI 1");
 
     bool callbackTriggered = false;
     MidiMessage receivedMsg;
@@ -30,14 +30,14 @@ void testMidiHardwareDevice() {
 
     // Simulate CC Message: Channel 1, CC #16 (Fader 1), Value 127
     device.simulateMidiInput(0xB0, 16, 127);
-    assert(callbackTriggered == true);
-    assert(receivedMsg.type == MidiMessageType::ControlChange);
-    assert(receivedMsg.channel == 1);
-    assert(receivedMsg.controlNumber == 16);
-    assert(receivedMsg.velocityValue == 127);
+    HS_CHECK(callbackTriggered);
+    HS_CHECK(receivedMsg.type == MidiMessageType::ControlChange);
+    HS_CHECK(receivedMsg.channel == 1);
+    HS_CHECK(receivedMsg.controlNumber == 16);
+    HS_CHECK(receivedMsg.velocityValue == 127);
 
     device.disconnectPort();
-    assert(!device.isConnected());
+    HS_CHECK(!device.isConnected());
 
     std::cout << "[PASS] testMidiHardwareDevice passed." << std::endl;
 }
@@ -48,14 +48,19 @@ void testMidiMappingViewModel() {
     auto device = std::make_shared<MidiHardwareDevice>();
     MidiMappingViewModel vm(device);
 
-    assert(!vm.isConnected());
+    HS_CHECK(!vm.isConnected());
 #ifdef HARMONYSYNC_QT_AVAILABLE
     bool connected = vm.connectPort(QStringLiteral("Novation Launchpad Mini"));
 #else
     bool connected = vm.connectPort("Novation Launchpad Mini");
 #endif
-    assert(connected == true);
-    assert(vm.isConnected() == true);
+    HS_CHECK(connected);
+    HS_CHECK(vm.isConnected());
+    HS_CHECK(vm.connectedPortNameStd() == "Novation Launchpad Mini");
+    HS_CHECK(!vm.availablePorts().empty());
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    HS_CHECK(vm.connectedPortName() == QStringLiteral("Novation Launchpad Mini"));
+#endif
 
     // Test Manual Binding
 #ifdef HARMONYSYNC_QT_AVAILABLE
@@ -65,32 +70,72 @@ void testMidiMappingViewModel() {
 #endif
 
     const MidiTargetBinding* binding = vm.getBindingForTarget("Stem1Volume");
-    assert(binding != nullptr);
-    assert(binding->controlNumber == 16);
-    assert(binding->channel == 1);
-    assert(binding->isCC == true);
+    HS_CHECK(binding != nullptr);
+    HS_CHECK(binding->controlNumber == 16);
+    HS_CHECK(binding->channel == 1);
+    HS_CHECK(binding->isCC);
 
     // Test MIDI Learn Mode
-    assert(!vm.isLearning());
+    HS_CHECK(!vm.isLearning());
 #ifdef HARMONYSYNC_QT_AVAILABLE
     vm.startMidiLearn(QStringLiteral("MasterGain"));
 #else
     vm.startMidiLearn("MasterGain");
 #endif
-    assert(vm.isLearning() == true);
-    assert(vm.activeLearnTargetStd() == "MasterGain");
+    HS_CHECK(vm.isLearning());
+    HS_CHECK(vm.activeLearnTargetStd() == "MasterGain");
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    HS_CHECK(vm.activeLearnTarget() == QStringLiteral("MasterGain"));
+#endif
 
     // Simulate input while learning
     device->simulateMidiInput(0xB0, 7, 64); // Master Volume CC #7
-    assert(!vm.isLearning()); // Learn auto-completes
+    HS_CHECK(!vm.isLearning());             // Learn auto-completes
 
     const MidiTargetBinding* learnedBinding = vm.getBindingForTarget("MasterGain");
-    assert(learnedBinding != nullptr);
-    assert(learnedBinding->controlNumber == 7);
+    HS_CHECK(learnedBinding != nullptr);
+    HS_CHECK(learnedBinding->controlNumber == 7);
+    HS_CHECK(learnedBinding->channel == 1);
+    HS_CHECK(learnedBinding->isCC);
 
-    // Test Profile Export
     std::string json = vm.saveProfileJsonStd();
-    assert(json.find("Korg nanoKONTROL2") != std::string::npos);
+    HS_CHECK(json.find("Korg nanoKONTROL2") != std::string::npos);
+    HS_CHECK(json.find("MasterGain") != std::string::npos);
+    HS_CHECK(vm.loadProfileJsonStd(json));
+    HS_CHECK(!vm.loadProfileJsonStd(""));
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    HS_CHECK(vm.saveProfileJson().toStdString() == json);
+    HS_CHECK(vm.loadProfileJson(QString::fromStdString(json)));
+    HS_CHECK(!vm.loadProfileJson(QString()));
+#endif
+    vm.clearBinding(
+#ifdef HARMONYSYNC_QT_AVAILABLE
+        QStringLiteral("MasterGain")
+#else
+        "MasterGain"
+#endif
+    );
+    HS_CHECK(vm.getBindingForTarget("MasterGain") == nullptr);
+    HS_CHECK(vm.getBindingForTarget("missing") == nullptr);
+
+    vm.startMidiLearn(
+#ifdef HARMONYSYNC_QT_AVAILABLE
+        QStringLiteral("NextSlide")
+#else
+        "NextSlide"
+#endif
+    );
+    device->simulateMidiInput(0x92, 64, 100); // Note-on on channel 3 is not a CC.
+    const MidiTargetBinding* learnedNote = vm.getBindingForTarget("NextSlide");
+    HS_CHECK(learnedNote != nullptr);
+    HS_CHECK(learnedNote->controlNumber == 64);
+    HS_CHECK(learnedNote->channel == 3);
+    HS_CHECK(!learnedNote->isCC);
+    HS_CHECK(!vm.isLearning());
+    vm.cancelMidiLearn(); // cancel when already idle is safe
+    HS_CHECK(vm.activeLearnTargetStd().empty());
+    vm.disconnectPort();
+    HS_CHECK(!vm.isConnected());
 
     std::cout << "[PASS] testMidiMappingViewModel passed." << std::endl;
 }

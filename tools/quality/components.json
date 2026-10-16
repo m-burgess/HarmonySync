@@ -83,7 +83,7 @@
     },
     {
       "name": "viewmodels-display",
-      "floor": 10,
+      "floor": 85,
       "paths": [
         "src/viewmodels/SlideDisplayViewModel",
         "src/viewmodels/PresentationWindowViewModel",
@@ -94,7 +94,7 @@
     },
     {
       "name": "viewmodels-midi-mobile",
-      "floor": 10,
+      "floor": 85,
       "paths": ["src/viewmodels/MidiMappingViewModel", "src/viewmodels/mobile/"]
     }
   ]

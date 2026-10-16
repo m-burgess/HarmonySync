@@ -9,8 +9,7 @@ struct LowerThirdOverlayViewModel::Impl {
 };
 
 LowerThirdOverlayViewModel::LowerThirdOverlayViewModel()
-    : m_impl(std::make_unique<Impl>())
-{}
+    : m_impl(std::make_unique<Impl>()) {}
 
 LowerThirdOverlayViewModel::~LowerThirdOverlayViewModel() = default;
 

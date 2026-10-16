@@ -32,7 +32,11 @@ class MusicianSessionViewModel
 
 public:
     explicit MusicianSessionViewModel(std::shared_ptr<Core::MobileApiClient> client = nullptr);
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    ~MusicianSessionViewModel() override;
+#else
     ~MusicianSessionViewModel();
+#endif
 
     MusicianSessionViewModel(const MusicianSessionViewModel&) = delete;
     MusicianSessionViewModel& operator=(const MusicianSessionViewModel&) = delete;
@@ -46,7 +50,7 @@ public:
     void setHostIp(const QString& ip);
     [[nodiscard]] QString pairingPin() const;
     void setPairingPin(const QString& pin);
-    
+
     Q_INVOKABLE void connectToHost();
     Q_INVOKABLE void disconnectFromHost();
 #else
@@ -54,7 +58,7 @@ public:
     void setHostIp(const std::string& ip);
     [[nodiscard]] std::string pairingPin() const;
     void setPairingPin(const std::string& pin);
-    
+
     void connectToHost();
     void disconnectFromHost();
 #endif

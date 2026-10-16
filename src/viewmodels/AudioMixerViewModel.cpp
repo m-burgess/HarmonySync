@@ -93,8 +93,9 @@ AudioMixerViewModel::AudioMixerViewModel(std::shared_ptr<Media::AudioEngine> aud
 
     QObject::connect(m_impl->transposeDebounceTimer.get(), &QTimer::timeout, this, [this]() {
         auto stems = m_impl->m_activeDeck->loadedStems();
-        if (stems.empty())
+        if (stems.empty()) {
             return;
+        }
 
         std::filesystem::path folderPath = std::filesystem::path(stems[0].filePath()).parent_path();
         // If transposed stems are from a subfolder, we need the actual root folder
@@ -114,21 +115,24 @@ AudioMixerViewModel::AudioMixerViewModel(std::shared_ptr<Media::AudioEngine> aud
 
         int targetSemitones = pitchShiftSemitones();
 
-        m_impl->transposer.transposeStemsAsync(stems, folderPath, targetSemitones,
-                                               [this, wasPlaying, currentPos](std::vector<Core::MediaStem> newStems) {
-                                                   QMetaObject::invokeMethod(
-                                                       this,
-                                                       [this, newStems, wasPlaying, currentPos]() {
-                                                           m_impl->m_activeDeck->loadStems(newStems);
-                                                           m_impl->m_activeDeck->seek(currentPos);
-                                                           if (wasPlaying) {
-                                                               m_impl->m_activeDeck->play();
-                                                           }
-                                                           m_impl->isTransposing = false;
-                                                           emit isTransposingChanged(false);
-                                                       },
-                                                       Qt::QueuedConnection);
-                                               });
+        m_impl->transposer.transposeStemsAsync(
+            stems, folderPath, targetSemitones,
+            [this, wasPlaying,
+             currentPos](std::vector<Core::MediaStem> newStems) { // NOLINT(performance-unnecessary-value-param): the
+                                                                  // queued closure owns the decoded stems.
+                QMetaObject::invokeMethod(
+                    this,
+                    [this, newStems, wasPlaying, currentPos]() {
+                        m_impl->m_activeDeck->loadStems(newStems);
+                        m_impl->m_activeDeck->seek(currentPos);
+                        if (wasPlaying) {
+                            m_impl->m_activeDeck->play();
+                        }
+                        m_impl->isTransposing = false;
+                        emit isTransposingChanged(false);
+                    },
+                    Qt::QueuedConnection);
+            });
     });
 #endif
 }
@@ -418,8 +422,9 @@ std::size_t AudioMixerViewModel::liveSongSetCountForTesting() const noexcept {
 
 void AudioMixerViewModel::setCrossfadePosition(float position) noexcept {
     float clamped = std::clamp(position, 0.0f, 1.0f);
-    if (m_impl->m_crossfadePos == clamped)
+    if (m_impl->m_crossfadePos == clamped) {
         return;
+    }
 
     m_impl->m_crossfadePos = clamped;
 
@@ -515,7 +520,7 @@ void AudioMixerViewModel::setStemVolume(int stemIndex, float volume) {
 
 void AudioMixerViewModel::toggleStemMute(int stemIndex) {
     auto stems = m_impl->m_activeDeck->loadedStems();
-    if (stemIndex >= 0 && stemIndex < static_cast<int>(stems.size())) {
+    if (stemIndex >= 0 && static_cast<std::size_t>(stemIndex) < stems.size()) {
         bool currentMute = stems[static_cast<size_t>(stemIndex)].isMuted();
         m_impl->m_activeDeck->setStemMuted(stemIndex, !currentMute);
 #ifdef HARMONYSYNC_QT_AVAILABLE
@@ -527,7 +532,7 @@ void AudioMixerViewModel::toggleStemMute(int stemIndex) {
 
 void AudioMixerViewModel::toggleStemSolo(int stemIndex) {
     auto stems = m_impl->m_activeDeck->loadedStems();
-    if (stemIndex >= 0 && stemIndex < static_cast<int>(stems.size())) {
+    if (stemIndex >= 0 && static_cast<std::size_t>(stemIndex) < stems.size()) {
         bool currentSolo = stems[static_cast<size_t>(stemIndex)].isSolo();
         m_impl->m_activeDeck->setStemSolo(stemIndex, !currentSolo);
 #ifdef HARMONYSYNC_QT_AVAILABLE
@@ -540,7 +545,7 @@ void AudioMixerViewModel::toggleStemSolo(int stemIndex) {
 #ifdef HARMONYSYNC_QT_AVAILABLE
 QString AudioMixerViewModel::stemName(int index) const {
     auto stems = m_impl->m_activeDeck->loadedStems();
-    if (index >= 0 && index < static_cast<int>(stems.size())) {
+    if (index >= 0 && static_cast<std::size_t>(index) < stems.size()) {
         return QString::fromStdString(stems[static_cast<size_t>(index)].name());
     }
     return QString();
@@ -548,7 +553,7 @@ QString AudioMixerViewModel::stemName(int index) const {
 #else
 std::string AudioMixerViewModel::stemName(int index) const {
     auto stems = m_impl->m_activeDeck->loadedStems();
-    if (index >= 0 && index < static_cast<int>(stems.size())) {
+    if (index >= 0 && static_cast<std::size_t>(index) < stems.size()) {
         return stems[static_cast<size_t>(index)].name();
     }
     return "";
@@ -557,7 +562,7 @@ std::string AudioMixerViewModel::stemName(int index) const {
 
 float AudioMixerViewModel::stemVolume(int index) const {
     auto stems = m_impl->m_activeDeck->loadedStems();
-    if (index >= 0 && index < static_cast<int>(stems.size())) {
+    if (index >= 0 && static_cast<std::size_t>(index) < stems.size()) {
         return stems[static_cast<size_t>(index)].volume();
     }
     return 1.0f;
@@ -565,7 +570,7 @@ float AudioMixerViewModel::stemVolume(int index) const {
 
 bool AudioMixerViewModel::stemIsMuted(int index) const {
     auto stems = m_impl->m_activeDeck->loadedStems();
-    if (index >= 0 && index < static_cast<int>(stems.size())) {
+    if (index >= 0 && static_cast<std::size_t>(index) < stems.size()) {
         return stems[static_cast<size_t>(index)].isMuted();
     }
     return false;
@@ -573,7 +578,7 @@ bool AudioMixerViewModel::stemIsMuted(int index) const {
 
 bool AudioMixerViewModel::stemIsSoloed(int index) const {
     auto stems = m_impl->m_activeDeck->loadedStems();
-    if (index >= 0 && index < static_cast<int>(stems.size())) {
+    if (index >= 0 && static_cast<std::size_t>(index) < stems.size()) {
         return stems[static_cast<size_t>(index)].isSolo();
     }
     return false;

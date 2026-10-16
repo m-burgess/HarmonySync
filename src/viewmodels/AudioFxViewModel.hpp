@@ -32,7 +32,11 @@ class AudioFxViewModel
 public:
     explicit AudioFxViewModel(std::shared_ptr<Media::MultiBandEqualizer> eq = nullptr,
                               std::shared_ptr<Media::AudioDynamicsCompressor> comp = nullptr);
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    ~AudioFxViewModel() override;
+#else
     ~AudioFxViewModel();
+#endif
 
     AudioFxViewModel(const AudioFxViewModel&) = delete;
     AudioFxViewModel& operator=(const AudioFxViewModel&) = delete;
