@@ -24,7 +24,7 @@ else()
         -Wunused
         -Woverloaded-virtual
         -Wshadow
-        -Werror=return-type
+        -Werror
     )
 endif()
 

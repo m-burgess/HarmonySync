@@ -115,3 +115,30 @@ jobs:
           name: lint-report
           path: build-lint/lint-report.txt
           if-no-files-found: ignore
+
+  cmake-and-workflow-lint:
+    name: CMake and workflow lint
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.4.0
+
+      - name: Install CMake linters
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends pipx
+          pipx install gersemi
+          pipx install cmakelint
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Check CMake formatting
+        shell: bash
+        run: gersemi -c CMakeLists.txt cmake/CPackConfig.cmake cmake/Coverage.cmake src/core/CMakeLists.txt src/media/CMakeLists.txt src/viewmodels/CMakeLists.txt tests/CMakeLists.txt
+
+      - name: Lint CMake
+        shell: bash
+        run: cmakelint CMakeLists.txt cmake/*.cmake src/core/CMakeLists.txt src/media/CMakeLists.txt src/viewmodels/CMakeLists.txt tests/CMakeLists.txt
+
+      - name: Lint GitHub Actions workflows
+        uses: raven-actions/actionlint@v2
