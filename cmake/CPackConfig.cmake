@@ -1,7 +1,9 @@
 # CPack Multi-Platform Installer Configuration
 set(CPACK_PACKAGE_NAME "harmonysync")
 set(CPACK_PACKAGE_VENDOR "HarmonySync Systems")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "HarmonySync Native C++20 / Qt 6 Worship Media Engine")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
+    "HarmonySync Native C++20 / Qt 6 Worship Media Engine"
+)
 set(CPACK_PACKAGE_VERSION_MAJOR 2)
 set(CPACK_PACKAGE_VERSION_MINOR 0)
 set(CPACK_PACKAGE_VERSION_PATCH 0)
@@ -9,7 +11,9 @@ set(CPACK_PACKAGE_INSTALL_DIRECTORY "HarmonySync")
 
 if(UNIX AND NOT APPLE)
     set(CPACK_GENERATOR "DEB;TGZ")
-    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Michael Burgess <michael@harmonysync.org>")
+    set(CPACK_DEBIAN_PACKAGE_MAINTAINER
+        "Michael Burgess <michael@harmonysync.org>"
+    )
     set(CPACK_DEBIAN_PACKAGE_SECTION "sound")
 elseif(WIN32)
     set(CPACK_GENERATOR "NSIS;ZIP")

@@ -1,4 +1,6 @@
-add_library(harmonysync_core STATIC
+add_library(
+    harmonysync_core
+    STATIC
     models/MediaStem.cpp
     models/SongMap.cpp
     models/SlideItem.cpp
@@ -27,12 +29,30 @@ add_library(harmonysync_core STATIC
     services/QrCodeImageProvider.cpp
 )
 
-target_include_directories(harmonysync_core PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/models
-    ${CMAKE_CURRENT_SOURCE_DIR}/services
+# qrcodegen is vendored and excluded from the project's warning and lint scope.
+if(MSVC)
+    set_source_files_properties(
+        services/qrcodegen.cpp
+        PROPERTIES COMPILE_OPTIONS /WX-
+    )
+else()
+    set_source_files_properties(
+        services/qrcodegen.cpp
+        PROPERTIES COMPILE_OPTIONS -Wno-error
+    )
+endif()
+
+target_include_directories(
+    harmonysync_core
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/models
+        ${CMAKE_CURRENT_SOURCE_DIR}/services
 )
 
 if(Qt6_FOUND)
-    target_link_libraries(harmonysync_core PUBLIC Qt6::Core Qt6::Gui Qt6::WebSockets Qt6::Quick)
+    target_link_libraries(
+        harmonysync_core
+        PUBLIC Qt6::Core Qt6::Gui Qt6::WebSockets Qt6::Quick
+    )
 endif()

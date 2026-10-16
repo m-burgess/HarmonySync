@@ -57,7 +57,8 @@ std::string ChordTransposer::nashvilleToStandard(const std::string& nashville, c
 
         if (degree >= 1 && degree <= 7) {
             int noteIdx = (rootIdx + scaleIntervals[degree - 1]) % 12;
-            return CHROMATIC_SCALE[noteIdx] + modifier;
+            auto noteIndex = static_cast<std::size_t>(noteIdx);
+            return CHROMATIC_SCALE[noteIndex] + modifier;
         }
     }
 
