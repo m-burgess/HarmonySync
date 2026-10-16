@@ -25,6 +25,7 @@
 #include <fstream>
 #include <functional>
 #include <iostream>
+#include <iterator>
 #include <mutex>
 #include <stdexcept>
 #include <string>
@@ -595,6 +596,34 @@ void testRemoveSongAtSignalOrderAndSkip() {
 
 } // namespace
 
+// #205/#185: a mute made just before the setlist is cleared still reaches the song's mix.json.
+void testMuteThenClearSetlistSavesMix() {
+    std::cout << "[TEST] Running testMuteThenClearSetlistSavesMix..." << std::endl;
+    SetlistViewModel setlist;
+    AudioMixerViewModel mixer;
+    SongSwitchCoordinator coordinator(setlist, mixer);
+    openAndSettle(setlist, mixer, makeRealServiceOrder("muteclear", {"Alpha", "Bravo"}));
+    const auto song = setlist.stemsAt(0);
+    check(!song.empty(), "song 0 has no stems");
+    const fs::path mixPath = fs::path(song.front().filePath()).parent_path() / "mix.json";
+    fs::remove(mixPath);
+    const std::string stemName = mixer.stemName(0).toStdString();
+    mixer.toggleStemMute(0);
+    check(mixer.stemIsMuted(0), "mute did not apply");
+    setlist.clearSetlist();            // immediately: the autosave is still debounced
+    waitFor([&] { return fs::exists(mixPath); }, 3000);
+    runEvents(200);
+    check(fs::exists(mixPath), "clear: mix.json was never written for the cleared song");
+    std::ifstream in(mixPath);
+    const std::string json((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    const auto key = json.find("\"" + stemName + "\"");
+    check(key != std::string::npos, "clear: mix.json has no entry for " + stemName);
+    const auto muted = json.find("\"muted\"", key);
+    check(muted != std::string::npos && json.find("true", muted) < json.find_first_of(",}", muted + 8),
+          "clear: mix.json does not have the mute: " + json);
+    std::cout << "[PASS] testMuteThenClearSetlistSavesMix passed." << std::endl;
+}
+
 int main(int argc, char** argv) {
     QCoreApplication app(argc, argv);
     // Optional: pass one test name to run only that test.
@@ -613,6 +642,7 @@ int main(int argc, char** argv) {
         {"testPendingAdvanceSurvivesRemovingNextSong", testPendingAdvanceSurvivesRemovingNextSong},
         {"testOpeningOrderDropsOldPreloadFirst", testOpeningOrderDropsOldPreloadFirst},
         {"testClearAndReopenFiftyTimesHoldsAtMostTwoSongs", testClearAndReopenFiftyTimesHoldsAtMostTwoSongs},
+        {"testMuteThenClearSetlistSavesMix", testMuteThenClearSetlistSavesMix},
     };
     try {
         for (const auto& [name, run] : tests) {
