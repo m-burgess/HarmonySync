@@ -34,15 +34,15 @@ QJsonObject parse(const std::string& message) {
 }
 
 void testDefaultTransportConstructs() {
-    std::cout << "[TEST] Running testDefaultTransportConstructs..." << std::endl;
+    std::cout << "[TEST] Running testDefaultTransportConstructs..." << '\n';
     // Builds the Qt transport but never connects, so no socket is opened.
     MobileApiClient client;
     HS_CHECK(client.currentState() == ConnectionState::Disconnected);
-    std::cout << "[PASS] testDefaultTransportConstructs passed." << std::endl;
+    std::cout << "[PASS] testDefaultTransportConstructs passed." << '\n';
 }
 
 void testConnectAuthenticatesWithPin() {
-    std::cout << "[TEST] Running testConnectAuthenticatesWithPin..." << std::endl;
+    std::cout << "[TEST] Running testConnectAuthenticatesWithPin..." << '\n';
     Harness h;
     HS_CHECK(h.client.currentState() == ConnectionState::Disconnected);
 
@@ -61,32 +61,32 @@ void testConnectAuthenticatesWithPin() {
     HS_CHECK(h.states.size() == 2);
     HS_CHECK(h.states[0] == ConnectionState::Connecting);
     HS_CHECK(h.states[1] == ConnectionState::Connected);
-    std::cout << "[PASS] testConnectAuthenticatesWithPin passed." << std::endl;
+    std::cout << "[PASS] testConnectAuthenticatesWithPin passed." << '\n';
 }
 
 void testConnectionFailure() {
-    std::cout << "[TEST] Running testConnectionFailure..." << std::endl;
+    std::cout << "[TEST] Running testConnectionFailure..." << '\n';
     Harness h;
     h.client.connectToHost("10.0.0.1", 8080, "1111");
     h.transport->fireError(1);
     HS_CHECK(h.client.currentState() == ConnectionState::ConnectionFailed);
     HS_CHECK(h.states.back() == ConnectionState::ConnectionFailed);
     HS_CHECK(!h.client.sendCommand("NEXT_SLIDE", "{}"));
-    std::cout << "[PASS] testConnectionFailure passed." << std::endl;
+    std::cout << "[PASS] testConnectionFailure passed." << '\n';
 }
 
 void testRemoteDisconnect() {
-    std::cout << "[TEST] Running testRemoteDisconnect..." << std::endl;
+    std::cout << "[TEST] Running testRemoteDisconnect..." << '\n';
     Harness h;
     h.client.connectToHost("10.0.0.1", 8080, "1111");
     h.transport->fireConnected();
     h.transport->fireDisconnected();
     HS_CHECK(h.client.currentState() == ConnectionState::Disconnected);
-    std::cout << "[PASS] testRemoteDisconnect passed." << std::endl;
+    std::cout << "[PASS] testRemoteDisconnect passed." << '\n';
 }
 
 void testLocalDisconnect() {
-    std::cout << "[TEST] Running testLocalDisconnect..." << std::endl;
+    std::cout << "[TEST] Running testLocalDisconnect..." << '\n';
     Harness h;
     h.client.connectToHost("10.0.0.1", 8080, "1111");
     h.transport->fireConnected();
@@ -94,11 +94,11 @@ void testLocalDisconnect() {
     h.client.disconnect();
     HS_CHECK(h.transport->closeCalls == 1);
     HS_CHECK(h.client.currentState() == ConnectionState::Disconnected);
-    std::cout << "[PASS] testLocalDisconnect passed." << std::endl;
+    std::cout << "[PASS] testLocalDisconnect passed." << '\n';
 }
 
 void testSendCommand() {
-    std::cout << "[TEST] Running testSendCommand..." << std::endl;
+    std::cout << "[TEST] Running testSendCommand..." << '\n';
     Harness h;
     HS_CHECK(!h.client.sendCommand("SET_MIXER_VOL", "{}"));
     HS_CHECK(h.transport->sent.empty());
@@ -112,11 +112,11 @@ void testSendCommand() {
     const QJsonObject command = parse(h.transport->sent[1]);
     HS_CHECK(command["action"].toString() == "SET_MIXER_VOL");
     HS_CHECK(command["payload"].toString() == R"({"stemId":2,"volume":0.8})");
-    std::cout << "[PASS] testSendCommand passed." << std::endl;
+    std::cout << "[PASS] testSendCommand passed." << '\n';
 }
 
 void testEvents() {
-    std::cout << "[TEST] Running testEvents..." << std::endl;
+    std::cout << "[TEST] Running testEvents..." << '\n';
     Harness h;
     // Dropped silently while no callback is set.
     h.transport->fireText(R"({"event":"EARLY","payload":""})");
@@ -138,11 +138,11 @@ void testEvents() {
     h.transport->fireText("garbage");
     h.transport->fireText("[]");
     HS_CHECK(calls == 1);
-    std::cout << "[PASS] testEvents passed." << std::endl;
+    std::cout << "[PASS] testEvents passed." << '\n';
 }
 
 void testCallbacksMayQueryClient() {
-    std::cout << "[TEST] Running testCallbacksMayQueryClient..." << std::endl;
+    std::cout << "[TEST] Running testCallbacksMayQueryClient..." << '\n';
     Harness h;
     ConnectionState seen = ConnectionState::Disconnected;
     h.client.setStateCallback([&](ConnectionState) { seen = h.client.currentState(); });
@@ -150,7 +150,20 @@ void testCallbacksMayQueryClient() {
     h.client.connectToHost("10.0.0.1", 8080, "1111");
     HS_CHECK(seen == ConnectionState::Connecting);
     h.client.setStateCallback(nullptr);
-    std::cout << "[PASS] testCallbacksMayQueryClient passed." << std::endl;
+    std::cout << "[PASS] testCallbacksMayQueryClient passed." << '\n';
+}
+
+void testCallbackCancelsConnection() {
+    Harness h;
+    h.client.setStateCallback([&](ConnectionState state) {
+        if (state == ConnectionState::Connecting) {
+            h.client.disconnect();
+        }
+    });
+    h.client.connectToHost("localhost", 8080, "1234");
+    HS_CHECK(h.client.currentState() == ConnectionState::Disconnected);
+    HS_CHECK(h.transport->openCalls == 0);
+    h.client.setStateCallback({});
 }
 
 } // namespace
@@ -164,6 +177,7 @@ int main() {
     testSendCommand();
     testEvents();
     testCallbacksMayQueryClient();
-    std::cout << "\nALL MOBILE API CLIENT UNIT TESTS PASSED" << std::endl;
+    testCallbackCancelsConnection();
+    std::cout << "\nALL MOBILE API CLIENT UNIT TESTS PASSED" << '\n';
     return EXIT_SUCCESS;
 }

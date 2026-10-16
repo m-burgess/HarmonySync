@@ -17,6 +17,7 @@ struct RemoteApiServer::Impl {
     std::string lastSongMapJson;
     ApiCommandCallback commandCb;
     mutable std::mutex mutex;
+    std::mutex lifecycleMutex;
     std::vector<std::shared_ptr<IWebSocketConnection>> clients;
     std::unique_ptr<IWebSocketServer> transport;
 
@@ -40,6 +41,10 @@ struct RemoteApiServer::Impl {
     }
 
     void onDisconnect(const std::shared_ptr<IWebSocketConnection>& connection) {
+        if (connection) {
+            connection->setTextHandler({});
+            connection->setDisconnectHandler({});
+        }
         std::lock_guard<std::mutex> lock(mutex);
         std::erase(clients, connection);
     }
@@ -83,6 +88,7 @@ RemoteApiServer::~RemoteApiServer() {
 }
 
 bool RemoteApiServer::startServer() {
+    std::lock_guard<std::mutex> lifecycleLock(m_impl->lifecycleMutex);
     std::lock_guard<std::mutex> lock(m_impl->mutex);
     if (m_impl->running) {
         return true;
@@ -98,6 +104,7 @@ bool RemoteApiServer::startServer() {
 }
 
 void RemoteApiServer::stopServer() {
+    std::lock_guard<std::mutex> lifecycleLock(m_impl->lifecycleMutex);
     std::vector<std::shared_ptr<IWebSocketConnection>> clients;
     {
         std::lock_guard<std::mutex> lock(m_impl->mutex);
@@ -107,6 +114,8 @@ void RemoteApiServer::stopServer() {
     // Closing outside the lock: a transport may report disconnects synchronously.
     m_impl->transport->close();
     for (const auto& client : clients) {
+        client->setTextHandler({});
+        client->setDisconnectHandler({});
         client->close();
     }
 }

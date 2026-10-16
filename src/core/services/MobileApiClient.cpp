@@ -103,6 +103,9 @@ void MobileApiClient::connectToHost(const std::string& ipAddress, uint16_t port,
         m_impl->currentPin = pin;
     }
     m_impl->updateState(ConnectionState::Connecting);
+    if (currentState() != ConnectionState::Connecting) {
+        return;
+    }
     m_impl->transport->open(ipAddress, port);
 }
 

@@ -8,7 +8,7 @@
 #define HS_CHECK(cond)                                                                                                 \
     do {                                                                                                               \
         if (!(cond)) {                                                                                                 \
-            std::cerr << __FILE__ << ':' << __LINE__ << ": check failed: " #cond << std::endl;                         \
+            std::cerr << __FILE__ << ':' << __LINE__ << ": check failed: " #cond << '\n';                              \
             std::exit(EXIT_FAILURE);                                                                                   \
         }                                                                                                              \
     } while (false)
