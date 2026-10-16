@@ -1,6 +1,9 @@
 #include "AudioEngine.hpp"
 #include "RealtimeHandoff.hpp"
 #include "StemMixer.hpp"
+#ifdef HARMONYSYNC_HAS_QT
+#include <QCoreApplication>
+#endif
 #include <iostream>
 #include <algorithm>
 #include <cassert>
@@ -260,6 +263,35 @@ void testRealtimeHandoffLatestPublishWinsAndRetiresStack() {
     std::cout << "[PASS] testRealtimeHandoffLatestPublishWinsAndRetiresStack passed." << std::endl;
 }
 
+// #185 (QA line-721 failure): an unacknowledged handoff keeps the outgoing song as current, and
+// nothing is retired; once the audio thread takes it, a control-thread reclaim frees the old song
+// without another publish. Device-free: this thread plays the audio thread's part.
+void testRetiredSongFreedAfterAcknowledgeWithoutAnotherSwitch() {
+    std::cout << "[TEST] Running testRetiredSongFreedAfterAcknowledgeWithoutAnotherSwitch..." << std::endl;
+    auto aFreed = std::make_shared<int>(0);
+    auto bFreed = std::make_shared<int>(0);
+    {
+        RealtimeHandoff<TrackedSongSet> handoff;
+        handoff.resetCurrent(TrackedSongSet("A", aFreed));
+        handoff.publish(TrackedSongSet("B", bFreed));
+
+        // The sink has not pulled yet: A is still current, B pending, nothing to reclaim.
+        assert(handoff.hasPending());
+        assert(handoff.reclaimRetired() == 0);
+        assert(*aFreed == 0);
+
+        assert(handoff.acquirePending()); // the audio callback runs once
+        assert(handoff.current()->song == "B");
+        assert(*aFreed == 0);              // retired, never freed on the audio thread
+
+        assert(handoff.reclaimRetired() == 1); // next control-thread call, no new publish
+        assert(*aFreed == 1);
+        assert(*bFreed == 0);
+    }
+    assert(*bFreed == 1);
+    std::cout << "[PASS] testRetiredSongFreedAfterAcknowledgeWithoutAnotherSwitch passed." << std::endl;
+}
+
 namespace {
 
 using namespace std::chrono_literals;
@@ -483,6 +515,17 @@ void testEngineDestroyedWhilePreloadDecoding() {
 }
 
 namespace {
+
+/// Lets a real audio sink pull. Qt's PulseAudio sink calls readData() from the event loop of
+/// the thread that owns it (here the test's main thread), so without this the sink never takes
+/// a handed-off song and the outgoing song is never retired (#185, QA line-721 failure).
+void pumpAudioEvents() {
+#ifdef HARMONYSYNC_HAS_QT
+    if (QCoreApplication::instance() != nullptr) {
+        QCoreApplication::processEvents();
+    }
+#endif
+}
 
 /// Writes small real 16-bit stereo WAVs so preloaded songs hold real memory-mapped buffers.
 class TempWavDir {
@@ -711,10 +754,11 @@ void testMemoryStaysBoundedOverFiftySwitches() {
     assert(ready->waitFor(ticket, hasStems));
     assert(hasStems);
     engine.clearPreloaded();
-    // With a live audio sink the last handoff may still be in flight; clearPreloaded() also
-    // frees whatever the audio thread has let go of, so retry briefly.
+    // With a live audio sink the outgoing song stays current until the sink pulls once and
+    // takes the handoff; clearPreloaded() then frees the retired song. Let the sink run.
     const auto deadline = std::chrono::steady_clock::now() + 2s;
     while (engine.liveSongSetCountForTesting() != 1 && std::chrono::steady_clock::now() < deadline) {
+        pumpAudioEvents();
         std::this_thread::sleep_for(5ms);
         engine.clearPreloaded();
     }
@@ -729,7 +773,14 @@ void testMemoryStaysBoundedOverFiftySwitches() {
               << maxAfterSwitch << ")." << std::endl;
 }
 
-int main() {
+int main(int argc, char** argv) {
+#ifdef HARMONYSYNC_HAS_QT
+    // Qt Multimedia needs an application object; the PulseAudio sink pulls from its event loop.
+    QCoreApplication app(argc, argv);
+#else
+    (void)argc;
+    (void)argv;
+#endif
     try {
         testAudioEngineStates();
         testStemMixerCalculation();
@@ -737,6 +788,7 @@ int main() {
         testSwitchToPreloadedStartsNextSongAtZero();
         testRealtimeHandoffKeepsSongAliveUntilAudioThreadLetsGo();
         testRealtimeHandoffLatestPublishWinsAndRetiresStack();
+        testRetiredSongFreedAfterAcknowledgeWithoutAnotherSwitch();
         testAsyncPreloadDoesNotBlockAndSwitchWaitsUntilReady();
         testNewerAsyncPreloadReplacesOlder();
         testSyncPreloadAndLoadCancelPendingAsync();
