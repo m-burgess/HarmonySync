@@ -41,7 +41,7 @@ MidiHardwareDevice::MidiHardwareDevice(MidiHardwareDevice&&) noexcept = default;
 MidiHardwareDevice& MidiHardwareDevice::operator=(MidiHardwareDevice&&) noexcept = default;
 
 std::vector<std::string> MidiHardwareDevice::availablePorts() const {
-    std::lock_guard<std::mutex> lock(m_impl->lifecycleMutex);
+    // Discovery can be called by an input callback while close() drains delivery.
     return m_impl->port ? m_impl->port->availablePorts() : std::vector<std::string>{};
 }
 

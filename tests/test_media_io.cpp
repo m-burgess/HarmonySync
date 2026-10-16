@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <array>
 #include <limits>
+#include <latch>
+#include <thread>
 #include <utility>
 
 using namespace HarmonySync::Media;
@@ -286,6 +288,49 @@ void testNdi() {
     offline.sendFrame(pixels.data(), pixels.size());
 }
 
+void testMidiDiscoveryDuringClose() {
+    class ThreadedMidi final : public IMidiPort {
+    public:
+        InputHandler input;
+        std::latch closing{1};
+        std::thread delivery;
+        std::vector<std::string> availablePorts() const override { return {"threaded input"}; }
+        bool open(const std::string& /*name*/) override { return true; }
+        void close() override {
+            if (delivery.joinable()) {
+                closing.count_down();
+                delivery.join();
+            }
+        }
+        void setInputHandler(InputHandler handler) override { input = std::move(handler); }
+        void deliverDuringClose() {
+            delivery = std::thread([this] { input(0x90, 60, 127); });
+        }
+    };
+    for (bool reconnect : {false, true}) {
+        auto port = std::make_unique<ThreadedMidi>();
+        auto* fake = port.get();
+        MidiHardwareDevice device(std::move(port));
+        HS_CHECK(device.connectPort("threaded input"));
+        bool queried = false;
+        device.setMidiCallback([&](const MidiMessage&) {
+            fake->closing.wait();
+            HS_CHECK(device.availablePorts() == std::vector<std::string>{"threaded input"});
+            HS_CHECK(device.isConnected());
+            queried = true;
+        });
+        fake->deliverDuringClose();
+        if (reconnect) {
+            HS_CHECK(device.connectPort("threaded input"));
+        } else {
+            device.disconnectPort();
+        }
+        HS_CHECK(queried); // close() has joined the delivery thread.
+        HS_CHECK(device.isConnected() == reconnect);
+        device.setMidiCallback({});
+    }
+}
+
 void testVideo() {
     const auto state = std::make_shared<VideoState>();
     {
@@ -354,6 +399,7 @@ int main() {
     testDmx();
     testCues();
     testMidi();
+    testMidiDiscoveryDuringClose();
     testNdi();
     testVideo();
 }

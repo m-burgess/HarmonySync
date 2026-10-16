@@ -10,9 +10,12 @@ class IMidiPort {
 public:
     using InputHandler = std::function<void(uint8_t, uint8_t, uint8_t)>;
     virtual ~IMidiPort() = default;
+    // Discovery must be safe concurrently with open/close and from an input handler.
+    // It must not acquire a backend lock held while close() drains delivery.
     virtual std::vector<std::string> availablePorts() const = 0;
     virtual bool open(const std::string& name) = 0;
     // close() quiesces delivery before returning. Lifecycle methods do not invoke handlers inline.
+    // Schedule lifecycle changes on the control thread, not from inside an input handler.
     virtual void close() = 0;
     virtual void setInputHandler(InputHandler handler) = 0;
 };
