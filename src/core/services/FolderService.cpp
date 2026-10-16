@@ -32,6 +32,7 @@ namespace {
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QFile>
+#include <QSaveFile>
 #endif
 
 namespace HarmonySync::Core {
@@ -354,9 +355,9 @@ std::vector<SlideItem> FolderService::loadSlidesFromFolder(const std::filesystem
     return slides;
 }
 
-void FolderService::saveMixState(const std::string& folderPath, const std::vector<MediaStem>& stems) {
+bool FolderService::saveMixState(const std::string& folderPath, const std::vector<MediaStem>& stems) {
 #if __has_include(<QJsonDocument>)
-    if (folderPath.empty() || stems.empty()) return;
+    if (folderPath.empty() || stems.empty()) return false;
 
     QJsonObject stemsObj;
     for (const auto& stem : stems) {
@@ -376,10 +377,20 @@ void FolderService::saveMixState(const std::string& folderPath, const std::vecto
     QJsonDocument doc(rootObj);
     std::filesystem::path mixPath = std::filesystem::path(folderPath) / "mix.json";
     
-    QFile file(QString::fromStdString(mixPath.string()));
-    if (file.open(QIODevice::WriteOnly)) {
-        file.write(doc.toJson(QJsonDocument::Indented));
+    QSaveFile file(QString::fromStdString(mixPath.string()));
+    if (!file.open(QIODevice::WriteOnly)) {
+        return false;
     }
+    const QByteArray json = doc.toJson(QJsonDocument::Indented);
+    if (file.write(json) != json.size()) {
+        file.cancelWriting();
+        return false;
+    }
+    return file.commit(); // renames over mix.json only if everything was written
+#else
+    (void)folderPath;
+    (void)stems;
+    return false;
 #endif
 }
 

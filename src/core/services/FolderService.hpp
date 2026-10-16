@@ -43,7 +43,10 @@ public:
     /**
      * @brief Save and apply the song's multitrack mix state to mix.json.
      */
-    static void saveMixState(const std::string& folderPath, const std::vector<MediaStem>& stems);
+    /// Writes via a temp file that replaces mix.json only once fully written (QSaveFile), so an
+    /// existing mix.json is never left half-written. Returns false if nothing was saved or the
+    /// write could not complete (e.g. folder missing or read-only); mix.json is then unchanged.
+    static bool saveMixState(const std::string& folderPath, const std::vector<MediaStem>& stems);
     static void applyMixState(const std::string& folderPath, std::vector<MediaStem>& stems);
 
     /**

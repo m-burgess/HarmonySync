@@ -4,6 +4,12 @@
 #include <filesystem>
 #include <cassert>
 #include <cstdlib>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <type_traits>
+#include <vector>
+#include <unistd.h>
 
 using namespace HarmonySync::Core;
 
@@ -124,11 +130,77 @@ void testJsonParsing() {
     std::cout << "[PASS] testJsonParsing passed." << std::endl;
 }
 
+namespace {
+std::string readAll(const std::filesystem::path& path) {
+    std::ifstream in(path, std::ios::binary);
+    std::ostringstream out;
+    out << in.rdbuf();
+    return out.str();
+}
+
+/// Calls saveMixState and reports its result; a void saveMixState cannot report failure.
+template <typename... Args>
+bool saveReported(bool& reported, Args&&... args) {
+    if constexpr (std::is_same_v<decltype(FolderService::saveMixState(std::forward<Args>(args)...)), bool>) {
+        reported = true;
+        return FolderService::saveMixState(std::forward<Args>(args)...);
+    } else {
+        reported = false;
+        FolderService::saveMixState(std::forward<Args>(args)...);
+        return true;
+    }
+}
+} // namespace
+
+// saveMixState must say when mix.json could not be written, and must never leave an
+// existing mix.json half-written (write to a temp file, then replace).
+void testSaveMixStateReportsFailureAndKeepsOldFile() {
+    std::cout << "[TEST] Running testSaveMixStateReportsFailureAndKeepsOldFile..." << std::endl;
+    namespace fs = std::filesystem;
+    const fs::path dir = fs::temp_directory_path() / ("harmonysync_test_mix_save_" + std::to_string(::getpid()));
+    fs::remove_all(dir);
+    fs::create_directories(dir);
+    std::vector<MediaStem> stems = {MediaStem("d", "Drums", (dir / "Drums.wav").string())};
+    bool failed = false;
+    auto fail = [&failed](const char* what) {
+        std::cerr << "FAIL: " << what << std::endl;
+        failed = true;
+    };
+
+    bool reported = false;
+    if (!saveReported(reported, dir.string(), stems)) fail("a save to a writable folder must succeed");
+    if (!reported) fail("saveMixState returns void, so callers cannot tell a failed save");
+
+    // Existing mix.json in a folder that is now read-only: the save cannot complete.
+    // Root ignores directory permissions, so this case only means something as a normal user.
+    if (::geteuid() == 0) {
+        std::cout << "[SKIP] read-only folder case: running as root, permissions are not enforced" << std::endl;
+    } else {
+        stems[0].setMuted(true);
+        const std::string before = readAll(dir / "mix.json");
+        fs::permissions(dir, fs::perms::owner_read | fs::perms::owner_exec, fs::perm_options::replace);
+        const bool savedReadOnly = saveReported(reported, dir.string(), stems);
+        const std::string after = readAll(dir / "mix.json");
+        fs::permissions(dir, fs::perms::owner_all, fs::perm_options::replace);
+        if (savedReadOnly) fail("a save into a read-only folder must return false");
+        if (after != before) fail("the existing mix.json was changed by a save that could not complete");
+    }
+
+    // Folder that does not exist (unwritable target).
+    if (saveReported(reported, (dir / "missing" / "deeper").string(), stems))
+        fail("a save into a missing folder must return false");
+
+    fs::remove_all(dir);
+    if (failed) throw std::runtime_error("testSaveMixStateReportsFailureAndKeepsOldFile failed");
+    std::cout << "[PASS] testSaveMixStateReportsFailureAndKeepsOldFile passed." << std::endl;
+}
+
 int main() {
     try {
         testFolderScanningWithDummyFiles();
         testLyricsToSongMapConversion();
         testJsonParsing();
+        testSaveMixStateReportsFailureAndKeepsOldFile();
         std::cout << "\nALL FOLDER SERVICE UNIT TESTS PASSED (100% Success)" << std::endl;
         return EXIT_SUCCESS;
     } catch (const std::exception& ex) {
