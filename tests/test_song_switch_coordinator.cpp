@@ -241,7 +241,8 @@ void writeWav(const fs::path& path) {
 }
 
 fs::path makeRealServiceOrder(const std::string& tag, const std::vector<std::string>& songs) {
-    fs::path root = fs::temp_directory_path() / ("hs_song_switch_real_" + tag);
+    fs::path root = fs::temp_directory_path()
+                 / ("hs_song_switch_real_" + std::to_string(QCoreApplication::applicationPid()) + "_" + tag);
     fs::remove_all(root);
     for (std::size_t i = 0; i < songs.size(); ++i) {
         fs::path song = root / ("0" + std::to_string(i + 1) + "_Song_" + songs[i]);
@@ -270,12 +271,13 @@ private:
     std::size_t m_max{0};
 };
 
-// Opens an order and waits until song 0 is current and song 1 is preloaded (2 sets held).
+// Opens an order and waits until song 0 is current and song 1's preload has finished (2 sets held).
 void openAndSettle(SetlistViewModel& setlist, AudioMixerViewModel& mixer, const fs::path& root) {
     check(openOrder(setlist, root), "open failed: " + root.string());
     check(waitFor([&] { return currentStem(mixer) == stemOfSong(setlist, 0); }, 3000),
           "first song never became current (got " + currentStem(mixer) + ")");
-    check(waitFor([&] { return mixer.isPreloadedSong(setlist.stemsAt(1)) && mixer.liveSongSetCountForTesting() == 2; }, 3000),
+    check(waitFor([&] { return mixer.isPreloadedSong(setlist.stemsAt(1)) && mixer.isPreloadReadyForTesting()
+                                && mixer.liveSongSetCountForTesting() == 2; }, 3000),
           "second song never preloaded (live sets " + std::to_string(mixer.liveSongSetCountForTesting()) + ")");
 }
 

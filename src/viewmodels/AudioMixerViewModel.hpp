@@ -86,6 +86,8 @@ public:
     void unloadCurrentSong();
     /// #185: true if this song is the one preloading or preloaded for the next switch.
     [[nodiscard]] bool isPreloadedSong(const std::vector<Core::MediaStem>& stems) const;
+    /// Test seam: the latest requested preload has finished decoding (its ready result was applied).
+    [[nodiscard]] bool isPreloadReadyForTesting() const noexcept;
     /// Test seam (#185): song buffer sets held by this view model's engines.
     [[nodiscard]] std::size_t liveSongSetCountForTesting() const noexcept;
     

@@ -68,6 +68,8 @@ public:
     [[nodiscard]] bool isPreloadPending() const noexcept;
     /// Test seam: runs on the decode worker before decoding starts. Not for production use.
     void setPreloadDecodeHookForTesting(std::function<void()> hook);
+    /// Test seam: runs on the worker after its last cancel check, before it reports done.
+    void setPreloadFinishHookForTesting(std::function<void()> hook);
     /**
      * @brief Drop the next song (#185). Cancels a preloadStemsAsync() that is still decoding
      * (its onReady reports hasStems=false and its result is never adopted) and frees a

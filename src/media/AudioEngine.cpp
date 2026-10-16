@@ -271,7 +271,8 @@ DecodedSong decodeSong(const std::vector<Core::MediaStem>& stems,
 
 /// State shared between the control thread and one async preload worker (#216).
 /// The worker writes `result`, then sets `done` (release); the control thread reads
-/// `result` only after seeing `done` (acquire).
+/// `result` only after seeing `done` (acquire), and never once it has cancelled the job.
+/// A worker that sees `cancelled` after setting `done` frees `result` itself.
 struct PreloadJob {
     AudioEngine::PreloadTicket ticket = 0;
     DecodedSong result;
@@ -327,11 +328,15 @@ struct AudioEngine::Impl {
     std::vector<PreloadWorker> workers;     // every worker not yet joined
     AudioEngine::PreloadTicket nextTicket = 1;
     std::function<void()> decodeHookForTesting;
+    std::function<void()> finishHookForTesting;
 
     /// Drop the pending async preload; its worker finishes on its own and is joined later.
     void cancelPendingPreload() {
         if (pendingJob) {
-            pendingJob->cancelled.store(true, std::memory_order_relaxed);
+            // seq_cst pairs with the worker's done store / cancelled load: either this
+            // thread sees done (and joinFinishedWorkers frees the job) or the worker sees
+            // cancelled and frees its own result. A finished cancelled set is never left held.
+            pendingJob->cancelled.store(true, std::memory_order_seq_cst);
             pendingJob.reset();
         }
     }
@@ -547,7 +552,8 @@ AudioEngine::PreloadTicket AudioEngine::preloadStemsAsync(std::vector<Core::Medi
 
     // The worker owns copies of everything it uses; it never touches Impl.
     std::thread thread([job, stems = std::move(stems), onReady = std::move(onReady),
-                        hook = m_impl->decodeHookForTesting, liveSets = m_impl->liveSets]() {
+                        hook = m_impl->decodeHookForTesting,
+                        finishHook = m_impl->finishHookForTesting, liveSets = m_impl->liveSets]() {
         if (hook) {
             hook();
         }
@@ -561,7 +567,16 @@ AudioEngine::PreloadTicket AudioEngine::preloadStemsAsync(std::vector<Core::Medi
             // The control thread never reads a cancelled job's result.
             job->result = {};
         }
-        job->done.store(true, std::memory_order_release);
+        if (finishHook) {
+            finishHook();
+        }
+        job->done.store(true, std::memory_order_seq_cst);
+        if (hasStems && job->cancelled.load(std::memory_order_seq_cst)) {
+            // Cancelled after the last check above: the control thread dropped this job and
+            // will never read its result, so release the song set's lease here (#185) instead
+            // of waiting for the next preload, switch, load or teardown to join us.
+            job->result = {};
+        }
         if (onReady) {
             onReady(job->ticket, hasStems);
         }
@@ -579,6 +594,10 @@ bool AudioEngine::isPreloadPending() const noexcept {
 
 void AudioEngine::setPreloadDecodeHookForTesting(std::function<void()> hook) {
     m_impl->decodeHookForTesting = std::move(hook);
+}
+
+void AudioEngine::setPreloadFinishHookForTesting(std::function<void()> hook) {
+    m_impl->finishHookForTesting = std::move(hook);
 }
 
 void AudioEngine::clearPreloaded() {
