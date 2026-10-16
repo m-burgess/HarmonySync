@@ -68,7 +68,7 @@
     },
     {
       "name": "viewmodels-session",
-      "floor": 10,
+      "floor": 85,
       "paths": [
         "src/viewmodels/SetlistViewModel",
         "src/viewmodels/SettingsViewModel",

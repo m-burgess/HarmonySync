@@ -1,54 +1,87 @@
 #include "SettingsViewModel.hpp"
-#include <iostream>
+#include "test_check.hpp"
+#include "test_temp_dir.hpp"
+
+#include <QObject>
 #include <filesystem>
-#include <cassert>
-#include <cstdlib>
+#include <memory>
+#include <string>
+#include <vector>
 
 using namespace HarmonySync::ViewModels;
 
-void testSettingsViewModel() {
-    std::cout << "[TEST] Running testSettingsViewModel..." << std::endl;
+void testSettingsPropertiesAndSignals() {
+    TempDir dir;
+    auto storage = std::make_shared<HarmonySync::Core::SettingsStorageService>((dir.path() / "settings.json").string());
+    int settingsChanges = 0;
+    int displayChanges = 0;
+    auto displays = std::make_shared<HarmonySync::Core::DisplayManager>([] {
+        return std::vector<HarmonySync::Core::ScreenInfo>{{"Control", 1280, 720, 0, 0, true},
+                                                          {"Projector", 1920, 1080, 1280, 0, false}};
+    });
+    SettingsViewModel vm(storage, displays);
+    QObject::connect(&vm, &SettingsViewModel::settingsChanged, [&] { ++settingsChanges; });
+    QObject::connect(&vm, &SettingsViewModel::availableDisplaysChanged, [&] { ++displayChanges; });
 
-    std::string testPath = (std::filesystem::temp_directory_path() / "test_settings_vm.json").string();
-    std::filesystem::remove(testPath);
+    HS_CHECK(vm.presentationDisplayIndex() == 1);
+    HS_CHECK(vm.confidenceDisplayIndex() == 2);
+    HS_CHECK(vm.lyricsFontSize() == 48);
+    HS_CHECK(vm.lowerThirdFontSize() == 26);
+    HS_CHECK(vm.fontFamily() == QStringLiteral("Inter"));
+    HS_CHECK(vm.textColorHex() == QStringLiteral("#FFFFFF"));
+    HS_CHECK(vm.vAlign() == static_cast<int>(HarmonySync::Core::TextVerticalAlignment::Bottom));
+    HS_CHECK(vm.hAlign() == static_cast<int>(HarmonySync::Core::TextHorizontalAlignment::Center));
+    HS_CHECK(vm.availableDisplayNames() == QStringList({"Control", "Projector"}));
 
-    auto storage = std::make_shared<HarmonySync::Core::SettingsStorageService>(testPath);
-    SettingsViewModel vm(storage);
-
-    assert(vm.presentationDisplayIndex() == 1);
-    assert(vm.lyricsFontSize() == 48);
-
-    vm.setPresentationDisplayIndex(2);
+    vm.setPresentationDisplayIndex(0);
+    vm.setConfidenceDisplayIndex(1);
     vm.setLyricsFontSize(60);
-    vm.setMarginOffsetY(50);
+    vm.setLowerThirdFontSize(42);
+    vm.setFontFamily(QStringLiteral("Noto Sans"));
+    vm.setTextColorHex(QStringLiteral("#AABBCC"));
+    vm.setVAlign(static_cast<int>(HarmonySync::Core::TextVerticalAlignment::Top));
+    vm.setHAlign(static_cast<int>(HarmonySync::Core::TextHorizontalAlignment::Right));
+    vm.setMarginOffsetX(17);
+    vm.setMarginOffsetY(-9);
+    HS_CHECK(settingsChanges == 10);
+    vm.setPresentationDisplayIndex(0);
+    vm.setConfidenceDisplayIndex(1);
+    vm.setLyricsFontSize(60);
+    vm.setLowerThirdFontSize(42);
+    vm.setFontFamily(QStringLiteral("Noto Sans"));
+    vm.setTextColorHex(QStringLiteral("#AABBCC"));
+    vm.setMarginOffsetX(17);
+    vm.setMarginOffsetY(-9);
+    HS_CHECK(settingsChanges == 10);
+    HS_CHECK(vm.presentationDisplayIndex() == 0);
+    HS_CHECK(vm.confidenceDisplayIndex() == 1);
+    HS_CHECK(vm.lyricsFontSize() == 60);
+    HS_CHECK(vm.lowerThirdFontSize() == 42);
+    HS_CHECK(vm.fontFamily() == QStringLiteral("Noto Sans"));
+    HS_CHECK(vm.textColorHex() == QStringLiteral("#AABBCC"));
+    HS_CHECK(vm.vAlign() == static_cast<int>(HarmonySync::Core::TextVerticalAlignment::Top));
+    HS_CHECK(vm.hAlign() == static_cast<int>(HarmonySync::Core::TextHorizontalAlignment::Right));
+    HS_CHECK(vm.marginOffsetX() == 17);
+    HS_CHECK(vm.marginOffsetY() == -9);
 
-    assert(vm.presentationDisplayIndex() == 2);
-    assert(vm.lyricsFontSize() == 60);
-    assert(vm.marginOffsetY() == 50);
+    vm.refreshDisplays();
+    HS_CHECK(displayChanges == 1);
+    HS_CHECK(vm.availableDisplayNames().size() == 2);
+    HS_CHECK(!vm.localIpAddress().isEmpty());
 
-    bool saved = vm.saveSettings();
-    assert(saved == true);
-
+    HS_CHECK(vm.saveSettings());
     vm.resetToDefaults();
-    assert(vm.lyricsFontSize() == 48);
-
-    bool loaded = vm.loadSettings();
-    assert(loaded == true);
-    assert(vm.presentationDisplayIndex() == 2);
-    assert(vm.lyricsFontSize() == 60);
-
-    std::filesystem::remove(testPath);
-
-    std::cout << "[PASS] testSettingsViewModel passed." << std::endl;
+    HS_CHECK(vm.lyricsFontSize() == 48);
+    HS_CHECK(vm.loadSettings());
+    HS_CHECK(vm.presentationDisplayIndex() == 0);
+    HS_CHECK(vm.confidenceDisplayIndex() == 1);
+    HS_CHECK(vm.lyricsFontSize() == 60);
+    HS_CHECK(vm.lowerThirdFontSize() == 42);
+    HS_CHECK(vm.marginOffsetX() == 17);
+    HS_CHECK(vm.marginOffsetY() == -9);
 }
 
 int main() {
-    try {
-        testSettingsViewModel();
-        std::cout << "\nALL SPRINT 25 SETTINGS VIEWMODEL UNIT TESTS PASSED (100% Success)" << std::endl;
-        return EXIT_SUCCESS;
-    } catch (const std::exception& ex) {
-        std::cerr << "EXCEPTION in Settings ViewModel unit tests: " << ex.what() << std::endl;
-        return EXIT_FAILURE;
-    }
+    testSettingsPropertiesAndSignals();
+    return 0;
 }

@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <functional>
 
 #if defined(HARMONYSYNC_HAS_QT) || __has_include(<QObject>)
 #include <QObject>
@@ -42,8 +43,18 @@ class SetlistViewModel
 #endif
 
 public:
-    explicit SetlistViewModel(std::shared_ptr<Core::FolderService> folderService = nullptr);
+    using AITimestampGenerator =
+        std::function<void(const std::string&, const std::string&, const std::string&,
+                           std::function<void(std::vector<Core::TimedLyricLine>)>, std::function<void(std::string)>,
+                           std::function<void(std::string)>)>;
+
+    explicit SetlistViewModel(std::shared_ptr<Core::FolderService> folderService = nullptr,
+                              AITimestampGenerator aiTimestampGenerator = {});
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    ~SetlistViewModel() override;
+#else
     ~SetlistViewModel();
+#endif
 
     SetlistViewModel(const SetlistViewModel&) = delete;
     SetlistViewModel& operator=(const SetlistViewModel&) = delete;
@@ -94,7 +105,7 @@ public:
     [[nodiscard]] bool isGeneratingTimestamps() const noexcept;
     Q_INVOKABLE void generateAITimestamps(const QString& referenceStemName = "reference");
     Q_INVOKABLE void syncToPlaybackPosition(double positionSeconds);
-    
+
     [[nodiscard]] QString aiSyncProgressMessage() const;
     [[nodiscard]] QString currentSongMapJson() const;
     Q_INVOKABLE bool saveSongMapJson(const QString& jsonString);

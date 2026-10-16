@@ -20,8 +20,7 @@ namespace HarmonySync::ViewModels {
 class SongSwitchCoordinator : public QObject {
     Q_OBJECT
 public:
-    SongSwitchCoordinator(SetlistViewModel& setlist, AudioMixerViewModel& mixer,
-                          QObject* parent = nullptr);
+    SongSwitchCoordinator(SetlistViewModel& setlist, AudioMixerViewModel& mixer, QObject* parent = nullptr);
 
 private:
     void onCurrentSongIndexChanged(int index);

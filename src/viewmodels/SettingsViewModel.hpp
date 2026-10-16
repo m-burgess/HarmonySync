@@ -27,8 +27,10 @@ class SettingsViewModel
 {
 #ifdef HARMONYSYNC_QT_AVAILABLE
     Q_OBJECT
-    Q_PROPERTY(int presentationDisplayIndex READ presentationDisplayIndex WRITE setPresentationDisplayIndex NOTIFY settingsChanged)
-    Q_PROPERTY(int confidenceDisplayIndex READ confidenceDisplayIndex WRITE setConfidenceDisplayIndex NOTIFY settingsChanged)
+    Q_PROPERTY(int presentationDisplayIndex READ presentationDisplayIndex WRITE setPresentationDisplayIndex NOTIFY
+                   settingsChanged)
+    Q_PROPERTY(
+        int confidenceDisplayIndex READ confidenceDisplayIndex WRITE setConfidenceDisplayIndex NOTIFY settingsChanged)
     Q_PROPERTY(int lyricsFontSize READ lyricsFontSize WRITE setLyricsFontSize NOTIFY settingsChanged)
     Q_PROPERTY(int lowerThirdFontSize READ lowerThirdFontSize WRITE setLowerThirdFontSize NOTIFY settingsChanged)
     Q_PROPERTY(QString fontFamily READ fontFamily WRITE setFontFamily NOTIFY settingsChanged)
@@ -42,10 +44,13 @@ class SettingsViewModel
 #endif
 
 public:
-    explicit SettingsViewModel(
-        std::shared_ptr<Core::SettingsStorageService> storageService = nullptr,
-        std::shared_ptr<Core::DisplayManager> displayManager = nullptr);
+    explicit SettingsViewModel(std::shared_ptr<Core::SettingsStorageService> storageService = nullptr,
+                               std::shared_ptr<Core::DisplayManager> displayManager = nullptr);
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    ~SettingsViewModel() override;
+#else
     ~SettingsViewModel();
+#endif
 
     SettingsViewModel(const SettingsViewModel&) = delete;
     SettingsViewModel& operator=(const SettingsViewModel&) = delete;

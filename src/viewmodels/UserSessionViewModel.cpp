@@ -9,8 +9,7 @@ struct UserSessionViewModel::Impl {
 };
 
 UserSessionViewModel::UserSessionViewModel()
-    : m_impl(std::make_unique<Impl>())
-{}
+    : m_impl(std::make_unique<Impl>()) {}
 
 UserSessionViewModel::~UserSessionViewModel() = default;
 

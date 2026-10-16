@@ -7,15 +7,18 @@ namespace HarmonySync::ViewModels {
 namespace {
 std::vector<std::string> stemPaths(const std::vector<Core::MediaStem>& stems) {
     std::vector<std::string> paths;
-    for (const auto& stem : stems) paths.push_back(stem.filePath());
+    paths.reserve(stems.size());
+    for (const auto& stem : stems) {
+        paths.push_back(stem.filePath());
+    }
     return paths;
 }
 } // namespace
 
-SongSwitchCoordinator::SongSwitchCoordinator(SetlistViewModel& setlist,
-                                             AudioMixerViewModel& mixer, QObject* parent)
-    : QObject(parent), m_setlist(setlist), m_mixer(mixer)
-{
+SongSwitchCoordinator::SongSwitchCoordinator(SetlistViewModel& setlist, AudioMixerViewModel& mixer, QObject* parent)
+    : QObject(parent)
+    , m_setlist(setlist)
+    , m_mixer(mixer) {
     // #220: a new service order always starts stopped, so its first song is cued at 0
     // (the switch keeps the play state). Emitted before the first song is selected.
     // #185: drop the old order's next song first, so it is never held alongside the new one.
@@ -31,8 +34,7 @@ SongSwitchCoordinator::SongSwitchCoordinator(SetlistViewModel& setlist,
     connect(&m_setlist, &SetlistViewModel::currentSongIndexChanged, this,
             &SongSwitchCoordinator::onCurrentSongIndexChanged);
     // #187: as soon as a song is current, get the one after it ready.
-    connect(&m_mixer, &AudioMixerViewModel::songSwitched, this,
-            &SongSwitchCoordinator::preloadSongAfterCurrent);
+    connect(&m_mixer, &AudioMixerViewModel::songSwitched, this, &SongSwitchCoordinator::preloadSongAfterCurrent);
 }
 
 void SongSwitchCoordinator::onCurrentSongIndexChanged(int index) {
@@ -41,9 +43,8 @@ void SongSwitchCoordinator::onCurrentSongIndexChanged(int index) {
     }
     // Removing an earlier row shifts the shown song up one place; nothing to switch.
     // Anything else (including a reprise of the same song) is a real switch.
-    const bool shiftedByRemoval = m_removalInFlight && m_shownGeneration == m_generation &&
-                                  m_shownIndex >= 0 && index == m_shownIndex - 1 &&
-                                  stemPaths(m_setlist.stemsAt(index)) == m_shownStems;
+    const bool shiftedByRemoval = m_removalInFlight && m_shownGeneration == m_generation && m_shownIndex >= 0 &&
+                                  index == m_shownIndex - 1 && stemPaths(m_setlist.stemsAt(index)) == m_shownStems;
     m_shownIndex = index;
     m_shownStems = stemPaths(m_setlist.stemsAt(index));
     m_shownGeneration = m_generation;

@@ -153,6 +153,11 @@ add_executable(test_settings_viewmodel test_settings_viewmodel.cpp)
 target_link_libraries(test_settings_viewmodel PRIVATE harmonysync_viewmodels harmonysync_core)
 add_test(NAME test_settings_viewmodel COMMAND test_settings_viewmodel)
 
+# Session transitions and QObject state notifications.
+add_executable(test_user_session_viewmodel test_user_session_viewmodel.cpp)
+target_link_libraries(test_user_session_viewmodel PRIVATE harmonysync_viewmodels)
+add_test(NAME test_user_session_viewmodel COMMAND test_user_session_viewmodel)
+
 # Test QML Settings Dialog
 add_executable(test_qml_settings_dialog test_qml_settings_dialog.cpp)
 target_link_libraries(test_qml_settings_dialog PRIVATE harmonysync_viewmodels harmonysync_core)

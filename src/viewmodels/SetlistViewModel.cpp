@@ -19,7 +19,7 @@ struct SetlistViewModel::Impl {
     Core::ServiceOrder serviceOrder;
     std::shared_ptr<Core::FolderService> folderService;
     Core::ServiceOrderFolderScanner scanner;
-    std::shared_ptr<Core::AILyricSyncService> aiSyncService = std::make_shared<Core::AILyricSyncService>();
+    AITimestampGenerator aiTimestampGenerator;
     std::string titleStr{"Sunday Service Order"};
     int currentSongIndex{-1};
     bool isLoading{false};
@@ -34,7 +34,7 @@ struct SetlistViewModel::Impl {
 
     void updateLyricBlocks() {
         lyricBlocks.clear();
-        if (currentSongIndex < 0 || currentSongIndex >= static_cast<int>(serviceOrder.songs().size())) {
+        if (currentSongIndex < 0 || static_cast<size_t>(currentSongIndex) >= serviceOrder.songs().size()) {
             return;
         }
 
@@ -46,7 +46,8 @@ struct SetlistViewModel::Impl {
 
         auto trim = [](std::string& s) {
             s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) { return !std::isspace(ch); }));
-            s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) { return !std::isspace(ch); }).base(), s.end());
+            s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) { return !std::isspace(ch); }).base(),
+                    s.end());
         };
 
         auto toLower = [](std::string s) {
@@ -68,18 +69,13 @@ struct SetlistViewModel::Impl {
                 }
                 continue;
             }
-            
+
             std::string lowerLine = toLower(line);
-            if (lowerLine.find("title:") == 0 ||
-                lowerLine.find("artist:") == 0 ||
-                lowerLine.find("bpm:") == 0 ||
-                lowerLine.find("key:") == 0 ||
-                lowerLine.find("original key:") == 0 ||
-                lowerLine.find("timing:") == 0 ||
-                lowerLine.find("length:") == 0 ||
-                lowerLine.find("chords:") == 0 ||
-                lowerLine.find("lyricsurl:") == 0 ||
-                lowerLine.find("backgroundvideo:") == 0) {
+            if (lowerLine.starts_with("title:") || lowerLine.starts_with("artist:") || lowerLine.starts_with("bpm:") ||
+                lowerLine.starts_with("key:") || lowerLine.starts_with("original key:") ||
+                lowerLine.starts_with("timing:") || lowerLine.starts_with("length:") ||
+                lowerLine.starts_with("chords:") || lowerLine.starts_with("lyricsurl:") ||
+                lowerLine.starts_with("backgroundvideo:")) {
                 continue;
             }
 
@@ -87,7 +83,7 @@ struct SetlistViewModel::Impl {
                 if (lowerLine.find("chords:") != std::string::npos) {
                     continue;
                 }
-                
+
                 if (!currentBlock.empty()) {
                     lyricBlocks.push_back(currentBlock);
                     currentBlock.clear();
@@ -120,7 +116,7 @@ struct SetlistViewModel::Impl {
         activeLyricText.clear();
         nextLyricText.clear();
 
-        if (activeLyricIndex >= 0 && activeLyricIndex < static_cast<int>(lyricBlocks.size())) {
+        if (activeLyricIndex >= 0 && static_cast<size_t>(activeLyricIndex) < lyricBlocks.size()) {
             activeLyricText = lyricBlocks[activeLyricIndex];
             // Find next non-header block
             for (size_t i = activeLyricIndex + 1; i < lyricBlocks.size(); ++i) {
@@ -132,19 +128,30 @@ struct SetlistViewModel::Impl {
         }
     }
 
-    explicit Impl(std::shared_ptr<Core::FolderService> fs)
+    explicit Impl(std::shared_ptr<Core::FolderService> fs, AITimestampGenerator generator)
         : folderService(std::move(fs))
         , scanner(folderService)
-    {
+        , aiTimestampGenerator(std::move(generator)) {
         if (!folderService) {
             folderService = std::make_shared<Core::FolderService>();
+        }
+        if (!aiTimestampGenerator) {
+            auto service = std::make_shared<Core::AILyricSyncService>();
+            aiTimestampGenerator =
+                [service = std::move(service)](
+                    const std::string& referencePath, const std::string& multitrackPath, const std::string& lyrics,
+                    std::function<void(std::vector<Core::TimedLyricLine>)> onSuccess,
+                    std::function<void(std::string)> onError, std::function<void(std::string)> onProgress) {
+                    service->generateTimestamps(referencePath, multitrackPath, lyrics, std::move(onSuccess),
+                                                std::move(onError), std::move(onProgress));
+                };
         }
     }
 };
 
-SetlistViewModel::SetlistViewModel(std::shared_ptr<Core::FolderService> folderService)
-    : m_impl(std::make_unique<Impl>(std::move(folderService)))
-{}
+SetlistViewModel::SetlistViewModel(std::shared_ptr<Core::FolderService> folderService,
+                                   AITimestampGenerator aiTimestampGenerator)
+    : m_impl(std::make_unique<Impl>(std::move(folderService), std::move(aiTimestampGenerator))) {}
 
 SetlistViewModel::~SetlistViewModel() = default;
 
@@ -295,6 +302,9 @@ std::string SetlistViewModel::backgroundVideoPathAt(int index) const {
 
 bool SetlistViewModel::addSongFolder(const std::string& pathStr) {
 #endif
+    if (!m_impl->folderService->isSongFolder(pathStr)) {
+        return false;
+    }
     Core::SongMap song = m_impl->folderService->loadSongFromFolder(pathStr);
     if (!song.title().empty()) {
         m_impl->serviceOrder.addSong(song);
@@ -347,7 +357,8 @@ void SetlistViewModel::clearSetlist() {
 #ifdef HARMONYSYNC_QT_AVAILABLE
 QString SetlistViewModel::currentLyricsContent() const {
     if (m_impl->currentSongIndex >= 0 && m_impl->currentSongIndex < itemCount()) {
-        return QString::fromStdString(m_impl->serviceOrder.songs()[static_cast<size_t>(m_impl->currentSongIndex)].lyricsContent());
+        return QString::fromStdString(
+            m_impl->serviceOrder.songs()[static_cast<size_t>(m_impl->currentSongIndex)].lyricsContent());
     }
     return QString();
 }
@@ -409,8 +420,10 @@ bool SetlistViewModel::isGeneratingTimestamps() const noexcept {
 }
 
 void SetlistViewModel::generateAITimestamps(const QString& referenceStemName) {
-    if (m_impl->currentSongIndex < 0 || m_impl->isGeneratingTimestamps) return;
-    
+    if (m_impl->currentSongIndex < 0 || m_impl->isGeneratingTimestamps) {
+        return;
+    }
+
     auto& song = m_impl->serviceOrder.songs()[m_impl->currentSongIndex];
     std::string referenceAudioPath;
     std::string multitrackAudioPath;
@@ -431,20 +444,19 @@ void SetlistViewModel::generateAITimestamps(const QString& referenceStemName) {
     for (const auto& stem : song.stems()) {
         std::string lowerStem = stem.name();
         std::transform(lowerStem.begin(), lowerStem.end(), lowerStem.begin(), ::tolower);
-        if (lowerStem.find("click") != std::string::npos ||
-            lowerStem.find("guide") != std::string::npos ||
-            lowerStem.find("split") != std::string::npos ||
-            lowerStem.find("stereo") != std::string::npos) {
+        if (lowerStem.find("click") != std::string::npos || lowerStem.find("guide") != std::string::npos ||
+            lowerStem.find("split") != std::string::npos || lowerStem.find("stereo") != std::string::npos) {
             multitrackAudioPath = stem.filePath();
             break;
         }
     }
-    
+
     if (referenceAudioPath.empty() || multitrackAudioPath.empty()) {
-        std::cerr << "Reference or multitrack stem not found." << std::endl;
-        m_impl->aiSyncProgressMessage = "Error: Missing 'reference' audio or multitrack stem (Click/Guide/Split/Stereo).";
+        std::cerr << "Reference or multitrack stem not found.\n";
+        m_impl->aiSyncProgressMessage =
+            "Error: Missing 'reference' audio or multitrack stem (Click/Guide/Split/Stereo).";
         emit aiSyncProgressMessageChanged();
-        
+
         m_impl->isGeneratingTimestamps = true;
         emit isGeneratingTimestampsChanged(true);
         m_impl->isGeneratingTimestamps = false;
@@ -468,7 +480,7 @@ void SetlistViewModel::generateAITimestamps(const QString& referenceStemName) {
     auto onSuccess = [this](std::vector<Core::TimedLyricLine> lines) {
         if (m_impl->currentSongIndex >= 0) {
             Core::SongMap songCopy = m_impl->serviceOrder.songs()[m_impl->currentSongIndex];
-            
+
             // Map AI output directly into sections
             auto sections = songCopy.sections();
             size_t flatIndex = 0;
@@ -488,28 +500,29 @@ void SetlistViewModel::generateAITimestamps(const QString& referenceStemName) {
                 Core::FolderService::saveSongMap(songCopy);
             }
         }
-        
+
         m_impl->aiSyncProgressMessage = "Success: Lyrics aligned!";
         emit aiSyncProgressMessageChanged();
-        
+
         m_impl->isGeneratingTimestamps = false;
         emit isGeneratingTimestampsChanged(false);
     };
 
-    auto onError = [this](std::string error) {
-        std::cerr << "AI Lyric Sync failed: " << error << std::endl;
+    auto onError = [this](const std::string& error) {
+        std::cerr << "AI Lyric Sync failed: " << error << '\n';
         m_impl->isGeneratingTimestamps = false;
         m_impl->aiSyncProgressMessage = "Error: " + error;
         emit aiSyncProgressMessageChanged();
         emit isGeneratingTimestampsChanged(false);
     };
-    
+
     auto onProgress = [this](std::string msg) {
-        m_impl->aiSyncProgressMessage = msg;
+        m_impl->aiSyncProgressMessage = std::move(msg);
         emit aiSyncProgressMessageChanged();
     };
 
-    m_impl->aiSyncService->generateTimestamps(referenceAudioPath, multitrackAudioPath, cleanLyrics, onSuccess, onError, onProgress);
+    m_impl->aiTimestampGenerator(referenceAudioPath, multitrackAudioPath, cleanLyrics, std::move(onSuccess),
+                                 std::move(onError), std::move(onProgress));
 }
 
 QString SetlistViewModel::aiSyncProgressMessage() const {
@@ -517,11 +530,15 @@ QString SetlistViewModel::aiSyncProgressMessage() const {
 }
 
 QString SetlistViewModel::currentSongMapJson() const {
-    if (m_impl->currentSongIndex < 0 || m_impl->currentSongIndex >= itemCount()) return QString();
-    
+    if (m_impl->currentSongIndex < 0 || m_impl->currentSongIndex >= itemCount()) {
+        return QString();
+    }
+
     auto& song = m_impl->serviceOrder.songs()[m_impl->currentSongIndex];
     std::string folderPath = song.folderPath();
-    if (folderPath.empty()) return QString();
+    if (folderPath.empty()) {
+        return QString();
+    }
 
     std::filesystem::path jsonPath = std::filesystem::path(folderPath) / "song-map.json";
     if (std::filesystem::exists(jsonPath)) {
@@ -541,16 +558,18 @@ QString SetlistViewModel::currentSongMapJson() const {
             return templateStr;
         }
     }
-    
+
     return "{\n  \"title\": \"" + QString::fromStdString(song.title()) + "\",\n  \"sections\": []\n}";
 }
 
 bool SetlistViewModel::saveSongMapJson(const QString& jsonString) {
-    if (m_impl->currentSongIndex < 0 || m_impl->currentSongIndex >= itemCount()) return false;
-    
+    if (m_impl->currentSongIndex < 0 || m_impl->currentSongIndex >= itemCount()) {
+        return false;
+    }
+
     QJsonParseError error;
     QJsonDocument doc = QJsonDocument::fromJson(jsonString.toUtf8(), &error);
-    
+
     if (error.error != QJsonParseError::NoError) {
         // Return false to indicate failure. UI can parse the string again to get exact error.
         return false;
@@ -558,19 +577,21 @@ bool SetlistViewModel::saveSongMapJson(const QString& jsonString) {
 
     auto& song = m_impl->serviceOrder.songs()[m_impl->currentSongIndex];
     std::string folderPath = song.folderPath();
-    if (folderPath.empty()) return false;
+    if (folderPath.empty()) {
+        return false;
+    }
 
     std::filesystem::path jsonPath = std::filesystem::path(folderPath) / "song-map.json";
     QFile file(QString::fromStdString(jsonPath.string()));
     if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
         file.write(doc.toJson(QJsonDocument::Indented));
         file.close();
-        
+
         // Reload the song from folder to apply changes
         if (m_impl->folderService) {
             Core::SongMap updatedSong = m_impl->folderService->loadSongFromFolder(folderPath);
             m_impl->serviceOrder.updateSongAt(m_impl->currentSongIndex, updatedSong);
-            
+
             // Trigger updates
             emit titleChanged(QString::fromStdString(updatedSong.title()));
             m_impl->updateLyricBlocks();
@@ -587,11 +608,15 @@ bool SetlistViewModel::saveSongMapJson(const QString& jsonString) {
 }
 
 void SetlistViewModel::syncToPlaybackPosition(double positionSeconds) {
-    if (!m_impl->autoLyricsEnabled || m_impl->currentSongIndex < 0) return;
-    
+    if (!m_impl->autoLyricsEnabled || m_impl->currentSongIndex < 0) {
+        return;
+    }
+
     auto& song = m_impl->serviceOrder.songs()[m_impl->currentSongIndex];
     auto sections = song.sections();
-    if (sections.empty()) return;
+    if (sections.empty()) {
+        return;
+    }
 
     // Create a flat array of timestamps mapping to the raw lyric lines
     std::vector<double> flatTimestamps;
@@ -600,8 +625,10 @@ void SetlistViewModel::syncToPlaybackPosition(double positionSeconds) {
             flatTimestamps.push_back(line.timestampSeconds);
         }
     }
-    
-    if (flatTimestamps.empty()) return;
+
+    if (flatTimestamps.empty()) {
+        return;
+    }
 
     int timedIndex = -1;
     for (size_t i = 0; i < flatTimestamps.size(); ++i) {
@@ -611,16 +638,22 @@ void SetlistViewModel::syncToPlaybackPosition(double positionSeconds) {
             break;
         }
     }
-    
+
     if (timedIndex >= 0) {
         int currentTimedIdx = 0;
         int mappedBlockIndex = -1;
         for (size_t b = 0; b < m_impl->lyricBlocks.size(); ++b) {
+            if (m_impl->lyricBlocks[b].size() >= 2 && m_impl->lyricBlocks[b].front() == '[' &&
+                m_impl->lyricBlocks[b].back() == ']') {
+                continue;
+            }
             int linesInBlock = 0;
             std::istringstream stream(m_impl->lyricBlocks[b]);
             std::string line;
             while (std::getline(stream, line)) {
-                if (!line.empty()) linesInBlock++;
+                if (!line.empty()) {
+                    linesInBlock++;
+                }
             }
             if (timedIndex >= currentTimedIdx && timedIndex < currentTimedIdx + linesInBlock) {
                 mappedBlockIndex = static_cast<int>(b);
@@ -648,8 +681,9 @@ bool SetlistViewModel::isGeneratingTimestamps() const noexcept {
 }
 
 void SetlistViewModel::generateAITimestamps(const std::string& referenceStemName) {
-    if (m_impl->currentSongIndex < 0 || m_impl->isGeneratingTimestamps) return;
-    
+    if (m_impl->currentSongIndex < 0 || m_impl->isGeneratingTimestamps)
+        return;
+
     auto& song = m_impl->serviceOrder.songs()[m_impl->currentSongIndex];
     std::string referenceAudioPath;
     std::string multitrackAudioPath;
@@ -664,20 +698,19 @@ void SetlistViewModel::generateAITimestamps(const std::string& referenceStemName
             break;
         }
     }
-    
+
     for (const auto& stem : song.stems()) {
         std::string lowerStem = stem.name();
         std::transform(lowerStem.begin(), lowerStem.end(), lowerStem.begin(), ::tolower);
-        if (lowerStem.find("click") != std::string::npos ||
-            lowerStem.find("guide") != std::string::npos ||
-            lowerStem.find("split") != std::string::npos ||
-            lowerStem.find("stereo") != std::string::npos) {
+        if (lowerStem.find("click") != std::string::npos || lowerStem.find("guide") != std::string::npos ||
+            lowerStem.find("split") != std::string::npos || lowerStem.find("stereo") != std::string::npos) {
             multitrackAudioPath = stem.filePath();
             break;
         }
     }
 
-    if (referenceAudioPath.empty() || multitrackAudioPath.empty()) return;
+    if (referenceAudioPath.empty() || multitrackAudioPath.empty())
+        return;
 
     m_impl->isGeneratingTimestamps = true;
 
@@ -693,11 +726,10 @@ void SetlistViewModel::generateAITimestamps(const std::string& referenceStemName
         }
     };
 
-    auto onError = [this](std::string error) {
-        m_impl->isGeneratingTimestamps = false;
-    };
+    auto onError = [this](std::string error) { m_impl->isGeneratingTimestamps = false; };
 
-    m_impl->aiSyncService->generateTimestamps(referenceAudioPath, multitrackAudioPath, song.lyricsContent(), onSuccess, onError, nullptr);
+    m_impl->aiTimestampGenerator(referenceAudioPath, multitrackAudioPath, song.lyricsContent(), std::move(onSuccess),
+                                 std::move(onError), nullptr);
 }
 
 std::string SetlistViewModel::currentSongMapJson() const {
@@ -709,11 +741,13 @@ bool SetlistViewModel::saveSongMapJson(const std::string& jsonString) {
 }
 
 void SetlistViewModel::syncToPlaybackPosition(double positionSeconds) {
-    if (!m_impl->autoLyricsEnabled || m_impl->currentSongIndex < 0) return;
-    
+    if (!m_impl->autoLyricsEnabled || m_impl->currentSongIndex < 0)
+        return;
+
     auto& song = m_impl->serviceOrder.songs()[m_impl->currentSongIndex];
     auto timedLyrics = song.timedLyrics();
-    if (timedLyrics.empty()) return;
+    if (timedLyrics.empty())
+        return;
 
     int timedIndex = -1;
     for (size_t i = 0; i < timedLyrics.size(); ++i) {
@@ -723,7 +757,7 @@ void SetlistViewModel::syncToPlaybackPosition(double positionSeconds) {
             break;
         }
     }
-    
+
     if (timedIndex >= 0) {
         int currentTimedIdx = 0;
         int mappedBlockIndex = -1;
@@ -732,7 +766,8 @@ void SetlistViewModel::syncToPlaybackPosition(double positionSeconds) {
             std::istringstream stream(m_impl->lyricBlocks[b]);
             std::string line;
             while (std::getline(stream, line)) {
-                if (!line.empty()) linesInBlock++;
+                if (!line.empty())
+                    linesInBlock++;
             }
             if (timedIndex >= currentTimedIdx && timedIndex < currentTimedIdx + linesInBlock) {
                 mappedBlockIndex = static_cast<int>(b);

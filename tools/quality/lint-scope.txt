@@ -45,3 +45,8 @@ src/media/NdiSender
 src/media/VideoBackgroundPlayer
 src/media/VideoPlayerBackend
 src/media/OfflineMediaBackends
+src/viewmodels/SetlistViewModel
+src/viewmodels/SettingsViewModel
+src/viewmodels/UserSessionViewModel
+src/viewmodels/SongSwitchCoordinator
+src/viewmodels/AudioMixerViewModel.hpp

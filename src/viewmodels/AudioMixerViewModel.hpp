@@ -32,13 +32,18 @@ class AudioMixerViewModel
     Q_PROPERTY(double positionSeconds READ positionSeconds NOTIFY positionChanged)
     Q_PROPERTY(double durationSeconds READ durationSeconds NOTIFY durationChanged)
     Q_PROPERTY(int loadedStemCount READ loadedStemCount NOTIFY stemCountChanged)
-    Q_PROPERTY(float crossfadePosition READ crossfadePosition WRITE setCrossfadePosition NOTIFY crossfadePositionChanged)
+    Q_PROPERTY(
+        float crossfadePosition READ crossfadePosition WRITE setCrossfadePosition NOTIFY crossfadePositionChanged)
     Q_PROPERTY(QString activeBackgroundVideo READ activeBackgroundVideo NOTIFY activeBackgroundVideoChanged)
 #endif
 
 public:
     explicit AudioMixerViewModel(std::shared_ptr<Media::AudioEngine> audioEngine = nullptr);
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    ~AudioMixerViewModel() override;
+#else
     ~AudioMixerViewModel();
+#endif
 
     AudioMixerViewModel(const AudioMixerViewModel&) = delete;
     AudioMixerViewModel& operator=(const AudioMixerViewModel&) = delete;
@@ -90,7 +95,7 @@ public:
     [[nodiscard]] bool isPreloadReadyForTesting() const noexcept;
     /// Test seam (#185): song buffer sets held by this view model's engines.
     [[nodiscard]] std::size_t liveSongSetCountForTesting() const noexcept;
-    
+
 #ifdef HARMONYSYNC_QT_AVAILABLE
     [[nodiscard]] QString activeBackgroundVideo() const;
     Q_INVOKABLE void loadNextBackgroundVideo(const QString& path);
@@ -100,7 +105,7 @@ public:
     void loadNextBackgroundVideo(const std::string& path);
     void setActiveBackgroundVideo(const std::string& path);
 #endif
-    
+
 #ifdef HARMONYSYNC_QT_AVAILABLE
     Q_INVOKABLE void setCrossfadePosition(float position) noexcept;
     Q_INVOKABLE void finalizeCrossfade();
@@ -154,7 +159,6 @@ private slots:
     // UI thread: applies decodes the engine's worker finished (queued by name, no captures).
     void drainPreloadResults();
 
-private:
     bool switchToPreloadedSong();
     void startPreload(const std::vector<Core::MediaStem>& stems, bool switchWhenReady);
     void onPreloadReady(std::uint64_t ticket, bool hasStems);
