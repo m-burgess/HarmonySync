@@ -38,7 +38,8 @@ class AudioMixerViewModel
 #endif
 
 public:
-    explicit AudioMixerViewModel(std::shared_ptr<Media::AudioEngine> audioEngine = nullptr);
+    explicit AudioMixerViewModel(std::shared_ptr<Media::AudioEngine> audioEngine = nullptr,
+                                 std::shared_ptr<Media::AudioEngine> nextAudioEngine = nullptr);
 #ifdef HARMONYSYNC_QT_AVAILABLE
     ~AudioMixerViewModel() override;
 #else

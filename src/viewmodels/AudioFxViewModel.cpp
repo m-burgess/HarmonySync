@@ -7,13 +7,9 @@ struct AudioFxViewModel::Impl {
     std::shared_ptr<Media::MultiBandEqualizer> equalizer;
     std::shared_ptr<Media::AudioDynamicsCompressor> compressor;
 
-    Impl(
-        std::shared_ptr<Media::MultiBandEqualizer> eq,
-        std::shared_ptr<Media::AudioDynamicsCompressor> comp
-    )
+    Impl(std::shared_ptr<Media::MultiBandEqualizer> eq, std::shared_ptr<Media::AudioDynamicsCompressor> comp)
         : equalizer(std::move(eq))
-        , compressor(std::move(comp))
-    {
+        , compressor(std::move(comp)) {
         if (!equalizer) {
             equalizer = std::make_shared<Media::MultiBandEqualizer>();
         }
@@ -23,12 +19,9 @@ struct AudioFxViewModel::Impl {
     }
 };
 
-AudioFxViewModel::AudioFxViewModel(
-    std::shared_ptr<Media::MultiBandEqualizer> eq,
-    std::shared_ptr<Media::AudioDynamicsCompressor> comp
-)
-    : m_impl(std::make_unique<Impl>(std::move(eq), std::move(comp)))
-{}
+AudioFxViewModel::AudioFxViewModel(std::shared_ptr<Media::MultiBandEqualizer> eq,
+                                   std::shared_ptr<Media::AudioDynamicsCompressor> comp)
+    : m_impl(std::make_unique<Impl>(std::move(eq), std::move(comp))) {}
 
 AudioFxViewModel::~AudioFxViewModel() = default;
 

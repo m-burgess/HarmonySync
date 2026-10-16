@@ -50,3 +50,6 @@ src/viewmodels/SettingsViewModel
 src/viewmodels/UserSessionViewModel
 src/viewmodels/SongSwitchCoordinator
 src/viewmodels/AudioMixerViewModel.hpp
+src/viewmodels/AudioMixerViewModel.cpp
+src/viewmodels/AudioFxViewModel.hpp
+src/viewmodels/AudioFxViewModel.cpp

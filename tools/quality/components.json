@@ -78,7 +78,7 @@
     },
     {
       "name": "viewmodels-audio",
-      "floor": 10,
+      "floor": 85,
       "paths": ["src/viewmodels/AudioMixerViewModel", "src/viewmodels/AudioFxViewModel"]
     },
     {

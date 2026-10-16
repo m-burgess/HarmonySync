@@ -108,6 +108,11 @@ add_executable(test_audio_dsp_advanced test_audio_dsp_advanced.cpp)
 target_link_libraries(test_audio_dsp_advanced PRIVATE harmonysync_viewmodels harmonysync_media harmonysync_core)
 add_test(NAME test_audio_dsp_advanced COMMAND test_audio_dsp_advanced)
 
+# Direct viewmodel audio controls and boundary behavior, checked in Release too.
+add_executable(test_viewmodels_audio test_viewmodels_audio.cpp)
+target_link_libraries(test_viewmodels_audio PRIVATE harmonysync_viewmodels harmonysync_media harmonysync_core)
+add_test(NAME test_viewmodels_audio COMMAND test_viewmodels_audio)
+
 # Test Multi-Language Localization
 add_executable(test_localization test_localization.cpp)
 target_link_libraries(test_localization PRIVATE harmonysync_core)
