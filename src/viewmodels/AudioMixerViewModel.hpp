@@ -159,6 +159,7 @@ private slots:
     // UI thread: applies decodes the engine's worker finished (queued by name, no captures).
     void drainPreloadResults();
 
+private: // NOLINT(readability-redundant-access-specifiers): end the Qt slots section before regular private members.
     bool switchToPreloadedSong();
     void startPreload(const std::vector<Core::MediaStem>& stems, bool switchWhenReady);
     void onPreloadReady(std::uint64_t ticket, bool hasStems);
