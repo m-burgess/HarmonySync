@@ -311,13 +311,25 @@ bool SetlistViewModel::addSongFolder(const std::string& pathStr) {
 
 void SetlistViewModel::removeSongAt(int index) {
     if (index >= 0 && index < itemCount()) {
+#ifdef HARMONYSYNC_QT_AVAILABLE
+        emit songRemovalStarted(index);
+#endif
         m_impl->serviceOrder.removeSongAt(static_cast<size_t>(index));
 #ifdef HARMONYSYNC_QT_AVAILABLE
         emit itemCountChanged(itemCount());
 #endif
-        if (m_impl->currentSongIndex >= itemCount()) {
+        if (index < m_impl->currentSongIndex) {
+            // An earlier song went: the same song stays selected, one place up.
+            --m_impl->currentSongIndex;
+#ifdef HARMONYSYNC_QT_AVAILABLE
+            emit currentSongIndexChanged(m_impl->currentSongIndex);
+#endif
+        } else if (m_impl->currentSongIndex >= itemCount()) {
             setCurrentSongIndex(itemCount() - 1);
         }
+#ifdef HARMONYSYNC_QT_AVAILABLE
+        emit songRemoved(index);
+#endif
     }
 }
 
@@ -328,6 +340,7 @@ void SetlistViewModel::clearSetlist() {
     emit itemCountChanged(0);
     emit currentSongIndexChanged(-1);
     emit activeSongMapChanged(false);
+    emit setlistCleared();
 #endif
 }
 

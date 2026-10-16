@@ -355,6 +355,42 @@ void AudioMixerViewModel::setPreloadDecodeHookForTesting(std::function<void()> h
     m_impl->m_activeDeck->setPreloadDecodeHookForTesting(std::move(hook));
 }
 
+void AudioMixerViewModel::clearPreloadedSong() {
+    m_impl->m_activeDeck->clearPreloaded();
+    // A cancelled decode still reports; ticket 0 never matches, so it is ignored.
+    m_impl->preloadKey.clear();
+    m_impl->preloadTicket = 0;
+    m_impl->preloadReady = false;
+    m_impl->switchWhenReady = false;
+}
+
+void AudioMixerViewModel::clearPreloadedSongKeepingPendingAdvance() {
+    if (m_impl->switchWhenReady && !m_impl->preloadKey.empty()) {
+        return;
+    }
+    clearPreloadedSong();
+}
+
+void AudioMixerViewModel::unloadCurrentSong() {
+    m_impl->m_activeDeck->unloadCurrent();
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    m_impl->positionTimer->stop();
+    emit stemCountChanged(loadedStemCount());
+    emit durationChanged(durationSeconds());
+    emit positionChanged(positionSeconds());
+    emit playStateChanged(isPlaying());
+#endif
+}
+
+bool AudioMixerViewModel::isPreloadedSong(const std::vector<Core::MediaStem>& stems) const {
+    return !stems.empty() && !m_impl->preloadKey.empty() && songKey(stems) == m_impl->preloadKey;
+}
+
+std::size_t AudioMixerViewModel::liveSongSetCountForTesting() const noexcept {
+    return m_impl->m_activeDeck->liveSongSetCountForTesting()
+         + m_impl->m_nextDeck->liveSongSetCountForTesting();
+}
+
 void AudioMixerViewModel::setCrossfadePosition(float position) noexcept {
     float clamped = std::clamp(position, 0.0f, 1.0f);
     if (m_impl->m_crossfadePos == clamped) return;

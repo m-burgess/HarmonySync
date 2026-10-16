@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <vector>
 
 #if defined(HARMONYSYNC_HAS_QT) || __has_include(<QObject>)
 #include <QObject>
@@ -75,6 +76,18 @@ public:
 
     /// Test seam: runs on the engine's decode worker before an async preload decodes.
     void setPreloadDecodeHookForTesting(std::function<void()> hook);
+
+    /// #185: drop the next song (cancels a running decode, frees a finished one) and forget it.
+    void clearPreloadedSong();
+    /// #185: as clearPreloadedSong(), but when the user's advance is still waiting on its
+    /// decode, that song is the one they chose: keep it and its pending switch.
+    void clearPreloadedSongKeepingPendingAdvance();
+    /// #185: stop and free the current song; the mixer shows no stems. A preloaded song is kept.
+    void unloadCurrentSong();
+    /// #185: true if this song is the one preloading or preloaded for the next switch.
+    [[nodiscard]] bool isPreloadedSong(const std::vector<Core::MediaStem>& stems) const;
+    /// Test seam (#185): song buffer sets held by this view model's engines.
+    [[nodiscard]] std::size_t liveSongSetCountForTesting() const noexcept;
     
 #ifdef HARMONYSYNC_QT_AVAILABLE
     [[nodiscard]] QString activeBackgroundVideo() const;

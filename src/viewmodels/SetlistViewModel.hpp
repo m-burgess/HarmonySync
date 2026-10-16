@@ -130,6 +130,12 @@ signals:
     void currentSongIndexChanged(int index);
     /// A new service order replaced the setlist. Emitted before its first song is selected (#220).
     void serviceOrderOpened();
+    /// The setlist was cleared (#185). Emitted after itemCountChanged(0).
+    void setlistCleared();
+    /// The song at index was removed (#185). Emitted after the setlist is updated.
+    /// Emitted first by removeSongAt, before itemCountChanged / currentSongIndexChanged / songRemoved.
+    void songRemovalStarted(int index);
+    void songRemoved(int index);
     void activeSongMapChanged(bool hasMap);
     void loadingStateChanged(bool loading);
     void currentLyricsContentChanged();
