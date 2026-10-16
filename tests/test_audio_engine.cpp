@@ -668,6 +668,40 @@ void testClearPreloadedCancelsPendingDecode() {
     std::cout << "[PASS] testClearPreloadedCancelsPendingDecode passed." << std::endl;
 }
 
+// Cancelled after the worker's last cancel check: the finished result must still be freed
+// without another engine call, so opening a new order releases the old song set.
+void testClearPreloadedFreesWorkerPastCancelCheck() {
+    std::cout << "[TEST] Running testClearPreloadedFreesWorkerPastCancelCheck..." << std::endl;
+    TempWavDir wavs;
+    AudioEngine engine;
+    assert(engine.loadStems({MediaStem("a1", "Drums", wavs.wav("a_drums.wav"))}));
+    engine.play();
+    assert(engine.liveSongSetCountForTesting() == 1);
+
+    auto gate = std::make_shared<DecodeGate>();
+    auto ready = std::make_shared<ReadyLog>();
+    engine.setPreloadFinishHookForTesting([gate] { gate->wait(); });
+    const auto ticket = engine.preloadStemsAsync({MediaStem("b1", "Keys", wavs.wav("b_keys.wav"))},
+                                                 ready->callback(ready));
+    assert(gate->waitEntered(1)); // decoded B, past its cancel checks, not yet done
+    assert(engine.liveSongSetCountForTesting() == 2);
+
+    engine.clearPreloaded(); // worker is not done, so it cannot be joined here
+    gate->release();
+    bool hasStems = false;
+    assert(ready->waitFor(ticket, hasStems));
+
+    // No further engine calls: B's set must be released on its own.
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (engine.liveSongSetCountForTesting() != 1 && std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    assert(engine.liveSongSetCountForTesting() == 1);
+    assert(engine.isPlaying());
+
+    std::cout << "[PASS] testClearPreloadedFreesWorkerPastCancelCheck passed." << std::endl;
+}
+
 // #185: unloading the current song stops it and frees it; the preloaded song survives.
 void testUnloadCurrentWhilePlaying() {
     std::cout << "[TEST] Running testUnloadCurrentWhilePlaying..." << std::endl;
@@ -795,6 +829,7 @@ int main(int argc, char** argv) {
         testEngineDestroyedWhilePreloadDecoding();
         testClearPreloadedDropsNextSongAndKeepsCurrentPlaying();
         testClearPreloadedCancelsPendingDecode();
+        testClearPreloadedFreesWorkerPastCancelCheck();
         testUnloadCurrentWhilePlaying();
         testMemoryStaysBoundedOverFiftySwitches();
         std::cout << "\nALL AUDIO ENGINE UNIT TESTS PASSED (100% Success)" << std::endl;
