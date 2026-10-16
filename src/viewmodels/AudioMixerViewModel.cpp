@@ -400,6 +400,10 @@ bool AudioMixerViewModel::isPreloadedSong(const std::vector<Core::MediaStem>& st
     return !stems.empty() && !m_impl->preloadKey.empty() && songKey(stems) == m_impl->preloadKey;
 }
 
+bool AudioMixerViewModel::isPreloadReadyForTesting() const noexcept {
+    return m_impl->preloadReady;
+}
+
 std::size_t AudioMixerViewModel::liveSongSetCountForTesting() const noexcept {
     return m_impl->m_activeDeck->liveSongSetCountForTesting()
          + m_impl->m_nextDeck->liveSongSetCountForTesting();
