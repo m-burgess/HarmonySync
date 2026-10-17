@@ -185,9 +185,6 @@ SetlistViewModel::SetlistViewModel(std::shared_ptr<Core::FolderService> folderSe
                                    AITimestampGenerator aiTimestampGenerator)
     : m_impl(std::make_unique<Impl>(std::move(folderService), std::move(aiTimestampGenerator))) {
     m_impl->scanGuard->target = this;
-#ifdef HARMONYSYNC_QT_AVAILABLE
-    m_impl->listModel = std::make_unique<SetlistListModel>(*this);
-#endif
 }
 
 SetlistViewModel::~SetlistViewModel() {
