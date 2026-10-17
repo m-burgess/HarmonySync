@@ -332,20 +332,12 @@ struct AudioEngine::Impl {
 #ifdef HARMONYSYNC_HAS_QT
     // Without an application object, queued work has no event loop to run on. In that case
     // these helpers execute inline and the engine uses the direct sink path.
-    // TODO: Remove this suppression if clang-analyzer learns Qt's callable ownership.
     template <typename F> void onAudioThread(F&& work) {
         if (!audioContext) {
             work();
             return;
         }
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wclang-analyzer-cplusplus.NewDeleteLeaks"
-#endif
         QMetaObject::invokeMethod(audioContext.get(), std::forward<F>(work), Qt::QueuedConnection);
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
     }
     /// Control thread only; the audio thread never waits on the control thread, so no deadlock.
     template <typename F> void onAudioThreadAndWait(F&& work) {
@@ -353,14 +345,7 @@ struct AudioEngine::Impl {
             work();
             return;
         }
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wclang-analyzer-cplusplus.NewDeleteLeaks"
-#endif
         QMetaObject::invokeMethod(audioContext.get(), std::forward<F>(work), Qt::BlockingQueuedConnection);
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
     }
 #endif
 
@@ -823,7 +808,7 @@ std::vector<Core::MediaStem> AudioEngine::audioThreadStemsForTesting() const {
 
 void AudioEngine::runOnAudioThreadForTesting(std::function<void()> work) {
 #ifdef HARMONYSYNC_HAS_QT
-    m_impl->onAudioThread(std::move(work));
+    m_impl->onAudioThread([work = std::move(work)]() mutable { work(); });
 #else
     work();
 #endif
