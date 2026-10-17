@@ -171,14 +171,16 @@ signals:
     void mixSaveFinished(bool ok);
 #endif
 
-private slots:
+private:
     // UI thread: applies decodes the engine's worker finished (queued by name, no captures).
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    Q_INVOKABLE
+#endif
     void drainPreloadResults();
 #ifdef HARMONYSYNC_QT_AVAILABLE
     Q_INVOKABLE void drainMixSaveResults();
 #endif
 
-private:
     void requestMixSave();
     bool switchToPreloadedSong();
     void startPreload(const std::vector<Core::MediaStem>& stems, bool switchWhenReady);

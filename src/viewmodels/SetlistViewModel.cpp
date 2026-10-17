@@ -330,12 +330,14 @@ void SetlistViewModel::openServiceOrderRootFolderAsync(const QString& rootFolder
     }
     // The task gets copies only: the path, the hook, and the (stateless) FolderService,
     // with its own scanner. It never touches this view model.
-    m_impl->scanWorker.post([guard, ticket, path = rootFolderPath.toStdString(),
-                             hook = m_impl->scanHook, folderService = m_impl->folderService]() {
+    m_impl->scanWorker.post([guard, ticket, path = rootFolderPath.toStdString(), hook = m_impl->scanHook,
+                             folderService = m_impl->folderService]() {
         if (guard->latestTicket.load() != ticket) {
             return; // superseded before it started
         }
-        if (hook) hook(path);
+        if (hook) {
+            hook(path);
+        }
         Core::ServiceOrder order;
         if (guard->latestTicket.load() == ticket) {
             order = Core::ServiceOrderFolderScanner(folderService).scanServiceOrderDirectory(path);

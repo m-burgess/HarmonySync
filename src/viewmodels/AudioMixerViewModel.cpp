@@ -61,7 +61,7 @@ struct AudioMixerViewModel::Impl {
     };
     std::shared_ptr<CallbackGuard> callbackGuard = std::make_shared<CallbackGuard>();
 
-    MixStateSaver mixSaver = [](const std::string& folder, std::vector<Core::MediaStem> stems) {
+    MixStateSaver mixSaver = [](const std::string& folder, const std::vector<Core::MediaStem>& stems) {
         return saveMixStateWithResult(folder, stems);
     };
 
@@ -473,7 +473,9 @@ void AudioMixerViewModel::setMixStateSaverForTesting(MixStateSaver saver) {
 
 void AudioMixerViewModel::requestMixSave() {
     auto stems = m_impl->m_activeDeck->loadedStems(); // a copy: the worker never sees live state
-    if (stems.empty()) return;
+    if (stems.empty()) {
+        return;
+    }
     std::string folderPath = std::filesystem::path(stems[0].filePath()).parent_path().string();
     auto guard = m_impl->saveGuard;
     {
@@ -490,7 +492,9 @@ void AudioMixerViewModel::requestMixSave() {
         Impl::SaveJob job;
         {
             std::lock_guard lock(guard->mutex);
-            if (guard->pending.empty()) return;
+            if (guard->pending.empty()) {
+                return;
+            }
             job = std::move(guard->pending.front());
             guard->pending.pop_front();
         }

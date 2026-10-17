@@ -19,7 +19,8 @@ class SerialWorker {
 public:
     enum class OnStop { DropQueued, RunQueued };
 
-    explicit SerialWorker(OnStop onStop = OnStop::DropQueued) : m_onStop(onStop) {}
+    explicit SerialWorker(OnStop onStop = OnStop::DropQueued)
+        : m_onStop(onStop) {}
     ~SerialWorker() { stop(); }
 
     SerialWorker(const SerialWorker&) = delete;
@@ -27,7 +28,9 @@ public:
 
     void post(std::function<void()> task) {
         std::lock_guard lock(m_mutex);
-        if (m_stopping) return;
+        if (m_stopping) {
+            return;
+        }
         m_tasks.push_back(std::move(task));
         if (!m_thread.joinable()) {
             m_thread = std::thread([this] { run(); });
@@ -40,10 +43,14 @@ public:
         {
             std::lock_guard lock(m_mutex);
             m_stopping = true;
-            if (m_onStop == OnStop::DropQueued) m_tasks.clear();
+            if (m_onStop == OnStop::DropQueued) {
+                m_tasks.clear();
+            }
         }
         m_cv.notify_one();
-        if (m_thread.joinable()) m_thread.join();
+        if (m_thread.joinable()) {
+            m_thread.join();
+        }
     }
 
 private:
@@ -53,7 +60,9 @@ private:
             {
                 std::unique_lock lock(m_mutex);
                 m_cv.wait(lock, [this] { return m_stopping || !m_tasks.empty(); });
-                if (m_tasks.empty()) return; // stopping and nothing left
+                if (m_tasks.empty()) {
+                    return; // stopping and nothing left
+                }
                 task = std::move(m_tasks.front());
                 m_tasks.pop_front();
             }
