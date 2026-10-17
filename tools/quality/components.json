@@ -85,6 +85,7 @@
       "name": "viewmodels-display",
       "floor": 85,
       "paths": [
+        "src/viewmodels/AppTheme",
         "src/viewmodels/SlideDisplayViewModel",
         "src/viewmodels/PresentationWindowViewModel",
         "src/viewmodels/LowerThirdOverlayViewModel",

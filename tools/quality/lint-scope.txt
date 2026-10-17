@@ -57,6 +57,7 @@ src/viewmodels/SlideDisplayViewModel
 src/viewmodels/PresentationWindowViewModel
 src/viewmodels/LowerThirdOverlayViewModel
 src/viewmodels/ConfidenceMonitorViewModel
+src/viewmodels/AppTheme
 src/viewmodels/JsonSyntaxHighlighter
 src/viewmodels/QmlJsonHighlighterAdapter.cpp
 src/viewmodels/MidiMappingViewModel
