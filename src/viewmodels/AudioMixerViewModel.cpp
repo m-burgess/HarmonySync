@@ -105,8 +105,8 @@ AudioMixerViewModel::AudioMixerViewModel(std::shared_ptr<Media::AudioEngine> aud
             emit positionChanged(positionSeconds());
         } else {
             m_impl->positionTimer->stop();
-            emit positionChanged(positionSeconds());
             emit playStateChanged(false);
+            emit positionChanged(positionSeconds());
         }
     });
 

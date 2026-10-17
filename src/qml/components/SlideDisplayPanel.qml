@@ -111,11 +111,13 @@ Rectangle {
                                                       (!setlistViewModel && audioMixerViewModel && audioMixerViewModel.isBackgroundVideoLooping)
             readonly property int fadeDurationMs: 600
             property bool nonSongVideoFadingOut: false
+            property bool nonSongVideoFinished: false
 
             onIsSongFolderVideoChanged: {
                 bgMediaPlayer.loops = previewFrame.isSongFolderVideo ? MediaPlayer.Infinite : MediaPlayer.Once
                 if (previewFrame.isSongFolderVideo) {
                     previewFrame.nonSongVideoFadingOut = false
+                    previewFrame.nonSongVideoFinished = false
                 }
             }
 
@@ -134,6 +136,7 @@ Rectangle {
                 onSourceChanged: {
                     bgMediaPlayer.loops = previewFrame.isSongFolderVideo ? MediaPlayer.Infinite : MediaPlayer.Once
                     previewFrame.nonSongVideoFadingOut = false
+                    previewFrame.nonSongVideoFinished = false
                     if (bgMediaPlayer.source.toString() !== "") {
                         bgMediaPlayer.play()
                     }
@@ -144,6 +147,7 @@ Rectangle {
                         bgMediaPlayer.duration > 0 &&
                         bgMediaPlayer.position >= Math.max(0, bgMediaPlayer.duration - previewFrame.fadeDurationMs)) {
                         previewFrame.nonSongVideoFadingOut = true
+                        previewFrame.nonSongVideoFinished = true
                     }
                 }
 
@@ -151,12 +155,17 @@ Rectangle {
                     if (bgMediaPlayer.mediaStatus === MediaPlayer.LoadedMedia &&
                         bgMediaPlayer.source.toString() !== "" &&
                         !previewFrame.nonSongVideoFadingOut &&
+                        !previewFrame.nonSongVideoFinished &&
                         bgMediaPlayer.playbackState !== MediaPlayer.PlayingState) {
                         bgMediaPlayer.play()
                     } else if (!previewFrame.isSongFolderVideo &&
                                (bgMediaPlayer.mediaStatus === MediaPlayer.EndOfMedia ||
                                 bgMediaPlayer.mediaStatus === MediaPlayer.InvalidMedia)) {
                         previewFrame.nonSongVideoFadingOut = true
+                        previewFrame.nonSongVideoFinished = true
+                        if (audioMixerViewModel && audioMixerViewModel.isPlaying) {
+                            audioMixerViewModel.stop()
+                        }
                     }
                 }
 
@@ -166,13 +175,15 @@ Rectangle {
                         audioMixerViewModel &&
                         audioMixerViewModel.loadedStemCount > 0 &&
                         !audioMixerViewModel.isPlaying &&
-                        !previewFrame.nonSongVideoFadingOut) {
+                        !previewFrame.nonSongVideoFadingOut &&
+                        !previewFrame.nonSongVideoFinished) {
                         audioMixerViewModel.play()
                     }
                     if (!previewFrame.isSongFolderVideo &&
                         bgMediaPlayer.playbackState === MediaPlayer.StoppedState &&
                         bgMediaPlayer.source.toString() !== "") {
                         previewFrame.nonSongVideoFadingOut = true
+                        previewFrame.nonSongVideoFinished = true
                     }
                 }
             }
@@ -185,6 +196,7 @@ Rectangle {
                         audioMixerViewModel &&
                         audioMixerViewModel.loadedStemCount > 0) {
                         previewFrame.nonSongVideoFadingOut = false
+                        previewFrame.nonSongVideoFinished = false
                         bgMediaPlayer.setPosition(0)
                         bgMediaPlayer.play()
                         if (!audioMixerViewModel.isPlaying) {
@@ -197,6 +209,7 @@ Rectangle {
                         if (playing) {
                             if (audioMixerViewModel.positionSeconds < 0.25) {
                                 previewFrame.nonSongVideoFadingOut = false
+                                previewFrame.nonSongVideoFinished = false
                                 if (bgMediaPlayer.position > 400 || bgMediaPlayer.mediaStatus === MediaPlayer.EndOfMedia) {
                                     bgMediaPlayer.setPosition(0)
                                 }
@@ -208,15 +221,18 @@ Rectangle {
                             let nearEnd = (audioMixerViewModel.durationSeconds > 0 &&
                                            audioMixerViewModel.positionSeconds >= audioMixerViewModel.durationSeconds - 0.25) ||
                                           (bgMediaPlayer.duration > 0 &&
-                                           bgMediaPlayer.position >= Math.max(0, bgMediaPlayer.duration - previewFrame.fadeDurationMs - 500)) ||
-                                          previewFrame.nonSongVideoFadingOut
+                                           bgMediaPlayer.position >= Math.max(0, bgMediaPlayer.duration - previewFrame.fadeDurationMs - 1000)) ||
+                                          previewFrame.nonSongVideoFadingOut ||
+                                          previewFrame.nonSongVideoFinished
                             if (nearEnd) {
                                 previewFrame.nonSongVideoFadingOut = true
+                                previewFrame.nonSongVideoFinished = true
                             } else {
                                 if (audioMixerViewModel.positionSeconds <= 0.05) {
                                     bgMediaPlayer.pause()
                                     bgMediaPlayer.setPosition(0)
                                     previewFrame.nonSongVideoFadingOut = false
+                                    previewFrame.nonSongVideoFinished = false
                                 } else if (bgMediaPlayer.playbackState === MediaPlayer.PlayingState) {
                                     bgMediaPlayer.pause()
                                 }
@@ -228,12 +244,15 @@ Rectangle {
                     if (!previewFrame.isSongFolderVideo &&
                         bgMediaPlayer.source.toString() !== "" &&
                         bgMediaPlayer.duration > 0) {
+                        if (previewFrame.nonSongVideoFinished || previewFrame.nonSongVideoFadingOut) {
+                            return
+                        }
+                        if (!audioMixerViewModel.isPlaying && posSec <= 0.05) {
+                            return
+                        }
                         let targetMs = posSec * 1000.0
                         if (Math.abs(bgMediaPlayer.position - targetMs) > 400) {
                             bgMediaPlayer.setPosition(Math.floor(targetMs))
-                            if (targetMs < Math.max(0, bgMediaPlayer.duration - previewFrame.fadeDurationMs)) {
-                                previewFrame.nonSongVideoFadingOut = false
-                            }
                         }
                     }
                 }

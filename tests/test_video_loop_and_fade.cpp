@@ -311,11 +311,23 @@ void testNonSongVideoAudioMixerAndMixPersistence() {
     check(volumeSlider != nullptr, "#244: StemMixerPanel must create stemVolumeSlider_0 for non-song video");
     check(volumeSlider->property("visible").toBool() == true,
           "#244: stemVolumeSlider_0 must be visible for non-song video");
+    check(volumeSlider->width() >= 200.0 && volumeSlider->height() >= 24.0,
+          "#244: stemVolumeSlider_0 must have non-zero interactive hit-test dimensions (got " +
+              std::to_string(volumeSlider->width()) + "x" + std::to_string(volumeSlider->height()) + ")");
 
-    // Adjust the non-song video stem volume and verify it persists to mix.json and reloads consistently.
-    mixer.setStemVolume(0, 0.35f);
-    check(std::abs(mixer.stemVolume(0) - 0.35f) < 0.001f, "#244: mixer stemVolume(0) must update to 0.35");
+    // Simulate user dragging the QML volume slider and verify it updates the mixer and persists to mix.json.
+    volumeSlider->setProperty("value", 0.35);
+    QMetaObject::invokeMethod(volumeSlider, "moved");
+    runEvents(50);
+    check(std::abs(mixer.stemVolume(0) - 0.35f) < 0.001f,
+          "#244: moving QML stemVolumeSlider_0 must update mixer stemVolume(0) to 0.35 (got " +
+              std::to_string(mixer.stemVolume(0)) + ")");
     mixer.unloadCurrentSong(); // flushes pending mix.json save immediately
+
+    // Verify SetlistViewModel::stemsAt(0) also reflects the saved mix.json volume in the same session
+    const auto updatedSessionStems = setlist.stemsAt(0);
+    check(updatedSessionStems.size() == 1 && std::abs(updatedSessionStems[0].volume() - 0.35f) < 0.001f,
+          "#244: SetlistViewModel::stemsAt(0) must reflect saved volume 0.35 from mix.json");
 
     HarmonySync::Core::FolderService folderService;
     HarmonySync::Core::SongMap reloaded = folderService.loadSongFromFolder(bumperFolder);
@@ -364,6 +376,8 @@ void testSilentVideoToBumperVideoAudioPlayback() {
     SlideDisplayViewModel slides;
     SongSwitchCoordinator coordinator(setlist, mixer);
     SlidePanelHarness panel(&setlist, mixer, slides);
+    QQuickItem* videoOutput = panel.videoOutputItem();
+    check(videoOutput != nullptr, "#244: SlideDisplayPanel must contain a VideoOutput");
 
     check(setlist.openServiceOrderRootFolder(QString::fromStdString(rootDir.string())),
           "#244: openServiceOrderRootFolder failed");
@@ -389,6 +403,16 @@ void testSilentVideoToBumperVideoAudioPlayback() {
     runEvents(250);
     check(mixer.isPlaying(),
           "#244: 06 Bumper Video audio stopped prematurely after 250ms");
+
+    // Let the 1.0s bumper video finish naturally and verify it fades out and does NOT loop or restart
+    check(waitFor([&] { return !mixer.isPlaying(); }, 2500),
+          "#244: 06 Bumper Video audio should stop after playing once");
+    runEvents(700);
+    check(!mixer.isPlaying(),
+          "#244: 06 Bumper Video must not loop/restart after finishing");
+    check(videoOutput->opacity() < 0.1,
+          "#244: 06 Bumper Video must stay faded out after finishing (opacity=" +
+              std::to_string(videoOutput->opacity()) + ")");
 
     fs::remove_all(rootDir);
     std::cout << "[PASS] testSilentVideoToBumperVideoAudioPlayback passed." << std::endl;
