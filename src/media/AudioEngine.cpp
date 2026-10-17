@@ -812,7 +812,7 @@ std::vector<Core::MediaStem> AudioEngine::audioThreadStemsForTesting() const {
 
 void AudioEngine::runOnAudioThreadForTesting(std::function<void()> work) {
 #ifdef HARMONYSYNC_HAS_QT
-    m_impl->onAudioThread(std::move(work));
+    m_impl->onAudioThread(std::move(work)); // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
 #else
     work();
 #endif
