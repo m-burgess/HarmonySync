@@ -204,8 +204,8 @@ void SetlistViewModel::setCurrentSongIndex(int index) {
         m_impl->calculateActiveLyrics();
 
 #ifdef HARMONYSYNC_QT_AVAILABLE
-        emit currentSongIndexChanged(index);
         emit activeSongMapChanged(hasActiveSongMap());
+        emit currentSongIndexChanged(index);
         emit currentLyricsContentChanged();
         emit activeLyricIndexChanged(m_impl->activeLyricIndex);
         emit activeLyricTextChanged();
@@ -229,7 +229,12 @@ bool SetlistViewModel::isLoading() const noexcept {
 
 std::vector<Core::MediaStem> SetlistViewModel::stemsAt(int index) const {
     if (index >= 0 && index < itemCount()) {
-        return m_impl->serviceOrder.songs()[static_cast<size_t>(index)].stems();
+        const auto& song = m_impl->serviceOrder.songs()[static_cast<size_t>(index)];
+        auto stems = song.stems();
+        if (!song.folderPath().empty() && !stems.empty()) {
+            Core::FolderService::applyMixState(song.folderPath(), stems);
+        }
+        return stems;
     }
     return {};
 }

@@ -35,6 +35,8 @@ class AudioMixerViewModel
     Q_PROPERTY(
         float crossfadePosition READ crossfadePosition WRITE setCrossfadePosition NOTIFY crossfadePositionChanged)
     Q_PROPERTY(QString activeBackgroundVideo READ activeBackgroundVideo NOTIFY activeBackgroundVideoChanged)
+    Q_PROPERTY(bool isBackgroundVideoLooping READ isBackgroundVideoLooping NOTIFY backgroundVideoLoopingChanged)
+    Q_PROPERTY(bool shouldAutoFadeOutVideo READ shouldAutoFadeOutVideo NOTIFY backgroundVideoLoopingChanged)
 #endif
 
 public:
@@ -97,14 +99,21 @@ public:
     /// Test seam (#185): song buffer sets held by this view model's engines.
     [[nodiscard]] std::size_t liveSongSetCountForTesting() const noexcept;
 
+    [[nodiscard]] bool isBackgroundVideoLooping() const noexcept;
+    [[nodiscard]] bool shouldAutoFadeOutVideo() const noexcept;
+
 #ifdef HARMONYSYNC_QT_AVAILABLE
     [[nodiscard]] QString activeBackgroundVideo() const;
     Q_INVOKABLE void loadNextBackgroundVideo(const QString& path);
     Q_INVOKABLE void setActiveBackgroundVideo(const QString& path);
+    Q_INVOKABLE void setBackgroundVideoLooping(bool looping) noexcept;
+    Q_INVOKABLE void setNextBackgroundVideoLooping(bool looping) noexcept;
 #else
     [[nodiscard]] std::string activeBackgroundVideo() const;
     void loadNextBackgroundVideo(const std::string& path);
     void setActiveBackgroundVideo(const std::string& path);
+    void setBackgroundVideoLooping(bool looping) noexcept;
+    void setNextBackgroundVideoLooping(bool looping) noexcept;
 #endif
 
 #ifdef HARMONYSYNC_QT_AVAILABLE
@@ -154,6 +163,7 @@ signals:
     void songSwitched();
     void stemStateChanged(int index);
     void activeBackgroundVideoChanged(const QString& path);
+    void backgroundVideoLoopingChanged(bool looping);
 #endif
 
 private slots:

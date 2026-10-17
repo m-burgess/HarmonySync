@@ -173,7 +173,8 @@ ApplicationWindow {
                 SplitView.fillWidth: true
                 SplitView.preferredHeight: 260
                 SplitView.minimumHeight: 260
-                visible: setlistViewModel ? setlistViewModel.hasActiveSongMap : false
+                visible: (setlistViewModel && setlistViewModel.hasActiveSongMap) ||
+                         (audioMixerViewModel && (audioMixerViewModel.loadedStemCount > 0 || audioMixerViewModel.activeBackgroundVideo !== ""))
             }
         }
     }

@@ -41,33 +41,56 @@ void SongSwitchCoordinator::onCurrentSongIndexChanged(int index) {
     if (index < 0) {
         return;
     }
+    const auto stems = m_setlist.stemsAt(index);
     // Removing an earlier row shifts the shown song up one place; nothing to switch.
     // Anything else (including a reprise of the same song) is a real switch.
     const bool shiftedByRemoval = m_removalInFlight && m_shownGeneration == m_generation && m_shownIndex >= 0 &&
-                                  index == m_shownIndex - 1 && stemPaths(m_setlist.stemsAt(index)) == m_shownStems;
+                                  index == m_shownIndex - 1 && stemPaths(stems) == m_shownStems;
+    const int previousShownIndex = m_shownIndex;
+    const bool previousWasSongFolder = m_shownWasSongFolder;
+    const bool isSongFolder = m_setlist.itemHasSongMapAt(index);
     m_shownIndex = index;
-    m_shownStems = stemPaths(m_setlist.stemsAt(index));
+    m_shownStems = stemPaths(stems);
     m_shownGeneration = m_generation;
+    m_shownWasSongFolder = isSongFolder;
     if (shiftedByRemoval) {
         return;
     }
+    if (previousShownIndex >= 0 && (!isSongFolder || !previousWasSongFolder)) {
+        m_mixer.stop();
+        m_mixer.unloadCurrentSong();
+    }
     const QString videoPath = m_setlist.backgroundVideoPathAt(index);
+    m_mixer.setBackgroundVideoLooping(isSongFolder);
+    m_mixer.setNextBackgroundVideoLooping(isSongFolder);
     m_mixer.setActiveBackgroundVideo(videoPath);
     m_mixer.loadNextBackgroundVideo(videoPath);
+    if (stems.empty()) {
+        m_mixer.clearPreloadedSong();
+        m_mixer.unloadCurrentSong();
+        preloadSongAfterCurrent();
+        return;
+    }
     // Switches now if this song was preloaded, otherwise when its decode is ready.
-    m_mixer.showSong(m_setlist.stemsAt(index));
+    m_mixer.showSong(stems);
 }
 
 void SongSwitchCoordinator::preloadSongAfterCurrent() {
-    const int next = m_setlist.currentSongIndex() + 1;
-    if (next > 0 && next < m_setlist.itemCount()) {
-        m_mixer.preloadNextSong(m_setlist.stemsAt(next));
+    for (int next = m_setlist.currentSongIndex() + 1; next > 0 && next < m_setlist.itemCount(); ++next) {
+        const auto stems = m_setlist.stemsAt(next);
+        if (!stems.empty()) {
+            m_mixer.preloadNextSong(stems);
+            return;
+        }
     }
 }
 
 void SongSwitchCoordinator::onSetlistCleared() {
     // #185: nothing is left to play; free the next song, then the current one.
     resetShownSong();
+    m_mixer.setBackgroundVideoLooping(false);
+    m_mixer.setNextBackgroundVideoLooping(false);
+    m_mixer.setActiveBackgroundVideo(QString());
     m_mixer.clearPreloadedSong();
     m_mixer.unloadCurrentSong();
 }
@@ -77,6 +100,7 @@ void SongSwitchCoordinator::resetShownSong() {
     m_shownIndex = -1;
     m_shownStems.clear();
     m_removalInFlight = false;
+    m_shownWasSongFolder = false;
 }
 
 void SongSwitchCoordinator::onSongRemoved(int /*index*/) {

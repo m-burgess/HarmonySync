@@ -22,6 +22,8 @@ struct AudioMixerViewModel::Impl {
     float m_crossfadePos{0.0f};
     std::string activeBackgroundVideo;
     std::string nextBackgroundVideo;
+    bool backgroundVideoLooping{false};
+    bool nextBackgroundVideoLooping{false};
     bool isTransposing{false};
     Media::FFmpegTransposer transposer;
 
@@ -70,6 +72,19 @@ struct AudioMixerViewModel::Impl {
         positionTimer->setInterval(33); // ~30 fps UI update
 #endif
     }
+
+    void flushPendingMixSave() {
+#ifdef HARMONYSYNC_QT_AVAILABLE
+        if (autosaveTimer && autosaveTimer->isActive()) {
+            autosaveTimer->stop();
+            auto stems = m_activeDeck->loadedStems();
+            if (!stems.empty()) {
+                std::string folderPath = std::filesystem::path(stems[0].filePath()).parent_path().string();
+                Core::FolderService::saveMixState(folderPath, stems);
+            }
+        }
+#endif
+    }
 };
 
 AudioMixerViewModel::AudioMixerViewModel(std::shared_ptr<Media::AudioEngine> audioEngine,
@@ -87,6 +102,10 @@ AudioMixerViewModel::AudioMixerViewModel(std::shared_ptr<Media::AudioEngine> aud
 
     QObject::connect(m_impl->positionTimer.get(), &QTimer::timeout, this, [this]() {
         if (m_impl->m_activeDeck->isPlaying()) {
+            emit positionChanged(positionSeconds());
+        } else {
+            m_impl->positionTimer->stop();
+            emit playStateChanged(false);
             emit positionChanged(positionSeconds());
         }
     });
@@ -138,6 +157,7 @@ AudioMixerViewModel::AudioMixerViewModel(std::shared_ptr<Media::AudioEngine> aud
 }
 
 AudioMixerViewModel::~AudioMixerViewModel() {
+    m_impl->flushPendingMixSave();
     // Stop worker callbacks from posting here before the engines (and their workers) go away.
     std::lock_guard lock(m_impl->callbackGuard->mutex);
     m_impl->callbackGuard->target = nullptr;
@@ -209,6 +229,7 @@ float AudioMixerViewModel::crossfadePosition() const noexcept {
 }
 
 bool AudioMixerViewModel::loadSongStems(const std::vector<Core::MediaStem>& stems) {
+    m_impl->flushPendingMixSave();
     // loadStems cancels any pending preload in the engine; forget ours too.
     m_impl->preloadKey.clear();
     m_impl->preloadReady = false;
@@ -221,6 +242,27 @@ bool AudioMixerViewModel::loadSongStems(const std::vector<Core::MediaStem>& stem
     emit playStateChanged(isPlaying());
 #endif
     return result;
+}
+
+bool AudioMixerViewModel::isBackgroundVideoLooping() const noexcept {
+    return m_impl->backgroundVideoLooping;
+}
+
+bool AudioMixerViewModel::shouldAutoFadeOutVideo() const noexcept {
+    return !m_impl->backgroundVideoLooping;
+}
+
+void AudioMixerViewModel::setBackgroundVideoLooping(bool looping) noexcept {
+    if (m_impl->backgroundVideoLooping != looping) {
+        m_impl->backgroundVideoLooping = looping;
+#ifdef HARMONYSYNC_QT_AVAILABLE
+        emit backgroundVideoLoopingChanged(looping);
+#endif
+    }
+}
+
+void AudioMixerViewModel::setNextBackgroundVideoLooping(bool looping) noexcept {
+    m_impl->nextBackgroundVideoLooping = looping;
 }
 
 #ifdef HARMONYSYNC_QT_AVAILABLE
@@ -256,6 +298,7 @@ void AudioMixerViewModel::setActiveBackgroundVideo(const std::string& path) {
 #endif
 
 bool AudioMixerViewModel::loadNextSongStems(const std::vector<Core::MediaStem>& stems) {
+    m_impl->flushPendingMixSave();
     // Synchronous preload and switch in one call; decodes on the calling thread.
     // The app uses showSong()/preloadNextSong() instead (#187).
     m_impl->preloadKey.clear();
@@ -359,6 +402,7 @@ void AudioMixerViewModel::onPreloadReady(std::uint64_t ticket, bool hasStems) {
 }
 
 bool AudioMixerViewModel::switchToPreloadedSong() {
+    m_impl->flushPendingMixSave();
     // Play-or-cue rule (#202): the switch keeps the current play state.
     bool result = m_impl->m_activeDeck->switchToPreloaded();
     m_impl->preloadKey.clear();
@@ -398,6 +442,7 @@ void AudioMixerViewModel::clearPreloadedSongKeepingPendingAdvance() {
 }
 
 void AudioMixerViewModel::unloadCurrentSong() {
+    m_impl->flushPendingMixSave();
     m_impl->m_activeDeck->unloadCurrent();
 #ifdef HARMONYSYNC_QT_AVAILABLE
     m_impl->positionTimer->stop();
@@ -456,6 +501,7 @@ void AudioMixerViewModel::finalizeCrossfade() {
 
     // Swap background video
     m_impl->activeBackgroundVideo = m_impl->nextBackgroundVideo;
+    m_impl->backgroundVideoLooping = m_impl->nextBackgroundVideoLooping;
 
     // Reset crossfade position silently
     m_impl->m_crossfadePos = 0.0f;
@@ -463,6 +509,7 @@ void AudioMixerViewModel::finalizeCrossfade() {
 
 #ifdef HARMONYSYNC_QT_AVAILABLE
     // Broadcast all new states of the newly active deck
+    emit backgroundVideoLoopingChanged(m_impl->backgroundVideoLooping);
     emit activeBackgroundVideoChanged(QString::fromStdString(m_impl->activeBackgroundVideo));
     emit stemCountChanged(loadedStemCount());
     emit durationChanged(durationSeconds());

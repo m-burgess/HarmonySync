@@ -248,12 +248,14 @@ public:
         }
 
         double newPosSec = static_cast<double>(currentFrame + framesToRead) / 44100.0;
-        if (newPosSec >= duration && duration > 0.0) {
-            m_state->store(PlaybackState::Stopped, std::memory_order_release);
-            newPosSec = 0.0;
-        }
+        if (!m_sets.hasPending()) {
+            if (newPosSec >= duration && duration > 0.0) {
+                m_state->store(PlaybackState::Stopped, std::memory_order_release);
+                newPosSec = 0.0;
+            }
 
-        m_position->store(newPosSec, std::memory_order_relaxed);
+            m_position->store(newPosSec, std::memory_order_relaxed);
+        }
         return framesToRead * frameSize;
     }
 
@@ -712,6 +714,7 @@ bool AudioEngine::switchToPreloaded() {
     device.m_sets.publish(std::move(m_impl->preloadedSet));
     m_impl->preloadedSet = {};
     m_impl->duration.store(nextDuration, std::memory_order_relaxed);
+    device.m_duration.store(nextDuration, std::memory_order_relaxed);
 
     // Take the handoff on the audio thread and wait, then free the outgoing set here.
     // This is safe while the sink runs because its callback and queued work share one thread.
@@ -818,6 +821,7 @@ void AudioEngine::unloadCurrent() {
 }
 
 std::size_t AudioEngine::liveSongSetCountForTesting() const noexcept {
+    m_impl->reclaimRetiredSongs();
     return m_impl->liveSets->load(std::memory_order_relaxed);
 }
 

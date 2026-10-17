@@ -319,4 +319,24 @@ if(Qt6_FOUND)
         NAME test_song_switch_coordinator
         COMMAND test_song_switch_coordinator
     )
+
+    # #244: song videos loop; other videos fade out smoothly.
+    add_executable(test_video_loop_and_fade test_video_loop_and_fade.cpp)
+    target_link_libraries(
+        test_video_loop_and_fade
+        PRIVATE
+            harmonysync_viewmodels
+            harmonysync_media
+            harmonysync_core
+            Qt6::Core
+            Qt6::Gui
+            Qt6::Quick
+            Qt6::QuickControls2
+            Qt6::Multimedia
+    )
+    target_compile_definitions(
+        test_video_loop_and_fade
+        PRIVATE HS_QML_DIR="${CMAKE_SOURCE_DIR}/src/qml"
+    )
+    add_test(NAME test_video_loop_and_fade COMMAND test_video_loop_and_fade)
 endif()

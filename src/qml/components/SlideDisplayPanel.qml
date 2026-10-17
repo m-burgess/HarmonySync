@@ -107,13 +107,155 @@ Rectangle {
             
             Behavior on border.color { ColorAnimation { duration: Theme.animDuration } }
 
+            readonly property bool isSongFolderVideo: (setlistViewModel && setlistViewModel.hasActiveSongMap) ||
+                                                      (!setlistViewModel && audioMixerViewModel && audioMixerViewModel.isBackgroundVideoLooping)
+            readonly property int fadeDurationMs: 600
+            property bool nonSongVideoFadingOut: false
+            property bool nonSongVideoFinished: false
+
+            onIsSongFolderVideoChanged: {
+                bgMediaPlayer.loops = previewFrame.isSongFolderVideo ? MediaPlayer.Infinite : MediaPlayer.Once
+                if (previewFrame.isSongFolderVideo) {
+                    previewFrame.nonSongVideoFadingOut = false
+                    previewFrame.nonSongVideoFinished = false
+                }
+            }
+
             MediaPlayer {
                 id: bgMediaPlayer
-                source: (audioMixerViewModel && audioMixerViewModel.activeBackgroundVideo !== "") ? "file://" + audioMixerViewModel.activeBackgroundVideo : ""
-                loops: MediaPlayer.Infinite
+                source: (audioMixerViewModel && audioMixerViewModel.activeBackgroundVideo !== "")
+                        ? "file://" + audioMixerViewModel.activeBackgroundVideo.replace(/#/g, "%23").replace(/\?/g, "%3F")
+                        : ""
+                loops: previewFrame.isSongFolderVideo
+                       ? MediaPlayer.Infinite
+                       : MediaPlayer.Once
                 audioOutput: null
                 videoOutput: videoOutput
                 autoPlay: true
+
+                onSourceChanged: {
+                    bgMediaPlayer.loops = previewFrame.isSongFolderVideo ? MediaPlayer.Infinite : MediaPlayer.Once
+                    previewFrame.nonSongVideoFadingOut = false
+                    previewFrame.nonSongVideoFinished = false
+                    if (bgMediaPlayer.source.toString() !== "") {
+                        bgMediaPlayer.play()
+                    }
+                }
+
+                onPositionChanged: {
+                    if (!previewFrame.isSongFolderVideo &&
+                        bgMediaPlayer.duration > 0 &&
+                        bgMediaPlayer.position >= Math.max(0, bgMediaPlayer.duration - previewFrame.fadeDurationMs)) {
+                        previewFrame.nonSongVideoFadingOut = true
+                        previewFrame.nonSongVideoFinished = true
+                    }
+                }
+
+                onMediaStatusChanged: {
+                    if (bgMediaPlayer.mediaStatus === MediaPlayer.LoadedMedia &&
+                        bgMediaPlayer.source.toString() !== "" &&
+                        !previewFrame.nonSongVideoFadingOut &&
+                        !previewFrame.nonSongVideoFinished &&
+                        bgMediaPlayer.playbackState !== MediaPlayer.PlayingState) {
+                        bgMediaPlayer.play()
+                    } else if (!previewFrame.isSongFolderVideo &&
+                               (bgMediaPlayer.mediaStatus === MediaPlayer.EndOfMedia ||
+                                bgMediaPlayer.mediaStatus === MediaPlayer.InvalidMedia)) {
+                        previewFrame.nonSongVideoFadingOut = true
+                        previewFrame.nonSongVideoFinished = true
+                        if (audioMixerViewModel && audioMixerViewModel.isPlaying) {
+                            audioMixerViewModel.stop()
+                        }
+                    }
+                }
+
+                onPlaybackStateChanged: {
+                    if (!previewFrame.isSongFolderVideo &&
+                        bgMediaPlayer.playbackState === MediaPlayer.PlayingState &&
+                        audioMixerViewModel &&
+                        audioMixerViewModel.loadedStemCount > 0 &&
+                        !audioMixerViewModel.isPlaying &&
+                        !previewFrame.nonSongVideoFadingOut &&
+                        !previewFrame.nonSongVideoFinished) {
+                        audioMixerViewModel.play()
+                    }
+                    if (!previewFrame.isSongFolderVideo &&
+                        bgMediaPlayer.playbackState === MediaPlayer.StoppedState &&
+                        bgMediaPlayer.source.toString() !== "") {
+                        previewFrame.nonSongVideoFadingOut = true
+                        previewFrame.nonSongVideoFinished = true
+                    }
+                }
+            }
+
+            Connections {
+                target: audioMixerViewModel
+                function onSongSwitched() {
+                    if (!previewFrame.isSongFolderVideo &&
+                        bgMediaPlayer.source.toString() !== "" &&
+                        audioMixerViewModel &&
+                        audioMixerViewModel.loadedStemCount > 0) {
+                        previewFrame.nonSongVideoFadingOut = false
+                        previewFrame.nonSongVideoFinished = false
+                        bgMediaPlayer.setPosition(0)
+                        bgMediaPlayer.play()
+                        if (!audioMixerViewModel.isPlaying) {
+                            audioMixerViewModel.play()
+                        }
+                    }
+                }
+                function onPlayStateChanged(playing) {
+                    if (!previewFrame.isSongFolderVideo && bgMediaPlayer.source.toString() !== "") {
+                        if (playing) {
+                            if (audioMixerViewModel.positionSeconds < 0.25) {
+                                previewFrame.nonSongVideoFadingOut = false
+                                previewFrame.nonSongVideoFinished = false
+                                if (bgMediaPlayer.position > 400 || bgMediaPlayer.mediaStatus === MediaPlayer.EndOfMedia) {
+                                    bgMediaPlayer.setPosition(0)
+                                }
+                            }
+                            if (bgMediaPlayer.playbackState !== MediaPlayer.PlayingState) {
+                                bgMediaPlayer.play()
+                            }
+                        } else {
+                            let nearEnd = (audioMixerViewModel.durationSeconds > 0 &&
+                                           audioMixerViewModel.positionSeconds >= audioMixerViewModel.durationSeconds - 0.25) ||
+                                          (bgMediaPlayer.duration > 0 &&
+                                           bgMediaPlayer.position >= Math.max(0, bgMediaPlayer.duration - previewFrame.fadeDurationMs - 1000)) ||
+                                          previewFrame.nonSongVideoFadingOut ||
+                                          previewFrame.nonSongVideoFinished
+                            if (nearEnd) {
+                                previewFrame.nonSongVideoFadingOut = true
+                                previewFrame.nonSongVideoFinished = true
+                            } else {
+                                if (audioMixerViewModel.positionSeconds <= 0.05) {
+                                    bgMediaPlayer.pause()
+                                    bgMediaPlayer.setPosition(0)
+                                    previewFrame.nonSongVideoFadingOut = false
+                                    previewFrame.nonSongVideoFinished = false
+                                } else if (bgMediaPlayer.playbackState === MediaPlayer.PlayingState) {
+                                    bgMediaPlayer.pause()
+                                }
+                            }
+                        }
+                    }
+                }
+                function onPositionChanged(posSec) {
+                    if (!previewFrame.isSongFolderVideo &&
+                        bgMediaPlayer.source.toString() !== "" &&
+                        bgMediaPlayer.duration > 0) {
+                        if (previewFrame.nonSongVideoFinished || previewFrame.nonSongVideoFadingOut) {
+                            return
+                        }
+                        if (!audioMixerViewModel.isPlaying && posSec <= 0.05) {
+                            return
+                        }
+                        let targetMs = posSec * 1000.0
+                        if (Math.abs(bgMediaPlayer.position - targetMs) > 400) {
+                            bgMediaPlayer.setPosition(Math.floor(targetMs))
+                        }
+                    }
+                }
             }
 
             VideoOutput {
@@ -121,6 +263,14 @@ Rectangle {
                 anchors.fill: parent
                 fillMode: VideoOutput.PreserveAspectCrop
                 visible: bgMediaPlayer.hasVideo && !(slideDisplayViewModel && slideDisplayViewModel.isBlackScreen) && root.outputMode === 0
+                opacity: previewFrame.isSongFolderVideo || !previewFrame.nonSongVideoFadingOut ? 1.0 : 0.0
+
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: previewFrame.fadeDurationMs
+                        easing.type: Easing.InOutQuad
+                    }
+                }
             }
 
             // Audience View (Mode 0)

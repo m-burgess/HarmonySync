@@ -10,6 +10,10 @@ Rectangle {
     border.width: 1
     radius: Theme.borderRadius
 
+    readonly property bool isNonSongVideo: (typeof setlistViewModel !== "undefined" && setlistViewModel !== null)
+                                           ? !setlistViewModel.hasActiveSongMap
+                                           : (audioMixerViewModel ? (!audioMixerViewModel.isBackgroundVideoLooping && audioMixerViewModel.activeBackgroundVideo !== "") : false)
+
     function formatTrackName(name) {
         if (!name) return "";
         var upperName = name.toUpperCase();
@@ -47,6 +51,7 @@ Rectangle {
 
             // Pitch Shift Semitones Pill Badge
             Rectangle {
+                visible: !root.isNonSongVideo
                 width: 90
                 height: 24
                 radius: 12
@@ -70,6 +75,7 @@ Rectangle {
 
             Button {
                 id: pitchDownBtn
+                visible: !root.isNonSongVideo
                 text: "-1"
                 font.pixelSize: 11
                 font.bold: true
@@ -86,6 +92,7 @@ Rectangle {
 
             Button {
                 id: pitchUpBtn
+                visible: !root.isNonSongVideo
                 text: "+1"
                 font.pixelSize: 11
                 font.bold: true
@@ -118,58 +125,172 @@ Rectangle {
             contentWidth: stemRow.implicitWidth
             contentHeight: availableHeight
 
+            Component.onCompleted: {
+                if (stemScrollView.contentItem && typeof stemScrollView.contentItem.interactive !== "undefined") {
+                    stemScrollView.contentItem.interactive = Qt.binding(function() { return !root.isNonSongVideo })
+                }
+            }
+
             Row {
                 id: stemRow
+                height: stemScrollView.availableHeight
                 spacing: 16
 
                 Repeater {
                     id: stemRepeater
                     model: audioMixerViewModel ? audioMixerViewModel.loadedStemCount : 0
                     
-                    delegate: Rectangle {
-                        id: stemDelegate
-                        width: nameText.implicitWidth + 32
+                    delegate: Row {
+                        id: stemContainer
                         height: 36
                         anchors.verticalCenter: parent.verticalCenter
-                        radius: 18
-                        color: isMuted ? Theme.danger : Theme.backgroundDark
-                        border.color: isMuted ? Theme.danger : Theme.borderDark
-                        border.width: 1
+                        spacing: 12
 
                         property bool isMuted: audioMixerViewModel ? audioMixerViewModel.stemIsMuted(index) : false
+                        property real stemVol: audioMixerViewModel ? audioMixerViewModel.stemVolume(index) : 1.0
+                        property string trackName: audioMixerViewModel ? root.formatTrackName(audioMixerViewModel.stemName(index)) : ("CH " + (index + 1))
+
+                        function refreshState() {
+                            if (!audioMixerViewModel) return
+                            isMuted = audioMixerViewModel.stemIsMuted(index)
+                            if (!stemVolSlider.pressed) {
+                                stemVol = audioMixerViewModel.stemVolume(index)
+                            }
+                            trackName = root.formatTrackName(audioMixerViewModel.stemName(index))
+                        }
 
                         Connections {
                             target: audioMixerViewModel
                             function onStemStateChanged(idx) {
                                 if (idx === index) {
-                                    isMuted = audioMixerViewModel.stemIsMuted(index)
+                                    stemContainer.refreshState()
                                 }
+                            }
+                            function onStemCountChanged() {
+                                stemContainer.refreshState()
+                            }
+                            function onNextSongLoaded() {
+                                stemContainer.refreshState()
+                            }
+                            function onSongSwitched() {
+                                stemContainer.refreshState()
                             }
                         }
 
-                        Text {
-                            id: nameText
-                            anchors.centerIn: parent
-                            text: audioMixerViewModel ? root.formatTrackName(audioMixerViewModel.stemName(index)) : "CH " + (index+1)
-                            font.family: Theme.fontFamily
-                            font.pixelSize: 11
-                            font.bold: true
-                            color: isMuted ? "#ffffff" : Theme.textPrimary
+                        Rectangle {
+                            id: stemDelegate
+                            width: nameText.implicitWidth + 32
+                            height: 36
+                            anchors.verticalCenter: parent.verticalCenter
+                            radius: 18
+                            color: stemContainer.isMuted ? Theme.danger : Theme.backgroundDark
+                            border.color: stemContainer.isMuted ? Theme.danger : Theme.borderDark
+                            border.width: 1
+
+                            Text {
+                                id: nameText
+                                anchors.centerIn: parent
+                                text: stemContainer.trackName
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 11
+                                font.bold: true
+                                color: stemContainer.isMuted ? "#ffffff" : Theme.textPrimary
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                hoverEnabled: true
+                                onEntered: stemDelegate.opacity = 0.8
+                                onExited: stemDelegate.opacity = 1.0
+                                onClicked: { if (audioMixerViewModel) audioMixerViewModel.toggleStemMute(index) }
+                            }
+                            
+                            Behavior on color { ColorAnimation { duration: Theme.animDuration } }
                         }
 
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            hoverEnabled: true
-                            onEntered: stemDelegate.opacity = 0.8
-                            onExited: stemDelegate.opacity = 1.0
-                            onClicked: { if (audioMixerViewModel) audioMixerViewModel.toggleStemMute(index) }
+                        Row {
+                            visible: root.isNonSongVideo
+                            height: 36
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 10
+
+                            Slider {
+                                id: stemVolSlider
+                                objectName: "stemVolumeSlider_" + index
+                                width: 220
+                                height: 36
+                                implicitWidth: 220
+                                implicitHeight: 36
+                                anchors.verticalCenter: parent.verticalCenter
+                                live: true
+                                from: 0.0
+                                to: 1.0
+                                value: stemContainer.stemVol
+
+                                Binding {
+                                    target: stemVolSlider
+                                    property: "value"
+                                    value: stemContainer.stemVol
+                                    when: !stemVolSlider.pressed
+                                }
+
+                                onMoved: {
+                                    stemContainer.stemVol = stemVolSlider.value
+                                    if (audioMixerViewModel) {
+                                        audioMixerViewModel.setStemVolume(index, stemVolSlider.value)
+                                    }
+                                }
+                                onValueChanged: {
+                                    if (pressed && audioMixerViewModel && Math.abs(stemContainer.stemVol - value) > 0.001) {
+                                        stemContainer.stemVol = value
+                                        audioMixerViewModel.setStemVolume(index, value)
+                                    }
+                                }
+
+                                background: Rectangle {
+                                    x: stemVolSlider.leftPadding
+                                    y: stemVolSlider.topPadding + (stemVolSlider.availableHeight - height) / 2
+                                    implicitWidth: 220
+                                    implicitHeight: 6
+                                    width: stemVolSlider.availableWidth
+                                    height: 6
+                                    radius: 3
+                                    color: Theme.backgroundDark
+                                    border.color: Theme.borderDark
+
+                                    Rectangle {
+                                        width: stemVolSlider.visualPosition * parent.width
+                                        height: parent.height
+                                        color: stemContainer.isMuted ? Theme.danger : Theme.accentPrimary
+                                        radius: 3
+                                    }
+                                }
+                                handle: Rectangle {
+                                    x: stemVolSlider.leftPadding + stemVolSlider.visualPosition * (stemVolSlider.availableWidth - width)
+                                    y: stemVolSlider.topPadding + (stemVolSlider.availableHeight - height) / 2
+                                    implicitWidth: 16
+                                    implicitHeight: 16
+                                    width: 16
+                                    height: 16
+                                    radius: 8
+                                    color: stemVolSlider.pressed ? Theme.accentPrimary : Theme.textPrimary
+                                }
+                            }
+
+                            Label {
+                                width: 44
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: Math.round((stemVolSlider.pressed ? stemVolSlider.value : stemContainer.stemVol) * 100) + "%"
+                                color: Theme.textSecondary
+                                font.pixelSize: 11
+                                font.bold: true
+                                font.family: Theme.fontFamily
+                            }
                         }
-                        
-                        Behavior on color { ColorAnimation { duration: Theme.animDuration } }
-                    } // Rectangle
+                    } // Row
                 } // Repeater
-            } // Flow
+            } // Row
         } // ScrollView
 
         Rectangle {
@@ -240,6 +361,8 @@ Rectangle {
             Slider {
                 id: posSlider
                 Layout.fillWidth: true
+                Layout.preferredHeight: 24
+                implicitHeight: 24
                 from: 0
                 to: audioMixerViewModel ? audioMixerViewModel.durationSeconds : 100
                 value: audioMixerViewModel ? audioMixerViewModel.positionSeconds : 0
@@ -248,6 +371,7 @@ Rectangle {
                 background: Rectangle {
                     x: posSlider.leftPadding
                     y: posSlider.topPadding + (posSlider.availableHeight - height) / 2
+                    implicitHeight: 4
                     width: posSlider.availableWidth
                     height: 4
                     radius: 2
