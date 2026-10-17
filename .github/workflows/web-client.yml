@@ -13,7 +13,7 @@ on:
 
 concurrency:
   group: web-client-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # Musician View lives at src/web_client (npm + package-lock.json).
 # There is no root package.json / pnpm workspace — do not reintroduce root pnpm.
