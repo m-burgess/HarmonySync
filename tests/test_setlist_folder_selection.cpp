@@ -237,11 +237,76 @@ void testAILyricSyncPrioritizesGuideOrSplitTrack() {
     HS_CHECK(fs::path(capturedMultitrack).filename() == "Song_Guide.wav");
 }
 
+void testAILyricSyncFiltersMetadataFromLyrics() {
+    TempDir dir;
+    const fs::path root = dir.path() / "service";
+    fs::create_directories(root);
+    const fs::path songFolder = root / "01_Egypt";
+    fs::create_directories(songFolder);
+
+    writeFile(songFolder / "song-map.json", R"({
+        "title": "Egypt",
+        "sections": [
+            {
+                "name": "Intro",
+                "lines": [
+                    {"text": "Title: Egypt"},
+                    {"text": "Key: D♭"},
+                    {"text": "Tempo: 76 BPM"},
+                    {"text": "Time Signature: 4/4"}
+                ]
+            },
+            {
+                "name": "Verse 1",
+                "lines": [
+                    {"text": "I won't forget, the wonder of how You brought"}
+                ]
+            }
+        ]
+    })");
+    writeFile(songFolder / "Song_Reference.wav", "RIFF....WAVEfmt ");
+    writeFile(songFolder / "Song_Guide.wav", "RIFF....WAVEfmt ");
+
+    std::string passedLyrics;
+    SetlistViewModel::AITimestampGenerator generator =
+        [&](const std::string& /*ref*/, const std::string& /*multi*/, const std::string& lyrics,
+            std::function<void(std::vector<HarmonySync::Core::TimedLyricLine>)> success,
+            std::function<void(std::string)> /*error*/,
+            std::function<void(std::string)> /*progress*/) {
+        passedLyrics = lyrics;
+        if (success) {
+            success({{82.5, "I won't forget, the wonder of how You brought"}});
+        }
+    };
+
+    SetlistViewModel vm(nullptr, std::move(generator));
+    HS_CHECK(vm.openServiceOrderRootFolder(QString::fromStdString(root.string())));
+    vm.setCurrentSongIndex(0);
+    vm.generateAITimestamps();
+
+    // The clean lyrics passed to the AI must not contain metadata lines
+    HS_CHECK(passedLyrics.find("Key: D♭") == std::string::npos);
+    HS_CHECK(passedLyrics.find("Tempo: 76 BPM") == std::string::npos);
+    HS_CHECK(passedLyrics.find("Time Signature: 4/4") == std::string::npos);
+    HS_CHECK(passedLyrics.find("I won't forget") != std::string::npos);
+
+    // The metadata lines in Intro must NOT have received lyric timestamps
+    HarmonySync::Core::FolderService folderService;
+    auto reloaded = folderService.loadSongFromFolder(songFolder);
+    HS_CHECK(reloaded.sections().size() >= 2);
+    for (const auto& line : reloaded.sections()[0].lines) {
+        HS_CHECK(line.timestampSeconds == 0.0);
+    }
+    // Only the actual lyric line in Verse 1 gets the timestamp
+    HS_CHECK(reloaded.sections()[1].lines[0].timestampSeconds == 82.5);
+}
+
 } // namespace
 
 int main() {
     testOpenSelectLyricsAndPersistMap();
     testAddSongFolderAndTitleSignals();
     testAILyricSyncPrioritizesGuideOrSplitTrack();
+    testAILyricSyncFiltersMetadataFromLyrics();
     return 0;
 }
