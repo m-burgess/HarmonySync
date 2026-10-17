@@ -46,6 +46,46 @@ double probeVideoDurationSeconds(const std::filesystem::path& videoPath) {
 #else
     (void)videoPath;
 #endif
+
+    // Direct container header parse fallback (ISO BMFF / MP4 / MOV) when ffprobe is not installed
+    std::ifstream file(videoPath, std::ios::binary);
+    if (file) {
+        std::vector<char> buf(8192);
+        file.read(buf.data(), static_cast<std::streamsize>(buf.size()));
+        const auto bytesRead = file.gcount();
+        for (std::streamsize i = 0; i + 24 <= bytesRead; ++i) {
+            if (std::memcmp(&buf[static_cast<std::size_t>(i)], "mvhd", 4) == 0) {
+                const auto version = static_cast<std::uint8_t>(buf[static_cast<std::size_t>(i) + 4]);
+                auto readU32 = [&](std::size_t off) -> std::uint32_t {
+                    return (static_cast<std::uint32_t>(static_cast<std::uint8_t>(buf[off])) << 24) |
+                           (static_cast<std::uint32_t>(static_cast<std::uint8_t>(buf[off + 1])) << 16) |
+                           (static_cast<std::uint32_t>(static_cast<std::uint8_t>(buf[off + 2])) << 8) |
+                           (static_cast<std::uint32_t>(static_cast<std::uint8_t>(buf[off + 3])));
+                };
+                if (version == 0 && i + 24 <= bytesRead) {
+                    const std::uint32_t timescale = readU32(static_cast<std::size_t>(i) + 16);
+                    const std::uint32_t duration = readU32(static_cast<std::size_t>(i) + 20);
+                    if (timescale > 0 && duration > 0) {
+                        const double dur = static_cast<double>(duration) / static_cast<double>(timescale);
+                        if (dur > 0.1) {
+                            return std::min(dur, 600.0);
+                        }
+                    }
+                } else if (version == 1 && i + 36 <= bytesRead) {
+                    const std::uint32_t timescale = readU32(static_cast<std::size_t>(i) + 24);
+                    const std::uint64_t duration = (static_cast<std::uint64_t>(readU32(static_cast<std::size_t>(i) + 28)) << 32) |
+                                                   static_cast<std::uint64_t>(readU32(static_cast<std::size_t>(i) + 32));
+                    if (timescale > 0 && duration > 0) {
+                        const double dur = static_cast<double>(duration) / static_cast<double>(timescale);
+                        if (dur > 0.1) {
+                            return std::min(dur, 600.0);
+                        }
+                    }
+                }
+                break;
+            }
+        }
+    }
     return 0.1;
 }
 
