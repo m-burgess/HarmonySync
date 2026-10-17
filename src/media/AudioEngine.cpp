@@ -6,7 +6,9 @@
 #include <cctype>
 #include <cmath>
 #include <functional>
+#include <future>
 #include <iostream>
+#include <mutex>
 #include <numbers>
 #include <thread>
 #include <utility>
@@ -14,12 +16,80 @@
 
 #ifdef HARMONYSYNC_HAS_QT
 #include <QCoreApplication>
-#include <QMetaObject>
+#include <QEvent>
 #include <QObject>
 #include <QThread>
 #endif
 
 namespace HarmonySync::Media {
+
+#ifdef HARMONYSYNC_HAS_QT
+namespace {
+QEvent::Type queuedAudioWorkEventType() {
+    static const auto type = static_cast<QEvent::Type>(QEvent::registerEventType());
+    return type;
+}
+
+class QueuedAudioWorkEvent final : public QEvent {
+public:
+    QueuedAudioWorkEvent(std::function<void()> workItem, std::shared_ptr<std::promise<void>> completionPromise)
+        : QEvent(queuedAudioWorkEventType())
+        , work(std::move(workItem))
+        , completion(std::move(completionPromise)) {}
+
+    std::function<void()> work;
+    std::shared_ptr<std::promise<void>> completion;
+};
+} // namespace
+
+class QueuedAudioContext final : public QObject {
+public:
+    void enqueue(std::function<void()> work, Qt::ConnectionType connectionType) {
+        if (connectionType == Qt::BlockingQueuedConnection && QThread::currentThread() == thread()) {
+            work();
+            return;
+        }
+        std::unique_lock submissionLock(m_submissionMutex);
+        std::shared_ptr<std::promise<void>> completion;
+        std::future<void> finished;
+        if (connectionType == Qt::BlockingQueuedConnection) {
+            completion = std::make_shared<std::promise<void>>();
+            finished = completion->get_future();
+        }
+
+        // postEvent takes ownership and deletes the event after dispatch.
+        QCoreApplication::postEvent(this, new QueuedAudioWorkEvent(std::move(work), completion));
+        submissionLock.unlock();
+        if (finished.valid()) {
+            finished.get();
+        }
+    }
+
+protected:
+    bool event(QEvent* event) override {
+        if (event->type() != queuedAudioWorkEventType()) {
+            return QObject::event(event);
+        }
+
+        auto* workEvent = static_cast<QueuedAudioWorkEvent*>(event);
+        try {
+            workEvent->work();
+            if (workEvent->completion) {
+                workEvent->completion->set_value();
+            }
+        } catch (...) {
+            if (!workEvent->completion) {
+                throw;
+            }
+            workEvent->completion->set_exception(std::current_exception());
+        }
+        return true;
+    }
+
+private:
+    std::mutex m_submissionMutex;
+};
+#endif
 
 /// Counts one live song buffer set against its engine (#185). Move-only; a moved-from or
 /// default lease counts nothing. Never released on the audio thread: retired sets are freed
@@ -319,8 +389,8 @@ struct AudioEngine::Impl {
     // on its own thread so a stalled GUI thread cannot starve it. Only the audio thread touches
     // audioSink and services the PCM source; the control thread queues work to it.
     std::unique_ptr<QThread> audioThread;
-    std::unique_ptr<QObject> audioContext; // lives on audioThread; target for queued work
-    bool sinkMayRun = false;               // control thread: a start was queued with no stopSinkAndWait() since
+    std::unique_ptr<QueuedAudioContext> audioContext; // lives on audioThread; target for queued work
+    bool sinkMayRun = false; // control thread: a start was queued with no stopSinkAndWait() since
 #endif
     bool hasSink = false; // set once at construction
     AudioMixerDevice mixerDevice;
@@ -337,7 +407,7 @@ struct AudioEngine::Impl {
             work();
             return;
         }
-        QMetaObject::invokeMethod(audioContext.get(), std::forward<F>(work), Qt::QueuedConnection);
+        audioContext->enqueue(std::forward<F>(work), Qt::QueuedConnection);
     }
     /// Control thread only; the audio thread never waits on the control thread, so no deadlock.
     template <typename F> void onAudioThreadAndWait(F&& work) {
@@ -345,7 +415,7 @@ struct AudioEngine::Impl {
             work();
             return;
         }
-        QMetaObject::invokeMethod(audioContext.get(), std::forward<F>(work), Qt::BlockingQueuedConnection);
+        audioContext->enqueue(std::forward<F>(work), Qt::BlockingQueuedConnection);
     }
 #endif
 
@@ -355,7 +425,7 @@ struct AudioEngine::Impl {
             audioThread = std::make_unique<QThread>();
             audioThread->setObjectName(QStringLiteral("HarmonySyncAudio"));
             audioThread->start(QThread::TimeCriticalPriority);
-            audioContext = std::make_unique<QObject>();
+            audioContext = std::make_unique<QueuedAudioContext>();
             audioContext->moveToThread(audioThread.get());
         }
 
