@@ -276,7 +276,9 @@ if(Python3_FOUND)
     endif()
     add_test(
         NAME test_ai_lyric_sync_py
-        COMMAND "${HS_TEST_PYTHON}" "${CMAKE_CURRENT_SOURCE_DIR}/test_ai_lyric_sync.py"
+        COMMAND
+            "${HS_TEST_PYTHON}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/test_ai_lyric_sync.py"
     )
 endif()
 
