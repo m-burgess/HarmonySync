@@ -22,6 +22,8 @@ struct AudioMixerViewModel::Impl {
     float m_crossfadePos{0.0f};
     std::string activeBackgroundVideo;
     std::string nextBackgroundVideo;
+    bool backgroundVideoLooping{false};
+    bool nextBackgroundVideoLooping{false};
     bool isTransposing{false};
     Media::FFmpegTransposer transposer;
 
@@ -221,6 +223,27 @@ bool AudioMixerViewModel::loadSongStems(const std::vector<Core::MediaStem>& stem
     emit playStateChanged(isPlaying());
 #endif
     return result;
+}
+
+bool AudioMixerViewModel::isBackgroundVideoLooping() const noexcept {
+    return m_impl->backgroundVideoLooping;
+}
+
+bool AudioMixerViewModel::shouldAutoFadeOutVideo() const noexcept {
+    return !m_impl->backgroundVideoLooping;
+}
+
+void AudioMixerViewModel::setBackgroundVideoLooping(bool looping) noexcept {
+    if (m_impl->backgroundVideoLooping != looping) {
+        m_impl->backgroundVideoLooping = looping;
+#ifdef HARMONYSYNC_QT_AVAILABLE
+        emit backgroundVideoLoopingChanged(looping);
+#endif
+    }
+}
+
+void AudioMixerViewModel::setNextBackgroundVideoLooping(bool looping) noexcept {
+    m_impl->nextBackgroundVideoLooping = looping;
 }
 
 #ifdef HARMONYSYNC_QT_AVAILABLE
@@ -456,6 +479,7 @@ void AudioMixerViewModel::finalizeCrossfade() {
 
     // Swap background video
     m_impl->activeBackgroundVideo = m_impl->nextBackgroundVideo;
+    m_impl->backgroundVideoLooping = m_impl->nextBackgroundVideoLooping;
 
     // Reset crossfade position silently
     m_impl->m_crossfadePos = 0.0f;
@@ -463,6 +487,7 @@ void AudioMixerViewModel::finalizeCrossfade() {
 
 #ifdef HARMONYSYNC_QT_AVAILABLE
     // Broadcast all new states of the newly active deck
+    emit backgroundVideoLoopingChanged(m_impl->backgroundVideoLooping);
     emit activeBackgroundVideoChanged(QString::fromStdString(m_impl->activeBackgroundVideo));
     emit stemCountChanged(loadedStemCount());
     emit durationChanged(durationSeconds());

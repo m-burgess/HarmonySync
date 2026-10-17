@@ -51,7 +51,10 @@ void SongSwitchCoordinator::onCurrentSongIndexChanged(int index) {
     if (shiftedByRemoval) {
         return;
     }
+    const bool isSongFolder = m_setlist.itemHasSongMapAt(index);
     const QString videoPath = m_setlist.backgroundVideoPathAt(index);
+    m_mixer.setBackgroundVideoLooping(isSongFolder);
+    m_mixer.setNextBackgroundVideoLooping(isSongFolder);
     m_mixer.setActiveBackgroundVideo(videoPath);
     m_mixer.loadNextBackgroundVideo(videoPath);
     // Switches now if this song was preloaded, otherwise when its decode is ready.
@@ -68,6 +71,9 @@ void SongSwitchCoordinator::preloadSongAfterCurrent() {
 void SongSwitchCoordinator::onSetlistCleared() {
     // #185: nothing is left to play; free the next song, then the current one.
     resetShownSong();
+    m_mixer.setBackgroundVideoLooping(false);
+    m_mixer.setNextBackgroundVideoLooping(false);
+    m_mixer.setActiveBackgroundVideo(QString());
     m_mixer.clearPreloadedSong();
     m_mixer.unloadCurrentSong();
 }

@@ -134,6 +134,13 @@ void testAudioMixerViewModel() {
     HS_CHECK(vm.crossfadePosition() == 0.5f);
     vm.setCrossfadePosition(2.0f);
     HS_CHECK(vm.crossfadePosition() == 1.0f);
+    HS_CHECK(!vm.isBackgroundVideoLooping());
+    HS_CHECK(vm.shouldAutoFadeOutVideo());
+    vm.setBackgroundVideoLooping(true);
+    vm.setBackgroundVideoLooping(true);
+    HS_CHECK(vm.isBackgroundVideoLooping());
+    HS_CHECK(!vm.shouldAutoFadeOutVideo());
+    vm.setNextBackgroundVideoLooping(false);
     vm.loadNextBackgroundVideo(
 #ifdef HARMONYSYNC_QT_AVAILABLE
         QStringLiteral("next.mp4")
@@ -158,6 +165,8 @@ void testAudioMixerViewModel() {
     vm.finalizeCrossfade();
     HS_CHECK(vm.crossfadePosition() == 0.0f);
     HS_CHECK(activeVideo(vm) == "next.mp4");
+    HS_CHECK(!vm.isBackgroundVideoLooping());
+    HS_CHECK(vm.shouldAutoFadeOutVideo());
 
     HS_CHECK(!vm.isPreloadedSong({}));
     HS_CHECK(!vm.isPreloadedSong(stems));

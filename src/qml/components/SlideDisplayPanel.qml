@@ -107,15 +107,66 @@ Rectangle {
             
             Behavior on border.color { ColorAnimation { duration: Theme.animDuration } }
 
+            readonly property bool isSongFolderVideo: (setlistViewModel && setlistViewModel.hasActiveSongMap) ||
+                                                      (!setlistViewModel && audioMixerViewModel && audioMixerViewModel.isBackgroundVideoLooping)
+            readonly property int fadeDurationMs: 600
+            property bool nonSongVideoFadingOut: false
+
+            onIsSongFolderVideoChanged: {
+                bgMediaPlayer.loops = previewFrame.isSongFolderVideo ? MediaPlayer.Infinite : MediaPlayer.Once
+                if (previewFrame.isSongFolderVideo) {
+                    previewFrame.nonSongVideoFadingOut = false
+                }
+            }
+
             MediaPlayer {
                 id: bgMediaPlayer
-                source: (audioMixerViewModel && audioMixerViewModel.activeBackgroundVideo !== "") ? "file://" + audioMixerViewModel.activeBackgroundVideo : ""
-                loops: !setlistViewModel || setlistViewModel.hasActiveSongMap
+                source: (audioMixerViewModel && audioMixerViewModel.activeBackgroundVideo !== "")
+                        ? "file://" + audioMixerViewModel.activeBackgroundVideo.replace(/#/g, "%23").replace(/\?/g, "%3F")
+                        : ""
+                loops: previewFrame.isSongFolderVideo
                        ? MediaPlayer.Infinite
                        : MediaPlayer.Once
                 audioOutput: null
                 videoOutput: videoOutput
                 autoPlay: true
+
+                onSourceChanged: {
+                    bgMediaPlayer.loops = previewFrame.isSongFolderVideo ? MediaPlayer.Infinite : MediaPlayer.Once
+                    previewFrame.nonSongVideoFadingOut = false
+                    if (bgMediaPlayer.source.toString() !== "") {
+                        bgMediaPlayer.play()
+                    }
+                }
+
+                onPositionChanged: {
+                    if (!previewFrame.isSongFolderVideo &&
+                        bgMediaPlayer.duration > 0 &&
+                        bgMediaPlayer.position >= Math.max(0, bgMediaPlayer.duration - previewFrame.fadeDurationMs)) {
+                        previewFrame.nonSongVideoFadingOut = true
+                    }
+                }
+
+                onMediaStatusChanged: {
+                    if (bgMediaPlayer.mediaStatus === MediaPlayer.LoadedMedia &&
+                        bgMediaPlayer.source.toString() !== "" &&
+                        !previewFrame.nonSongVideoFadingOut &&
+                        bgMediaPlayer.playbackState !== MediaPlayer.PlayingState) {
+                        bgMediaPlayer.play()
+                    } else if (!previewFrame.isSongFolderVideo &&
+                               (bgMediaPlayer.mediaStatus === MediaPlayer.EndOfMedia ||
+                                bgMediaPlayer.mediaStatus === MediaPlayer.InvalidMedia)) {
+                        previewFrame.nonSongVideoFadingOut = true
+                    }
+                }
+
+                onPlaybackStateChanged: {
+                    if (!previewFrame.isSongFolderVideo &&
+                        bgMediaPlayer.playbackState === MediaPlayer.StoppedState &&
+                        bgMediaPlayer.source.toString() !== "") {
+                        previewFrame.nonSongVideoFadingOut = true
+                    }
+                }
             }
 
             VideoOutput {
@@ -123,12 +174,11 @@ Rectangle {
                 anchors.fill: parent
                 fillMode: VideoOutput.PreserveAspectCrop
                 visible: bgMediaPlayer.hasVideo && !(slideDisplayViewModel && slideDisplayViewModel.isBlackScreen) && root.outputMode === 0
-                opacity: !setlistViewModel || setlistViewModel.hasActiveSongMap ||
-                         bgMediaPlayer.playbackState === MediaPlayer.PlayingState ? 1.0 : 0.0
+                opacity: previewFrame.isSongFolderVideo || !previewFrame.nonSongVideoFadingOut ? 1.0 : 0.0
 
                 Behavior on opacity {
                     NumberAnimation {
-                        duration: 600
+                        duration: previewFrame.fadeDurationMs
                         easing.type: Easing.InOutQuad
                     }
                 }

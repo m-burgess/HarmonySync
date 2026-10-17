@@ -204,8 +204,8 @@ void SetlistViewModel::setCurrentSongIndex(int index) {
         m_impl->calculateActiveLyrics();
 
 #ifdef HARMONYSYNC_QT_AVAILABLE
-        emit currentSongIndexChanged(index);
         emit activeSongMapChanged(hasActiveSongMap());
+        emit currentSongIndexChanged(index);
         emit currentLyricsContentChanged();
         emit activeLyricIndexChanged(m_impl->activeLyricIndex);
         emit activeLyricTextChanged();
