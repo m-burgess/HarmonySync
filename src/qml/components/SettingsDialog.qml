@@ -495,9 +495,9 @@ Dialog {
                                 Layout.fillWidth: true
                                 Layout.preferredHeight: 34
                                 model: ["Left", "Center", "Right"]
-                                currentIndex: settingsViewModel ? settingsViewModel.horizontalAlignment : 1
+                                currentIndex: settingsViewModel ? settingsViewModel.hAlign : 1
                                 onActivated: function(index) {
-                                    if (settingsViewModel) settingsViewModel.horizontalAlignment = index
+                                    if (settingsViewModel) settingsViewModel.hAlign = index
                                 }
                                 background: Rectangle {
                                     color: Theme.inputBackground
@@ -558,9 +558,9 @@ Dialog {
                                 Layout.fillWidth: true
                                 Layout.preferredHeight: 34
                                 model: ["Top", "Center", "Bottom"]
-                                currentIndex: settingsViewModel ? settingsViewModel.verticalAlignment : 2
+                                currentIndex: settingsViewModel ? settingsViewModel.vAlign : 2
                                 onActivated: function(index) {
-                                    if (settingsViewModel) settingsViewModel.verticalAlignment = index
+                                    if (settingsViewModel) settingsViewModel.vAlign = index
                                 }
                                 background: Rectangle {
                                     color: Theme.inputBackground
