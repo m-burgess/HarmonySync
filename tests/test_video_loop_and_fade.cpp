@@ -133,6 +133,8 @@ void testSongAndNonSongVideoPlaybackBehavior() {
     check(player->loops() == 1 || player->loops() == QMediaPlayer::Once,
           "#244: video not in a song folder must play once (not loop infinitely), got loops=" +
               std::to_string(player->loops()));
+    check(videoOutput->opacity() > 0.1,
+          "#244: non-song video should fade out gradually rather than disappear immediately");
 
     // When non-song video reaches end / stops, or fades out at completion, videoOutput opacity must smoothly fade to 0.0
     player->stop();

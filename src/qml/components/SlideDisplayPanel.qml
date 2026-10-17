@@ -110,7 +110,9 @@ Rectangle {
             MediaPlayer {
                 id: bgMediaPlayer
                 source: (audioMixerViewModel && audioMixerViewModel.activeBackgroundVideo !== "") ? "file://" + audioMixerViewModel.activeBackgroundVideo : ""
-                loops: MediaPlayer.Infinite
+                loops: !setlistViewModel || setlistViewModel.hasActiveSongMap
+                       ? MediaPlayer.Infinite
+                       : MediaPlayer.Once
                 audioOutput: null
                 videoOutput: videoOutput
                 autoPlay: true
@@ -121,6 +123,15 @@ Rectangle {
                 anchors.fill: parent
                 fillMode: VideoOutput.PreserveAspectCrop
                 visible: bgMediaPlayer.hasVideo && !(slideDisplayViewModel && slideDisplayViewModel.isBlackScreen) && root.outputMode === 0
+                opacity: !setlistViewModel || setlistViewModel.hasActiveSongMap ||
+                         bgMediaPlayer.playbackState === MediaPlayer.PlayingState ? 1.0 : 0.0
+
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: 600
+                        easing.type: Easing.InOutQuad
+                    }
+                }
             }
 
             // Audience View (Mode 0)
