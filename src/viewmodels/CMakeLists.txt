@@ -1,6 +1,7 @@
 add_library(
     harmonysync_viewmodels
     STATIC
+    AppTheme.cpp
     SetlistViewModel.cpp
     AudioMixerViewModel.cpp
     SongSwitchCoordinator.cpp

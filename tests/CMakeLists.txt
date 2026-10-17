@@ -247,6 +247,14 @@ target_link_libraries(
 )
 add_test(NAME test_qml_settings_dialog COMMAND test_qml_settings_dialog)
 
+# Test Theme Palette & Dark Window Frame / Dialog Configuration
+add_executable(test_theme_palette test_theme_palette.cpp)
+target_link_libraries(
+    test_theme_palette
+    PRIVATE harmonysync_viewmodels harmonysync_core Qt6::Gui
+)
+add_test(NAME test_theme_palette COMMAND test_theme_palette)
+
 # Test Mobile API Client
 add_executable(test_mobile_api_client test_mobile_api_client.cpp)
 target_link_libraries(test_mobile_api_client PRIVATE harmonysync_core)
