@@ -332,15 +332,14 @@ struct AudioEngine::Impl {
 #ifdef HARMONYSYNC_HAS_QT
     // Without an application object, queued work has no event loop to run on. In that case
     // these helpers execute inline and the engine uses the direct sink path.
-    // Qt owns the callable passed to invokeMethod; clang-analyzer misattributes its lifetime.
-    // TODO: Remove this suppression if clang-analyzer learns Qt's callable ownership.
-    // NOLINTBEGIN(clang-analyzer-cplusplus.NewDeleteLeaks)
+    // TODO: Remove these suppressions if clang-analyzer learns Qt's callable ownership.
     template <typename F> void onAudioThread(F&& work) {
         if (!audioContext) {
             work();
             return;
         }
-        QMetaObject::invokeMethod(audioContext.get(), std::forward<F>(work), Qt::QueuedConnection);
+        QMetaObject::invokeMethod( // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks): Qt owns queued functors.
+            audioContext.get(), std::forward<F>(work), Qt::QueuedConnection);
     }
     /// Control thread only; the audio thread never waits on the control thread, so no deadlock.
     template <typename F> void onAudioThreadAndWait(F&& work) {
@@ -348,9 +347,9 @@ struct AudioEngine::Impl {
             work();
             return;
         }
-        QMetaObject::invokeMethod(audioContext.get(), std::forward<F>(work), Qt::BlockingQueuedConnection);
+        QMetaObject::invokeMethod( // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks): Qt owns queued functors.
+            audioContext.get(), std::forward<F>(work), Qt::BlockingQueuedConnection);
     }
-    // NOLINTEND(clang-analyzer-cplusplus.NewDeleteLeaks)
 #endif
 
 #ifdef HARMONYSYNC_HAS_QT
@@ -812,7 +811,7 @@ std::vector<Core::MediaStem> AudioEngine::audioThreadStemsForTesting() const {
 
 void AudioEngine::runOnAudioThreadForTesting(std::function<void()> work) {
 #ifdef HARMONYSYNC_HAS_QT
-    m_impl->onAudioThread(std::move(work)); // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
+    m_impl->onAudioThread(std::move(work));
 #else
     work();
 #endif
