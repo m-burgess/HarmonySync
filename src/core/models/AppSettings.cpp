@@ -131,6 +131,15 @@ void AppSettings::setMarginOffsetY(int offset) noexcept {
     m_impl->offsetY = offset;
 }
 
+const std::string& AppSettings::preServiceMusicUrl() const noexcept {
+    static const std::string empty;
+    return empty;
+}
+
+void AppSettings::setPreServiceMusicUrl(std::string url) {
+    (void)url;
+}
+
 void AppSettings::resetToDefaults() {
     *m_impl = Impl();
 }

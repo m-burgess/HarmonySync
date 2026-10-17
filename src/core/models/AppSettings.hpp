@@ -60,6 +60,10 @@ public:
     [[nodiscard]] int marginOffsetY() const noexcept;
     void setMarginOffsetY(int offset) noexcept;
 
+    // Pre-Service / Walk-In Music
+    [[nodiscard]] const std::string& preServiceMusicUrl() const noexcept;
+    void setPreServiceMusicUrl(std::string url);
+
     void resetToDefaults();
 
 private:

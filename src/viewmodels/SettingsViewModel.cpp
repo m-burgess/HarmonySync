@@ -107,6 +107,14 @@ void SettingsViewModel::setTextColorHex(const QString& hexColor) {
     }
 }
 
+QString SettingsViewModel::preServiceMusicUrl() const {
+    return QString();
+}
+
+void SettingsViewModel::setPreServiceMusicUrl(const QString& url) {
+    (void)url;
+}
+
 QStringList SettingsViewModel::availableDisplayNames() const {
     QStringList list;
     for (const auto& d : m_impl->displayManager->availableDisplays()) {
@@ -151,6 +159,14 @@ std::string SettingsViewModel::textColorHex() const {
 
 void SettingsViewModel::setTextColorHex(const std::string& hexColor) {
     m_impl->settings.setTextColorHex(hexColor);
+}
+
+std::string SettingsViewModel::preServiceMusicUrl() const {
+    return std::string();
+}
+
+void SettingsViewModel::setPreServiceMusicUrl(const std::string& url) {
+    (void)url;
 }
 
 std::vector<std::string> SettingsViewModel::availableDisplayNames() const {
