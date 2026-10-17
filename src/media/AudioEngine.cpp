@@ -332,13 +332,14 @@ struct AudioEngine::Impl {
 #ifdef HARMONYSYNC_HAS_QT
     // Without an application object, queued work has no event loop to run on. In that case
     // these helpers execute inline and the engine uses the direct sink path.
+    // Qt owns the callable passed to invokeMethod; clang-analyzer misattributes its lifetime.
+    // NOLINTBEGIN(clang-analyzer-cplusplus.NewDeleteLeaks)
     template <typename F> void onAudioThread(F&& work) {
         if (!audioContext) {
             work();
             return;
         }
-        QMetaObject::invokeMethod(audioContext.get(), std::forward<F>(work),
-                                  Qt::QueuedConnection); // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
+        QMetaObject::invokeMethod(audioContext.get(), std::forward<F>(work), Qt::QueuedConnection);
     }
     /// Control thread only; the audio thread never waits on the control thread, so no deadlock.
     template <typename F> void onAudioThreadAndWait(F&& work) {
@@ -346,9 +347,9 @@ struct AudioEngine::Impl {
             work();
             return;
         }
-        QMetaObject::invokeMethod(audioContext.get(), std::forward<F>(work),
-                                  Qt::BlockingQueuedConnection); // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
+        QMetaObject::invokeMethod(audioContext.get(), std::forward<F>(work), Qt::BlockingQueuedConnection);
     }
+    // NOLINTEND(clang-analyzer-cplusplus.NewDeleteLeaks)
 #endif
 
 #ifdef HARMONYSYNC_HAS_QT
