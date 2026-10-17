@@ -157,6 +157,94 @@ class TestAILyricSync(unittest.TestCase):
         self.assertEqual(saved_map["timedLyrics"][0]["time"], "00:02.50")
         self.assertEqual(saved_map["timedLyrics"][0]["text"], "You are here moving in our midst")
 
+    def test_update_church_songmap_skips_metadata_and_chords(self):
+        """Test that update_songmap_for_church skips metadata and chord lines, stamping only lyrics."""
+        songmap_path = os.path.join(self.test_dir.name, "song-map-meta.json")
+        initial_map = {
+            "title": "Egypt",
+            "sections": [
+                {
+                    "name": "Intro",
+                    "lines": [
+                        {"text": "Title: Egypt"},
+                        {"text": "Key: D♭"},
+                        {"text": "Tempo: 76 BPM"},
+                        {"text": "Time Signature: 4/4"}
+                    ]
+                },
+                {
+                    "name": "Verse 1",
+                    "lines": [
+                        {"text": "I won't forget, the wonder of how You brought"},
+                        {"text": "Deliverance, the exodus of my heart"}
+                    ]
+                },
+                {
+                    "name": "chords: 1 - 4/1 - 1 - 5/1",
+                    "lines": [
+                        {"text": "chords: 1 - 4/1 - 1 - 5/1"},
+                        {"text": "'Cause You found me, You freed me"}
+                    ]
+                }
+            ]
+        }
+        with open(songmap_path, 'w', encoding='utf-8') as f:
+            json.dump(initial_map, f, indent=2)
+
+        timed_lyrics = [
+            {"time": 82.5, "text": "I won't forget, the wonder of how You brought"},
+            {"time": 166.34, "text": "Deliverance, the exodus of my heart"},
+            {"time": 170.18, "text": "'Cause You found me, You freed me"}
+        ]
+
+        updated = ai_lyric_sync.update_songmap_for_church(songmap_path, timed_lyrics)
+        self.assertTrue(updated)
+
+        with open(songmap_path, 'r', encoding='utf-8') as f:
+            saved = json.load(f)
+
+        intro_lines = saved["sections"][0]["lines"]
+        for meta_line in intro_lines:
+            # Metadata lines in Intro must NOT receive lyric timestamps
+            self.assertNotIn("timestamp", meta_line, f"Metadata line '{meta_line.get('text')}' should not have timestamp")
+            self.assertNotIn("timestampSeconds", meta_line)
+
+        v1_lines = saved["sections"][1]["lines"]
+        self.assertEqual(v1_lines[0]["text"], "I won't forget, the wonder of how You brought")
+        self.assertEqual(v1_lines[0]["timestamp"], "01:22.50")
+        self.assertAlmostEqual(v1_lines[0]["timestampSeconds"], 82.5)
+
+        chord_sec_lines = saved["sections"][2]["lines"]
+        self.assertNotIn("timestamp", chord_sec_lines[0], "Chord chart header line should not have timestamp")
+        self.assertEqual(chord_sec_lines[1]["text"], "'Cause You found me, You freed me")
+        self.assertEqual(chord_sec_lines[1]["timestamp"], "02:50.18")
+
+    def test_find_audio_offset_with_click_and_guide_countin(self):
+        """Test detecting count-in offset between immediate reference track and performance count-in."""
+        duration = 5.0
+        count_in_sec = 2.0
+        t = np.linspace(0, duration, int(self.sr * duration), endpoint=False)
+
+        # Reference song starts music immediately at t=0
+        ref_signal = np.zeros_like(t)
+        ref_signal[:int(self.sr * 2.0)] = np.sin(2 * np.pi * 330 * t[:int(self.sr * 2.0)])
+        ref_path = self.create_dummy_wav("ref_immediate.wav", ref_signal)
+
+        # Guide/Click performance stem: 2s count-in clicks/vocal cue, then performance music downbeat
+        perf_stem = np.zeros_like(t)
+        for beat in range(4):
+            click_start = int(self.sr * (beat * 0.5))
+            click_end = click_start + int(self.sr * 0.05)
+            perf_stem[click_start:click_end] = 0.9 * np.sin(2 * np.pi * 1200 * t[:click_end - click_start])
+        downbeat_idx = int(self.sr * count_in_sec)
+        perf_stem[downbeat_idx:downbeat_idx + int(self.sr * 2.0)] = ref_signal[:int(self.sr * 2.0)]
+
+        perf_path = self.create_dummy_wav("perf_stem.wav", perf_stem)
+
+        offset = ai_lyric_sync.find_audio_offset(ref_path, perf_path, sr=self.sr)
+        self.assertAlmostEqual(offset, count_in_sec, delta=0.25)
+
 
 if __name__ == '__main__':
     unittest.main()
+
