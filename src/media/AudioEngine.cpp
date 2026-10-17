@@ -333,6 +333,7 @@ struct AudioEngine::Impl {
     // Without an application object, queued work has no event loop to run on. In that case
     // these helpers execute inline and the engine uses the direct sink path.
     // Qt owns the callable passed to invokeMethod; clang-analyzer misattributes its lifetime.
+    // TODO: Remove this suppression if clang-analyzer learns Qt's callable ownership.
     // NOLINTBEGIN(clang-analyzer-cplusplus.NewDeleteLeaks)
     template <typename F> void onAudioThread(F&& work) {
         if (!audioContext) {
