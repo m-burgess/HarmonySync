@@ -19,7 +19,7 @@ Rectangle {
             if (selectedPath.startsWith("file://")) {
                 selectedPath = selectedPath.substring(7);
             }
-            setlistViewModel.openServiceOrderRootFolder(selectedPath);
+            setlistViewModel.openServiceOrderRootFolderAsync(selectedPath);
         }
     }
 
