@@ -625,6 +625,35 @@ void SetlistViewModel::syncToPlaybackPosition(double positionSeconds) {
     }
 
     auto& song = m_impl->serviceOrder.songs()[m_impl->currentSongIndexAsSize()];
+    const auto& timedLyrics = song.timedLyrics();
+    if (!timedLyrics.empty()) {
+        int timedIndex = -1;
+        for (size_t i = 0; i < timedLyrics.size(); ++i) {
+            if (timedLyrics[i].timestampSeconds <= positionSeconds) {
+                timedIndex = static_cast<int>(i);
+            } else {
+                break;
+            }
+        }
+
+        if (timedIndex >= 0) {
+            const std::string& targetText = timedLyrics[static_cast<size_t>(timedIndex)].text;
+            int mappedBlockIndex = -1;
+            for (size_t b = 0; b < m_impl->lyricBlocks.size(); ++b) {
+                if (m_impl->lyricBlocks[b] == targetText ||
+                    m_impl->lyricBlocks[b].find(targetText) != std::string::npos) {
+                    mappedBlockIndex = static_cast<int>(b);
+                    break;
+                }
+            }
+
+            if (mappedBlockIndex >= 0 && mappedBlockIndex != m_impl->activeLyricIndex) {
+                setActiveLyricIndex(mappedBlockIndex);
+            }
+        }
+        return;
+    }
+
     auto sections = song.sections();
     if (sections.empty()) {
         return;
@@ -771,21 +800,13 @@ void SetlistViewModel::syncToPlaybackPosition(double positionSeconds) {
     }
 
     if (timedIndex >= 0) {
-        int currentTimedIdx = 0;
+        const std::string& targetText = timedLyrics[static_cast<size_t>(timedIndex)].text;
         int mappedBlockIndex = -1;
         for (size_t b = 0; b < m_impl->lyricBlocks.size(); ++b) {
-            int linesInBlock = 0;
-            std::istringstream stream(m_impl->lyricBlocks[b]);
-            std::string line;
-            while (std::getline(stream, line)) {
-                if (!line.empty())
-                    linesInBlock++;
-            }
-            if (timedIndex >= currentTimedIdx && timedIndex < currentTimedIdx + linesInBlock) {
+            if (m_impl->lyricBlocks[b] == targetText || m_impl->lyricBlocks[b].find(targetText) != std::string::npos) {
                 mappedBlockIndex = static_cast<int>(b);
                 break;
             }
-            currentTimedIdx += linesInBlock;
         }
 
         if (mappedBlockIndex >= 0 && mappedBlockIndex != m_impl->activeLyricIndex) {

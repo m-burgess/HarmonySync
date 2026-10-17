@@ -13,6 +13,7 @@
 #include <QQmlContext>
 #include <QQmlEngine>
 #include <QQuickItem>
+#include <QStandardPaths>
 #include <QUrl>
 
 #include <cmath>
@@ -385,10 +386,17 @@ void testSilentVideoToBumperVideoAudioPlayback() {
     // Wait for 01 Countdown Video stem to decode and load
     check(waitFor([&] { return mixer.loadedStemCount() == 1; }, 4000),
           "#244: 01 Countdown Video stem did not load");
-    // Silent video fallback must match the 1.0s video duration (not 0.1s) when ffprobe is available
-    check(mixer.durationSeconds() >= 0.8,
-          "#244: silent video stem duration should match video duration (~1.0s), got " +
-              std::to_string(mixer.durationSeconds()));
+    // Silent video fallback must match the 1.0s video duration when ffprobe is available, or 0.1s fallback without ffprobe
+    const bool hasFfprobe = !QStandardPaths::findExecutable(QStringLiteral("ffprobe")).isEmpty();
+    if (hasFfprobe) {
+        check(mixer.durationSeconds() >= 0.8,
+              "#244: silent video stem duration should match video duration (~1.0s), got " +
+                  std::to_string(mixer.durationSeconds()));
+    } else {
+        check(mixer.durationSeconds() >= 0.09,
+              "#244: silent video fallback duration should be at least 0.1s, got " +
+                  std::to_string(mixer.durationSeconds()));
+    }
 
     // Switch directly from 01 Countdown Video to 06 Bumper Video (index 3)
     setlist.setCurrentSongIndex(3);

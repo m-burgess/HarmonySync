@@ -18,6 +18,8 @@ struct AppSettings::Impl {
     TextHorizontalAlignment hAlign{TextHorizontalAlignment::Center};
     int offsetX{0};
     int offsetY{40};
+
+    std::string preServiceMusicUrl;
 };
 
 AppSettings::AppSettings()
@@ -129,6 +131,14 @@ int AppSettings::marginOffsetY() const noexcept {
 
 void AppSettings::setMarginOffsetY(int offset) noexcept {
     m_impl->offsetY = offset;
+}
+
+const std::string& AppSettings::preServiceMusicUrl() const noexcept {
+    return m_impl->preServiceMusicUrl;
+}
+
+void AppSettings::setPreServiceMusicUrl(std::string url) {
+    m_impl->preServiceMusicUrl = std::move(url);
 }
 
 void AppSettings::resetToDefaults() {

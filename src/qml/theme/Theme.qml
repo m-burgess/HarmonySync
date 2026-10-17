@@ -17,6 +17,11 @@ QtObject {
     readonly property color textPrimary: "#f4f4f5"
     readonly property color textSecondary: "#a1a1aa"
     readonly property color textMuted: "#71717a"
+    readonly property color textOnAccent: "#ffffff"
+
+    readonly property color surfaceHover: "#2d2d30"
+    readonly property color surfaceActive: "#37373d"
+    readonly property color inputBackground: "#1e1e1e"
 
     readonly property color success: "#22c55e"
     readonly property color warning: "#f59e0b"

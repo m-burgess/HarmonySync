@@ -72,7 +72,7 @@ ApplicationWindow {
                 font.pixelSize: 11
                 font.bold: true
                 font.family: Theme.fontFamily
-                visible: hasWebEngine && setlistViewModel && setlistViewModel.playlistUrl !== ""
+                visible: hasWebEngine && ((setlistViewModel && setlistViewModel.playlistUrl !== "") || (settingsViewModel && settingsViewModel.preServiceMusicUrl !== ""))
 
                 background: Rectangle {
                     color: playlistLoader.active ? Theme.accentPrimary : (walkInBtn.hovered ? Theme.borderDark : "transparent")
@@ -216,8 +216,14 @@ ApplicationWindow {
         active: false
         source: "components/PlaylistWebPlayer.qml"
         onLoaded: {
-            if (item && setlistViewModel) {
-                item.playlistUrl = setlistViewModel.playlistUrl;
+            if (item) {
+                var url = "";
+                if (setlistViewModel && setlistViewModel.playlistUrl !== "") {
+                    url = setlistViewModel.playlistUrl;
+                } else if (settingsViewModel && settingsViewModel.preServiceMusicUrl !== "") {
+                    url = settingsViewModel.preServiceMusicUrl;
+                }
+                item.playlistUrl = url;
                 item.show();
             }
         }

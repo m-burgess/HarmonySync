@@ -39,6 +39,7 @@ class SettingsViewModel
     Q_PROPERTY(int hAlign READ hAlign WRITE setHAlign NOTIFY settingsChanged)
     Q_PROPERTY(int marginOffsetX READ marginOffsetX WRITE setMarginOffsetX NOTIFY settingsChanged)
     Q_PROPERTY(int marginOffsetY READ marginOffsetY WRITE setMarginOffsetY NOTIFY settingsChanged)
+    Q_PROPERTY(QString preServiceMusicUrl READ preServiceMusicUrl WRITE setPreServiceMusicUrl NOTIFY settingsChanged)
     Q_PROPERTY(QStringList availableDisplayNames READ availableDisplayNames NOTIFY availableDisplaysChanged)
     Q_PROPERTY(QString localIpAddress READ localIpAddress CONSTANT)
 #endif
@@ -73,6 +74,8 @@ public:
 
     [[nodiscard]] QString textColorHex() const;
     void setTextColorHex(const QString& hexColor);
+    [[nodiscard]] QString preServiceMusicUrl() const;
+    void setPreServiceMusicUrl(const QString& url);
     [[nodiscard]] QStringList availableDisplayNames() const;
     Q_INVOKABLE void refreshDisplays();
     Q_INVOKABLE bool saveSettings();
@@ -85,6 +88,8 @@ public:
 
     [[nodiscard]] std::string textColorHex() const;
     void setTextColorHex(const std::string& hexColor);
+    [[nodiscard]] std::string preServiceMusicUrl() const;
+    void setPreServiceMusicUrl(const std::string& url);
     [[nodiscard]] std::vector<std::string> availableDisplayNames() const;
     void refreshDisplays();
     bool saveSettings();
