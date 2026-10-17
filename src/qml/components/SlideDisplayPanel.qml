@@ -197,6 +197,9 @@ Rectangle {
                         if (playing) {
                             if (audioMixerViewModel.positionSeconds < 0.25) {
                                 previewFrame.nonSongVideoFadingOut = false
+                                if (bgMediaPlayer.position > 400 || bgMediaPlayer.mediaStatus === MediaPlayer.EndOfMedia) {
+                                    bgMediaPlayer.setPosition(0)
+                                }
                             }
                             if (bgMediaPlayer.playbackState !== MediaPlayer.PlayingState) {
                                 bgMediaPlayer.play()
@@ -204,8 +207,12 @@ Rectangle {
                         } else {
                             let nearEnd = (audioMixerViewModel.durationSeconds > 0 &&
                                            audioMixerViewModel.positionSeconds >= audioMixerViewModel.durationSeconds - 0.25) ||
+                                          (bgMediaPlayer.duration > 0 &&
+                                           bgMediaPlayer.position >= Math.max(0, bgMediaPlayer.duration - previewFrame.fadeDurationMs - 500)) ||
                                           previewFrame.nonSongVideoFadingOut
-                            if (!nearEnd) {
+                            if (nearEnd) {
+                                previewFrame.nonSongVideoFadingOut = true
+                            } else {
                                 if (audioMixerViewModel.positionSeconds <= 0.05) {
                                     bgMediaPlayer.pause()
                                     bgMediaPlayer.setPosition(0)

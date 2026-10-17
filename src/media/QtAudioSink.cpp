@@ -14,11 +14,13 @@ namespace {
 // Forwards QAudioSink pulls to the source.
 class PcmSourceDevice final : public QIODevice {
 public:
-    PcmSourceDevice() { open(QIODevice::ReadOnly); }
+    PcmSourceDevice() { open(QIODevice::ReadOnly | QIODevice::Unbuffered); }
 
     void setSource(IPcmSource* source) { m_source = source; }
 
     bool isSequential() const override { return true; }
+
+    bool seek(qint64 /*pos*/) override { return false; }
 
     qint64 bytesAvailable() const override { return static_cast<qint64>(m_source->bytesAvailable()); }
 

@@ -28,9 +28,31 @@ bool isVideoFileExtension(const std::filesystem::path& path) {
     return ext == ".mp4" || ext == ".mkv" || ext == ".webm" || ext == ".mov";
 }
 
-void writeSilentWavFallback(const std::filesystem::path& wavPath) {
+double probeVideoDurationSeconds(const std::filesystem::path& videoPath) {
+#if __has_include(<QProcess>)
+    QProcess proc;
+    QStringList args;
+    args << QStringLiteral("-v") << QStringLiteral("error") << QStringLiteral("-show_entries")
+         << QStringLiteral("format=duration") << QStringLiteral("-of")
+         << QStringLiteral("default=noprint_wrappers=1:nokey=1") << QString::fromStdString(videoPath.string());
+    proc.start(QStringLiteral("ffprobe"), args);
+    if (proc.waitForFinished(5000) && proc.exitStatus() == QProcess::NormalExit && proc.exitCode() == 0) {
+        bool ok = false;
+        const double dur = QString::fromUtf8(proc.readAllStandardOutput()).trimmed().toDouble(&ok);
+        if (ok && dur > 0.1) {
+            return std::min(dur, 600.0);
+        }
+    }
+#else
+    (void)videoPath;
+#endif
+    return 0.1;
+}
+
+void writeSilentWavFallback(const std::filesystem::path& wavPath, double durationSeconds = 0.1) {
     const std::uint32_t rate = 44100;
-    const std::uint32_t frames = rate / 10; // 0.1s silent stereo buffer
+    const double clampedSec = std::clamp(durationSeconds, 0.1, 600.0);
+    const auto frames = static_cast<std::uint32_t>(clampedSec * static_cast<double>(rate));
     const std::uint16_t channels = 2;
     const std::uint16_t bits = 16;
     const std::uint32_t dataBytes = frames * channels * bits / 8;
@@ -52,8 +74,13 @@ void writeSilentWavFallback(const std::filesystem::path& wavPath) {
     u16(bits);
     out << "data";
     u32(dataBytes);
-    const std::vector<char> zeros(dataBytes, 0);
-    out.write(zeros.data(), static_cast<std::streamsize>(zeros.size()));
+    const std::vector<char> zeros(65536, 0);
+    std::uint32_t remaining = dataBytes;
+    while (remaining > 0) {
+        const std::uint32_t chunk = std::min<std::uint32_t>(remaining, static_cast<std::uint32_t>(zeros.size()));
+        out.write(zeros.data(), static_cast<std::streamsize>(chunk));
+        remaining -= chunk;
+    }
 }
 
 std::filesystem::path ensureVideoAudioWav(const std::filesystem::path& videoPath) {
@@ -66,8 +93,12 @@ std::filesystem::path ensureVideoAudioWav(const std::filesystem::path& videoPath
     }
 
     const std::filesystem::path cachedWav = cacheDir / (videoPath.filename().string() + ".wav");
-    if (std::filesystem::exists(cachedWav, ec) && std::filesystem::file_size(cachedWav, ec) > 44) {
-        return cachedWav;
+    if (std::filesystem::exists(cachedWav, ec)) {
+        const auto wavSize = std::filesystem::file_size(cachedWav, ec);
+        const auto videoSize = std::filesystem::file_size(videoPath, ec);
+        if (wavSize > 44 && !(wavSize == 17684 && videoSize > 100000)) {
+            return cachedWav;
+        }
     }
 
 #if __has_include(<QProcess>)
@@ -82,7 +113,7 @@ std::filesystem::path ensureVideoAudioWav(const std::filesystem::path& videoPath
     const bool ok = proc.waitForFinished(-1) && proc.exitStatus() == QProcess::NormalExit && proc.exitCode() == 0;
     if (!ok || !std::filesystem::exists(cachedWav, ec) || std::filesystem::file_size(cachedWav, ec) <= 44) {
         std::filesystem::remove(cachedWav, ec);
-        writeSilentWavFallback(cachedWav);
+        writeSilentWavFallback(cachedWav, probeVideoDurationSeconds(videoPath));
     }
 #else
     writeSilentWavFallback(cachedWav);

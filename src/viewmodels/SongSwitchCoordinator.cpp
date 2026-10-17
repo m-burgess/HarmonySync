@@ -58,6 +58,7 @@ void SongSwitchCoordinator::onCurrentSongIndexChanged(int index) {
     }
     if (previousShownIndex >= 0 && (!isSongFolder || !previousWasSongFolder)) {
         m_mixer.stop();
+        m_mixer.unloadCurrentSong();
     }
     const QString videoPath = m_setlist.backgroundVideoPathAt(index);
     m_mixer.setBackgroundVideoLooping(isSongFolder);
@@ -75,9 +76,12 @@ void SongSwitchCoordinator::onCurrentSongIndexChanged(int index) {
 }
 
 void SongSwitchCoordinator::preloadSongAfterCurrent() {
-    const int next = m_setlist.currentSongIndex() + 1;
-    if (next > 0 && next < m_setlist.itemCount()) {
-        m_mixer.preloadNextSong(m_setlist.stemsAt(next));
+    for (int next = m_setlist.currentSongIndex() + 1; next > 0 && next < m_setlist.itemCount(); ++next) {
+        const auto stems = m_setlist.stemsAt(next);
+        if (!stems.empty()) {
+            m_mixer.preloadNextSong(stems);
+            return;
+        }
     }
 }
 

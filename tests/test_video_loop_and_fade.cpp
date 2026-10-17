@@ -329,6 +329,71 @@ void testNonSongVideoAudioMixerAndMixPersistence() {
     std::cout << "[PASS] testNonSongVideoAudioMixerAndMixPersistence passed." << std::endl;
 }
 
+void testSilentVideoToBumperVideoAudioPlayback() {
+    std::cout << "[TEST] Running testSilentVideoToBumperVideoAudioPlayback (#244)..." << std::endl;
+
+    fs::path rootDir = fs::temp_directory_path() / "hs_test_silent_to_bumper_244";
+    fs::remove_all(rootDir);
+
+    // 01 Countdown Video (video-only MP4 with no audio stream, 1.0s duration)
+    fs::path countdownFolder = rootDir / "01 Countdown Video";
+    fs::create_directories(countdownFolder);
+    writeValidMp4(countdownFolder / "Countdown Slides.mp4");
+
+    // 02 Song Folder
+    fs::path songFolder = rootDir / "02 Worship Song";
+    fs::create_directories(songFolder);
+    writeValidWav(songFolder / "Drums.wav");
+    writeValidMp4(songFolder / "Song Background.mp4");
+
+    // 04 Announcements (image-only folder, 0 stems)
+    fs::path announceFolder = rootDir / "04 Announcements";
+    fs::create_directories(announceFolder);
+    {
+        std::ofstream img(announceFolder / "Slide1.png", std::ios::binary);
+        img << "PNG";
+    }
+
+    // 06 Bumper Video
+    fs::path bumperFolder = rootDir / "06 Bumper Video";
+    fs::create_directories(bumperFolder);
+    writeValidMp4(bumperFolder / "Bumper Clip.mp4");
+
+    SetlistViewModel setlist;
+    AudioMixerViewModel mixer;
+    SlideDisplayViewModel slides;
+    SongSwitchCoordinator coordinator(setlist, mixer);
+    SlidePanelHarness panel(&setlist, mixer, slides);
+
+    check(setlist.openServiceOrderRootFolder(QString::fromStdString(rootDir.string())),
+          "#244: openServiceOrderRootFolder failed");
+
+    // Wait for 01 Countdown Video stem to decode and load
+    check(waitFor([&] { return mixer.loadedStemCount() == 1; }, 4000),
+          "#244: 01 Countdown Video stem did not load");
+    // Silent video fallback must match the 1.0s video duration (not 0.1s) when ffprobe is available
+    check(mixer.durationSeconds() >= 0.8,
+          "#244: silent video stem duration should match video duration (~1.0s), got " +
+              std::to_string(mixer.durationSeconds()));
+
+    // Switch directly from 01 Countdown Video to 06 Bumper Video (index 3)
+    setlist.setCurrentSongIndex(3);
+    check(waitFor([&] {
+        return mixer.loadedStemCount() == 1 &&
+               mixer.stemName(0).toStdString() == "Bumper Clip";
+    }, 4000), "#244: 06 Bumper Video stem did not load after switching from 01 Countdown Video");
+
+    // Ensure bumper video audio starts playing and stays playing (not stopped by previous 0.1s stem race)
+    check(waitFor([&] { return mixer.isPlaying(); }, 1500),
+          "#244: 06 Bumper Video audio should be playing");
+    runEvents(250);
+    check(mixer.isPlaying(),
+          "#244: 06 Bumper Video audio stopped prematurely after 250ms");
+
+    fs::remove_all(rootDir);
+    std::cout << "[PASS] testSilentVideoToBumperVideoAudioPlayback passed." << std::endl;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -337,6 +402,7 @@ int main(int argc, char** argv) {
     try {
         testSongAndNonSongVideoPlaybackBehavior();
         testNonSongVideoAudioMixerAndMixPersistence();
+        testSilentVideoToBumperVideoAudioPlayback();
         std::cout << "\nALL #244 VIDEO LOOP AND FADE TESTS PASSED" << std::endl;
         return EXIT_SUCCESS;
     } catch (const std::exception& ex) {
