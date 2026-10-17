@@ -204,10 +204,44 @@ void testAddSongFolderAndTitleSignals() {
     HS_CHECK(!vm.addSongFolder(QString::fromStdString((dir.path() / "missing").string())));
 }
 
+void testAILyricSyncPrioritizesGuideOrSplitTrack() {
+    TempDir dir;
+    const fs::path root = dir.path() / "service";
+    fs::create_directories(root);
+    const fs::path songFolder = root / "01_Worship_Song";
+    fs::create_directories(songFolder);
+
+    writeFile(songFolder / "lyrics.txt", "Line 1\nLine 2\n");
+    writeFile(songFolder / "Song_Reference.wav", "RIFF....WAVEfmt ");
+    writeFile(songFolder / "Song_Click.wav", "RIFF....WAVEfmt ");
+    writeFile(songFolder / "Song_Guide.wav", "RIFF....WAVEfmt ");
+
+    std::string capturedMultitrack;
+    SetlistViewModel::AITimestampGenerator generator =
+        [&](const std::string& /*ref*/, const std::string& multi, const std::string& /*lyrics*/,
+            std::function<void(std::vector<HarmonySync::Core::TimedLyricLine>)> success,
+            std::function<void(std::string)> /*error*/,
+            std::function<void(std::string)> /*progress*/) {
+        capturedMultitrack = multi;
+        if (success) {
+            success({{0.0, "Line 1"}, {5.0, "Line 2"}});
+        }
+    };
+
+    SetlistViewModel vm(nullptr, std::move(generator));
+    HS_CHECK(vm.openServiceOrderRootFolder(QString::fromStdString(root.string())));
+    vm.setCurrentSongIndex(0);
+    vm.generateAITimestamps();
+
+    // Must prioritize Guide or Split over Click for accurate count-in offset
+    HS_CHECK(fs::path(capturedMultitrack).filename() == "Song_Guide.wav");
+}
+
 } // namespace
 
 int main() {
     testOpenSelectLyricsAndPersistMap();
     testAddSongFolderAndTitleSignals();
+    testAILyricSyncPrioritizesGuideOrSplitTrack();
     return 0;
 }

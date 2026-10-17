@@ -452,14 +452,25 @@ void SetlistViewModel::generateAITimestamps(const QString& referenceStemName) {
         }
     }
 
-    // Find a multitrack (click, guide, split, or stereo) to align against
+    // Prioritize guide or split tracks to determine count-in offset
     for (const auto& stem : song.stems()) {
         std::string lowerStem = stem.name();
         std::transform(lowerStem.begin(), lowerStem.end(), lowerStem.begin(), ::tolower);
-        if (lowerStem.find("click") != std::string::npos || lowerStem.find("guide") != std::string::npos ||
-            lowerStem.find("split") != std::string::npos || lowerStem.find("stereo") != std::string::npos) {
+        if (lowerStem.find("guide") != std::string::npos || lowerStem.find("split") != std::string::npos) {
             multitrackAudioPath = stem.filePath();
             break;
+        }
+    }
+
+    // Fallback to click or stereo if no guide or split track is present
+    if (multitrackAudioPath.empty()) {
+        for (const auto& stem : song.stems()) {
+            std::string lowerStem = stem.name();
+            std::transform(lowerStem.begin(), lowerStem.end(), lowerStem.begin(), ::tolower);
+            if (lowerStem.find("click") != std::string::npos || lowerStem.find("stereo") != std::string::npos) {
+                multitrackAudioPath = stem.filePath();
+                break;
+            }
         }
     }
 
@@ -740,13 +751,24 @@ void SetlistViewModel::generateAITimestamps(const std::string& referenceStemName
         }
     }
 
+    // Prioritize guide or split tracks to determine count-in offset
     for (const auto& stem : song.stems()) {
         std::string lowerStem = stem.name();
         std::transform(lowerStem.begin(), lowerStem.end(), lowerStem.begin(), ::tolower);
-        if (lowerStem.find("click") != std::string::npos || lowerStem.find("guide") != std::string::npos ||
-            lowerStem.find("split") != std::string::npos || lowerStem.find("stereo") != std::string::npos) {
+        if (lowerStem.find("guide") != std::string::npos || lowerStem.find("split") != std::string::npos) {
             multitrackAudioPath = stem.filePath();
             break;
+        }
+    }
+
+    if (multitrackAudioPath.empty()) {
+        for (const auto& stem : song.stems()) {
+            std::string lowerStem = stem.name();
+            std::transform(lowerStem.begin(), lowerStem.end(), lowerStem.begin(), ::tolower);
+            if (lowerStem.find("click") != std::string::npos || lowerStem.find("stereo") != std::string::npos) {
+                multitrackAudioPath = stem.filePath();
+                break;
+            }
         }
     }
 

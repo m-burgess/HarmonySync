@@ -268,6 +268,20 @@ if(Qt6_FOUND)
 endif()
 add_test(NAME test_ai_lyric_sync COMMAND test_ai_lyric_sync)
 
+find_package(Python3 COMPONENTS Interpreter QUIET)
+if(Python3_FOUND)
+    set(HS_TEST_PYTHON "${Python3_EXECUTABLE}")
+    if(EXISTS "${CMAKE_SOURCE_DIR}/scripts/venv/bin/python3")
+        set(HS_TEST_PYTHON "${CMAKE_SOURCE_DIR}/scripts/venv/bin/python3")
+    endif()
+    add_test(
+        NAME test_ai_lyric_sync_py
+        COMMAND
+            "${HS_TEST_PYTHON}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/test_ai_lyric_sync.py"
+    )
+endif()
+
 # Test StemMixerPanel.qml against AudioMixerViewModel (#188)
 if(Qt6_FOUND)
     add_executable(test_viewmodels_display test_viewmodels_display.cpp)
