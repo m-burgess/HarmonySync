@@ -73,8 +73,9 @@ double probeVideoDurationSeconds(const std::filesystem::path& videoPath) {
                     }
                 } else if (version == 1 && i + 36 <= bytesRead) {
                     const std::uint32_t timescale = readU32(static_cast<std::size_t>(i) + 24);
-                    const std::uint64_t duration = (static_cast<std::uint64_t>(readU32(static_cast<std::size_t>(i) + 28)) << 32) |
-                                                   static_cast<std::uint64_t>(readU32(static_cast<std::size_t>(i) + 32));
+                    const std::uint64_t durHi = readU32(static_cast<std::size_t>(i) + 28);
+                    const std::uint64_t durLo = readU32(static_cast<std::size_t>(i) + 32);
+                    const std::uint64_t duration = (durHi << 32) | durLo;
                     if (timescale > 0 && duration > 0) {
                         const double dur = static_cast<double>(duration) / static_cast<double>(timescale);
                         if (dur > 0.1) {
