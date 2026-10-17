@@ -79,7 +79,7 @@ Rectangle {
                 Layout.preferredWidth: 120
                 background: Rectangle {
                     color: Theme.backgroundDark
-                    border.color: Theme.borderDark
+                    border.color: modeCombo.hovered ? Theme.accentPrimary : Theme.borderDark
                     radius: 4
                 }
                 contentItem: Text {
@@ -88,6 +88,41 @@ Rectangle {
                     font: modeCombo.font
                     verticalAlignment: Text.AlignVCenter
                     horizontalAlignment: Text.AlignHCenter
+                }
+                popup: Popup {
+                    y: modeCombo.height + 2
+                    width: modeCombo.width
+                    implicitHeight: contentItem.implicitHeight + 4
+                    padding: 2
+                    contentItem: ListView {
+                        clip: true
+                        implicitHeight: contentHeight
+                        model: modeCombo.popup.visible ? modeCombo.delegateModel : null
+                        currentIndex: modeCombo.highlightedIndex
+                        ScrollIndicator.vertical: ScrollIndicator { }
+                    }
+                    background: Rectangle {
+                        color: Theme.backgroundCard
+                        border.color: Theme.borderDark
+                        border.width: 1
+                        radius: 4
+                    }
+                }
+                delegate: ItemDelegate {
+                    width: modeCombo.width - 4
+                    implicitHeight: 26
+                    contentItem: Text {
+                        text: modelData
+                        color: highlighted ? Theme.textOnAccent : Theme.textPrimary
+                        font: modeCombo.font
+                        elide: Text.ElideRight
+                        verticalAlignment: Text.AlignVCenter
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                    background: Rectangle {
+                        color: highlighted ? Theme.accentPrimary : "transparent"
+                        radius: 3
+                    }
                 }
             }
         }

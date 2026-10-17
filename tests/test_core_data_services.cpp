@@ -92,7 +92,8 @@ void testConfigMove() {
 
 void testSettingsStoragePaths() {
     SettingsStorageService defaults;
-    HS_CHECK(defaults.defaultFilePath() == "/tmp/harmonysync_settings.json");
+    HS_CHECK(defaults.defaultFilePath().find("settings.json") != std::string::npos);
+    HS_CHECK(defaults.defaultFilePath().find("/tmp/harmonysync_settings.json") == std::string::npos);
 
     SettingsStorageService custom("/tmp/custom_settings.json");
     HS_CHECK(custom.defaultFilePath() == "/tmp/custom_settings.json");

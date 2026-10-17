@@ -96,8 +96,11 @@ bool FolderService::isSongFolder(const std::filesystem::path& folderPath) const 
     }
 
     for (const auto& entry : std::filesystem::directory_iterator(folderPath)) {
-        if (entry.is_regular_file() && isAudioExtension(entry.path().extension().string())) {
-            return true;
+        if (entry.is_regular_file()) {
+            std::string filename = entry.path().filename().string();
+            if (isAudioExtension(entry.path().extension().string()) || filename == "song-map.json") {
+                return true;
+            }
         }
     }
     return false;
@@ -118,6 +121,7 @@ SongMap FolderService::loadSongFromFolder(const std::filesystem::path& folderPat
 #if __has_include(<QJsonDocument>)
     std::filesystem::path jsonPath = folderPath / "song-map.json";
     if (std::filesystem::exists(jsonPath)) {
+        song.setHasSongMap(true);
         QFile file(QString::fromStdString(jsonPath.string()));
         if (file.open(QIODevice::ReadOnly)) {
             QByteArray data = file.readAll();

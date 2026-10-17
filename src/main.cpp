@@ -36,6 +36,8 @@ int main(int argc, char *argv[]) {
 #endif
 
   QGuiApplication app(argc, argv);
+  app.setOrganizationName("HarmonySync");
+  app.setApplicationName("HarmonySync");
 #endif
 
   auto folderService = std::make_shared<HarmonySync::Core::FolderService>();
@@ -46,6 +48,7 @@ int main(int argc, char *argv[]) {
   HarmonySync::ViewModels::SlideDisplayViewModel slideDisplayViewModel(
       folderService);
   HarmonySync::ViewModels::SettingsViewModel settingsViewModel;
+  settingsViewModel.loadSettings();
 
 #ifdef HARMONYSYNC_QT_AVAILABLE
 
