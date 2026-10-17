@@ -117,7 +117,7 @@ void testSongAndNonSongVideoPlaybackBehavior() {
 
     // Case 1: Song folder (index 0) -> video in song folder must loop smoothly
     setlist.setCurrentSongIndex(0);
-    runEvents(100);
+    runEvents(700); // Let the opacity behavior finish its 600 ms transition.
     check(setlist.hasActiveSongMap() == true, "#244: index 0 should be a song folder");
     check(player->loops() == QMediaPlayer::Infinite,
           "#244: video in a song folder must loop infinitely (got loops=" +

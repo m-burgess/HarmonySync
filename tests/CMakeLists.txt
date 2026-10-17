@@ -320,7 +320,7 @@ if(Qt6_FOUND)
         COMMAND test_song_switch_coordinator
     )
 
-    # #244: videos in song folders loop smoothly; videos outside song folders fade out smoothly.
+    # #244: song videos loop; other videos fade out smoothly.
     add_executable(test_video_loop_and_fade test_video_loop_and_fade.cpp)
     target_link_libraries(
         test_video_loop_and_fade
