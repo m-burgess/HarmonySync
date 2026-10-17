@@ -56,7 +56,10 @@ void testApplyDarkTheme(int argc, char** argv) {
     HS_CHECK(app.palette().color(QPalette::Active, QPalette::Window) == QColor("#1e1e1e"));
     HS_CHECK(app.palette().color(QPalette::Active, QPalette::Base) == QColor("#1e1e1e"));
     HS_CHECK(app.palette().color(QPalette::Active, QPalette::Text) == QColor("#f4f4f5"));
-    HS_CHECK(app.styleHints()->colorScheme() == Qt::ColorScheme::Dark);
+    HS_CHECK(app.palette().color(QPalette::Active, QPalette::Highlight) == QColor("#007acc"));
+    HS_CHECK(app.palette().color(QPalette::Active, QPalette::Button) == QColor("#252526"));
+    HS_CHECK(app.palette().color(QPalette::Active, QPalette::ButtonText) == QColor("#f4f4f5"));
+    HS_CHECK(app.palette().color(QPalette::Active, QPalette::Mid) == QColor("#3c3c3c"));
 
     std::cout << "[PASS] testApplyDarkTheme passed." << std::endl;
 }

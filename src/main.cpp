@@ -6,6 +6,7 @@
 #include "JsonSyntaxHighlighter.hpp"
 #include "RemoteApiServer.hpp"
 #include "QrCodeImageProvider.hpp"
+#include "AppTheme.hpp"
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -38,6 +39,8 @@ int main(int argc, char *argv[]) {
   QGuiApplication app(argc, argv);
   app.setOrganizationName("HarmonySync");
   app.setApplicationName("HarmonySync");
+
+  HarmonySync::ViewModels::AppTheme::applyDarkTheme(app);
 #endif
 
   auto folderService = std::make_shared<HarmonySync::Core::FolderService>();
