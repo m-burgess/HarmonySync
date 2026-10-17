@@ -323,7 +323,10 @@ if(Qt6_FOUND)
     )
     add_test(NAME test_qml_stem_mixer_panel COMMAND test_qml_stem_mixer_panel)
 
-    add_executable(test_qml_service_order_panel test_qml_service_order_panel.cpp)
+    add_executable(
+        test_qml_service_order_panel
+        test_qml_service_order_panel.cpp
+    )
     target_link_libraries(
         test_qml_service_order_panel
         PRIVATE
@@ -339,7 +342,10 @@ if(Qt6_FOUND)
         test_qml_service_order_panel
         PRIVATE HS_QML_DIR="${CMAKE_SOURCE_DIR}/src/qml"
     )
-    add_test(NAME test_qml_service_order_panel COMMAND test_qml_service_order_panel)
+    add_test(
+        NAME test_qml_service_order_panel
+        COMMAND test_qml_service_order_panel
+    )
 
     # #187/#220: setlist selection to song audio, through SongSwitchCoordinator.
     add_executable(
