@@ -4,19 +4,17 @@
 namespace HarmonySync::Media {
 
 StemMixer::StemMixer() = default;
-StemMixer::~StemMixer() = default;
 StemMixer::StemMixer(const StemMixer&) = default;
 StemMixer& StemMixer::operator=(const StemMixer&) = default;
 StemMixer::StemMixer(StemMixer&&) noexcept = default;
 StemMixer& StemMixer::operator=(StemMixer&&) noexcept = default;
 
 bool StemMixer::hasSoloTrack(const std::vector<Core::MediaStem>& stems) const noexcept {
-    return std::any_of(stems.begin(), stems.end(), [](const Core::MediaStem& s) {
-        return s.isSolo();
-    });
+    return std::any_of(stems.begin(), stems.end(), [](const Core::MediaStem& s) { return s.isSolo(); });
 }
 
-float StemMixer::calculateEffectiveGain(const Core::MediaStem& stem, const std::vector<Core::MediaStem>& allStems, float masterVolume) const noexcept {
+float StemMixer::calculateEffectiveGain(const Core::MediaStem& stem, const std::vector<Core::MediaStem>& allStems,
+                                        float masterVolume) const noexcept {
     if (stem.isMuted()) {
         return 0.0f;
     }

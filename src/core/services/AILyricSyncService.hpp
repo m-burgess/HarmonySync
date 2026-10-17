@@ -1,9 +1,14 @@
 #ifndef HARMONYSYNC_AI_LYRIC_SYNC_SERVICE_HPP
 #define HARMONYSYNC_AI_LYRIC_SYNC_SERVICE_HPP
 
+// main.cpp and the viewmodels key their Qt-only code off this macro, which they receive through this header.
+#ifndef HARMONYSYNC_QT_AVAILABLE
 #define HARMONYSYNC_QT_AVAILABLE 1
+#endif
 
 #include "../models/SongMap.hpp"
+#include "ProcessRunner.hpp"
+#include <filesystem>
 #include <string>
 #include <vector>
 #include <functional>
@@ -17,7 +22,13 @@ namespace HarmonySync::Core {
  */
 class AILyricSyncService {
 public:
-    AILyricSyncService();
+    /**
+     * @param runner Process launcher; defaults to QProcess.
+     * @param scriptPath ai_lyric_sync.py location; empty searches ./scripts, then ../scripts.
+     * @param workDir Scratch directory for the lyrics file; empty uses the system temp directory.
+     */
+    explicit AILyricSyncService(std::shared_ptr<IProcessRunner> runner = nullptr, std::filesystem::path scriptPath = {},
+                                std::filesystem::path workDir = {});
     ~AILyricSyncService();
 
     AILyricSyncService(const AILyricSyncService&) = delete;
@@ -30,13 +41,10 @@ public:
      * @param onSuccess Callback invoked when generation succeeds, providing the parsed TimedLyricLines.
      * @param onError Callback invoked when generation fails, providing an error message.
      */
-    void generateTimestamps(
-        const std::string& referenceAudioPath,
-        const std::string& multitrackAudioPath,
-        const std::string& rawLyrics,
-        std::function<void(std::vector<TimedLyricLine>)> onSuccess,
-        std::function<void(std::string)> onError,
-        std::function<void(std::string)> onProgress = nullptr);
+    void generateTimestamps(const std::string& referenceAudioPath, const std::string& multitrackAudioPath,
+                            const std::string& rawLyrics, std::function<void(std::vector<TimedLyricLine>)> onSuccess,
+                            std::function<void(std::string)> onError,
+                            std::function<void(std::string)> onProgress = nullptr);
 
 private:
     struct Impl;

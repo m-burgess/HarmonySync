@@ -1,6 +1,7 @@
 #ifndef HARMONYSYNC_AUDIO_ENGINE_HPP
 #define HARMONYSYNC_AUDIO_ENGINE_HPP
 
+#include "AudioSink.hpp"
 #include "MediaStem.hpp"
 #include <vector>
 #include <string>
@@ -12,11 +13,7 @@
 
 namespace HarmonySync::Media {
 
-enum class PlaybackState {
-    Stopped,
-    Playing,
-    Paused
-};
+enum class PlaybackState { Stopped, Playing, Paused };
 
 /**
  * @brief Low-latency audio playback engine managing multi-track stems and lock-free state.
@@ -24,7 +21,10 @@ enum class PlaybackState {
  */
 class AudioEngine {
 public:
+    /// Plays through the default output device.
     AudioEngine();
+    /// Plays through @p sink; null means no output.
+    explicit AudioEngine(std::unique_ptr<IAudioSink> sink);
     ~AudioEngine();
 
     AudioEngine(const AudioEngine&) = delete;
@@ -62,8 +62,7 @@ public:
      * While the decode is running, switchToPreloaded() returns false without blocking and
      * the current song keeps playing.
      */
-    PreloadTicket preloadStemsAsync(std::vector<Core::MediaStem> stems,
-                                    PreloadReadyCallback onReady = {});
+    PreloadTicket preloadStemsAsync(std::vector<Core::MediaStem> stems, PreloadReadyCallback onReady = {});
     /// True while the most recent preloadStemsAsync() is still decoding.
     [[nodiscard]] bool isPreloadPending() const noexcept;
     /// Test seam: runs on the decode worker before decoding starts. Not for production use.

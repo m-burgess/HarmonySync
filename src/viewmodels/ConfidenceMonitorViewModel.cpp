@@ -9,8 +9,7 @@ struct ConfidenceMonitorViewModel::Impl {
 };
 
 ConfidenceMonitorViewModel::ConfidenceMonitorViewModel()
-    : m_impl(std::make_unique<Impl>())
-{}
+    : m_impl(std::make_unique<Impl>()) {}
 
 ConfidenceMonitorViewModel::~ConfidenceMonitorViewModel() = default;
 

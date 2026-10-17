@@ -15,11 +15,26 @@ struct HttpResponse {
 };
 
 /**
- * @brief Asynchronous HTTP client service using Qt Network or native C++ fallback.
+ * @brief Blocking HTTP GET transport behind CloudNetworkService.
+ */
+class IHttpClient {
+public:
+    IHttpClient() = default;
+    IHttpClient(const IHttpClient&) = delete;
+    IHttpClient& operator=(const IHttpClient&) = delete;
+    virtual ~IHttpClient() = default;
+
+    virtual HttpResponse get(const std::string& url) = 0;
+};
+
+/**
+ * @brief Asynchronous HTTP client service. Until a real transport is injected it answers with an offline canned
+ * response.
  */
 class CloudNetworkService {
 public:
-    CloudNetworkService();
+    /** @param httpClient Transport for requests; defaults to the offline canned-response client. */
+    explicit CloudNetworkService(std::shared_ptr<IHttpClient> httpClient = nullptr);
     ~CloudNetworkService();
 
     CloudNetworkService(const CloudNetworkService&) = delete;
@@ -28,7 +43,7 @@ public:
     CloudNetworkService& operator=(CloudNetworkService&&) noexcept;
 
     // HTTP Operations
-    void getAsync(const std::string& url, std::function<void(const HttpResponse&)> callback);
+    void getAsync(const std::string& url, const std::function<void(const HttpResponse&)>& callback);
     [[nodiscard]] HttpResponse getSync(const std::string& url);
 
 private:

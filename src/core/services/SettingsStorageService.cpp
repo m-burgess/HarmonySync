@@ -11,17 +11,14 @@ struct SettingsStorageService::Impl {
     mutable std::mutex mutex;
 
     explicit Impl(std::string p)
-        : path(std::move(p))
-    {}
+        : path(std::move(p)) {}
 };
 
 SettingsStorageService::SettingsStorageService()
-    : m_impl(std::make_unique<Impl>("/tmp/harmonysync_settings.json"))
-{}
+    : m_impl(std::make_unique<Impl>("/tmp/harmonysync_settings.json")) {}
 
 SettingsStorageService::SettingsStorageService(std::string defaultFilePath)
-    : m_impl(std::make_unique<Impl>(std::move(defaultFilePath)))
-{}
+    : m_impl(std::make_unique<Impl>(std::move(defaultFilePath))) {}
 
 SettingsStorageService::~SettingsStorageService() = default;
 
@@ -68,17 +65,17 @@ AppSettings SettingsStorageService::loadSettings(const std::string& filePath) {
     std::string line;
     while (std::getline(inFile, line)) {
         if (line.find("\"presentationDisplay\":") != std::string::npos) {
-            settings.setPresentationDisplayIndex(std::stoi(line.substr(line.find(":") + 1)));
+            settings.setPresentationDisplayIndex(std::stoi(line.substr(line.find(':') + 1)));
         } else if (line.find("\"confidenceDisplay\":") != std::string::npos) {
-            settings.setConfidenceDisplayIndex(std::stoi(line.substr(line.find(":") + 1)));
+            settings.setConfidenceDisplayIndex(std::stoi(line.substr(line.find(':') + 1)));
         } else if (line.find("\"lyricsFontSize\":") != std::string::npos) {
-            settings.setLyricsFontSize(std::stoi(line.substr(line.find(":") + 1)));
+            settings.setLyricsFontSize(std::stoi(line.substr(line.find(':') + 1)));
         } else if (line.find("\"lowerThirdFontSize\":") != std::string::npos) {
-            settings.setLowerThirdFontSize(std::stoi(line.substr(line.find(":") + 1)));
+            settings.setLowerThirdFontSize(std::stoi(line.substr(line.find(':') + 1)));
         } else if (line.find("\"marginOffsetX\":") != std::string::npos) {
-            settings.setMarginOffsetX(std::stoi(line.substr(line.find(":") + 1)));
+            settings.setMarginOffsetX(std::stoi(line.substr(line.find(':') + 1)));
         } else if (line.find("\"marginOffsetY\":") != std::string::npos) {
-            settings.setMarginOffsetY(std::stoi(line.substr(line.find(":") + 1)));
+            settings.setMarginOffsetY(std::stoi(line.substr(line.find(':') + 1)));
         }
     }
 

@@ -11,8 +11,7 @@ struct SlideDisplayViewModel::Impl {
     bool clearScreen{false};
 
     explicit Impl(std::shared_ptr<Core::FolderService> fs)
-        : folderService(std::move(fs))
-    {
+        : folderService(std::move(fs)) {
         if (!folderService) {
             folderService = std::make_shared<Core::FolderService>();
         }
@@ -20,8 +19,7 @@ struct SlideDisplayViewModel::Impl {
 };
 
 SlideDisplayViewModel::SlideDisplayViewModel(std::shared_ptr<Core::FolderService> folderService)
-    : m_impl(std::make_unique<Impl>(std::move(folderService)))
-{}
+    : m_impl(std::make_unique<Impl>(std::move(folderService))) {}
 
 SlideDisplayViewModel::~SlideDisplayViewModel() = default;
 

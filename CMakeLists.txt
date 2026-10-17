@@ -24,17 +24,25 @@ else()
         -Wunused
         -Woverloaded-virtual
         -Wshadow
-        -Werror=return-type
+        -Werror
     )
 endif()
 
 # Find Qt 6 Packages (Optional Fallback for standalone C++ core testing)
-find_package(Qt6 COMPONENTS Core Gui Quick QuickControls2 Multimedia WebSockets Test QUIET)
+find_package(
+    Qt6
+    COMPONENTS Core Gui Quick QuickControls2 Multimedia WebSockets Test
+    QUIET
+)
 
-# Use find_package(Qt6WebEngineQuick) instead of COMPONENTS to prevent overriding Qt6_FOUND if not installed
+# Avoid adding this optional package to COMPONENTS, which would override
+# Qt6_FOUND when WebEngineQuick is unavailable.
 find_package(Qt6WebEngineQuick QUIET)
-if (Qt6WebEngineQuick_FOUND)
-    message(STATUS "Qt6 WebEngineQuick found. Playlist automation will be enabled.")
+if(Qt6WebEngineQuick_FOUND)
+    message(
+        STATUS
+        "Qt6 WebEngineQuick found. Playlist automation will be enabled."
+    )
     add_compile_definitions(HARMONYSYNC_HAS_WEBENGINE=1)
 endif()
 
@@ -45,7 +53,11 @@ if(Qt6_FOUND)
     set(CMAKE_AUTOUIC ON)
     add_compile_definitions(HARMONYSYNC_HAS_QT=1)
 else()
-    message(STATUS "Qt6 packages not found in PATH. Building C++ domain core and standalone test target.")
+    message(
+        STATUS
+        "Qt6 packages not found in PATH. Building C++ domain core and"
+        " standalone test target."
+    )
 endif()
 
 # Global Include Directories
@@ -57,6 +69,8 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/media
     ${CMAKE_CURRENT_SOURCE_DIR}/src/viewmodels
 )
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Coverage.cmake)
 
 # Enable CTest
 enable_testing()
@@ -73,11 +87,22 @@ add_subdirectory(tests)
 
 # Application Executable Target
 add_executable(harmonysync_app src/main.cpp)
-target_link_libraries(harmonysync_app PRIVATE harmonysync_viewmodels harmonysync_media harmonysync_core)
+target_link_libraries(
+    harmonysync_app
+    PRIVATE harmonysync_viewmodels harmonysync_media harmonysync_core
+)
 
 if(Qt6_FOUND)
-    target_link_libraries(harmonysync_app PRIVATE Qt6::Core Qt6::Quick Qt6::QuickControls2 Qt6::Multimedia Qt6::WebSockets)
-    if (Qt6WebEngineQuick_FOUND)
+    target_link_libraries(
+        harmonysync_app
+        PRIVATE
+            Qt6::Core
+            Qt6::Quick
+            Qt6::QuickControls2
+            Qt6::Multimedia
+            Qt6::WebSockets
+    )
+    if(Qt6WebEngineQuick_FOUND)
         target_link_libraries(harmonysync_app PRIVATE Qt6::WebEngineQuick)
     endif()
     qt_add_resources(harmonysync_app "qml_resources"
@@ -95,7 +120,16 @@ if(Qt6_FOUND)
 
     # Mobile Musician App Executable
     add_executable(harmonysync_musician_app src/mobile/main_mobile.cpp)
-    target_link_libraries(harmonysync_musician_app PRIVATE harmonysync_viewmodels harmonysync_core Qt6::Core Qt6::Quick Qt6::Gui Qt6::WebSockets)
+    target_link_libraries(
+        harmonysync_musician_app
+        PRIVATE
+            harmonysync_viewmodels
+            harmonysync_core
+            Qt6::Core
+            Qt6::Quick
+            Qt6::Gui
+            Qt6::WebSockets
+    )
     qt_add_resources(harmonysync_musician_app "mobile_qml_resources"
         PREFIX "/"
         FILES
@@ -106,4 +140,3 @@ endif()
 
 # CPack Packaging Support
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/CPackConfig.cmake)
-

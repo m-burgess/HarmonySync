@@ -6,17 +6,9 @@
 
 namespace HarmonySync::Core {
 
-enum class TextVerticalAlignment {
-    Top,
-    Center,
-    Bottom
-};
+enum class TextVerticalAlignment { Top, Center, Bottom };
 
-enum class TextHorizontalAlignment {
-    Left,
-    Center,
-    Right
-};
+enum class TextHorizontalAlignment { Left, Center, Right };
 
 /**
  * @brief Thread-safe domain model capturing system display, typography, and text layout placement settings.

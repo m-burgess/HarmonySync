@@ -4,8 +4,8 @@
 #include <iostream>
 #include <fstream>
 #include <filesystem>
-#include <cassert>
 #include <cstdlib>
+#include "test_check.hpp"
 
 using namespace HarmonySync::Core;
 using namespace HarmonySync::ViewModels;
@@ -14,17 +14,17 @@ void testSetlistViewModel() {
     std::cout << "[TEST] Running testSetlistViewModel..." << std::endl;
     SetlistViewModel vm;
 
-    assert(vm.titleStd() == "Sunday Service Order");
-    assert(vm.itemCount() == 0);
-    assert(vm.currentSongIndex() == -1);
-    assert(!vm.hasActiveSongMap());
+    HS_CHECK(vm.titleStd() == "Sunday Service Order");
+    HS_CHECK(vm.itemCount() == 0);
+    HS_CHECK(vm.currentSongIndex() == -1);
+    HS_CHECK(!vm.hasActiveSongMap());
 
 #ifdef HARMONYSYNC_QT_AVAILABLE
     vm.setTitle(QStringLiteral("Youth Night Worship"));
 #else
     vm.setTitle("Youth Night Worship");
 #endif
-    assert(vm.titleStd() == "Youth Night Worship");
+    HS_CHECK(vm.titleStd() == "Youth Night Worship");
 
     std::filesystem::path tempDir = std::filesystem::temp_directory_path() / "vm_song_folder";
     std::filesystem::create_directories(tempDir);
@@ -38,14 +38,14 @@ void testSetlistViewModel() {
 #else
     bool added = vm.addSongFolder(tempDir.string());
 #endif
-    assert(added == true);
-    assert(vm.itemCount() == 1);
-    assert(vm.currentSongIndex() == 0);
-    assert(vm.hasActiveSongMap() == true);
+    HS_CHECK(added == true);
+    HS_CHECK(vm.itemCount() == 1);
+    HS_CHECK(vm.currentSongIndex() == 0);
+    HS_CHECK(vm.hasActiveSongMap() == true);
 
     vm.clearSetlist();
-    assert(vm.itemCount() == 0);
-    assert(vm.currentSongIndex() == -1);
+    HS_CHECK(vm.itemCount() == 0);
+    HS_CHECK(vm.currentSongIndex() == -1);
 
     std::filesystem::remove_all(tempDir);
     std::cout << "[PASS] testSetlistViewModel passed." << std::endl;
@@ -110,35 +110,35 @@ void testAudioMixerViewModel() {
     std::cout << "[TEST] Running testAudioMixerViewModel..." << std::endl;
     AudioMixerViewModel vm;
 
-    assert(vm.masterVolume() == 1.0f);
-    assert(vm.pitchShiftSemitones() == 0);
-    assert(!vm.isPlaying());
+    HS_CHECK(vm.masterVolume() == 1.0f);
+    HS_CHECK(vm.pitchShiftSemitones() == 0);
+    HS_CHECK(!vm.isPlaying());
 
     vm.setMasterVolume(0.85f);
-    assert(vm.masterVolume() == 0.85f);
+    HS_CHECK(vm.masterVolume() == 0.85f);
 
     vm.setPitchShiftSemitones(3);
-    assert(vm.pitchShiftSemitones() == 3);
+    HS_CHECK(vm.pitchShiftSemitones() == 3);
 
     MediaStem s1("1", "Drums", "d.wav");
     MediaStem s2("2", "Acoustic", "a.wav");
     vm.loadSongStems({s1, s2});
-    assert(vm.loadedStemCount() == 2);
+    HS_CHECK(vm.loadedStemCount() == 2);
 
     vm.play();
-    assert(vm.isPlaying() == true);
+    HS_CHECK(vm.isPlaying() == true);
 
     vm.pause();
-    assert(!vm.isPlaying());
+    HS_CHECK(!vm.isPlaying());
 
     vm.toggleStemMute(0); // mute drums
-    assert(vm.stemIsMuted(0) == true);
+    HS_CHECK(vm.stemIsMuted(0) == true);
 
     vm.toggleStemSolo(1); // solo acoustic
-    assert(vm.stemIsSoloed(1) == true);
+    HS_CHECK(vm.stemIsSoloed(1) == true);
     
     vm.setStemVolume(0, 0.5f);
-    assert(vm.stemVolume(0) == 0.5f);
+    HS_CHECK(vm.stemVolume(0) == 0.5f);
 
     std::cout << "[PASS] testAudioMixerViewModel passed." << std::endl;
 }
@@ -150,21 +150,21 @@ void testAudioMixerCrossfading() {
     MediaStem s1("1", "Drums", "d.wav");
     vm.loadSongStems({s1});
     vm.play();
-    assert(vm.isPlaying() == true);
-    assert(vm.crossfadePosition() == 0.0f);
+    HS_CHECK(vm.isPlaying() == true);
+    HS_CHECK(vm.crossfadePosition() == 0.0f);
 
     MediaStem s2("2", "Acoustic", "a.wav");
     vm.loadNextSongStems({s2});
     
     vm.setCrossfadePosition(0.5f);
-    assert(vm.crossfadePosition() == 0.5f);
+    HS_CHECK(vm.crossfadePosition() == 0.5f);
     
     // Simulate end of crossfade
     vm.setCrossfadePosition(1.0f);
     vm.finalizeCrossfade();
     
     // After finalize, crossfade is reset, and next deck is now active
-    assert(vm.crossfadePosition() == 0.0f);
+    HS_CHECK(vm.crossfadePosition() == 0.0f);
     
     std::cout << "[PASS] testAudioMixerCrossfading passed." << std::endl;
 }
@@ -179,15 +179,15 @@ void testLoadNextSongSwitchesToPreloaded() {
 
     vm.loadSongStems({songA});
     vm.play();
-    assert(vm.isPlaying());
+    HS_CHECK(vm.isPlaying());
 
-    assert(vm.loadNextSongStems({songB}) == true);
-    assert(vm.isPlaying());
-    assert(vm.loadedStemCount() == 1);
+    HS_CHECK(vm.loadNextSongStems({songB}) == true);
+    HS_CHECK(vm.isPlaying());
+    HS_CHECK(vm.loadedStemCount() == 1);
 #ifdef HARMONYSYNC_QT_AVAILABLE
-    assert(vm.stemName(0).toStdString() == "DrumsB");
+    HS_CHECK(vm.stemName(0).toStdString() == "DrumsB");
 #else
-    assert(vm.stemName(0) == "DrumsB");
+    HS_CHECK(vm.stemName(0) == "DrumsB");
 #endif
 
     std::cout << "[PASS] testLoadNextSongSwitchesToPreloaded passed." << std::endl;
@@ -198,18 +198,18 @@ void testLoadNextSongWhileStoppedCues() {
     AudioMixerViewModel vm;
 
     // #202: opening a service order cues the first song.
-    assert(vm.loadNextSongStems({MediaStem("a1", "DrumsA", "song_a_drums.wav")}) == true);
-    assert(!vm.isPlaying());
-    assert(vm.positionSeconds() == 0.0);
+    HS_CHECK(vm.loadNextSongStems({MediaStem("a1", "DrumsA", "song_a_drums.wav")}) == true);
+    HS_CHECK(!vm.isPlaying());
+    HS_CHECK(vm.positionSeconds() == 0.0);
 
     // Advancing while stopped cues the next song.
-    assert(vm.loadNextSongStems({MediaStem("b1", "DrumsB", "song_b_drums.wav")}) == true);
-    assert(!vm.isPlaying());
-    assert(vm.positionSeconds() == 0.0);
+    HS_CHECK(vm.loadNextSongStems({MediaStem("b1", "DrumsB", "song_b_drums.wav")}) == true);
+    HS_CHECK(!vm.isPlaying());
+    HS_CHECK(vm.positionSeconds() == 0.0);
 #ifdef HARMONYSYNC_QT_AVAILABLE
-    assert(vm.stemName(0).toStdString() == "DrumsB");
+    HS_CHECK(vm.stemName(0).toStdString() == "DrumsB");
 #else
-    assert(vm.stemName(0) == "DrumsB");
+    HS_CHECK(vm.stemName(0) == "DrumsB");
 #endif
 
     std::cout << "[PASS] testLoadNextSongWhileStoppedCues passed." << std::endl;
@@ -219,7 +219,7 @@ void testAudioMixerInitialization() {
     std::cout << "[TEST] Running testAudioMixerInitialization..." << std::endl;
     AudioMixerViewModel vm;
 
-    assert(vm.loadedStemCount() == 0);
+    HS_CHECK(vm.loadedStemCount() == 0);
 
     // Simulate loading a song with many stems to ensure Repeater data is ready
     std::vector<MediaStem> stems;
@@ -228,14 +228,14 @@ void testAudioMixerInitialization() {
     }
 
     bool result = vm.loadSongStems(stems);
-    assert(result == true);
+    HS_CHECK(result == true);
     
     // Verify properties bound to UI
-    assert(vm.loadedStemCount() == 10);
+    HS_CHECK(vm.loadedStemCount() == 10);
 #ifdef HARMONYSYNC_QT_AVAILABLE
-    assert(vm.stemName(5).toStdString() == "Stem 5");
+    HS_CHECK(vm.stemName(5).toStdString() == "Stem 5");
 #else
-    assert(vm.stemName(5) == "Stem 5");
+    HS_CHECK(vm.stemName(5) == "Stem 5");
 #endif
 
     std::cout << "[PASS] testAudioMixerInitialization passed." << std::endl;
@@ -247,10 +247,10 @@ void testBackgroundVideoUpdate() {
     
 #ifdef HARMONYSYNC_QT_AVAILABLE
     vm.setActiveBackgroundVideo(QStringLiteral("test_bg.mp4"));
-    assert(vm.activeBackgroundVideo().toStdString() == "test_bg.mp4");
+    HS_CHECK(vm.activeBackgroundVideo().toStdString() == "test_bg.mp4");
 #else
     vm.setActiveBackgroundVideo("test_bg.mp4");
-    assert(vm.activeBackgroundVideo() == "test_bg.mp4");
+    HS_CHECK(vm.activeBackgroundVideo() == "test_bg.mp4");
 #endif
     
     std::cout << "[PASS] testBackgroundVideoUpdate passed." << std::endl;
@@ -260,9 +260,9 @@ void testSlideDisplayViewModel() {
     std::cout << "[TEST] Running testSlideDisplayViewModel..." << std::endl;
     SlideDisplayViewModel vm;
 
-    assert(vm.activeSlideIndex() == -1);
-    assert(vm.slideCount() == 0);
-    assert(!vm.isBlackScreen());
+    HS_CHECK(vm.activeSlideIndex() == -1);
+    HS_CHECK(vm.slideCount() == 0);
+    HS_CHECK(!vm.isBlackScreen());
 
     std::filesystem::path tempDir = std::filesystem::temp_directory_path() / "vm_slide_folder";
     std::filesystem::create_directories(tempDir);
@@ -280,18 +280,18 @@ void testSlideDisplayViewModel() {
 #else
     bool loaded = vm.loadSlideFolder(tempDir.string());
 #endif
-    assert(loaded == true);
-    assert(vm.slideCount() == 2);
-    assert(vm.activeSlideIndex() == 0);
+    HS_CHECK(loaded == true);
+    HS_CHECK(vm.slideCount() == 2);
+    HS_CHECK(vm.activeSlideIndex() == 0);
 
     vm.nextSlide();
-    assert(vm.activeSlideIndex() == 1);
+    HS_CHECK(vm.activeSlideIndex() == 1);
 
     vm.previousSlide();
-    assert(vm.activeSlideIndex() == 0);
+    HS_CHECK(vm.activeSlideIndex() == 0);
 
     vm.toggleBlackScreen();
-    assert(vm.isBlackScreen() == true);
+    HS_CHECK(vm.isBlackScreen() == true);
 
     std::filesystem::remove_all(tempDir);
     std::cout << "[PASS] testSlideDisplayViewModel passed." << std::endl;

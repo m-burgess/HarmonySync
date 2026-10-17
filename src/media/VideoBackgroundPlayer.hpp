@@ -1,16 +1,11 @@
 #ifndef HARMONYSYNC_VIDEO_BACKGROUND_PLAYER_HPP
 #define HARMONYSYNC_VIDEO_BACKGROUND_PLAYER_HPP
+#include "VideoPlayerBackend.hpp"
 
 #include <string>
 #include <memory>
 
 namespace HarmonySync::Media {
-
-enum class VideoTransitionMode {
-    Cut,
-    Crossfade,
-    AlphaBlend
-};
 
 /**
  * @brief Thread-safe manager for background video loops, crossfade transitions, and hardware-accelerated playback.
@@ -18,6 +13,7 @@ enum class VideoTransitionMode {
 class VideoBackgroundPlayer {
 public:
     VideoBackgroundPlayer();
+    explicit VideoBackgroundPlayer(std::unique_ptr<IVideoPlayerBackend> backend);
     ~VideoBackgroundPlayer();
 
     VideoBackgroundPlayer(const VideoBackgroundPlayer&) = delete;
@@ -41,7 +37,7 @@ public:
     void crossfadeToSecondary(VideoTransitionMode mode = VideoTransitionMode::Crossfade);
 
     [[nodiscard]] bool isPlaying() const noexcept;
-    [[nodiscard]] const std::string& activeVideoPath() const noexcept;
+    [[nodiscard]] std::string activeVideoPath() const;
     [[nodiscard]] float crossfadeProgress() const noexcept; // 0.0 to 1.0
 
 private:

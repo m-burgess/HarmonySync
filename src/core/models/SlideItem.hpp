@@ -6,14 +6,7 @@
 
 namespace HarmonySync::Core {
 
-enum class SlideType {
-    Lyrics,
-    Image,
-    Video,
-    YouTube,
-    Header,
-    Unknown
-};
+enum class SlideType { Lyrics, Image, Video, YouTube, Header, Unknown };
 
 /**
  * @brief Domain model representing a slide element in a service schedule or presentation deck.

@@ -11,8 +11,7 @@ struct ConfigService::Impl {
 };
 
 ConfigService::ConfigService()
-    : m_impl(std::make_unique<Impl>())
-{}
+    : m_impl(std::make_unique<Impl>()) {}
 
 ConfigService::~ConfigService() = default;
 
@@ -73,7 +72,7 @@ ServiceItemConfig ConfigService::parseConfigJson(const std::string& jsonString) 
             auto begin = std::sregex_iterator(arrayContent.begin(), arrayContent.end(), linkElemRegex);
             auto end = std::sregex_iterator();
             for (std::sregex_iterator i = begin; i != end; ++i) {
-                std::smatch elemMatch = *i;
+                const std::smatch& elemMatch = *i;
                 if (elemMatch.size() > 1) {
                     config.youtubeLinks.push_back(elemMatch[1].str());
                 }

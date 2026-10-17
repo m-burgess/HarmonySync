@@ -1,5 +1,6 @@
 #ifndef HARMONYSYNC_DMX_CONTROLLER_HPP
 #define HARMONYSYNC_DMX_CONTROLLER_HPP
+#include "DmxOutput.hpp"
 
 #include <vector>
 #include <cstdint>
@@ -13,6 +14,7 @@ namespace HarmonySync::Media {
 class DmxController {
 public:
     DmxController();
+    explicit DmxController(std::unique_ptr<IDmxOutput> output);
     ~DmxController();
 
     DmxController(const DmxController&) = delete;
@@ -27,6 +29,7 @@ public:
 
     // ArtNet Packet Construction
     [[nodiscard]] std::vector<uint8_t> buildArtDmxPacket(uint16_t universe = 0) const;
+    bool send(uint16_t universe = 0);
 
 private:
     struct Impl;

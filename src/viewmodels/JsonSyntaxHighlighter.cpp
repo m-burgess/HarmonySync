@@ -1,16 +1,16 @@
 #include "JsonSyntaxHighlighter.hpp"
 #include <QQuickTextDocument>
 #include <QTextDocument>
+#include <utility>
 
-JsonSyntaxHighlighter::JsonSyntaxHighlighter(QTextDocument *parent)
-    : QSyntaxHighlighter(parent)
-{
+JsonSyntaxHighlighter::JsonSyntaxHighlighter(QTextDocument* parent)
+    : QSyntaxHighlighter(parent) {
     // Define format colors (matching the dark theme)
-    keyFormat.setForeground(QColor("#9CDCFE")); // Light Blue for keys
-    stringFormat.setForeground(QColor("#CE9178")); // Orange for strings
-    numberFormat.setForeground(QColor("#B5CEA8")); // Light Green for numbers
+    keyFormat.setForeground(QColor("#9CDCFE"));     // Light Blue for keys
+    stringFormat.setForeground(QColor("#CE9178"));  // Orange for strings
+    numberFormat.setForeground(QColor("#B5CEA8"));  // Light Green for numbers
     booleanFormat.setForeground(QColor("#569CD6")); // Blue for booleans
-    nullFormat.setForeground(QColor("#569CD6")); // Blue for nulls
+    nullFormat.setForeground(QColor("#569CD6"));    // Blue for nulls
 
     HighlightingRule rule;
 
@@ -40,43 +40,12 @@ JsonSyntaxHighlighter::JsonSyntaxHighlighter(QTextDocument *parent)
     highlightingRules.append(rule);
 }
 
-void JsonSyntaxHighlighter::highlightBlock(const QString &text)
-{
-    for (const HighlightingRule &rule : qAsConst(highlightingRules)) {
+void JsonSyntaxHighlighter::highlightBlock(const QString& text) {
+    for (const HighlightingRule& rule : std::as_const(highlightingRules)) {
         QRegularExpressionMatchIterator matchIterator = rule.pattern.globalMatch(text);
         while (matchIterator.hasNext()) {
             QRegularExpressionMatch match = matchIterator.next();
-            setFormat(match.capturedStart(), match.capturedLength(), rule.format);
+            setFormat(static_cast<int>(match.capturedStart()), static_cast<int>(match.capturedLength()), rule.format);
         }
     }
-}
-
-
-QmlJsonHighlighter::QmlJsonHighlighter(QObject *parent)
-    : QObject(parent), m_textDocument(nullptr), m_highlighter(nullptr)
-{
-}
-
-QQuickTextDocument *QmlJsonHighlighter::textDocument() const
-{
-    return m_textDocument;
-}
-
-void QmlJsonHighlighter::setTextDocument(QQuickTextDocument *textDocument)
-{
-    if (textDocument == m_textDocument)
-        return;
-
-    m_textDocument = textDocument;
-
-    if (m_highlighter) {
-        m_highlighter->deleteLater();
-        m_highlighter = nullptr;
-    }
-
-    if (m_textDocument) {
-        m_highlighter = new JsonSyntaxHighlighter(m_textDocument->textDocument());
-    }
-
-    emit textDocumentChanged();
 }

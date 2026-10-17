@@ -7,13 +7,7 @@
 
 namespace HarmonySync::Media {
 
-enum class EqBand {
-    LowShelf = 0,
-    LowMid = 1,
-    Mid = 2,
-    HighMid = 3,
-    HighShelf = 4
-};
+enum class EqBand { LowShelf = 0, LowMid = 1, Mid = 2, HighMid = 3, HighShelf = 4 };
 
 /**
  * @brief Thread-safe 5-band parametric equalizer with RAII memory management and lock-free processing.

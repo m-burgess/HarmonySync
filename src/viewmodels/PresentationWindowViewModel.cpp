@@ -9,8 +9,7 @@ struct PresentationWindowViewModel::Impl {
     std::string keyColorHex{"#00FF00"};
 
     explicit Impl(std::shared_ptr<Media::VideoBackgroundPlayer> vp)
-        : videoPlayer(std::move(vp))
-    {
+        : videoPlayer(std::move(vp)) {
         if (!videoPlayer) {
             videoPlayer = std::make_shared<Media::VideoBackgroundPlayer>();
         }
@@ -18,8 +17,7 @@ struct PresentationWindowViewModel::Impl {
 };
 
 PresentationWindowViewModel::PresentationWindowViewModel(std::shared_ptr<Media::VideoBackgroundPlayer> videoPlayer)
-    : m_impl(std::make_unique<Impl>(std::move(videoPlayer)))
-{}
+    : m_impl(std::make_unique<Impl>(std::move(videoPlayer))) {}
 
 PresentationWindowViewModel::~PresentationWindowViewModel() = default;
 
@@ -84,7 +82,9 @@ bool PresentationWindowViewModel::isVideoPlaying() const noexcept {
 #ifdef HARMONYSYNC_QT_AVAILABLE
 bool PresentationWindowViewModel::loadBackgroundVideo(const QString& videoPath) {
     bool ok = m_impl->videoPlayer->loadPrimaryVideo(videoPath.toStdString());
-    if (ok) emit videoPathChanged(videoPath);
+    if (ok) {
+        emit videoPathChanged(videoPath);
+    }
     return ok;
 }
 #else

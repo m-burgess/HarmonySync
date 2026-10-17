@@ -10,7 +10,8 @@
 namespace HarmonySync::Core {
 
 /**
- * @brief RAII SQLite database wrapper providing offline storage for song maps, service schedules, and presentation settings.
+ * @brief RAII SQLite database wrapper providing offline storage for song maps, service schedules, and presentation
+ * settings.
  */
 class LocalDatabaseService {
 public:

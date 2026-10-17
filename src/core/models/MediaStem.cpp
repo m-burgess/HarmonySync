@@ -18,23 +18,19 @@ struct MediaStem::Impl {
     Impl(std::string id_, std::string name_, std::string filePath_)
         : id(std::move(id_))
         , name(std::move(name_))
-        , filePath(std::move(filePath_))
-    {}
+        , filePath(std::move(filePath_)) {}
 };
 
 MediaStem::MediaStem()
-    : m_impl(std::make_unique<Impl>())
-{}
+    : m_impl(std::make_unique<Impl>()) {}
 
 MediaStem::MediaStem(std::string stemId, std::string name, std::string filePath)
-    : m_impl(std::make_unique<Impl>(std::move(stemId), std::move(name), std::move(filePath)))
-{}
+    : m_impl(std::make_unique<Impl>(std::move(stemId), std::move(name), std::move(filePath))) {}
 
 MediaStem::~MediaStem() = default;
 
 MediaStem::MediaStem(const MediaStem& other)
-    : m_impl(std::make_unique<Impl>(*other.m_impl))
-{}
+    : m_impl(std::make_unique<Impl>(*other.m_impl)) {}
 
 MediaStem& MediaStem::operator=(const MediaStem& other) {
     if (this != &other) {

@@ -39,11 +39,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests
-        shell: bash
-        run: |
-          if node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts.test ? 0 : 1)"; then
-            npm test
-          else
-            echo "::notice title=Web client tests not on this branch yet::package.json has no 'test' script (expected until Musician View PR #198 merges). Skipping npm test so this workflow can stay green."
-          fi
+      - name: Run tests with coverage threshold
+        run: npm test
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Build
+        run: npm run build

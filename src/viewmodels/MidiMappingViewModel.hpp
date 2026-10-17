@@ -40,7 +40,11 @@ class MidiMappingViewModel
 
 public:
     explicit MidiMappingViewModel(std::shared_ptr<Media::MidiHardwareDevice> device = nullptr);
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    ~MidiMappingViewModel() override;
+#else
     ~MidiMappingViewModel();
+#endif
 
     MidiMappingViewModel(const MidiMappingViewModel&) = delete;
     MidiMappingViewModel& operator=(const MidiMappingViewModel&) = delete;

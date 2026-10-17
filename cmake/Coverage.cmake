@@ -1,0 +1,32 @@
+# Opt-in line coverage instrumentation (gcc/clang gcov-compatible).
+option(
+    HARMONYSYNC_COVERAGE
+    "Instrument C++ targets for gcov/gcovr coverage"
+    OFF
+)
+
+if(HARMONYSYNC_COVERAGE)
+    if(MSVC)
+        message(FATAL_ERROR "HARMONYSYNC_COVERAGE requires gcc or clang")
+    endif()
+    # Tests use assert(); NDEBUG compiles out checks and exercised code.
+    get_property(_hs_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+    if(_hs_multi_config)
+        message(
+            FATAL_ERROR
+            "HARMONYSYNC_COVERAGE requires a single-config generator"
+            " (e.g. Ninja) with CMAKE_BUILD_TYPE=Debug"
+        )
+    endif()
+    string(TOLOWER "${CMAKE_BUILD_TYPE}" _hs_build_type)
+    if(_hs_build_type MATCHES "^(release|relwithdebinfo|minsizerel)$")
+        message(
+            FATAL_ERROR
+            "HARMONYSYNC_COVERAGE requires CMAKE_BUILD_TYPE=Debug"
+            " (tests rely on assert)"
+        )
+    endif()
+    message(STATUS "Coverage instrumentation enabled")
+    add_compile_options(--coverage -O0 -g -fno-inline)
+    add_link_options(--coverage)
+endif()

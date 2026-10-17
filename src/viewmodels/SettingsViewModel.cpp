@@ -11,10 +11,9 @@ struct SettingsViewModel::Impl {
     std::shared_ptr<Core::SettingsStorageService> storageService;
     std::shared_ptr<Core::DisplayManager> displayManager;
 
-    Impl(std::shared_ptr<Core::SettingsStorageService> storage,
-         std::shared_ptr<Core::DisplayManager> displays)
-        : storageService(std::move(storage)), displayManager(std::move(displays))
-    {
+    Impl(std::shared_ptr<Core::SettingsStorageService> storage, std::shared_ptr<Core::DisplayManager> displays)
+        : storageService(std::move(storage))
+        , displayManager(std::move(displays)) {
         if (!storageService) {
             storageService = std::make_shared<Core::SettingsStorageService>();
         }
@@ -25,11 +24,9 @@ struct SettingsViewModel::Impl {
     }
 };
 
-SettingsViewModel::SettingsViewModel(
-    std::shared_ptr<Core::SettingsStorageService> storageService,
-    std::shared_ptr<Core::DisplayManager> displayManager)
-    : m_impl(std::make_unique<Impl>(std::move(storageService), std::move(displayManager)))
-{}
+SettingsViewModel::SettingsViewModel(std::shared_ptr<Core::SettingsStorageService> storageService,
+                                     std::shared_ptr<Core::DisplayManager> displayManager)
+    : m_impl(std::make_unique<Impl>(std::move(storageService), std::move(displayManager))) {}
 
 SettingsViewModel::~SettingsViewModel() = default;
 
@@ -233,8 +230,8 @@ void SettingsViewModel::setMarginOffsetY(int offset) noexcept {
 
 #ifdef HARMONYSYNC_QT_AVAILABLE
 QString SettingsViewModel::localIpAddress() const {
-    const QHostAddress &localhost = QHostAddress(QHostAddress::LocalHost);
-    for (const QHostAddress &address : QNetworkInterface::allAddresses()) {
+    const QHostAddress& localhost = QHostAddress(QHostAddress::LocalHost);
+    for (const QHostAddress& address : QNetworkInterface::allAddresses()) {
         if (address.protocol() == QAbstractSocket::IPv4Protocol && address != localhost) {
             return address.toString();
         }

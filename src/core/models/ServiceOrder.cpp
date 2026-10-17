@@ -16,23 +16,19 @@ struct ServiceOrder::Impl {
     Impl(std::string id_, std::string title_, std::string dateString_)
         : id(std::move(id_))
         , title(std::move(title_))
-        , dateString(std::move(dateString_))
-    {}
+        , dateString(std::move(dateString_)) {}
 };
 
 ServiceOrder::ServiceOrder()
-    : m_impl(std::make_unique<Impl>())
-{}
+    : m_impl(std::make_unique<Impl>()) {}
 
 ServiceOrder::ServiceOrder(std::string orderId, std::string title, std::string dateString)
-    : m_impl(std::make_unique<Impl>(std::move(orderId), std::move(title), std::move(dateString)))
-{}
+    : m_impl(std::make_unique<Impl>(std::move(orderId), std::move(title), std::move(dateString))) {}
 
 ServiceOrder::~ServiceOrder() = default;
 
 ServiceOrder::ServiceOrder(const ServiceOrder& other)
-    : m_impl(std::make_unique<Impl>(*other.m_impl))
-{}
+    : m_impl(std::make_unique<Impl>(*other.m_impl)) {}
 
 ServiceOrder& ServiceOrder::operator=(const ServiceOrder& other) {
     if (this != &other) {

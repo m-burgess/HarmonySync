@@ -31,7 +31,11 @@ class PresentationWindowViewModel
 
 public:
     explicit PresentationWindowViewModel(std::shared_ptr<Media::VideoBackgroundPlayer> videoPlayer = nullptr);
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    ~PresentationWindowViewModel() override;
+#else
     ~PresentationWindowViewModel();
+#endif
 
     PresentationWindowViewModel(const PresentationWindowViewModel&) = delete;
     PresentationWindowViewModel& operator=(const PresentationWindowViewModel&) = delete;

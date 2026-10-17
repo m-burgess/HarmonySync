@@ -9,8 +9,7 @@ struct AudioPitchShifter::Impl {
 };
 
 AudioPitchShifter::AudioPitchShifter()
-    : m_impl(std::make_unique<Impl>())
-{}
+    : m_impl(std::make_unique<Impl>()) {}
 
 AudioPitchShifter::~AudioPitchShifter() = default;
 AudioPitchShifter::AudioPitchShifter(AudioPitchShifter&&) noexcept = default;
@@ -30,8 +29,10 @@ double AudioPitchShifter::calculatePitchScaleFactor() const noexcept {
 }
 
 void AudioPitchShifter::processBuffer(const float* inputBuffer, float* outputBuffer, size_t numFrames) noexcept {
-    if (!inputBuffer || !outputBuffer) return;
-    float scale = static_cast<float>(calculatePitchScaleFactor());
+    if (!inputBuffer || !outputBuffer) {
+        return;
+    }
+    const auto scale = static_cast<float>(calculatePitchScaleFactor());
 
     for (size_t i = 0; i < numFrames; ++i) {
         outputBuffer[i] = inputBuffer[i] * scale;

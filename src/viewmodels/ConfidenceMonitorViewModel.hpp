@@ -30,7 +30,11 @@ class ConfidenceMonitorViewModel
 
 public:
     ConfidenceMonitorViewModel();
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    ~ConfidenceMonitorViewModel() override;
+#else
     ~ConfidenceMonitorViewModel();
+#endif
 
     ConfidenceMonitorViewModel(const ConfidenceMonitorViewModel&) = delete;
     ConfidenceMonitorViewModel& operator=(const ConfidenceMonitorViewModel&) = delete;

@@ -9,19 +9,17 @@
 
 class QTextDocument;
 
-class JsonSyntaxHighlighter : public QSyntaxHighlighter
-{
+class JsonSyntaxHighlighter : public QSyntaxHighlighter {
     Q_OBJECT
 
 public:
-    explicit JsonSyntaxHighlighter(QTextDocument *parent = nullptr);
+    explicit JsonSyntaxHighlighter(QTextDocument* parent = nullptr);
 
 protected:
-    void highlightBlock(const QString &text) override;
+    void highlightBlock(const QString& text) override;
 
 private:
-    struct HighlightingRule
-    {
+    struct HighlightingRule {
         QRegularExpression pattern;
         QTextCharFormat format;
     };
@@ -34,23 +32,22 @@ private:
     QTextCharFormat nullFormat;
 };
 
-class QmlJsonHighlighter : public QObject
-{
+class QmlJsonHighlighter : public QObject {
     Q_OBJECT
-    Q_PROPERTY(QQuickTextDocument *textDocument READ textDocument WRITE setTextDocument NOTIFY textDocumentChanged)
+    Q_PROPERTY(QQuickTextDocument* textDocument READ textDocument WRITE setTextDocument NOTIFY textDocumentChanged)
 
 public:
-    explicit QmlJsonHighlighter(QObject *parent = nullptr);
+    explicit QmlJsonHighlighter(QObject* parent = nullptr);
 
-    QQuickTextDocument *textDocument() const;
-    void setTextDocument(QQuickTextDocument *textDocument);
+    QQuickTextDocument* textDocument() const;
+    void setTextDocument(QQuickTextDocument* textDocument);
 
 signals:
     void textDocumentChanged();
 
 private:
-    QQuickTextDocument *m_textDocument;
-    JsonSyntaxHighlighter *m_highlighter;
+    QQuickTextDocument* m_textDocument{nullptr};
+    JsonSyntaxHighlighter* m_highlighter{nullptr};
 };
 
 #endif // JSONSYNTAXHIGHLIGHTER_HPP

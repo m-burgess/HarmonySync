@@ -47,19 +47,21 @@ struct AudioMixerViewModel::Impl {
     std::unique_ptr<QTimer> positionTimer;
 #endif
 
-    Impl(std::shared_ptr<Media::AudioEngine> engine)
-        : m_activeDeck(std::move(engine))
-    {
+    Impl(std::shared_ptr<Media::AudioEngine> engine, std::shared_ptr<Media::AudioEngine> nextEngine)
+        : m_activeDeck(std::move(engine)) {
         if (!m_activeDeck) {
             m_activeDeck = std::make_shared<Media::AudioEngine>();
         }
-        m_nextDeck = std::make_shared<Media::AudioEngine>();
+        m_nextDeck = std::move(nextEngine);
+        if (!m_nextDeck) {
+            m_nextDeck = std::make_shared<Media::AudioEngine>();
+        }
 
 #ifdef HARMONYSYNC_QT_AVAILABLE
         autosaveTimer = std::make_unique<QTimer>();
         autosaveTimer->setSingleShot(true);
         autosaveTimer->setInterval(500); // 500ms debounce
-        
+
         transposeDebounceTimer = std::make_unique<QTimer>();
         transposeDebounceTimer->setSingleShot(true);
         transposeDebounceTimer->setInterval(700); // 700ms debounce before starting ffmpeg
@@ -70,9 +72,9 @@ struct AudioMixerViewModel::Impl {
     }
 };
 
-AudioMixerViewModel::AudioMixerViewModel(std::shared_ptr<Media::AudioEngine> audioEngine)
-    : m_impl(std::make_unique<Impl>(std::move(audioEngine)))
-{
+AudioMixerViewModel::AudioMixerViewModel(std::shared_ptr<Media::AudioEngine> audioEngine,
+                                         std::shared_ptr<Media::AudioEngine> nextAudioEngine)
+    : m_impl(std::make_unique<Impl>(std::move(audioEngine), std::move(nextAudioEngine))) {
     m_impl->callbackGuard->target = this;
 #ifdef HARMONYSYNC_QT_AVAILABLE
     QObject::connect(m_impl->autosaveTimer.get(), &QTimer::timeout, this, [this]() {
@@ -88,40 +90,49 @@ AudioMixerViewModel::AudioMixerViewModel(std::shared_ptr<Media::AudioEngine> aud
             emit positionChanged(positionSeconds());
         }
     });
-    
+
     QObject::connect(m_impl->transposeDebounceTimer.get(), &QTimer::timeout, this, [this]() {
         auto stems = m_impl->m_activeDeck->loadedStems();
-        if (stems.empty()) return;
-        
+        if (stems.empty()) {
+            return;
+        }
+
         std::filesystem::path folderPath = std::filesystem::path(stems[0].filePath()).parent_path();
         // If transposed stems are from a subfolder, we need the actual root folder
         if (folderPath.filename().string().find("Transposed_") != std::string::npos) {
             folderPath = folderPath.parent_path();
         }
-        
+
         m_impl->isTransposing = true;
         emit isTransposingChanged(true);
-        
+
         bool wasPlaying = m_impl->m_activeDeck->isPlaying();
         double currentPos = m_impl->m_activeDeck->positionSeconds();
-        
+
         if (wasPlaying) {
             m_impl->m_activeDeck->pause();
         }
-        
+
         int targetSemitones = pitchShiftSemitones();
-        
-        m_impl->transposer.transposeStemsAsync(stems, folderPath, targetSemitones, [this, wasPlaying, currentPos](std::vector<Core::MediaStem> newStems) {
-            QMetaObject::invokeMethod(this, [this, newStems, wasPlaying, currentPos]() {
-                m_impl->m_activeDeck->loadStems(newStems);
-                m_impl->m_activeDeck->seek(currentPos);
-                if (wasPlaying) {
-                    m_impl->m_activeDeck->play();
-                }
-                m_impl->isTransposing = false;
-                emit isTransposingChanged(false);
-            }, Qt::QueuedConnection);
-        });
+
+        m_impl->transposer.transposeStemsAsync(
+            stems, folderPath, targetSemitones,
+            [this, wasPlaying,
+             currentPos](std::vector<Core::MediaStem> newStems) { // NOLINT(performance-unnecessary-value-param): the
+                                                                  // queued closure owns the decoded stems.
+                QMetaObject::invokeMethod( // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks): Qt owns queued functors.
+                    this,
+                    [this, newStems, wasPlaying, currentPos]() {
+                        m_impl->m_activeDeck->loadStems(newStems);
+                        m_impl->m_activeDeck->seek(currentPos);
+                        if (wasPlaying) {
+                            m_impl->m_activeDeck->play();
+                        }
+                        m_impl->isTransposing = false;
+                        emit isTransposingChanged(false);
+                    },
+                    Qt::QueuedConnection);
+            });
     });
 #endif
 }
@@ -150,7 +161,8 @@ float AudioMixerViewModel::masterVolume() const noexcept {
 void AudioMixerViewModel::setMasterVolume(float volume) noexcept {
     if (m_impl->m_activeDeck->masterVolume() != volume) {
         // Master volume applies to the mix. We could store a global master if crossfade overrides engine master.
-        // For simplicity, we assume setMasterVolume applies directly to active deck, and crossfading overrides this temporarily.
+        // For simplicity, we assume setMasterVolume applies directly to active deck, and crossfading overrides this
+        // temporarily.
         m_impl->m_activeDeck->setMasterVolume(volume);
 #ifdef HARMONYSYNC_QT_AVAILABLE
         emit masterVolumeChanged(volume);
@@ -405,25 +417,26 @@ bool AudioMixerViewModel::isPreloadReadyForTesting() const noexcept {
 }
 
 std::size_t AudioMixerViewModel::liveSongSetCountForTesting() const noexcept {
-    return m_impl->m_activeDeck->liveSongSetCountForTesting()
-         + m_impl->m_nextDeck->liveSongSetCountForTesting();
+    return m_impl->m_activeDeck->liveSongSetCountForTesting() + m_impl->m_nextDeck->liveSongSetCountForTesting();
 }
 
 void AudioMixerViewModel::setCrossfadePosition(float position) noexcept {
     float clamped = std::clamp(position, 0.0f, 1.0f);
-    if (m_impl->m_crossfadePos == clamped) return;
+    if (m_impl->m_crossfadePos == clamped) {
+        return;
+    }
 
     m_impl->m_crossfadePos = clamped;
-    
+
     // Equal power crossfade
     float activeVol = std::sqrt(1.0f - clamped);
     float nextVol = std::sqrt(clamped);
-    
+
     // Apply crossfade multiplier to the master volume
     // Assuming 1.0f is default, but really we'd multiply by global master.
     m_impl->m_activeDeck->setMasterVolume(activeVol);
     m_impl->m_nextDeck->setMasterVolume(nextVol);
-    
+
     // Automatically start playing next deck if we begin crossfading
     if (clamped > 0.0f && !m_impl->m_nextDeck->isPlaying()) {
         m_impl->m_nextDeck->play();
@@ -437,17 +450,17 @@ void AudioMixerViewModel::setCrossfadePosition(float position) noexcept {
 void AudioMixerViewModel::finalizeCrossfade() {
     // Stop the old active deck
     m_impl->m_activeDeck->stop();
-    
+
     // Swap decks
     std::swap(m_impl->m_activeDeck, m_impl->m_nextDeck);
-    
+
     // Swap background video
     m_impl->activeBackgroundVideo = m_impl->nextBackgroundVideo;
-    
+
     // Reset crossfade position silently
     m_impl->m_crossfadePos = 0.0f;
     m_impl->m_activeDeck->setMasterVolume(1.0f);
-    
+
 #ifdef HARMONYSYNC_QT_AVAILABLE
     // Broadcast all new states of the newly active deck
     emit activeBackgroundVideoChanged(QString::fromStdString(m_impl->activeBackgroundVideo));
@@ -456,7 +469,7 @@ void AudioMixerViewModel::finalizeCrossfade() {
     emit positionChanged(positionSeconds());
     emit playStateChanged(isPlaying());
     emit crossfadePositionChanged(0.0f);
-    
+
     if (m_impl->m_activeDeck->isPlaying()) {
         m_impl->positionTimer->start();
     } else {
@@ -507,7 +520,7 @@ void AudioMixerViewModel::setStemVolume(int stemIndex, float volume) {
 
 void AudioMixerViewModel::toggleStemMute(int stemIndex) {
     auto stems = m_impl->m_activeDeck->loadedStems();
-    if (stemIndex >= 0 && stemIndex < static_cast<int>(stems.size())) {
+    if (stemIndex >= 0 && static_cast<std::size_t>(stemIndex) < stems.size()) {
         bool currentMute = stems[static_cast<size_t>(stemIndex)].isMuted();
         m_impl->m_activeDeck->setStemMuted(stemIndex, !currentMute);
 #ifdef HARMONYSYNC_QT_AVAILABLE
@@ -519,7 +532,7 @@ void AudioMixerViewModel::toggleStemMute(int stemIndex) {
 
 void AudioMixerViewModel::toggleStemSolo(int stemIndex) {
     auto stems = m_impl->m_activeDeck->loadedStems();
-    if (stemIndex >= 0 && stemIndex < static_cast<int>(stems.size())) {
+    if (stemIndex >= 0 && static_cast<std::size_t>(stemIndex) < stems.size()) {
         bool currentSolo = stems[static_cast<size_t>(stemIndex)].isSolo();
         m_impl->m_activeDeck->setStemSolo(stemIndex, !currentSolo);
 #ifdef HARMONYSYNC_QT_AVAILABLE
@@ -532,7 +545,7 @@ void AudioMixerViewModel::toggleStemSolo(int stemIndex) {
 #ifdef HARMONYSYNC_QT_AVAILABLE
 QString AudioMixerViewModel::stemName(int index) const {
     auto stems = m_impl->m_activeDeck->loadedStems();
-    if (index >= 0 && index < static_cast<int>(stems.size())) {
+    if (index >= 0 && static_cast<std::size_t>(index) < stems.size()) {
         return QString::fromStdString(stems[static_cast<size_t>(index)].name());
     }
     return QString();
@@ -540,7 +553,7 @@ QString AudioMixerViewModel::stemName(int index) const {
 #else
 std::string AudioMixerViewModel::stemName(int index) const {
     auto stems = m_impl->m_activeDeck->loadedStems();
-    if (index >= 0 && index < static_cast<int>(stems.size())) {
+    if (index >= 0 && static_cast<std::size_t>(index) < stems.size()) {
         return stems[static_cast<size_t>(index)].name();
     }
     return "";
@@ -549,7 +562,7 @@ std::string AudioMixerViewModel::stemName(int index) const {
 
 float AudioMixerViewModel::stemVolume(int index) const {
     auto stems = m_impl->m_activeDeck->loadedStems();
-    if (index >= 0 && index < static_cast<int>(stems.size())) {
+    if (index >= 0 && static_cast<std::size_t>(index) < stems.size()) {
         return stems[static_cast<size_t>(index)].volume();
     }
     return 1.0f;
@@ -557,7 +570,7 @@ float AudioMixerViewModel::stemVolume(int index) const {
 
 bool AudioMixerViewModel::stemIsMuted(int index) const {
     auto stems = m_impl->m_activeDeck->loadedStems();
-    if (index >= 0 && index < static_cast<int>(stems.size())) {
+    if (index >= 0 && static_cast<std::size_t>(index) < stems.size()) {
         return stems[static_cast<size_t>(index)].isMuted();
     }
     return false;
@@ -565,7 +578,7 @@ bool AudioMixerViewModel::stemIsMuted(int index) const {
 
 bool AudioMixerViewModel::stemIsSoloed(int index) const {
     auto stems = m_impl->m_activeDeck->loadedStems();
-    if (index >= 0 && index < static_cast<int>(stems.size())) {
+    if (index >= 0 && static_cast<std::size_t>(index) < stems.size()) {
         return stems[static_cast<size_t>(index)].isSolo();
     }
     return false;

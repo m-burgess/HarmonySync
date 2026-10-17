@@ -11,17 +11,14 @@ struct AutoUpdateService::Impl {
     mutable std::mutex mutex;
 
     explicit Impl(std::string ch)
-        : channel(std::move(ch))
-    {}
+        : channel(std::move(ch)) {}
 };
 
 AutoUpdateService::AutoUpdateService()
-    : m_impl(std::make_unique<Impl>("stable"))
-{}
+    : m_impl(std::make_unique<Impl>("stable")) {}
 
 AutoUpdateService::AutoUpdateService(const std::string& updateChannel)
-    : m_impl(std::make_unique<Impl>(updateChannel))
-{}
+    : m_impl(std::make_unique<Impl>(updateChannel)) {}
 
 AutoUpdateService::~AutoUpdateService() = default;
 

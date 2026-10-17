@@ -29,7 +29,11 @@ class UserSessionViewModel
 
 public:
     UserSessionViewModel();
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    ~UserSessionViewModel() override;
+#else
     ~UserSessionViewModel();
+#endif
 
     UserSessionViewModel(const UserSessionViewModel&) = delete;
     UserSessionViewModel& operator=(const UserSessionViewModel&) = delete;

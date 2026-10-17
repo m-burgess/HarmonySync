@@ -11,7 +11,7 @@ struct SongMap::Impl {
     std::string currentKey{"C"};
     std::string timing{"4/4"};
     std::string length{"0:00"};
-    std::string lyricsURL{""};
+    std::string lyricsURL;
     double tempoBpm{120.0};
     std::vector<MediaStem> stems;
     std::vector<SongSection> sections;
@@ -25,23 +25,19 @@ struct SongMap::Impl {
     Impl(std::string id_, std::string title_, std::string artist_)
         : id(std::move(id_))
         , title(std::move(title_))
-        , artist(std::move(artist_))
-    {}
+        , artist(std::move(artist_)) {}
 };
 
 SongMap::SongMap()
-    : m_impl(std::make_unique<Impl>())
-{}
+    : m_impl(std::make_unique<Impl>()) {}
 
 SongMap::SongMap(std::string songId, std::string title, std::string artist)
-    : m_impl(std::make_unique<Impl>(std::move(songId), std::move(title), std::move(artist)))
-{}
+    : m_impl(std::make_unique<Impl>(std::move(songId), std::move(title), std::move(artist))) {}
 
 SongMap::~SongMap() = default;
 
 SongMap::SongMap(const SongMap& other)
-    : m_impl(std::make_unique<Impl>(*other.m_impl))
-{}
+    : m_impl(std::make_unique<Impl>(*other.m_impl)) {}
 
 SongMap& SongMap::operator=(const SongMap& other) {
     if (this != &other) {

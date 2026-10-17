@@ -23,17 +23,20 @@ class AudioFxViewModel
 #ifdef HARMONYSYNC_QT_AVAILABLE
     Q_OBJECT
     Q_PROPERTY(bool isEqEnabled READ isEqEnabled WRITE setEqEnabled NOTIFY eqStateChanged)
-    Q_PROPERTY(bool isCompressorEnabled READ isCompressorEnabled WRITE setCompressorEnabled NOTIFY compressorStateChanged)
+    Q_PROPERTY(
+        bool isCompressorEnabled READ isCompressorEnabled WRITE setCompressorEnabled NOTIFY compressorStateChanged)
     Q_PROPERTY(float thresholdDb READ thresholdDb WRITE setThresholdDb NOTIFY compressorParamsChanged)
     Q_PROPERTY(float ratio READ ratio WRITE setRatio NOTIFY compressorParamsChanged)
 #endif
 
 public:
-    explicit AudioFxViewModel(
-        std::shared_ptr<Media::MultiBandEqualizer> eq = nullptr,
-        std::shared_ptr<Media::AudioDynamicsCompressor> comp = nullptr
-    );
+    explicit AudioFxViewModel(std::shared_ptr<Media::MultiBandEqualizer> eq = nullptr,
+                              std::shared_ptr<Media::AudioDynamicsCompressor> comp = nullptr);
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    ~AudioFxViewModel() override;
+#else
     ~AudioFxViewModel();
+#endif
 
     AudioFxViewModel(const AudioFxViewModel&) = delete;
     AudioFxViewModel& operator=(const AudioFxViewModel&) = delete;

@@ -1,14 +1,15 @@
 #ifndef HARMONYSYNC_REMOTE_API_SERVER_HPP
 #define HARMONYSYNC_REMOTE_API_SERVER_HPP
 
+#include "WebSocketTransport.hpp"
+#include <cstdint>
+#include <functional>
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
-#include <functional>
-#include <cstdint>
 
+// main.cpp and the viewmodels key their Qt-only code off this macro, which they receive through this header.
 #if defined(HARMONYSYNC_HAS_QT) || __has_include(<QObject>)
-#include <QObject>
 #define HARMONYSYNC_QT_AVAILABLE 1
 #endif
 
@@ -17,18 +18,12 @@ namespace HarmonySync::Core {
 using ApiCommandCallback = std::function<void(const std::string& action, const std::string& payload)>;
 
 /**
- * @brief Thread-safe embedded HTTP & WebSocket server exposing REST endpoints and push notifications for mobile remote control.
+ * @brief Thread-safe embedded WebSocket server exposing push notifications and commands for mobile remote control.
  */
-class RemoteApiServer
-#ifdef HARMONYSYNC_QT_AVAILABLE
-    : public QObject
-#endif
-{
-#ifdef HARMONYSYNC_QT_AVAILABLE
-    Q_OBJECT
-#endif
+class RemoteApiServer {
 public:
-    explicit RemoteApiServer(uint16_t port = 8080);
+    /** @param transport Server transport; defaults to the Qt WebSocket server. */
+    explicit RemoteApiServer(uint16_t port = 8080, std::unique_ptr<IWebSocketServer> transport = nullptr);
     ~RemoteApiServer();
 
     RemoteApiServer(const RemoteApiServer&) = delete;

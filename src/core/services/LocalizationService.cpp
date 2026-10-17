@@ -10,36 +10,28 @@ struct LocalizationService::Impl {
 
     Impl() {
         // Default EN
-        catalogs["en"] = {
-            {"APP_TITLE", "HarmonySync Worship Media Engine"},
-            {"NAV_MIXER", "Stem Mixer"},
-            {"NAV_LYRICS", "Lyrics & Presentation"},
-            {"NAV_SETLIST", "Service Order"}
-        };
+        catalogs["en"] = {{"APP_TITLE", "HarmonySync Worship Media Engine"},
+                          {"NAV_MIXER", "Stem Mixer"},
+                          {"NAV_LYRICS", "Lyrics & Presentation"},
+                          {"NAV_SETLIST", "Service Order"}};
         // Spanish ES
-        catalogs["es"] = {
-            {"APP_TITLE", "Motor de Medios de Adoración HarmonySync"},
-            {"NAV_MIXER", "Mezclador de Pistas"},
-            {"NAV_LYRICS", "Letras y Presentación"},
-            {"NAV_SETLIST", "Orden de Culto"}
-        };
+        catalogs["es"] = {{"APP_TITLE", "Motor de Medios de Adoración HarmonySync"},
+                          {"NAV_MIXER", "Mezclador de Pistas"},
+                          {"NAV_LYRICS", "Letras y Presentación"},
+                          {"NAV_SETLIST", "Orden de Culto"}};
         // French FR
-        catalogs["fr"] = {
-            {"APP_TITLE", "Moteur de Média de Culte HarmonySync"},
-            {"NAV_MIXER", "Mélangeur de Pistes"},
-            {"NAV_LYRICS", "Paroles et Présentation"},
-            {"NAV_SETLIST", "Ordre de Culte"}
-        };
+        catalogs["fr"] = {{"APP_TITLE", "Moteur de Média de Culte HarmonySync"},
+                          {"NAV_MIXER", "Mélangeur de Pistes"},
+                          {"NAV_LYRICS", "Paroles et Présentation"},
+                          {"NAV_SETLIST", "Ordre de Culte"}};
     }
 };
 
 LocalizationService::LocalizationService()
-    : m_impl(std::make_unique<Impl>())
-{}
+    : m_impl(std::make_unique<Impl>()) {}
 
 LocalizationService::LocalizationService(const std::string& currentLanguageCode)
-    : m_impl(std::make_unique<Impl>())
-{
+    : m_impl(std::make_unique<Impl>()) {
     setLanguage(currentLanguageCode);
 }
 

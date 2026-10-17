@@ -1,5 +1,7 @@
 #ifndef HARMONYSYNC_NDI_VIDEO_OUTPUT_SERVICE_HPP
 #define HARMONYSYNC_NDI_VIDEO_OUTPUT_SERVICE_HPP
+#include "NdiSender.hpp"
+#include <utility>
 
 #include <string>
 #include <memory>
@@ -14,6 +16,7 @@ class NdiVideoOutputService {
 public:
     NdiVideoOutputService();
     explicit NdiVideoOutputService(const std::string& streamName);
+    NdiVideoOutputService(const std::string& streamName, std::unique_ptr<INdiSender> sender);
     ~NdiVideoOutputService();
 
     NdiVideoOutputService(const NdiVideoOutputService&) = delete;

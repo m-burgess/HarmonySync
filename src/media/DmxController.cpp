@@ -5,11 +5,20 @@ namespace HarmonySync::Media {
 
 struct DmxController::Impl {
     std::vector<uint8_t> channels{std::vector<uint8_t>(512, 0)};
+    std::unique_ptr<IDmxOutput> output;
+    explicit Impl(std::unique_ptr<IDmxOutput> out)
+        : output(std::move(out)) {}
 };
 
 DmxController::DmxController()
-    : m_impl(std::make_unique<Impl>())
-{}
+    : DmxController(createOfflineDmxOutput()) {}
+
+DmxController::DmxController(std::unique_ptr<IDmxOutput> output)
+    : m_impl(std::make_unique<Impl>(std::move(output))) {}
+
+bool DmxController::send(uint16_t universe) {
+    return m_impl->output && m_impl->output->send(buildArtDmxPacket(universe));
+}
 
 DmxController::~DmxController() = default;
 DmxController::DmxController(DmxController&&) noexcept = default;

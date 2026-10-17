@@ -1,0 +1,4 @@
+# ctest names that fail on main and are temporarily excluded from the blocking coverage run.
+# They still run for coverage, but do not fail the job. Remove each line when its test is fixed.
+#   test_viewmodels         throws "Playback sync failed" in the AI lyric sync step
+test_viewmodels

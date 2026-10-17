@@ -1,64 +1,131 @@
 #include "MusicianSessionViewModel.hpp"
 #include "MusicianConfidenceViewModel.hpp"
 #include "MobileApiClient.hpp"
-#include <iostream>
-#include <cassert>
-#include <cstdlib>
-#include <thread>
-#include <chrono>
+#include "fake_web_socket.hpp"
+#include "test_check.hpp"
+
+#include <QCoreApplication>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QVariantList>
+#include <QVariantMap>
+
+#include <memory>
+#include <string>
 
 using namespace HarmonySync::ViewModels;
 using namespace HarmonySync::Core;
 
 void testMusicianSessionViewModel() {
-    std::cout << "[TEST] Running testMusicianSessionViewModel..." << std::endl;
-    
-    auto apiClient = std::make_shared<MobileApiClient>();
+    auto fake = std::make_unique<FakeWebSocketClient>();
+    auto* transport = fake.get();
+    auto apiClient = std::make_shared<MobileApiClient>(std::move(fake));
     MusicianSessionViewModel vm(apiClient);
-    
-    assert(vm.hostIp() == "192.168.1.50");
-    vm.setHostIp("10.0.0.1");
-    assert(vm.hostIp() == "10.0.0.1");
-    
-    vm.setPairingPin("1234");
-    assert(vm.pairingPin() == "1234");
-    
-    assert(vm.isConnected() == false);
-    assert(vm.isConnecting() == false);
-    
+
+    HS_CHECK(vm.hostIp() == QStringLiteral("192.168.1.50"));
+    vm.setHostIp(QStringLiteral("10.0.0.1"));
+    vm.setHostIp(QStringLiteral("10.0.0.1"));
+    vm.setPairingPin(QStringLiteral("1234"));
+    vm.setPairingPin(QStringLiteral("1234"));
+    HS_CHECK(vm.hostIp() == QStringLiteral("10.0.0.1"));
+    HS_CHECK(vm.pairingPin() == QStringLiteral("1234"));
+    HS_CHECK(transport->sent.empty());
+    HS_CHECK(!vm.isConnected());
+    HS_CHECK(!vm.isConnecting());
+    HS_CHECK(!vm.hasAuthError());
+
     vm.connectToHost();
-    
-    // Allow thread time to update state
-    std::this_thread::sleep_for(std::chrono::milliseconds(300));
-    assert(vm.isConnected() == true);
-    
+    HS_CHECK(vm.isConnecting());
+    HS_CHECK(transport->openedHost == "10.0.0.1");
+    HS_CHECK(transport->openedPort == 8080);
+    transport->fireConnected();
+    HS_CHECK(vm.isConnected());
+    HS_CHECK(!vm.isConnecting());
     vm.disconnectFromHost();
-    
-    std::cout << "[PASS] testMusicianSessionViewModel passed." << std::endl;
+    HS_CHECK(!vm.isConnected());
+
+    vm.connectToHost();
+    transport->fireError(1);
+    HS_CHECK(!vm.isConnected());
+    HS_CHECK(!vm.isConnecting());
+    HS_CHECK(!vm.hasAuthError());
 }
 
 void testMusicianConfidenceViewModel() {
-    std::cout << "[TEST] Running testMusicianConfidenceViewModel..." << std::endl;
-    
-    auto apiClient = std::make_shared<MobileApiClient>();
-    
-    // Simulate setting event callback via view model setup
+    auto fake = std::make_unique<FakeWebSocketClient>();
+    auto* transport = fake.get();
+    auto apiClient = std::make_shared<MobileApiClient>(std::move(fake));
     MusicianConfidenceViewModel vm(apiClient);
-    
-    assert(vm.currentSongTitle() == "Waiting for Host...");
-    assert(vm.currentLyricLine() == "");
-    
-    std::cout << "[PASS] testMusicianConfidenceViewModel passed." << std::endl;
+
+    HS_CHECK(vm.currentSongTitle() == QStringLiteral("Waiting for Host..."));
+    HS_CHECK(vm.currentLyricLine().isEmpty());
+    HS_CHECK(vm.nextLyricLine().isEmpty());
+    HS_CHECK(vm.timerText() == QStringLiteral("00:00"));
+
+    vm.setCapoEnabled(true); // no song map yet, so structure generation returns early
+    vm.setCapoEnabled(false);
+
+    QJsonObject line{{QStringLiteral("lyric"), QStringLiteral("Amazing grace")},
+                     {QStringLiteral("timestamp"), QStringLiteral("00:12")},
+                     {QStringLiteral("chords"), QStringLiteral("1 4 5")}};
+    QJsonObject section{{QStringLiteral("name"), QStringLiteral("Verse")}, {QStringLiteral("lines"), QJsonArray{line}}};
+    QJsonObject song{{QStringLiteral("title"), QStringLiteral("Grace")},
+                     {QStringLiteral("originalKey"), QStringLiteral("D")},
+                     {QStringLiteral("sections"), QJsonArray{section}}};
+    const std::string songPayload = QJsonDocument(song).toJson(QJsonDocument::Compact).toStdString();
+    const QJsonObject event{{QStringLiteral("event"), QStringLiteral("SONG_MAP_UPDATED")},
+                            {QStringLiteral("payload"), QString::fromStdString(songPayload)}};
+    transport->fireText(QJsonDocument(event).toJson(QJsonDocument::Compact).toStdString());
+
+    HS_CHECK(vm.currentSongTitle() == QStringLiteral("Grace"));
+    HS_CHECK(vm.originalKey() == QStringLiteral("D"));
+    HS_CHECK(vm.selectedKey() == QStringLiteral("D"));
+    QVariantList structure = vm.songStructure();
+    HS_CHECK(structure.size() == 1);
+    QVariantMap sectionMap = structure[0].toMap();
+    HS_CHECK(sectionMap.value("name").toString() == QStringLiteral("Verse"));
+    QVariantList lines = sectionMap.value("lines").toList();
+    HS_CHECK(lines.size() == 1);
+    HS_CHECK(lines[0].toMap().value("lyric").toString() == QStringLiteral("Amazing grace"));
+    HS_CHECK(lines[0].toMap().value("timestamp").toString() == QStringLiteral("00:12"));
+    HS_CHECK(lines[0].toMap().value("chords").toString() == QStringLiteral("D G A"));
+
+    vm.setSelectedKey(QStringLiteral("G"));
+    HS_CHECK(vm.selectedKey() == QStringLiteral("G"));
+    HS_CHECK(vm.songStructure()[0].toMap().value("lines").toList()[0].toMap().value("chords").toString() ==
+             QStringLiteral("G C D"));
+    vm.setCagedEnabled(true);
+    HS_CHECK(vm.songStructure()[0].toMap().value("lines").toList()[0].toMap().value("chords").toString() ==
+             QStringLiteral("G [D-shape] C [C-shape] D [A-shape]"));
+    vm.setCapoEnabled(true);
+    HS_CHECK(vm.songStructure()[0].toMap().value("lines").toList()[0].toMap().value("chords").toString() ==
+             QStringLiteral("G C D"));
+    vm.setCapoEnabled(true);
+    vm.setCagedEnabled(true);
+
+    const QJsonObject invalidSongEvent{{QStringLiteral("event"), QStringLiteral("SONG_MAP_UPDATED")},
+                                       {QStringLiteral("payload"), QStringLiteral("not-json")}};
+    transport->fireText(QJsonDocument(invalidSongEvent).toJson(QJsonDocument::Compact).toStdString());
+    HS_CHECK(vm.currentSongTitle() == QStringLiteral("Grace"));
+    HS_CHECK(vm.songStructure().size() == 1);
+
+    const QJsonObject ignoredLyricsEvent{{QStringLiteral("event"), QStringLiteral("LYRICS_UPDATE")},
+                                         {QStringLiteral("payload"), QStringLiteral("ignored")}};
+    transport->fireText(QJsonDocument(ignoredLyricsEvent).toJson(QJsonDocument::Compact).toStdString());
+    HS_CHECK(vm.currentLyricLine().isEmpty());
+
+    const QJsonObject timerEvent{{QStringLiteral("event"), QStringLiteral("TIMER_UPDATE")},
+                                 {QStringLiteral("payload"), QStringLiteral("01:23")}};
+    transport->fireText(QJsonDocument(timerEvent).toJson(QJsonDocument::Compact).toStdString());
+    HS_CHECK(vm.timerText() == QStringLiteral("01:23"));
 }
 
 int main() {
-    try {
-        testMusicianSessionViewModel();
-        testMusicianConfidenceViewModel();
-        std::cout << "\nALL MOBILE VIEWMODELS UNIT TESTS PASSED (100% Success)" << std::endl;
-        return EXIT_SUCCESS;
-    } catch (const std::exception& ex) {
-        std::cerr << "EXCEPTION in mobile viewmodels unit tests: " << ex.what() << std::endl;
-        return EXIT_FAILURE;
-    }
+    int argc = 0;
+    char* argv[] = {nullptr};
+    QCoreApplication app(argc, argv);
+    testMusicianSessionViewModel();
+    testMusicianConfidenceViewModel();
+    return 0;
 }

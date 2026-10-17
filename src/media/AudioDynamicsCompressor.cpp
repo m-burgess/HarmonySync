@@ -14,8 +14,7 @@ struct AudioDynamicsCompressor::Impl {
 };
 
 AudioDynamicsCompressor::AudioDynamicsCompressor()
-    : m_impl(std::make_unique<Impl>())
-{}
+    : m_impl(std::make_unique<Impl>()) {}
 
 AudioDynamicsCompressor::~AudioDynamicsCompressor() = default;
 
@@ -63,10 +62,14 @@ bool AudioDynamicsCompressor::isEnabled() const noexcept {
 }
 
 void AudioDynamicsCompressor::processBuffer(float* samples, size_t sampleCount) noexcept {
-    if (!samples || sampleCount == 0) return;
+    if (!samples || sampleCount == 0) {
+        return;
+    }
 
     std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
-    if (!m_impl->enabled) return;
+    if (!m_impl->enabled) {
+        return;
+    }
 
     float gainLinear = std::pow(10.0f, m_impl->makeupGain / 20.0f);
 

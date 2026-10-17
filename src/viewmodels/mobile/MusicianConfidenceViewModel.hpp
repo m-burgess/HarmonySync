@@ -28,7 +28,7 @@ class MusicianConfidenceViewModel
     Q_PROPERTY(QString currentLyricLine READ currentLyricLine NOTIFY lyricsUpdated)
     Q_PROPERTY(QString nextLyricLine READ nextLyricLine NOTIFY lyricsUpdated)
     Q_PROPERTY(QString timerText READ timerText NOTIFY timerUpdated)
-    
+
     // New properties for Transposition & Structure
     Q_PROPERTY(bool capoEnabled READ capoEnabled WRITE setCapoEnabled NOTIFY transpositionSettingsChanged)
     Q_PROPERTY(bool cagedEnabled READ cagedEnabled WRITE setCagedEnabled NOTIFY transpositionSettingsChanged)
@@ -39,7 +39,11 @@ class MusicianConfidenceViewModel
 
 public:
     explicit MusicianConfidenceViewModel(std::shared_ptr<Core::MobileApiClient> client = nullptr);
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    ~MusicianConfidenceViewModel() override;
+#else
     ~MusicianConfidenceViewModel();
+#endif
 
     MusicianConfidenceViewModel(const MusicianConfidenceViewModel&) = delete;
     MusicianConfidenceViewModel& operator=(const MusicianConfidenceViewModel&) = delete;
@@ -49,16 +53,16 @@ public:
     [[nodiscard]] QString currentLyricLine() const;
     [[nodiscard]] QString nextLyricLine() const;
     [[nodiscard]] QString timerText() const;
-    
+
     [[nodiscard]] bool capoEnabled() const;
     void setCapoEnabled(bool enabled);
-    
+
     [[nodiscard]] bool cagedEnabled() const;
     void setCagedEnabled(bool enabled);
-    
+
     [[nodiscard]] QString selectedKey() const;
     void setSelectedKey(const QString& key);
-    
+
     [[nodiscard]] QString originalKey() const;
     [[nodiscard]] QVariantList songStructure() const;
 #else

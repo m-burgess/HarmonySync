@@ -6,22 +6,21 @@ namespace HarmonySync::ViewModels {
 struct MusicianSessionViewModel::Impl {
     std::shared_ptr<Core::MobileApiClient> apiClient;
     std::string ip{"192.168.1.50"};
-    std::string pin{""};
-    
+    std::string pin;
+
 #ifdef HARMONYSYNC_QT_AVAILABLE
     MusicianSessionViewModel* qmlParent{nullptr};
 #endif
 
     Impl(std::shared_ptr<Core::MobileApiClient> client)
-        : apiClient(std::move(client))
-    {
+        : apiClient(std::move(client)) {
         if (!apiClient) {
             apiClient = std::make_shared<Core::MobileApiClient>();
         }
     }
-    
+
     void setupCallbacks() {
-        apiClient->setStateCallback([this](Core::ConnectionState state) {
+        apiClient->setStateCallback([this](Core::ConnectionState) {
 #ifdef HARMONYSYNC_QT_AVAILABLE
             if (qmlParent) {
                 // Ensure signals are emitted safely across threads
@@ -33,8 +32,7 @@ struct MusicianSessionViewModel::Impl {
 };
 
 MusicianSessionViewModel::MusicianSessionViewModel(std::shared_ptr<Core::MobileApiClient> client)
-    : m_impl(std::make_unique<Impl>(std::move(client)))
-{
+    : m_impl(std::make_unique<Impl>(std::move(client))) {
 #ifdef HARMONYSYNC_QT_AVAILABLE
     m_impl->qmlParent = this;
 #endif

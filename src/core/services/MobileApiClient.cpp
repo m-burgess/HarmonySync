@@ -1,92 +1,96 @@
 #include "MobileApiClient.hpp"
-#include <mutex>
-#include <iostream>
-
-#ifdef HARMONYSYNC_QT_AVAILABLE
-#include <QtWebSockets/QWebSocket>
+#include <QByteArray>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QUrl>
-#include <QTimer>
-#endif
+#include <QString>
+#include <iostream>
+#include <mutex>
+#include <utility>
 
 namespace HarmonySync::Core {
 
+namespace {
+
+std::string buildCommandMessage(const std::string& action, const std::string& payload) {
+    QJsonObject obj;
+    obj["action"] = QString::fromStdString(action);
+    obj["payload"] = QString::fromStdString(payload);
+    const QByteArray json = QJsonDocument(obj).toJson(QJsonDocument::Compact);
+    return std::string(json.constData(), static_cast<std::size_t>(json.size()));
+}
+
+} // namespace
+
 struct MobileApiClient::Impl {
-    std::string currentIp;
-    uint16_t currentPort{0};
     std::string currentPin;
-    
+
     ConnectionState state{ConnectionState::Disconnected};
     ClientStateCallback stateCallback;
     ClientEventCallback eventCallback;
-    
+
     mutable std::mutex mutex;
+    // Declared last: destroyed first, so no transport handler can fire into destroyed members.
+    std::unique_ptr<IWebSocketClient> transport;
 
-#ifdef HARMONYSYNC_QT_AVAILABLE
-    QWebSocket* webSocket{nullptr};
-#endif
+    explicit Impl(std::unique_ptr<IWebSocketClient> t)
+        : transport(std::move(t)) {}
 
+    // Callbacks run outside the lock so they may call back into the client.
     void updateState(ConnectionState newState) {
-        state = newState;
-        if (stateCallback) {
-            stateCallback(newState);
+        ClientStateCallback cb;
+        {
+            std::lock_guard<std::mutex> lock(mutex);
+            state = newState;
+            cb = stateCallback;
         }
+        if (cb) {
+            cb(newState);
+        }
+    }
+
+    void onConnected() {
+        updateState(ConnectionState::Connected);
+        std::cout << "[MobileApiClient] Connected to host." << '\n';
+
+        std::string pin;
+        {
+            std::lock_guard<std::mutex> lock(mutex);
+            pin = currentPin;
+        }
+        transport->sendText(buildCommandMessage("auth", pin));
+    }
+
+    void onMessage(const std::string& message) {
+        ClientEventCallback cb;
+        {
+            std::lock_guard<std::mutex> lock(mutex);
+            cb = eventCallback;
+        }
+        if (!cb) {
+            return;
+        }
+        const QJsonDocument doc = QJsonDocument::fromJson(QByteArray::fromStdString(message));
+        if (!doc.isObject()) {
+            return;
+        }
+        const QJsonObject obj = doc.object();
+        cb(obj["event"].toString().toStdString(), obj["payload"].toString().toStdString());
     }
 };
 
-MobileApiClient::MobileApiClient()
-    : m_impl(std::make_unique<Impl>())
-{
-#ifdef HARMONYSYNC_QT_AVAILABLE
-    m_impl->webSocket = new QWebSocket(QString(), QWebSocketProtocol::VersionLatest, this);
-    
-    connect(m_impl->webSocket, &QWebSocket::connected, this, [this]() {
-        std::lock_guard<std::mutex> lock(m_impl->mutex);
-        m_impl->updateState(ConnectionState::Connected);
-        std::cout << "[MobileApiClient] Connected to host." << std::endl;
-        
-        // Optionally send a connect/auth message with the PIN here
-        QJsonObject authObj;
-        authObj["action"] = "auth";
-        authObj["payload"] = QString::fromStdString(m_impl->currentPin);
-        QJsonDocument doc(authObj);
-        m_impl->webSocket->sendTextMessage(QString::fromUtf8(doc.toJson(QJsonDocument::Compact)));
+MobileApiClient::MobileApiClient(std::unique_ptr<IWebSocketClient> transport)
+    : m_impl(std::make_unique<Impl>(transport ? std::move(transport) : createQtWebSocketClient())) {
+    Impl* impl = m_impl.get();
+    impl->transport->setConnectedHandler([impl]() { impl->onConnected(); });
+    impl->transport->setDisconnectHandler([impl]() {
+        impl->updateState(ConnectionState::Disconnected);
+        std::cout << "[MobileApiClient] Disconnected from host." << '\n';
     });
-    
-    connect(m_impl->webSocket, &QWebSocket::disconnected, this, [this]() {
-        std::lock_guard<std::mutex> lock(m_impl->mutex);
-        m_impl->updateState(ConnectionState::Disconnected);
-        std::cout << "[MobileApiClient] Disconnected from host." << std::endl;
+    impl->transport->setErrorHandler([impl](int errorCode) {
+        std::cerr << "[MobileApiClient] WebSocket Error: " << errorCode << '\n';
+        impl->updateState(ConnectionState::ConnectionFailed);
     });
-
-#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
-    connect(m_impl->webSocket, &QWebSocket::errorOccurred, this, [this](QAbstractSocket::SocketError error) {
-#else
-    connect(m_impl->webSocket, QOverload<QAbstractSocket::SocketError>::of(&QWebSocket::error), this, [this](QAbstractSocket::SocketError error) {
-#endif
-        std::lock_guard<std::mutex> lock(m_impl->mutex);
-        std::cerr << "[MobileApiClient] WebSocket Error: " << error << std::endl;
-        m_impl->updateState(ConnectionState::ConnectionFailed);
-    });
-    
-    connect(m_impl->webSocket, &QWebSocket::textMessageReceived, this, [this](const QString &message) {
-        ClientEventCallback cb;
-        {
-            std::lock_guard<std::mutex> lock(m_impl->mutex);
-            cb = m_impl->eventCallback;
-        }
-        if (cb) {
-            QJsonDocument doc = QJsonDocument::fromJson(message.toUtf8());
-            if (!doc.isNull() && doc.isObject()) {
-                QJsonObject obj = doc.object();
-                QString event = obj["event"].toString();
-                QString payload = obj["payload"].toString();
-                cb(event.toStdString(), payload.toStdString());
-            }
-        }
-    });
-#endif
+    impl->transport->setTextHandler([impl](const std::string& message) { impl->onMessage(message); });
 }
 
 MobileApiClient::~MobileApiClient() {
@@ -94,33 +98,19 @@ MobileApiClient::~MobileApiClient() {
 }
 
 void MobileApiClient::connectToHost(const std::string& ipAddress, uint16_t port, const std::string& pin) {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
-    
-    m_impl->currentIp = ipAddress;
-    m_impl->currentPort = port;
-    m_impl->currentPin = pin;
-    
+    {
+        std::lock_guard<std::mutex> lock(m_impl->mutex);
+        m_impl->currentPin = pin;
+    }
     m_impl->updateState(ConnectionState::Connecting);
-
-#ifdef HARMONYSYNC_QT_AVAILABLE
-    QUrl url;
-    url.setScheme("ws");
-    url.setHost(QString::fromStdString(ipAddress));
-    url.setPort(port);
-    m_impl->webSocket->open(url);
-#else
-    // Mock for non-Qt builds
-    m_impl->updateState(ConnectionState::Connected);
-#endif
+    if (currentState() != ConnectionState::Connecting) {
+        return;
+    }
+    m_impl->transport->open(ipAddress, port);
 }
 
 void MobileApiClient::disconnect() {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
-#ifdef HARMONYSYNC_QT_AVAILABLE
-    if (m_impl->webSocket) {
-        m_impl->webSocket->close();
-    }
-#endif
+    m_impl->transport->close();
     m_impl->updateState(ConnectionState::Disconnected);
 }
 
@@ -140,21 +130,11 @@ void MobileApiClient::setEventCallback(ClientEventCallback callback) {
 }
 
 bool MobileApiClient::sendCommand(const std::string& action, const std::string& payload) {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
-    if (m_impl->state != ConnectionState::Connected) {
+    if (currentState() != ConnectionState::Connected) {
         return false;
     }
-    
-#ifdef HARMONYSYNC_QT_AVAILABLE
-    QJsonObject obj;
-    obj["action"] = QString::fromStdString(action);
-    obj["payload"] = QString::fromStdString(payload);
-    QJsonDocument doc(obj);
-    m_impl->webSocket->sendTextMessage(QString::fromUtf8(doc.toJson(QJsonDocument::Compact)));
+    m_impl->transport->sendText(buildCommandMessage(action, payload));
     return true;
-#else
-    return true;
-#endif
 }
 
 } // namespace HarmonySync::Core

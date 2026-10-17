@@ -9,8 +9,7 @@ struct OnlineLyricsFetcher::Impl {
     std::shared_ptr<CloudNetworkService> networkService;
 
     Impl(std::shared_ptr<CloudNetworkService> netSvc)
-        : networkService(std::move(netSvc))
-    {
+        : networkService(std::move(netSvc)) {
         if (!networkService) {
             networkService = std::make_shared<CloudNetworkService>();
         }
@@ -18,8 +17,7 @@ struct OnlineLyricsFetcher::Impl {
 };
 
 OnlineLyricsFetcher::OnlineLyricsFetcher(std::shared_ptr<CloudNetworkService> networkService)
-    : m_impl(std::make_unique<Impl>(std::move(networkService)))
-{}
+    : m_impl(std::make_unique<Impl>(std::move(networkService))) {}
 
 OnlineLyricsFetcher::~OnlineLyricsFetcher() = default;
 

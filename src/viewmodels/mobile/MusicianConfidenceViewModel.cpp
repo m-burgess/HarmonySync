@@ -14,43 +14,46 @@ namespace HarmonySync::ViewModels {
 
 struct MusicianConfidenceViewModel::Impl {
     std::shared_ptr<Core::MobileApiClient> apiClient;
-    
+
     std::string songTitle{"Waiting for Host..."};
-    std::string currentLyric{""};
-    std::string nextLyric{""};
+    std::string currentLyric;
+    std::string nextLyric;
     std::string timer{"00:00"};
 
     bool capoEnabled{false};
     bool cagedEnabled{false};
-    std::string selectedKey{""};
-    std::string originalKey{""};
-    
-    std::string rawJsonPayload{""};
-    
+    std::string selectedKey;
+    std::string originalKey;
+
+    std::string rawJsonPayload;
+
 #ifdef HARMONYSYNC_QT_AVAILABLE
     QVariantList songStructure;
     MusicianConfidenceViewModel* qmlParent{nullptr};
 #endif
 
     Impl(std::shared_ptr<Core::MobileApiClient> client)
-        : apiClient(std::move(client))
-    {
+        : apiClient(std::move(client)) {
         if (!apiClient) {
             apiClient = std::make_shared<Core::MobileApiClient>();
         }
     }
-    
+
     void updateSongStructure() {
 #ifdef HARMONYSYNC_QT_AVAILABLE
-        if (rawJsonPayload.empty()) return;
-        
+        if (rawJsonPayload.empty()) {
+            return;
+        }
+
         QJsonDocument doc = QJsonDocument::fromJson(QString::fromStdString(rawJsonPayload).toUtf8());
-        if (doc.isNull() || !doc.isObject()) return;
-        
+        if (doc.isNull() || !doc.isObject()) {
+            return;
+        }
+
         QJsonObject root = doc.object();
         songTitle = root["title"].toString().toStdString();
         originalKey = root["originalKey"].toString().toStdString();
-        
+
         if (selectedKey.empty()) {
             selectedKey = originalKey;
         }
@@ -62,26 +65,26 @@ struct MusicianConfidenceViewModel::Impl {
 
         QJsonArray sections = root["sections"].toArray();
         QVariantList structure;
-        
+
         for (int i = 0; i < sections.size(); ++i) {
             QJsonObject secObj = sections[i].toObject();
             QVariantMap sectionMap;
             sectionMap["name"] = secObj["name"].toString();
-            
+
             QJsonArray lines = secObj["lines"].toArray();
             QVariantList lineList;
-            
+
             for (int j = 0; j < lines.size(); ++j) {
                 QJsonObject lineObj = lines[j].toObject();
                 QVariantMap lineMap;
                 lineMap["lyric"] = lineObj["lyric"].toString();
                 lineMap["timestamp"] = lineObj["timestamp"].toString();
-                
+
                 // Transpose chords
                 QString rawChords = lineObj["chords"].toString();
                 QStringList chordParts = rawChords.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts);
                 QStringList transposedChords;
-                
+
                 for (const QString& part : chordParts) {
                     std::string stdChord = Core::ChordTransposer::nashvilleToStandard(part.toStdString(), targetKey);
                     if (cagedEnabled && !capoEnabled) { // CAGED typically used when not capoing
@@ -89,24 +92,24 @@ struct MusicianConfidenceViewModel::Impl {
                     }
                     transposedChords.append(QString::fromStdString(stdChord));
                 }
-                
+
                 lineMap["chords"] = transposedChords.join(" ");
                 lineList.append(lineMap);
             }
-            
+
             sectionMap["lines"] = lineList;
             structure.append(sectionMap);
         }
-        
+
         songStructure = structure;
-        
+
         if (qmlParent) {
             QMetaObject::invokeMethod(qmlParent, "songMapUpdated", Qt::QueuedConnection);
             QMetaObject::invokeMethod(qmlParent, "lyricsUpdated", Qt::QueuedConnection);
         }
 #endif
     }
-    
+
     void setupCallbacks() {
         apiClient->setEventCallback([this](const std::string& eventName, const std::string& payload) {
             if (eventName == "SONG_MAP_UPDATED") {
@@ -127,8 +130,7 @@ struct MusicianConfidenceViewModel::Impl {
 };
 
 MusicianConfidenceViewModel::MusicianConfidenceViewModel(std::shared_ptr<Core::MobileApiClient> client)
-    : m_impl(std::make_unique<Impl>(std::move(client)))
-{
+    : m_impl(std::make_unique<Impl>(std::move(client))) {
 #ifdef HARMONYSYNC_QT_AVAILABLE
     m_impl->qmlParent = this;
 #endif

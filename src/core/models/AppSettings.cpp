@@ -21,14 +21,12 @@ struct AppSettings::Impl {
 };
 
 AppSettings::AppSettings()
-    : m_impl(std::make_unique<Impl>())
-{}
+    : m_impl(std::make_unique<Impl>()) {}
 
 AppSettings::~AppSettings() = default;
 
 AppSettings::AppSettings(const AppSettings& other)
-    : m_impl(std::make_unique<Impl>(*other.m_impl))
-{}
+    : m_impl(std::make_unique<Impl>(*other.m_impl)) {}
 
 AppSettings& AppSettings::operator=(const AppSettings& other) {
     if (this != &other) {

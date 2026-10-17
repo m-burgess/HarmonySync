@@ -21,8 +21,7 @@ namespace HarmonySync::Media {
  * destroyed later on the control thread by reclaimRetired(), so a set the audio thread may still
  * be reading is never freed under it.
  */
-template <typename T>
-class RealtimeHandoff {
+template <typename T> class RealtimeHandoff {
 public:
     RealtimeHandoff() = default;
     ~RealtimeHandoff() { destroyAll(); }
@@ -89,22 +88,16 @@ public:
     }
 
     /** @brief Control thread, ONLY while the consumer is not running: drop everything. */
-    void clear() noexcept {
-        destroyAll();
-    }
+    void clear() noexcept { destroyAll(); }
 
     /** @brief Control thread: true while a published value has not been taken yet. */
-    [[nodiscard]] bool hasPending() const noexcept {
-        return m_pending.load(std::memory_order_acquire) != nullptr;
-    }
+    [[nodiscard]] bool hasPending() const noexcept { return m_pending.load(std::memory_order_acquire) != nullptr; }
 
     /**
      * @brief Control thread: the most recently published or reset value (pending or current).
      * Stays valid until the next publish()/resetCurrent()/clear() on the control thread.
      */
-    [[nodiscard]] T* latest() noexcept {
-        return m_latest != nullptr ? &m_latest->value : nullptr;
-    }
+    [[nodiscard]] T* latest() noexcept { return m_latest != nullptr ? &m_latest->value : nullptr; }
 
 private:
     struct Node {
@@ -116,9 +109,7 @@ private:
         Node* head = m_retired.load(std::memory_order_relaxed);
         do {
             node->next = head;
-        } while (!m_retired.compare_exchange_weak(head, node,
-                                                  std::memory_order_release,
-                                                  std::memory_order_relaxed));
+        } while (!m_retired.compare_exchange_weak(head, node, std::memory_order_release, std::memory_order_relaxed));
     }
 
     static std::size_t destroyChain(Node* node) noexcept {

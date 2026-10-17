@@ -1,0 +1,101 @@
+{
+  "_comment": "Per-component line-coverage floors. 'paths' are repo-relative prefixes. A floor may only go up; each component PR sets its floor to 85.",
+  "components": [
+    { "name": "core-models", "floor": 85, "paths": ["src/core/models/"] },
+    {
+      "name": "core-services-data",
+      "floor": 85,
+      "paths": [
+        "src/core/services/ConfigService",
+        "src/core/services/SettingsStorageService",
+        "src/core/services/LocalDatabaseService",
+        "src/core/services/SongLibraryIndexService",
+        "src/core/services/FolderService",
+        "src/core/services/ServiceOrderFolderScanner",
+        "src/core/services/LocalizationService",
+        "src/core/services/ChordTransposer"
+      ]
+    },
+    {
+      "name": "core-services-network",
+      "floor": 85,
+      "paths": [
+        "src/core/services/WebSocketTransport",
+        "src/core/services/ProcessRunner",
+        "src/core/services/RemoteApiServer",
+        "src/core/services/MobileApiClient",
+        "src/core/services/CloudSyncEngine",
+        "src/core/services/CloudNetworkService",
+        "src/core/services/AutoUpdateService",
+        "src/core/services/CrashReporterService",
+        "src/core/services/OnlineLyricsFetcher",
+        "src/core/services/QrCodeImageProvider",
+        "src/core/services/AILyricSyncService",
+        "src/core/services/DisplayManager"
+      ]
+    },
+    {
+      "name": "media-audio",
+      "floor": 85,
+      "paths": [
+        "src/media/AudioEngine",
+        "src/media/AudioSink",
+        "src/media/CommandRunner",
+        "src/media/StemMixer",
+        "src/media/AudioDynamicsCompressor",
+        "src/media/MultiBandEqualizer",
+        "src/media/AudioPitchShifter",
+        "src/media/FFmpegAudioDecoder",
+        "src/media/FFmpegTransposer",
+        "src/media/RealtimeHandoff"
+      ]
+    },
+    {
+      "name": "media-io",
+      "floor": 85,
+      "paths": [
+        "src/media/DmxOutput",
+        "src/media/MidiPort",
+        "src/media/NdiSender",
+        "src/media/VideoPlayerBackend",
+        "src/media/OfflineMediaBackends",
+        "src/media/DmxController",
+        "src/media/MidiHardwareDevice",
+        "src/media/EventTriggerEngine",
+        "src/media/NdiVideoOutputService",
+        "src/media/VideoBackgroundPlayer"
+      ]
+    },
+    {
+      "name": "viewmodels-session",
+      "floor": 85,
+      "paths": [
+        "src/viewmodels/SetlistViewModel",
+        "src/viewmodels/SettingsViewModel",
+        "src/viewmodels/UserSessionViewModel",
+        "src/viewmodels/SongSwitchCoordinator"
+      ]
+    },
+    {
+      "name": "viewmodels-audio",
+      "floor": 85,
+      "paths": ["src/viewmodels/AudioMixerViewModel", "src/viewmodels/AudioFxViewModel"]
+    },
+    {
+      "name": "viewmodels-display",
+      "floor": 85,
+      "paths": [
+        "src/viewmodels/SlideDisplayViewModel",
+        "src/viewmodels/PresentationWindowViewModel",
+        "src/viewmodels/LowerThirdOverlayViewModel",
+        "src/viewmodels/ConfidenceMonitorViewModel",
+        "src/viewmodels/JsonSyntaxHighlighter"
+      ]
+    },
+    {
+      "name": "viewmodels-midi-mobile",
+      "floor": 85,
+      "paths": ["src/viewmodels/MidiMappingViewModel", "src/viewmodels/mobile/"]
+    }
+  ]
+}
