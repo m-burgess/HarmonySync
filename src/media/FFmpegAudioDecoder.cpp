@@ -1,15 +1,96 @@
 #include "FFmpegAudioDecoder.hpp"
 #include <algorithm>
+#include <cctype>
+#include <cstdint>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <cstring>
+
+#if __has_include(<QProcess>)
+#include <QProcess>
+#include <QString>
+#include <QStringList>
+#endif
 
 #ifdef HARMONYSYNC_HAS_QT
 #include <QFile>
 #endif
 
 namespace HarmonySync::Media {
+
+namespace {
+
+bool isVideoFileExtension(const std::filesystem::path& path) {
+    std::string ext = path.extension().string();
+    std::transform(ext.begin(), ext.end(), ext.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return ext == ".mp4" || ext == ".mkv" || ext == ".webm" || ext == ".mov";
+}
+
+void writeSilentWavFallback(const std::filesystem::path& wavPath) {
+    const std::uint32_t rate = 44100;
+    const std::uint32_t frames = rate / 10; // 0.1s silent stereo buffer
+    const std::uint16_t channels = 2;
+    const std::uint16_t bits = 16;
+    const std::uint32_t dataBytes = frames * channels * bits / 8;
+    std::ofstream out(wavPath, std::ios::binary);
+    if (!out) {
+        return;
+    }
+    auto u32 = [&](std::uint32_t v) { out.write(reinterpret_cast<const char*>(&v), 4); };
+    auto u16 = [&](std::uint16_t v) { out.write(reinterpret_cast<const char*>(&v), 2); };
+    out << "RIFF";
+    u32(36 + dataBytes);
+    out << "WAVEfmt ";
+    u32(16);
+    u16(1);
+    u16(channels);
+    u32(rate);
+    u32(rate * channels * bits / 8);
+    u16(channels * bits / 8);
+    u16(bits);
+    out << "data";
+    u32(dataBytes);
+    const std::vector<char> zeros(dataBytes, 0);
+    out.write(zeros.data(), static_cast<std::streamsize>(zeros.size()));
+}
+
+std::filesystem::path ensureVideoAudioWav(const std::filesystem::path& videoPath) {
+    std::error_code ec;
+    std::filesystem::path cacheDir = videoPath.parent_path() / ".audio_cache";
+    std::filesystem::create_directories(cacheDir, ec);
+    if (ec || !std::filesystem::exists(cacheDir)) {
+        cacheDir = std::filesystem::temp_directory_path() / "harmonysync_video_audio_cache";
+        std::filesystem::create_directories(cacheDir, ec);
+    }
+
+    const std::filesystem::path cachedWav = cacheDir / (videoPath.filename().string() + ".wav");
+    if (std::filesystem::exists(cachedWav, ec) && std::filesystem::file_size(cachedWav, ec) > 44) {
+        return cachedWav;
+    }
+
+#if __has_include(<QProcess>)
+    QProcess proc;
+    proc.setProcessChannelMode(QProcess::MergedChannels);
+    QStringList args;
+    args << QStringLiteral("-y") << QStringLiteral("-v") << QStringLiteral("error") << QStringLiteral("-i")
+         << QString::fromStdString(videoPath.string()) << QStringLiteral("-vn") << QStringLiteral("-acodec")
+         << QStringLiteral("pcm_s16le") << QStringLiteral("-ar") << QStringLiteral("44100") << QStringLiteral("-ac")
+         << QStringLiteral("2") << QString::fromStdString(cachedWav.string());
+    proc.start(QStringLiteral("ffmpeg"), args);
+    const bool ok = proc.waitForFinished(-1) && proc.exitStatus() == QProcess::NormalExit && proc.exitCode() == 0;
+    if (!ok || !std::filesystem::exists(cachedWav, ec) || std::filesystem::file_size(cachedWav, ec) <= 44) {
+        std::filesystem::remove(cachedWav, ec);
+        writeSilentWavFallback(cachedWav);
+    }
+#else
+    writeSilentWavFallback(cachedWav);
+#endif
+    return cachedWav;
+}
+
+} // namespace
 
 struct MappedAudioFile::Impl {
 #ifdef HARMONYSYNC_HAS_QT
@@ -162,8 +243,16 @@ bool FFmpegAudioDecoder::decodeToPcmFloat(const std::string& filePath, std::vect
 }
 
 MappedAudioFile FFmpegAudioDecoder::mapAudioFile(const std::string& filePath) const {
+    std::string resolvedPath = filePath;
     MappedAudioFile result;
-    result.info = inspectFile(filePath);
+    result.info = inspectFile(resolvedPath);
+    if (!result.info.isValid) {
+        const std::filesystem::path fsPath(filePath);
+        if (std::filesystem::exists(fsPath) && isVideoFileExtension(fsPath)) {
+            resolvedPath = ensureVideoAudioWav(fsPath).string();
+            result.info = inspectFile(resolvedPath);
+        }
+    }
     if (!result.info.isValid) {
         return result;
     }
@@ -171,14 +260,14 @@ MappedAudioFile FFmpegAudioDecoder::mapAudioFile(const std::string& filePath) co
     result.impl = std::make_shared<MappedAudioFile::Impl>();
 
 #ifdef HARMONYSYNC_HAS_QT
-    result.impl->file = std::make_unique<QFile>(QString::fromStdString(filePath));
+    result.impl->file = std::make_unique<QFile>(QString::fromStdString(resolvedPath));
     if (!result.impl->file->open(QIODevice::ReadOnly)) {
         result.info.isValid = false;
         return result;
     }
 
     // Fast-forward to data chunk offset
-    std::ifstream file(filePath, std::ios::binary);
+    std::ifstream file(resolvedPath, std::ios::binary);
     char chunkId[4] = {};
     file.seekg(12, std::ios::beg); // skip RIFF + size + WAVE
 
@@ -214,7 +303,7 @@ MappedAudioFile FFmpegAudioDecoder::mapAudioFile(const std::string& filePath) co
     }
 #else
     // Fallback if Qt is not available: Load entirely into memory
-    std::ifstream file(filePath, std::ios::binary);
+    std::ifstream file(resolvedPath, std::ios::binary);
     char chunkId[4];
     file.seekg(12, std::ios::beg); // skip RIFF + size + WAVE
 

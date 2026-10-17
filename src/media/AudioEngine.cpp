@@ -818,6 +818,7 @@ void AudioEngine::unloadCurrent() {
 }
 
 std::size_t AudioEngine::liveSongSetCountForTesting() const noexcept {
+    m_impl->reclaimRetiredSongs();
     return m_impl->liveSets->load(std::memory_order_relaxed);
 }
 

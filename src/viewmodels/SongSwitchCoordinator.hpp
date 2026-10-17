@@ -39,6 +39,7 @@ private:
     unsigned m_shownGeneration{0};
     unsigned m_generation{0};
     bool m_removalInFlight{false};
+    bool m_shownWasSongFolder{false};
     /// Stem paths of the shown row; guards the case where the shown (last) row itself
     /// was removed and the index fell back to the previous, different song.
     std::vector<std::string> m_shownStems;

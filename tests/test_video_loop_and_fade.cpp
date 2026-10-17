@@ -250,6 +250,85 @@ void testSongAndNonSongVideoPlaybackBehavior() {
     std::cout << "[PASS] testSongAndNonSongVideoPlaybackBehavior passed." << std::endl;
 }
 
+QQuickItem* findVisualItem(QQuickItem* item, const QString& name) {
+    if (!item) {
+        return nullptr;
+    }
+    if (item->objectName() == name) {
+        return item;
+    }
+    for (QQuickItem* child : item->childItems()) {
+        if (QQuickItem* found = findVisualItem(child, name)) {
+            return found;
+        }
+    }
+    return nullptr;
+}
+
+void testNonSongVideoAudioMixerAndMixPersistence() {
+    std::cout << "[TEST] Running testNonSongVideoAudioMixerAndMixPersistence (#244)..." << std::endl;
+
+    fs::path rootDir = fs::temp_directory_path() / "hs_test_non_song_video_mixer_244";
+    fs::remove_all(rootDir);
+
+    fs::path bumperFolder = rootDir / "06 Bumper Video";
+    fs::create_directories(bumperFolder);
+    writeValidMp4(bumperFolder / "Mark - Sermon Bumper - Keith Robertson (1080p).mp4");
+
+    SetlistViewModel setlist;
+    AudioMixerViewModel mixer;
+    SongSwitchCoordinator coordinator(setlist, mixer);
+
+    check(setlist.openServiceOrderRootFolder(QString::fromStdString(rootDir.string())),
+          "#244: openServiceOrderRootFolder failed for bumper video");
+
+    // Non-song video folder must remain a non-song item (hasActiveSongMap == false)
+    // while routing its video audio stem (pan = 0.0) and creating mix.json in the folder.
+    check(setlist.hasActiveSongMap() == false, "#244: bumper video folder must not have an active song map");
+    const auto initialStems = setlist.stemsAt(0);
+    check(initialStems.size() == 1, "#244: bumper video folder must expose 1 audio stem for the video");
+    check(std::abs(initialStems[0].pan() - 0.0f) < 0.001f, "#244: bumper video stem must be centered stereo (pan=0.0)");
+    check(std::abs(initialStems[0].volume() - 1.0f) < 0.001f, "#244: initial bumper video stem volume must be 1.0");
+    check(fs::exists(bumperFolder / "mix.json"), "#244: initial scan of non-song video folder must create mix.json");
+
+    // Wait for SongSwitchCoordinator + AudioMixerViewModel async preload to load the video stem into the mixer.
+    check(waitFor([&] { return mixer.loadedStemCount() == 1; }, 4000),
+          "#244: bumper video stem was not loaded into AudioMixerViewModel");
+
+    // Load StemMixerPanel.qml with setlistViewModel + audioMixerViewModel and verify the non-song video fader is visible.
+    QQmlEngine qmlEngine;
+    qmlEngine.rootContext()->setContextProperty("setlistViewModel", &setlist);
+    qmlEngine.rootContext()->setContextProperty("audioMixerViewModel", &mixer);
+    QQmlComponent mixerComp(&qmlEngine, QUrl::fromLocalFile(QStringLiteral(HS_QML_DIR "/components/StemMixerPanel.qml")));
+    std::unique_ptr<QObject> mixerRoot(mixerComp.create());
+    check(mixerRoot != nullptr,
+          "#244: StemMixerPanel.qml failed to load: " + mixerComp.errorString().toStdString());
+    runEvents(50);
+
+    check(mixerRoot->property("isNonSongVideo").toBool() == true,
+          "#244: StemMixerPanel.isNonSongVideo must be true for non-song video");
+    auto* volumeSlider = findVisualItem(qobject_cast<QQuickItem*>(mixerRoot.get()), QStringLiteral("stemVolumeSlider_0"));
+    check(volumeSlider != nullptr, "#244: StemMixerPanel must create stemVolumeSlider_0 for non-song video");
+    check(volumeSlider->property("visible").toBool() == true,
+          "#244: stemVolumeSlider_0 must be visible for non-song video");
+
+    // Adjust the non-song video stem volume and verify it persists to mix.json and reloads consistently.
+    mixer.setStemVolume(0, 0.35f);
+    check(std::abs(mixer.stemVolume(0) - 0.35f) < 0.001f, "#244: mixer stemVolume(0) must update to 0.35");
+    mixer.unloadCurrentSong(); // flushes pending mix.json save immediately
+
+    HarmonySync::Core::FolderService folderService;
+    HarmonySync::Core::SongMap reloaded = folderService.loadSongFromFolder(bumperFolder);
+    check(reloaded.hasSongMap() == false, "#244: reloaded bumper folder must still have hasSongMap() == false");
+    check(reloaded.stems().size() == 1, "#244: reloaded bumper folder must still have 1 stem");
+    check(std::abs(reloaded.stems()[0].volume() - 0.35f) < 0.001f,
+          "#244: reloaded bumper folder must restore saved volume 0.35 from mix.json (got " +
+              std::to_string(reloaded.stems()[0].volume()) + ")");
+
+    fs::remove_all(rootDir);
+    std::cout << "[PASS] testNonSongVideoAudioMixerAndMixPersistence passed." << std::endl;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -257,6 +336,7 @@ int main(int argc, char** argv) {
     QGuiApplication app(argc, argv);
     try {
         testSongAndNonSongVideoPlaybackBehavior();
+        testNonSongVideoAudioMixerAndMixPersistence();
         std::cout << "\nALL #244 VIDEO LOOP AND FADE TESTS PASSED" << std::endl;
         return EXIT_SUCCESS;
     } catch (const std::exception& ex) {

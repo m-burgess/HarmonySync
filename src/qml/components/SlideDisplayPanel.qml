@@ -162,9 +162,72 @@ Rectangle {
 
                 onPlaybackStateChanged: {
                     if (!previewFrame.isSongFolderVideo &&
+                        bgMediaPlayer.playbackState === MediaPlayer.PlayingState &&
+                        audioMixerViewModel &&
+                        audioMixerViewModel.loadedStemCount > 0 &&
+                        !audioMixerViewModel.isPlaying &&
+                        !previewFrame.nonSongVideoFadingOut) {
+                        audioMixerViewModel.play()
+                    }
+                    if (!previewFrame.isSongFolderVideo &&
                         bgMediaPlayer.playbackState === MediaPlayer.StoppedState &&
                         bgMediaPlayer.source.toString() !== "") {
                         previewFrame.nonSongVideoFadingOut = true
+                    }
+                }
+            }
+
+            Connections {
+                target: audioMixerViewModel
+                function onSongSwitched() {
+                    if (!previewFrame.isSongFolderVideo &&
+                        bgMediaPlayer.source.toString() !== "" &&
+                        audioMixerViewModel &&
+                        audioMixerViewModel.loadedStemCount > 0) {
+                        previewFrame.nonSongVideoFadingOut = false
+                        bgMediaPlayer.setPosition(0)
+                        bgMediaPlayer.play()
+                        if (!audioMixerViewModel.isPlaying) {
+                            audioMixerViewModel.play()
+                        }
+                    }
+                }
+                function onPlayStateChanged(playing) {
+                    if (!previewFrame.isSongFolderVideo && bgMediaPlayer.source.toString() !== "") {
+                        if (playing) {
+                            if (audioMixerViewModel.positionSeconds < 0.25) {
+                                previewFrame.nonSongVideoFadingOut = false
+                            }
+                            if (bgMediaPlayer.playbackState !== MediaPlayer.PlayingState) {
+                                bgMediaPlayer.play()
+                            }
+                        } else {
+                            let nearEnd = (audioMixerViewModel.durationSeconds > 0 &&
+                                           audioMixerViewModel.positionSeconds >= audioMixerViewModel.durationSeconds - 0.25) ||
+                                          previewFrame.nonSongVideoFadingOut
+                            if (!nearEnd) {
+                                if (audioMixerViewModel.positionSeconds <= 0.05) {
+                                    bgMediaPlayer.pause()
+                                    bgMediaPlayer.setPosition(0)
+                                    previewFrame.nonSongVideoFadingOut = false
+                                } else if (bgMediaPlayer.playbackState === MediaPlayer.PlayingState) {
+                                    bgMediaPlayer.pause()
+                                }
+                            }
+                        }
+                    }
+                }
+                function onPositionChanged(posSec) {
+                    if (!previewFrame.isSongFolderVideo &&
+                        bgMediaPlayer.source.toString() !== "" &&
+                        bgMediaPlayer.duration > 0) {
+                        let targetMs = posSec * 1000.0
+                        if (Math.abs(bgMediaPlayer.position - targetMs) > 400) {
+                            bgMediaPlayer.setPosition(Math.floor(targetMs))
+                            if (targetMs < Math.max(0, bgMediaPlayer.duration - previewFrame.fadeDurationMs)) {
+                                previewFrame.nonSongVideoFadingOut = false
+                            }
+                        }
                     }
                 }
             }

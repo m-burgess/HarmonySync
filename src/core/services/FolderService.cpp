@@ -237,6 +237,7 @@ SongMap FolderService::loadSongFromFolder(const std::filesystem::path& folderPat
 
     int stemCount = 0;
     std::vector<MediaStem> loadedStems;
+    std::filesystem::path foundVideoFile;
 
     for (const auto& entry : std::filesystem::directory_iterator(folderPath)) {
         if (!entry.is_regular_file()) {
@@ -272,6 +273,7 @@ SongMap FolderService::loadSongFromFolder(const std::filesystem::path& folderPat
             }
         } else if (isVideoExtension(ext)) {
             song.setBackgroundVideoPath(entry.path().string());
+            foundVideoFile = entry.path();
         }
     }
 
@@ -317,6 +319,20 @@ SongMap FolderService::loadSongFromFolder(const std::filesystem::path& folderPat
         }
 
         song.setHasSongMap(true);
+    } else if (!foundVideoFile.empty()) {
+        // Non-song video folder: route video audio through the mixer/engine with a stereo stem
+        // and persist its mix configuration in mix.json while keeping hasSongMap() false.
+        MediaStem videoStem("1", foundVideoFile.stem().string(), foundVideoFile.string());
+        videoStem.setPan(0.0f);
+        videoStem.setVolume(1.0f);
+        std::vector<MediaStem> videoStems{std::move(videoStem)};
+
+        applyMixState(folderPath.string(), videoStems);
+        if (!std::filesystem::exists(folderPath / "mix.json")) {
+            saveMixState(folderPath.string(), videoStems);
+        }
+
+        song.addStem(std::move(videoStems[0]));
     }
 
     return song;

@@ -41,24 +41,37 @@ void SongSwitchCoordinator::onCurrentSongIndexChanged(int index) {
     if (index < 0) {
         return;
     }
+    const auto stems = m_setlist.stemsAt(index);
     // Removing an earlier row shifts the shown song up one place; nothing to switch.
     // Anything else (including a reprise of the same song) is a real switch.
     const bool shiftedByRemoval = m_removalInFlight && m_shownGeneration == m_generation && m_shownIndex >= 0 &&
-                                  index == m_shownIndex - 1 && stemPaths(m_setlist.stemsAt(index)) == m_shownStems;
+                                  index == m_shownIndex - 1 && stemPaths(stems) == m_shownStems;
+    const int previousShownIndex = m_shownIndex;
+    const bool previousWasSongFolder = m_shownWasSongFolder;
+    const bool isSongFolder = m_setlist.itemHasSongMapAt(index);
     m_shownIndex = index;
-    m_shownStems = stemPaths(m_setlist.stemsAt(index));
+    m_shownStems = stemPaths(stems);
     m_shownGeneration = m_generation;
+    m_shownWasSongFolder = isSongFolder;
     if (shiftedByRemoval) {
         return;
     }
-    const bool isSongFolder = m_setlist.itemHasSongMapAt(index);
+    if (previousShownIndex >= 0 && (!isSongFolder || !previousWasSongFolder)) {
+        m_mixer.stop();
+    }
     const QString videoPath = m_setlist.backgroundVideoPathAt(index);
     m_mixer.setBackgroundVideoLooping(isSongFolder);
     m_mixer.setNextBackgroundVideoLooping(isSongFolder);
     m_mixer.setActiveBackgroundVideo(videoPath);
     m_mixer.loadNextBackgroundVideo(videoPath);
+    if (stems.empty()) {
+        m_mixer.clearPreloadedSong();
+        m_mixer.unloadCurrentSong();
+        preloadSongAfterCurrent();
+        return;
+    }
     // Switches now if this song was preloaded, otherwise when its decode is ready.
-    m_mixer.showSong(m_setlist.stemsAt(index));
+    m_mixer.showSong(stems);
 }
 
 void SongSwitchCoordinator::preloadSongAfterCurrent() {
@@ -83,6 +96,7 @@ void SongSwitchCoordinator::resetShownSong() {
     m_shownIndex = -1;
     m_shownStems.clear();
     m_removalInFlight = false;
+    m_shownWasSongFolder = false;
 }
 
 void SongSwitchCoordinator::onSongRemoved(int /*index*/) {
