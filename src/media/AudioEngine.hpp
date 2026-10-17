@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <thread>
 
 namespace HarmonySync::Media {
 
@@ -90,6 +91,36 @@ public:
      * decode result not yet adopted. Not for production use.
      */
     [[nodiscard]] std::size_t liveSongSetCountForTesting() const noexcept;
+    /// Test seam (#177): true if an audio output device was opened. Not for production use.
+    [[nodiscard]] bool hasAudioOutputForTesting() const noexcept;
+    /// Test seam (#177): how many times the sink has pulled audio (readData() calls).
+    [[nodiscard]] std::uint64_t audioCallbackCountForTesting() const noexcept;
+    /// Test seam (#177): the thread the most recent readData() ran on (default id if none yet).
+    [[nodiscard]] std::thread::id audioCallbackThreadForTesting() const noexcept;
+    /**
+     * @brief Identity of one song (#177): the file paths of its stems, in order, exactly as
+     * passed to loadStems()/preloadStems()/preloadStemsAsync(). Same idea as the viewmodel's
+     * preload key, so Qt can compare a reported key with songKey() of its own stem list.
+     */
+    [[nodiscard]] static std::vector<std::string> songKey(const std::vector<Core::MediaStem>& stems);
+    /**
+     * @brief Called when a queued setStemVolume()/setStemMuted()/setStemSolo() reached the audio
+     * thread after its song stopped being current (e.g. a switch landed first), so it was
+     * dropped instead of being applied to the next song (#177). @p songKey is the song the change
+     * was made for, passed by const reference to the engine's own copy (no copy is made).
+     *
+     * Runs on the audio thread. It must not allocate, block, lock a mutex the UI thread can
+     * hold, or touch UI objects. In Qt, only post a queued signal (e.g. emit a signal connected
+     * with Qt::QueuedConnection, or QMetaObject::invokeMethod(..., Qt::QueuedConnection)) and do
+     * the copy/re-sync/save on the UI thread; the control-side stems of that song already hold
+     * the change.
+     */
+    using StaleStemChangeCallback = std::function<void(const std::vector<std::string>& songKey, int stemIndex)>;
+    void setStaleStemChangeCallback(StaleStemChangeCallback callback);
+    /// Test seam (#177): the stems the audio thread is mixing now, read on the audio thread.
+    [[nodiscard]] std::vector<Core::MediaStem> audioThreadStemsForTesting() const;
+    /// Test seam (#177): queue @p work on the audio thread (inline without one). Not for production.
+    void runOnAudioThreadForTesting(std::function<void()> work);
     void play();
     void pause();
     void stop();
