@@ -1,6 +1,11 @@
 #include "SetlistViewModel.hpp"
 #include "ServiceOrderFolderScanner.hpp"
 #include "AILyricSyncService.hpp"
+#include "SetlistListModel.hpp"
+#include "SerialWorker.hpp"
+#include <atomic>
+#include <cstdint>
+#include <mutex>
 #include <utility>
 #include <algorithm>
 #include <iostream>
@@ -26,6 +31,26 @@ struct SetlistViewModel::Impl {
     bool autoLyricsEnabled{false};
     bool isGeneratingTimestamps{false};
     std::string aiSyncProgressMessage;
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    std::unique_ptr<SetlistListModel> listModel; // #219
+#endif
+    std::function<void(const std::string&)> scanHook;
+
+    // #177: folder scans run on scanWorker. Results come back through scanGuard (our own
+    // mutex, as in PR 227); the destructor clears target before the worker is joined.
+    struct ScanResult {
+        std::uint64_t ticket;
+        Core::ServiceOrder order;
+    };
+    struct ScanGuard {
+        std::mutex mutex;
+        SetlistViewModel* target{nullptr};
+        std::vector<ScanResult> results;
+        std::atomic<std::uint64_t> latestTicket{0};
+    };
+    std::shared_ptr<ScanGuard> scanGuard = std::make_shared<ScanGuard>();
+    std::uint64_t scanTicket{0};
+    SerialWorker scanWorker{SerialWorker::OnStop::DropQueued};
 
     int activeLyricIndex{-1};
     std::string activeLyricText;
@@ -158,11 +183,27 @@ struct SetlistViewModel::Impl {
 
 SetlistViewModel::SetlistViewModel(std::shared_ptr<Core::FolderService> folderService,
                                    AITimestampGenerator aiTimestampGenerator)
-    : m_impl(std::make_unique<Impl>(std::move(folderService), std::move(aiTimestampGenerator))) {}
+    : m_impl(std::make_unique<Impl>(std::move(folderService), std::move(aiTimestampGenerator))) {
+    m_impl->scanGuard->target = this;
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    m_impl->listModel = std::make_unique<SetlistListModel>(*this);
+#endif
+}
 
-SetlistViewModel::~SetlistViewModel() = default;
+SetlistViewModel::~SetlistViewModel() {
+    {
+        std::lock_guard lock(m_impl->scanGuard->mutex);
+        m_impl->scanGuard->target = nullptr;
+    }
+    // Queued scans are dropped; a scan already running finishes, then the thread joins.
+    m_impl->scanWorker.stop();
+}
 
 #ifdef HARMONYSYNC_QT_AVAILABLE
+QAbstractListModel* SetlistViewModel::setlistModel() const {
+    return m_impl->listModel.get();
+}
+
 QString SetlistViewModel::title() const {
     return QString::fromStdString(m_impl->titleStr);
 }
@@ -198,7 +239,13 @@ int SetlistViewModel::currentSongIndex() const noexcept {
 
 void SetlistViewModel::setCurrentSongIndex(int index) {
     if (index >= -1 && index < itemCount() && m_impl->currentSongIndex != index) {
+        const int previous = m_impl->currentSongIndex;
         m_impl->currentSongIndex = index;
+#ifdef HARMONYSYNC_QT_AVAILABLE
+        m_impl->listModel->currentRowChanged(previous, index);
+#else
+        (void)previous;
+#endif
         m_impl->activeLyricIndex = -1;
         m_impl->updateLyricBlocks();
         m_impl->calculateActiveLyrics();
@@ -240,8 +287,17 @@ bool SetlistViewModel::openServiceOrderRootFolder(const QString& rootFolderPath)
 #else
 bool SetlistViewModel::openServiceOrderRootFolder(const std::string& pathStr) {
 #endif
-    Core::ServiceOrder newOrder = m_impl->scanner.scanServiceOrderDirectory(pathStr);
+    if (m_impl->scanHook) {
+        m_impl->scanHook(pathStr);
+    }
+    return applyScannedOrder(m_impl->scanner.scanServiceOrderDirectory(pathStr));
+}
+
+bool SetlistViewModel::applyScannedOrder(Core::ServiceOrder newOrder) {
     if (!newOrder.songs().empty()) {
+#ifdef HARMONYSYNC_QT_AVAILABLE
+        m_impl->listModel->beginReplaceAll();
+#endif
         m_impl->serviceOrder = std::move(newOrder);
         setTitle(
 #ifdef HARMONYSYNC_QT_AVAILABLE
@@ -252,6 +308,7 @@ bool SetlistViewModel::openServiceOrderRootFolder(const std::string& pathStr) {
         );
         m_impl->currentSongIndex = -1;
 #ifdef HARMONYSYNC_QT_AVAILABLE
+        m_impl->listModel->endReplaceAll();
         emit itemCountChanged(itemCount());
         emit serviceOrderOpened();
 #endif
@@ -260,6 +317,59 @@ bool SetlistViewModel::openServiceOrderRootFolder(const std::string& pathStr) {
     }
     return false;
 }
+
+void SetlistViewModel::setServiceOrderScanHookForTesting(std::function<void(const std::string&)> hook) {
+    m_impl->scanHook = std::move(hook);
+}
+
+#ifdef HARMONYSYNC_QT_AVAILABLE
+void SetlistViewModel::openServiceOrderRootFolderAsync(const QString& rootFolderPath) {
+    const std::uint64_t ticket = ++m_impl->scanTicket;
+    auto guard = m_impl->scanGuard;
+    guard->latestTicket.store(ticket);
+    if (!m_impl->isLoading) {
+        m_impl->isLoading = true;
+        emit loadingStateChanged(true);
+    }
+    // The task gets copies only: the path, the hook, and the (stateless) FolderService,
+    // with its own scanner. It never touches this view model.
+    m_impl->scanWorker.post([guard, ticket, path = rootFolderPath.toStdString(), hook = m_impl->scanHook,
+                             folderService = m_impl->folderService]() {
+        if (guard->latestTicket.load() != ticket) {
+            return; // superseded before it started
+        }
+        if (hook) {
+            hook(path);
+        }
+        Core::ServiceOrder order;
+        if (guard->latestTicket.load() == ticket) {
+            order = Core::ServiceOrderFolderScanner(folderService).scanServiceOrderDirectory(path);
+        }
+        std::lock_guard lock(guard->mutex);
+        if (SetlistViewModel* target = guard->target) {
+            guard->results.push_back({ticket, std::move(order)});
+            QMetaObject::invokeMethod(target, "drainScanResults", Qt::QueuedConnection);
+        }
+    });
+}
+
+void SetlistViewModel::drainScanResults() {
+    std::vector<Impl::ScanResult> results;
+    {
+        std::lock_guard lock(m_impl->scanGuard->mutex);
+        results.swap(m_impl->scanGuard->results);
+    }
+    for (auto& result : results) {
+        if (result.ticket != m_impl->scanTicket) {
+            continue; // a newer open replaced this one
+        }
+        m_impl->isLoading = false;
+        emit loadingStateChanged(false);
+        const bool opened = applyScannedOrder(std::move(result.order));
+        emit serviceOrderOpenFinished(opened);
+    }
+}
+#endif
 
 #ifdef HARMONYSYNC_QT_AVAILABLE
 QString SetlistViewModel::itemNameAt(int index) const {
@@ -314,8 +424,12 @@ bool SetlistViewModel::addSongFolder(const std::string& pathStr) {
     }
     Core::SongMap song = m_impl->folderService->loadSongFromFolder(pathStr);
     if (!song.title().empty()) {
+#ifdef HARMONYSYNC_QT_AVAILABLE
+        m_impl->listModel->beginInsertAt(itemCount());
+#endif
         m_impl->serviceOrder.addSong(song);
 #ifdef HARMONYSYNC_QT_AVAILABLE
+        m_impl->listModel->endInsert();
         emit itemCountChanged(itemCount());
 #endif
         if (m_impl->currentSongIndex == -1) {
@@ -330,11 +444,14 @@ void SetlistViewModel::removeSongAt(int index) {
     if (index >= 0 && index < itemCount()) {
 #ifdef HARMONYSYNC_QT_AVAILABLE
         emit songRemovalStarted(index);
+        m_impl->listModel->beginRemoveAt(index);
 #endif
         m_impl->serviceOrder.removeSongAt(static_cast<size_t>(index));
 #ifdef HARMONYSYNC_QT_AVAILABLE
+        m_impl->listModel->endRemove();
         emit itemCountChanged(itemCount());
 #endif
+        const int currentBefore = m_impl->currentSongIndex;
         if (index < m_impl->currentSongIndex) {
             // An earlier song went: the same song stays selected, one place up.
             --m_impl->currentSongIndex;
@@ -345,15 +462,23 @@ void SetlistViewModel::removeSongAt(int index) {
             setCurrentSongIndex(itemCount() - 1);
         }
 #ifdef HARMONYSYNC_QT_AVAILABLE
+        // Rows below the removed one moved up, so refresh the current-row role.
+        if (index <= currentBefore) {
+            m_impl->listModel->currentRowChanged(currentBefore - 1, m_impl->currentSongIndex);
+        }
         emit songRemoved(index);
 #endif
     }
 }
 
 void SetlistViewModel::clearSetlist() {
+#ifdef HARMONYSYNC_QT_AVAILABLE
+    m_impl->listModel->beginReplaceAll();
+#endif
     m_impl->serviceOrder.clearAll();
     m_impl->currentSongIndex = -1;
 #ifdef HARMONYSYNC_QT_AVAILABLE
+    m_impl->listModel->endReplaceAll();
     emit itemCountChanged(0);
     emit currentSongIndexChanged(-1);
     emit activeSongMapChanged(false);
@@ -620,16 +745,19 @@ void SetlistViewModel::syncToPlaybackPosition(double positionSeconds) {
     }
 
     auto& song = m_impl->serviceOrder.songs()[m_impl->currentSongIndexAsSize()];
-    auto sections = song.sections();
-    if (sections.empty()) {
-        return;
-    }
-
-    // Create a flat array of timestamps mapping to the raw lyric lines
+    const auto timedLyrics = song.timedLyrics();
+    const bool hasTimedLyrics = !timedLyrics.empty();
+    const auto sections = song.sections();
     std::vector<double> flatTimestamps;
-    for (const auto& sec : sections) {
-        for (const auto& line : sec.lines) {
+    if (hasTimedLyrics) {
+        for (const auto& line : timedLyrics) {
             flatTimestamps.push_back(line.timestampSeconds);
+        }
+    } else {
+        for (const auto& sec : sections) {
+            for (const auto& line : sec.lines) {
+                flatTimestamps.push_back(line.timestampSeconds);
+            }
         }
     }
 
@@ -639,7 +767,7 @@ void SetlistViewModel::syncToPlaybackPosition(double positionSeconds) {
 
     int timedIndex = -1;
     for (size_t i = 0; i < flatTimestamps.size(); ++i) {
-        if (flatTimestamps[i] <= positionSeconds && flatTimestamps[i] > 0.0) {
+        if (flatTimestamps[i] <= positionSeconds && (hasTimedLyrics || flatTimestamps[i] > 0.0)) {
             timedIndex = static_cast<int>(i);
         } else if (flatTimestamps[i] > positionSeconds) {
             break;
@@ -650,7 +778,7 @@ void SetlistViewModel::syncToPlaybackPosition(double positionSeconds) {
         int currentTimedIdx = 0;
         int mappedBlockIndex = -1;
         for (size_t b = 0; b < m_impl->lyricBlocks.size(); ++b) {
-            if (m_impl->lyricBlocks[b].size() >= 2 && m_impl->lyricBlocks[b].front() == '[' &&
+            if (!hasTimedLyrics && m_impl->lyricBlocks[b].size() >= 2 && m_impl->lyricBlocks[b].front() == '[' &&
                 m_impl->lyricBlocks[b].back() == ']') {
                 continue;
             }

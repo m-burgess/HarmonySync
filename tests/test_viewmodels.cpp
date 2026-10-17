@@ -57,6 +57,7 @@ void testLyricNavigation() {
 
     std::filesystem::path tempDir = std::filesystem::temp_directory_path() / "vm_song_folder_lyrics";
     std::filesystem::create_directories(tempDir);
+    std::ofstream(tempDir / "Reference.wav") << "RIFF....WAVEfmt ";
 
     std::ofstream json(tempDir / "song-map.json");
     json << R"({
@@ -302,6 +303,7 @@ void testAILyricSyncIntegration() {
     SetlistViewModel vm;
     std::filesystem::path tempDir = std::filesystem::temp_directory_path() / "hs_test_ai_sync";
     std::filesystem::create_directories(tempDir);
+    std::ofstream(tempDir / "Reference.wav") << "RIFF....WAVEfmt ";
     
     std::ofstream json(tempDir / "song-map.json");
     json << R"({
