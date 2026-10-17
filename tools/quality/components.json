@@ -71,6 +71,7 @@
       "floor": 85,
       "paths": [
         "src/viewmodels/SetlistViewModel",
+        "src/viewmodels/SetlistListModel",
         "src/viewmodels/SettingsViewModel",
         "src/viewmodels/UserSessionViewModel",
         "src/viewmodels/SongSwitchCoordinator"

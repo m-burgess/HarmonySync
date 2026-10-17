@@ -307,7 +307,7 @@ if(Qt6_FOUND)
         NAME test_song_switch_coordinator
         COMMAND test_song_switch_coordinator
     )
-    # #219/#206: the setlist rows follow the service order through ServiceOrderPanel.qml.
+    # #219/#206: setlist rows follow the order in ServiceOrderPanel.qml.
     add_executable(test_qml_setlist_model test_qml_setlist_model.cpp)
     target_link_libraries(
         test_qml_setlist_model
