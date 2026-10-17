@@ -83,9 +83,9 @@ public:
     std::atomic<double>* m_position = nullptr;
     std::atomic<PlaybackState>* m_state = nullptr;
     std::atomic<float>* m_masterVolume = nullptr;
-    std::atomic<double> m_duration{0.0}; // duration of the set read() is using
+    std::atomic<double> m_duration{0.0};           // duration of the set read() is using
     std::atomic<std::uint64_t> m_callbackCount{0}; // test seam (#177)
-    std::atomic<std::thread::id> m_callbackThread{}; // test seam (#177)
+    std::atomic<std::thread::id> m_callbackThread; // test seam (#177)
 
     /// Audio thread only: take a published song, if any, and start it at 0.
     /// Shared by read() and the stem-control updates queued to the audio thread.
@@ -320,7 +320,7 @@ struct AudioEngine::Impl {
     // audioSink and services the PCM source; the control thread queues work to it.
     std::unique_ptr<QThread> audioThread;
     std::unique_ptr<QObject> audioContext; // lives on audioThread; target for queued work
-    bool sinkMayRun = false;  // control thread: a start was queued with no stopSinkAndWait() since
+    bool sinkMayRun = false;               // control thread: a start was queued with no stopSinkAndWait() since
 #endif
     bool hasSink = false; // set once at construction
     AudioMixerDevice mixerDevice;
@@ -332,22 +332,22 @@ struct AudioEngine::Impl {
 #ifdef HARMONYSYNC_HAS_QT
     // Without an application object, queued work has no event loop to run on. In that case
     // these helpers execute inline and the engine uses the direct sink path.
-    template <typename F>
-    void onAudioThread(F&& work) {
+    template <typename F> void onAudioThread(F&& work) {
         if (!audioContext) {
             work();
             return;
         }
-        QMetaObject::invokeMethod(audioContext.get(), std::forward<F>(work), Qt::QueuedConnection);
+        QMetaObject::invokeMethod(audioContext.get(), std::forward<F>(work),
+                                  Qt::QueuedConnection); // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
     }
     /// Control thread only; the audio thread never waits on the control thread, so no deadlock.
-    template <typename F>
-    void onAudioThreadAndWait(F&& work) {
+    template <typename F> void onAudioThreadAndWait(F&& work) {
         if (!audioContext) {
             work();
             return;
         }
-        QMetaObject::invokeMethod(audioContext.get(), std::forward<F>(work), Qt::BlockingQueuedConnection);
+        QMetaObject::invokeMethod(audioContext.get(), std::forward<F>(work),
+                                  Qt::BlockingQueuedConnection); // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
     }
 #endif
 
@@ -370,14 +370,15 @@ struct AudioEngine::Impl {
     /// Stop the sink and wait. Afterwards no read() runs and every update queued earlier
     /// has run, so the control thread may replace or free every set until the next start.
     void stopSinkAndWait() {
-#ifdef HARMONYSYNC_HAS_QT
         if (audioThread) {
             onAudioThreadAndWait([this] {
-                if (audioSink) audioSink->stop();
+                if (audioSink) {
+                    audioSink->stop();
+                }
             });
-        } else
-#endif
-        if (audioSink) audioSink->stop();
+        } else if (audioSink) {
+            audioSink->stop();
+        }
         sinkMayRun = false;
     }
 
@@ -402,8 +403,7 @@ struct AudioEngine::Impl {
     /// Queue a change to one stem of the control thread's current song. The change is tagged
     /// with the current load generation; if another load or switch is current by the time it reaches the audio thread
     /// (a switch landed first), it is dropped and reported, never applied to the wrong song.
-    template <typename Apply>
-    void updateStemOnAudioThread(int stemIndex, Apply apply) {
+    template <typename Apply> void updateStemOnAudioThread(int stemIndex, Apply apply) {
         onAudioThread([device = &mixerDevice, stemIndex, apply, key = stemsKey, gen = generation,
                        onStale = staleStemChangeCallback] {
             device->takePending(); // see the song that is current now, not the outgoing one
@@ -414,7 +414,7 @@ struct AudioEngine::Impl {
                 }
                 return;
             }
-            if (stemIndex < static_cast<int>(set->buffers.size())) {
+            if (stemIndex >= 0 && static_cast<std::size_t>(stemIndex) < set->buffers.size()) {
                 apply(set->buffers[static_cast<std::size_t>(stemIndex)].stem);
             }
         });
@@ -424,7 +424,9 @@ struct AudioEngine::Impl {
     /// True while the sink may call read() on the audio thread.
     bool audioCallbackMayRun() const {
 #ifdef HARMONYSYNC_HAS_QT
-        if (audioThread) return sinkMayRun;
+        if (audioThread) {
+            return sinkMayRun;
+        }
 #endif
         return audioSink && audioSink->isRunning();
     }
@@ -432,15 +434,21 @@ struct AudioEngine::Impl {
     void startSink() {
 #ifdef HARMONYSYNC_HAS_QT
         if (audioThread) {
-            if (!hasSink) return;
+            if (!hasSink) {
+                return;
+            }
             sinkMayRun = true;
             onAudioThread([this] {
-                if (audioSink && !audioSink->isActive()) audioSink->start(mixerDevice);
+                if (audioSink && !audioSink->isActive()) {
+                    audioSink->start(mixerDevice);
+                }
             });
             return;
         }
 #endif
-        if (audioSink && !audioSink->isActive()) audioSink->start(mixerDevice);
+        if (audioSink && !audioSink->isActive()) {
+            audioSink->start(mixerDevice);
+        }
     }
 
     void takePendingWhenIdle() {
@@ -519,7 +527,9 @@ struct AudioEngine::Impl {
         // The sets are freed afterwards on this thread when mixerDevice is destroyed.
         shutdownAudioThread();
 #endif
-        if (audioSink) audioSink->stop();
+        if (audioSink) {
+            audioSink->stop();
+        }
         // Runs for destruction and for move-assignment over this engine. A running worker
         // only touches its own job, so cancelling then joining is enough.
         for (auto& worker : workers) {
