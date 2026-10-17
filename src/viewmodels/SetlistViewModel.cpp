@@ -657,16 +657,19 @@ void SetlistViewModel::syncToPlaybackPosition(double positionSeconds) {
     }
 
     auto& song = m_impl->serviceOrder.songs()[m_impl->currentSongIndexAsSize()];
-    auto sections = song.sections();
-    if (sections.empty()) {
-        return;
-    }
-
-    // Create a flat array of timestamps mapping to the raw lyric lines
+    const auto timedLyrics = song.timedLyrics();
+    const bool hasTimedLyrics = !timedLyrics.empty();
+    const auto sections = song.sections();
     std::vector<double> flatTimestamps;
-    for (const auto& sec : sections) {
-        for (const auto& line : sec.lines) {
+    if (hasTimedLyrics) {
+        for (const auto& line : timedLyrics) {
             flatTimestamps.push_back(line.timestampSeconds);
+        }
+    } else {
+        for (const auto& sec : sections) {
+            for (const auto& line : sec.lines) {
+                flatTimestamps.push_back(line.timestampSeconds);
+            }
         }
     }
 
@@ -676,7 +679,7 @@ void SetlistViewModel::syncToPlaybackPosition(double positionSeconds) {
 
     int timedIndex = -1;
     for (size_t i = 0; i < flatTimestamps.size(); ++i) {
-        if (flatTimestamps[i] <= positionSeconds && flatTimestamps[i] > 0.0) {
+        if (flatTimestamps[i] <= positionSeconds && (hasTimedLyrics || flatTimestamps[i] > 0.0)) {
             timedIndex = static_cast<int>(i);
         } else if (flatTimestamps[i] > positionSeconds) {
             break;
@@ -687,7 +690,7 @@ void SetlistViewModel::syncToPlaybackPosition(double positionSeconds) {
         int currentTimedIdx = 0;
         int mappedBlockIndex = -1;
         for (size_t b = 0; b < m_impl->lyricBlocks.size(); ++b) {
-            if (m_impl->lyricBlocks[b].size() >= 2 && m_impl->lyricBlocks[b].front() == '[' &&
+            if (!hasTimedLyrics && m_impl->lyricBlocks[b].size() >= 2 && m_impl->lyricBlocks[b].front() == '[' &&
                 m_impl->lyricBlocks[b].back() == ']') {
                 continue;
             }
