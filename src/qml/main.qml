@@ -14,6 +14,18 @@ ApplicationWindow {
     visibility: Window.Maximized
     title: "HarmonySync Pro"
     color: Theme.backgroundDark
+    palette.window: Theme.backgroundDark
+    palette.windowText: Theme.textPrimary
+    palette.base: Theme.backgroundDark
+    palette.text: Theme.textPrimary
+    palette.button: Theme.backgroundCard
+    palette.buttonText: Theme.textPrimary
+    palette.highlight: Theme.accentPrimary
+    palette.highlightedText: Theme.textOnAccent
+    palette.mid: Theme.borderDark
+    palette.dark: Theme.textMuted
+    palette.light: Theme.surfaceHover
+    palette.placeholderText: Theme.textSecondary
     
     property string activeLyricText: setlistViewModel ? setlistViewModel.activeLyricText : ""
     property string nextLyricText: setlistViewModel ? setlistViewModel.nextLyricText : ""

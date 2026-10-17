@@ -60,6 +60,8 @@ coverage/
 # Temp files
 *.tmp
 .cache/
+__pycache__/
+*.pyc
 
 # Environment files
 .env

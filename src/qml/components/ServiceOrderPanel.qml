@@ -14,6 +14,18 @@ Rectangle {
     FolderDialog {
         id: folderDialog
         title: "Select Service Order Directory"
+        palette.window: Theme.backgroundCard
+        palette.windowText: Theme.textPrimary
+        palette.base: Theme.backgroundDark
+        palette.text: Theme.textPrimary
+        palette.button: Theme.surfaceHover
+        palette.buttonText: Theme.textPrimary
+        palette.highlight: Theme.accentPrimary
+        palette.highlightedText: Theme.textOnAccent
+        palette.mid: Theme.borderDark
+        palette.dark: Theme.textMuted
+        palette.light: Theme.surfaceHover
+        palette.placeholderText: Theme.textSecondary
         onAccepted: {
             var selectedPath = folderDialog.selectedFolder.toString();
             if (selectedPath.startsWith("file://")) {
