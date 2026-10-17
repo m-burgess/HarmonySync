@@ -803,8 +803,7 @@ void SetlistViewModel::syncToPlaybackPosition(double positionSeconds) {
         const std::string& targetText = timedLyrics[static_cast<size_t>(timedIndex)].text;
         int mappedBlockIndex = -1;
         for (size_t b = 0; b < m_impl->lyricBlocks.size(); ++b) {
-            if (m_impl->lyricBlocks[b] == targetText ||
-                m_impl->lyricBlocks[b].find(targetText) != std::string::npos) {
+            if (m_impl->lyricBlocks[b] == targetText || m_impl->lyricBlocks[b].find(targetText) != std::string::npos) {
                 mappedBlockIndex = static_cast<int>(b);
                 break;
             }

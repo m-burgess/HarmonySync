@@ -193,16 +193,24 @@ AppSettings SettingsStorageService::loadSettings(const std::string& filePath) {
     std::string line;
     auto parseStringVal = [](const std::string& l) -> std::string {
         auto colon = l.find(':');
-        if (colon == std::string::npos) return "";
+        if (colon == std::string::npos) {
+            return "";
+        }
         auto firstQuote = l.find('"', colon);
-        if (firstQuote == std::string::npos) return "";
+        if (firstQuote == std::string::npos) {
+            return "";
+        }
         auto secondQuote = l.find('"', firstQuote + 1);
-        if (secondQuote == std::string::npos) return "";
+        if (secondQuote == std::string::npos) {
+            return "";
+        }
         return l.substr(firstQuote + 1, secondQuote - firstQuote - 1);
     };
     auto parseIntVal = [](const std::string& l) -> int {
         auto colon = l.find(':');
-        if (colon == std::string::npos) return 0;
+        if (colon == std::string::npos) {
+            return 0;
+        }
         try {
             return std::stoi(l.substr(colon + 1));
         } catch (...) {

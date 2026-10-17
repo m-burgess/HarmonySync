@@ -39,8 +39,7 @@ class SettingsViewModel
     Q_PROPERTY(int hAlign READ hAlign WRITE setHAlign NOTIFY settingsChanged)
     Q_PROPERTY(int marginOffsetX READ marginOffsetX WRITE setMarginOffsetX NOTIFY settingsChanged)
     Q_PROPERTY(int marginOffsetY READ marginOffsetY WRITE setMarginOffsetY NOTIFY settingsChanged)
-    Q_PROPERTY(
-        QString preServiceMusicUrl READ preServiceMusicUrl WRITE setPreServiceMusicUrl NOTIFY settingsChanged)
+    Q_PROPERTY(QString preServiceMusicUrl READ preServiceMusicUrl WRITE setPreServiceMusicUrl NOTIFY settingsChanged)
     Q_PROPERTY(QStringList availableDisplayNames READ availableDisplayNames NOTIFY availableDisplaysChanged)
     Q_PROPERTY(QString localIpAddress READ localIpAddress CONSTANT)
 #endif
